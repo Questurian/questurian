@@ -14,10 +14,10 @@ from ...content.outline_v3 import (
 )
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
-from ...instructions_v3 import stage_context_text
+from ...instructions_v3 import resolve_structure_policy, stage_context_text
 from ...observability import _append_stage_trace
 from ...prompts.editorial_v3 import P2B_V3_OUTLINE_PROMPT
-from ...schemas import V3_OUTLINE_SCHEMA
+from ...schemas import v3_outline_schema
 from ...support import _safe_dict, _section_budget, _target_word_count
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,10 @@ def run_v3_outline_stage(
         fact["claim_id"] for fact in (state["packet"].get("facts") or [])
     }
     target_word_count = _target_word_count(_safe_dict(state["option_context"]))
+    # The approved form decides how many sections this article divides into,
+    # and whether it plans a direct answer and takeaways at all. Frozen with
+    # the run's instructions, so a resumed leg plans to the same shape.
+    structure = resolve_structure_policy(state.get("instructions"))
     outline = dict(EMPTY_OUTLINE)
     candidate = dict(EMPTY_OUTLINE)
     diagnostics: dict[str, Any] = {}
@@ -63,6 +67,7 @@ def run_v3_outline_stage(
 
     prompt = P2B_V3_OUTLINE_PROMPT.format(
         instructions=stage_context_text(state["stage_contexts"], "outline"),
+        structure_rules=structure.outline_rules(),
         target_word_count=target_word_count or "Not specified.",
         section_budget=_section_budget(_safe_dict(state["option_context"]))
         or "Not specified.",
@@ -75,14 +80,20 @@ def run_v3_outline_stage(
             max_tokens=2048,
             temperature=0.1,
             model_name=outline_model,
-            schema=V3_OUTLINE_SCHEMA,
+            schema=v3_outline_schema(
+                min_sections=structure.min_sections,
+                max_sections=structure.max_sections,
+            ),
         )
-        candidate = sanitize_v3_outline(parsed)
+        candidate = sanitize_v3_outline(
+            parsed, max_sections=structure.max_sections
+        )
         accepted, diagnostics = validate_v3_outline(
             candidate,
             work_order=state["work_order"],
             claim_ids=allowed_claim_ids,
             target_word_count=target_word_count,
+            min_sections=structure.min_sections,
         )
         if accepted:
             outline = candidate
@@ -99,6 +110,7 @@ def run_v3_outline_stage(
                     work_order=state["work_order"],
                     claim_ids=allowed_claim_ids,
                     target_word_count=target_word_count,
+                    min_sections=structure.min_sections,
                 )
                 if repaired_accepted:
                     logger.warning(
@@ -162,6 +174,7 @@ def run_v3_outline_stage(
             "repaired": repaired,
             "dropped_headings": dropped_headings,
             "checks": diagnostics,
+            "structure_policy": structure.model_dump(),
             "raw_response": raw_response,
         },
     )

@@ -2,18 +2,32 @@
 
 from __future__ import annotations
 
+import logging
+
 from hashlib import sha256
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
 from .contracts_v4 import ArticleBrief, Prompt2BlogV4Request, Prompt2BlogWorkOrder
-from .editorial_catalog import EditorialCatalog, load_editorial_catalog
+from .editorial_catalog import (
+    DEFAULT_STRUCTURE_POLICY,
+    EditorialCatalog,
+    FormStructurePolicy,
+    load_editorial_catalog,
+)
 from .evidence_v3 import NormalizedEvidence, normalize_evidence
 from .packet_v4 import WritingPacket
 
+logger = logging.getLogger(__name__)
+
 INSTRUCTION_SCHEMA_VERSION = 5
 
+# The one authority order in the system. It used to be stated twice -- here,
+# and again in prose at the top of `house-rules.md` -- in two vocabularies
+# ("approved commission" against "approved brief"), which is how a rule ends up
+# with two owners and neither of them current. House style no longer states an
+# order; it is the lowest layer of this one.
 PRECEDENCE = (
     "verified evidence",
     "approved brief",
@@ -22,6 +36,38 @@ PRECEDENCE = (
     "audience guidance",
     "house style",
 )
+
+# What each layer is actually allowed to decide. The bare list above says which
+# wins; it never said what any of them owns, so "the form controls structure"
+# and "house style controls structure" could both look true to a reader of the
+# assembled prompt.
+PRECEDENCE_OWNERSHIP = (
+    "The facts and their stated limits control every factual claim. Nothing "
+    "below may widen, flatten, or date a claim differently.",
+    "The approved brief controls intent: subject, scope, promise, and what "
+    "this piece fails if it does.",
+    "The article form controls structure: how it opens, how it is divided, "
+    "how it closes.",
+    "Topic modules and audience guidance adjust emphasis only.",
+    "House style controls expression, and only where nothing above has "
+    "already decided.",
+)
+
+
+def precedence_block(role: str) -> str:
+    """The authority order, written out once, for one stage's prompt."""
+    order = " > ".join(PRECEDENCE)
+    return "\n".join(
+        (
+            role,
+            "",
+            f"AUTHORITY ORDER: {order}.",
+            *(f"- {line}" for line in PRECEDENCE_OWNERSHIP),
+            "A lower layer may refine emphasis. It may never add a subject, "
+            "comparator, factual claim, or obligation that conflicts with a "
+            "higher one.",
+        )
+    )
 
 _HEADLINE_HEADING = "## Headline note"
 _OUTLINE_FORM_HEADINGS = (
@@ -578,10 +624,10 @@ def assemble_v3_instructions(
             parts=[
                 (
                     "outline_authority",
-                    "OUTLINE AUTHORITY\nThe approved brief controls scope; the "
-                    "facts control available support; the form structure "
-                    "controls organization; the voice controls what kind of "
-                    "piece this is.",
+                    precedence_block(
+                        "OUTLINE AUTHORITY\nYou are planning, not writing. The "
+                        "voice below says what kind of piece this is."
+                    ),
                 ),
                 # The single largest change in the spec. Compose is obedient:
                 # give it a good plan and it writes well, give it an audit and
@@ -623,10 +669,10 @@ def assemble_v3_instructions(
             parts=[
                 (
                     "compose_authority",
-                    "COMPOSE AUTHORITY\nThe brief says what you are making. The "
-                    "facts below are the material you may make it from, and "
-                    "they constrain every factual claim absolutely. Form and "
-                    "style rules control expression.",
+                    precedence_block(
+                        "COMPOSE AUTHORITY\nThe brief says what you are making. "
+                        "The facts below are the material you may make it from."
+                    ),
                 ),
                 # The brief first, and evidence reframed. Evidence still binds
                 # the facts; it stops being the reason the article exists,
@@ -651,9 +697,11 @@ def assemble_v3_instructions(
             parts=[
                 (
                     "audit_authority",
-                    "AUDIT AUTHORITY\nJudge brief fidelity, form fit, reader "
-                    "service, and style. Treat the grounding verdict as final "
-                    "on support.",
+                    precedence_block(
+                        "AUDIT AUTHORITY\nJudge brief fidelity, form fit, reader "
+                        "service, and style against this order. Treat the "
+                        "grounding verdict as final on support."
+                    ),
                 ),
                 ("brief", f"APPROVED BRIEF\n{brief_body}"),
                 ("support", _packet_support_body(packet)),
@@ -697,5 +745,38 @@ def assemble_v3_instructions(
             "brief_fingerprint": brief.brief_fingerprint,
             "work_order_fingerprint": work_order.work_order_fingerprint,
             "evidence_receipt": evidence.receipt(),
+            # Resolved once, here, and frozen with the rest of the run's
+            # instructions. Outline, compose and the deterministic checks all
+            # read this rather than each resolving the form again -- and a
+            # resumed leg reads the policy the draft was written under, not
+            # whatever the form file says today.
+            "structure_policy": form.structure.model_dump(),
         },
     )
+
+
+def resolve_structure_policy(
+    instructions: dict[str, Any] | None,
+) -> FormStructurePolicy:
+    """The structure policy one run was frozen with.
+
+    Falls back to the old universal shape -- direct answer, three-plus
+    headings, takeaways -- when a run has no policy recorded, which is every
+    run started before forms carried one. That is deliberately the pre-change
+    behaviour rather than a refusal: an old run resumed after this shipped
+    should finish the article it started.
+    """
+    meta = _safe_meta(instructions).get("structure_policy")
+    if not isinstance(meta, dict) or not meta:
+        logger.warning(
+            "No structure policy recorded for this run; using the default shape"
+        )
+        return DEFAULT_STRUCTURE_POLICY
+    return FormStructurePolicy.model_validate(meta)
+
+
+def _safe_meta(instructions: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(instructions, dict):
+        return {}
+    meta = instructions.get("instruction_meta")
+    return meta if isinstance(meta, dict) else {}

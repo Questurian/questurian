@@ -3,6 +3,9 @@ id: comparison
 label: Comparison
 summary: Evaluates approved co-subjects against consistent criteria for a defined choice.
 order: 12
+opening: direct-answer
+sections: 3-12
+closing: takeaways
 ---
 
 ## Use when

@@ -13,6 +13,10 @@ from typing import Any
 
 from ..support import _safe_dict, _safe_int, _safe_str
 
+# The shape every article used to be planned into, whatever form was
+# approved. Both are now the default only -- what a run actually uses comes
+# from its frozen structure policy (finding 07) -- and they stay here as the
+# fallback for a run that has none.
 MIN_OUTLINE_SECTIONS = 3
 MAX_OUTLINE_SECTIONS = 12
 
@@ -36,11 +40,15 @@ def _sanitize_section(raw: Any) -> dict[str, Any] | None:
     }
 
 
-def sanitize_v3_outline(parsed: dict[str, Any]) -> dict[str, Any]:
+def sanitize_v3_outline(
+    parsed: dict[str, Any],
+    *,
+    max_sections: int = MAX_OUTLINE_SECTIONS,
+) -> dict[str, Any]:
     sections_raw = parsed.get("sections")
     sections: list[dict[str, Any]] = []
     if isinstance(sections_raw, list):
-        for item in sections_raw[:MAX_OUTLINE_SECTIONS]:
+        for item in sections_raw[:max_sections]:
             section = _sanitize_section(item)
             if section:
                 sections.append(section)
@@ -170,6 +178,7 @@ def validate_v3_outline(
     work_order: dict[str, Any],
     claim_ids: set[str],
     target_word_count: int,
+    min_sections: int = MIN_OUTLINE_SECTIONS,
 ) -> tuple[bool, dict[str, Any]]:
     """Check a plan against the work order's scope and the writer's packet.
 
@@ -262,7 +271,10 @@ def validate_v3_outline(
     )
 
     checks = {
-        "enough_sections": len(sections) >= MIN_OUTLINE_SECTIONS,
+        # From the approved form, not from a constant. A Q&A or a column that
+        # divides into two sections is that form working, and failing the plan
+        # for it sent compose in with no plan at all.
+        "enough_sections": len(sections) >= min_sections,
         "headings_unique": len({s["heading"].casefold() for s in sections})
         == len(sections),
         "within_word_budget": within_budget,
@@ -275,6 +287,7 @@ def validate_v3_outline(
     diagnostics = {
         **checks,
         "section_count": len(sections),
+        "min_sections": min_sections,
         "planned_word_count": planned_words,
         "target_word_count": target_word_count,
         "unknown_claim_ids": unknown_claim_ids,

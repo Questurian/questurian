@@ -3,6 +3,9 @@ id: personal-essay-travelogue
 label: Personal Essay/Travelogue
 summary: Shapes supplied lived experience into a reflective journey grounded in real events.
 order: 7
+opening: form-led
+sections: 2-12
+closing: form-led
 source_gate: first-person-material
 ---
 

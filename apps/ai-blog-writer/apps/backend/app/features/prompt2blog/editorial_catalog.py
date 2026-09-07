@@ -6,7 +6,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal, get_args
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ValidationError as PydanticValidationError
 
 from .config import (
     PROMPT2BLOG_FORMS_DIR,
@@ -55,8 +56,130 @@ class EditorialRule(CatalogModel):
     instructions: str = Field(min_length=1)
 
 
+OpeningMode = Literal["direct-answer", "form-led"]
+ClosingMode = Literal["takeaways", "form-led"]
+
+# The floor under `min_sections`. Below two there is no structure to plan and
+# `sections_changed` has nothing to scope a repair to.
+ABSOLUTE_MIN_SECTIONS = 2
+ABSOLUTE_MAX_SECTIONS = 12
+
+
+class FormStructurePolicy(CatalogModel):
+    """How one article form is allowed to be shaped.
+
+    Finding 07: every article was required to open with a 40-60 word direct
+    answer, carry at least three `##` headings, and close with takeaways --
+    rules written into the compose prompt, the outline schema and the outline
+    validator, all three of them blind to which form was approved. A service
+    guide wants exactly that shape. A profile, an essay and a Q&A do not, and
+    being marked down for not having it is what turned different briefs into
+    the same article.
+
+    Declared in each form's own frontmatter, so the form that says how a piece
+    is organized is also where its organization is written down, and resolved
+    once per run into the frozen instruction meta so outline, compose and the
+    deterministic checks read the same policy -- including after a resume.
+    """
+
+    opening: OpeningMode
+    closing: ClosingMode
+    min_sections: int = Field(ge=ABSOLUTE_MIN_SECTIONS, le=ABSOLUTE_MAX_SECTIONS)
+    max_sections: int = Field(ge=ABSOLUTE_MIN_SECTIONS, le=ABSOLUTE_MAX_SECTIONS)
+
+    @model_validator(mode="after")
+    def _range_is_a_range(self) -> "FormStructurePolicy":
+        if self.min_sections > self.max_sections:
+            raise ValueError("min_sections cannot exceed max_sections")
+        return self
+
+    def opening_rule(self) -> str:
+        if self.opening == "direct-answer":
+            return (
+                "- Open with a direct 40-60 word answer to the core reader "
+                "question, before the first `##` heading. The reader came for "
+                "that answer; everything after it is the support."
+            )
+        return (
+            "- Open the way this form opens. Use one of its allowed structures "
+            "and start on something concrete and supported -- a scene, a "
+            "figure, the claim you are about to argue. Do not bolt a "
+            "question-and-answer box onto a piece that is not answering a "
+            "lookup question, and do not warm up before the point either."
+        )
+
+    def closing_rule(self) -> str:
+        if self.closing == "takeaways":
+            return (
+                "- Close with a concise takeaway section. It synthesises "
+                "decisions the article already supported, in fresh wording "
+                "rather than copied sentences. Never let a material fact, "
+                "figure, or place appear there for the first time."
+            )
+        return (
+            "- End where the piece ends. This form does not take a takeaways "
+            "list, and appending one to reach a familiar shape weakens it. "
+            "The close still lands somewhere; it does not summarise."
+        )
+
+    def sections_rule(self) -> str:
+        return (
+            f"- Use between {self.min_sections} and {self.max_sections} `##` "
+            "headings, as many as the material actually divides into. The "
+            "count is a range, not a target to hit."
+        )
+
+    def compose_rules(self) -> str:
+        """The structural obligations for one form, for the compose prompt."""
+        return "\n".join(
+            (
+                self.opening_rule(),
+                self.sections_rule(),
+                self.closing_rule(),
+                "- Structure is the form's to decide and the evidence rules "
+                "are not. A form never licenses an invented scene, quotation, "
+                "voice, or detail to fill the shape it asks for.",
+            )
+        )
+
+    def outline_rules(self) -> str:
+        """The same policy, said to the stage that plans rather than writes."""
+        opening = (
+            "The article opens with a direct 40-60 word answer, which you do "
+            "not plan as a section: put its subject in `direct_answer_focus`."
+            if self.opening == "direct-answer"
+            else "This form does not use a direct-answer opening. Leave "
+            "`direct_answer_focus` empty and let the first section open the "
+            "piece the way the form's allowed structures do."
+        )
+        closing = (
+            "The article closes with takeaways, which you also do not plan as "
+            "a section: put their subject in `takeaway_focus`."
+            if self.closing == "takeaways"
+            else "This form does not close with takeaways. Leave "
+            "`takeaway_focus` empty."
+        )
+        return "\n".join(
+            (
+                f"- Plan at least {self.min_sections} and at most "
+                f"{self.max_sections} sections.",
+                f"- {opening}",
+                f"- {closing}",
+            )
+        )
+
+
+DEFAULT_STRUCTURE_POLICY = FormStructurePolicy(
+    opening="direct-answer",
+    closing="takeaways",
+    min_sections=3,
+    max_sections=12,
+)
+
+
 class ArticleFormRule(EditorialRule):
     source_requirements: list[SourceRequirement] = Field(default_factory=list)
+    structure: FormStructurePolicy
     # The direction step used to choose a form from `description` alone — one
     # summary line each. "Where to eat in Lima right now" became a News Report
     # because "reports a timely development" is a fair reading of "right now",
@@ -101,6 +224,7 @@ class EditorialCatalog(CatalogModel):
                     "source_requirements": item.source_requirements,
                     "use_when": item.use_when,
                     "do_not_use_when": item.do_not_use_when,
+                    "structure": item.structure.model_dump(),
                 }
                 for item in self.forms
             ],
@@ -228,6 +352,31 @@ def _rule_section(body: str, heading: str) -> str:
     return section.split("\n## ", 1)[0].strip()
 
 
+def _structure_policy(metadata: dict[str, str], path: Path) -> FormStructurePolicy:
+    """Read `opening`, `sections` and `closing` off one form's frontmatter.
+
+    Loudly. A malformed range or an unknown mode fails the catalog load, which
+    fails at import in every test rather than producing an article shaped by a
+    silently substituted default.
+    """
+    raw_range = metadata["sections"]
+    try:
+        low, high = (int(part) for part in raw_range.split("-", 1))
+    except ValueError as exc:
+        raise ValueError(
+            f"Form section range must be 'min-max': {path} ({raw_range!r})"
+        ) from exc
+    try:
+        return FormStructurePolicy(
+            opening=metadata["opening"],
+            closing=metadata["closing"],
+            min_sections=low,
+            max_sections=high,
+        )
+    except PydanticValidationError as exc:
+        raise ValueError(f"Invalid structure policy in {path}: {exc}") from exc
+
+
 def _load_rule_directory(
     directory: Path,
     *,
@@ -249,6 +398,11 @@ def _load_rule_directory(
     for path in files:
         metadata, body = _parse_rule_file(path)
         required_keys = {"id", "label", "summary", "order"}
+        # A form that does not declare its own structure would silently take
+        # somebody else's, which is finding 07 with an extra step. Required,
+        # not defaulted.
+        if forms:
+            required_keys |= {"opening", "sections", "closing"}
         missing_keys = required_keys - metadata.keys()
         extra_keys = metadata.keys() - required_keys - {"source_gate"}
         if missing_keys or extra_keys:
@@ -282,6 +436,7 @@ def _load_rule_directory(
                     source_requirements=[source_gate] if source_gate else [],
                     use_when=_rule_section(body, "## Use when"),
                     do_not_use_when=_rule_section(body, "## Do not use when"),
+                    structure=_structure_policy(metadata, path),
                 )
             )
         else:

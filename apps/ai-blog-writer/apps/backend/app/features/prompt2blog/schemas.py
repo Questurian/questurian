@@ -27,6 +27,7 @@ does not have to guess, so the canonical names are pinned and the alias table
 is left to keep serving the providers still being asked in prose.
 """
 
+import json
 from typing import Any
 
 # Compose requires at least three `##` headings, so `sections` is required --
@@ -84,6 +85,21 @@ V3_OUTLINE_SCHEMA: dict[str, Any] = {
         "unsupported_requirements": {"type": "array", "items": {"type": "string"}},
     },
 }
+
+
+def v3_outline_schema(*, min_sections: int, max_sections: int) -> dict[str, Any]:
+    """The outline shape for one run's approved form.
+
+    `minItems` used to be a literal 3 for every form, which is finding 07 in
+    the one place a provider enforces rather than requests: a Q&A that divides
+    into two was refused by the transport before any of our own checks could
+    have an opinion.
+    """
+    schema = json.loads(json.dumps(V3_OUTLINE_SCHEMA))
+    schema["properties"]["sections"]["minItems"] = min_sections
+    schema["properties"]["sections"]["maxItems"] = max_sections
+    return schema
+
 
 # Shared by compose and by repair: both return a whole rewritten article, and
 # both go through _sanitize_rewrite.

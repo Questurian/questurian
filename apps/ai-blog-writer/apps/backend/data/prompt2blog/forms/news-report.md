@@ -3,6 +3,9 @@ id: news-report
 label: News Report
 summary: Reports a timely development, what changed, and what readers should know now.
 order: 1
+opening: direct-answer
+sections: 2-12
+closing: form-led
 ---
 
 ## Use when

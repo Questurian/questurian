@@ -352,7 +352,10 @@ def test_compose_leads_with_the_brief_and_treats_evidence_as_material():
     assert "WHAT WE ARE MAKING" in compose
     assert "THE FACTS YOU MAY USE" in compose
     assert compose.index("WHAT WE ARE MAKING") < compose.index("THE FACTS YOU MAY USE")
-    assert "constrain every factual claim absolutely" in _flat(compose)
+    # The authority order is now written out once, in one place, with what
+    # each layer actually owns. This is the line that says the facts win.
+    assert "control every factual claim" in _flat(compose)
+    assert "AUTHORITY ORDER: verified evidence > approved brief" in _flat(compose)
 
 
 def test_compose_is_given_the_voice_and_the_conventions():

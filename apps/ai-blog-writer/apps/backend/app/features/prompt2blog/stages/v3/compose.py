@@ -6,7 +6,7 @@ from app.shared.prompts import ANTI_AI_TELLS_FULL
 
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
-from ...instructions_v3 import stage_context_text
+from ...instructions_v3 import resolve_structure_policy, stage_context_text
 from ...observability import _append_stage_trace
 from ...prompts.editorial_v3 import P2B_V3_COMPOSE_PROMPT
 from ...prompts.generation import SEO_SAFE_CONTENT_GENERATION_GUIDELINES
@@ -32,8 +32,15 @@ def run_v3_compose_stage(
     style_directive = _format_style_directive(
         state["option_context"], keys=("length",)
     )
+    # The approved form's own shape, not one shape for every article. Compose
+    # used to require a direct answer, three headings and closing takeaways
+    # whatever the brief asked for, which is why a profile and a service guide
+    # came back looking like the same piece (finding 07).
+    structure = resolve_structure_policy(state.get("instructions"))
+    structure_rules = structure.compose_rules()
     prompt = P2B_V3_COMPOSE_PROMPT.format(
         outline=state["outline_text"],
+        structure_rules=structure_rules,
         target_word_count=_target_word_count(_safe_dict(state["option_context"]))
         or "Not specified.",
         instructions=stage_context_text(state["stage_contexts"], "compose"),
@@ -54,6 +61,7 @@ def run_v3_compose_stage(
         "seo_guideline": len(SEO_SAFE_CONTENT_GENERATION_GUIDELINES),
         "style_directive": len(style_directive),
         "anti_ai_rules": len(ANTI_AI_TELLS_FULL),
+        "structure_rules": len(structure_rules),
         "total": len(prompt),
     }
     # What the template itself costs, once everything it carries is subtracted.
@@ -99,6 +107,7 @@ def run_v3_compose_stage(
             "brief_fingerprint": state["brief"]["brief_fingerprint"],
             "form_id": state["brief"]["form_id"],
             "outline_accepted": state.get("outline_accepted", False),
+            "structure_policy": structure.model_dump(),
             "style_directive": style_directive,
             "prompt_sizes": prompt_sizes,
         },

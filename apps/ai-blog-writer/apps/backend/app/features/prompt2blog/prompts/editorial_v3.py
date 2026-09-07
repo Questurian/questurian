@@ -25,7 +25,7 @@ Return strict JSON only:
 }}
 
 Rules:
-- Plan at least 3 and at most 12 sections.
+{structure_rules}
 - Headings must be specific and distinct. No generic "Introduction" or
   "Conclusion" headings.
 - Every section must name the claim_ids it rests on, using IDs from the facts
@@ -75,8 +75,14 @@ Return strict JSON only:
 }}
 
 Hard rules:
-- Every factual statement must trace to a claim in the evidence records.
-  Preserve attribution, dates, units, geography, and stated uncertainty.
+- Every figure, date, rule, price, duration, capacity, and named entity must
+  trace to a fact you were given. Preserve its dates, units, geography, and
+  the limits it states. General background a well-informed writer would state
+  without looking it up needs no fact behind it, and it is also not where this
+  article's value is.
+- Keep a limit that changes what the reader should do -- an as-of date, a
+  season, a route only some operators run. Drop confidence language that
+  changes nothing: no "it seems", no "arguably", no grading your own certainty.
 - Never invent a bridge fact, scene, quotation, experience, statistic, price,
   consensus, or practical detail. Follow the EVIDENCE DISPOSITION POLICY in
   the compose context exactly.
@@ -93,12 +99,7 @@ Hard rules:
 - Answer the core reader question and deliver the stated reader outcome.
 - Keep to the brief's spine, and name everything under must_name.
 - improved_content must not contain a `#` H1.
-- Use at least 3 `##` headings.
-- Include one direct 40-60 word answer near the top.
-- Include a concise takeaway section near the end. It synthesises the
-  decisions the article already supported, in fresh wording rather than copied
-  sentences. Never let a material fact, figure, or place appear there for the
-  first time.
+{structure_rules}
 - Follow the STYLE DIRECTIVE exactly. Tone, length, and brand voice are
   requirements, not suggestions.
 - Follow the SECTION PLAN when one is provided: use its headings, in order, and

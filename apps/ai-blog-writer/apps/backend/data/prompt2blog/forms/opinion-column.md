@@ -3,6 +3,9 @@ id: opinion-column
 label: Opinion/Column
 summary: Advances a clearly identified viewpoint using evidence and transparent reasoning.
 order: 6
+opening: form-led
+sections: 2-12
+closing: form-led
 ---
 
 ## Use when
