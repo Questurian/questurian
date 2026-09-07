@@ -182,6 +182,107 @@ def test_grounding_compares_the_draft_with_the_exact_evidence_records():
     assert recorder.recorded[0][0] == "stage_v3_groundedness"
 
 
+def test_grounding_reads_the_first_hand_material_the_writer_was_given():
+    """Finding 01. Compose saw `brief.material`; the checker did not."""
+    llm = FakeLLM(
+        json_response={
+            "grounded": True,
+            "assessment": "Everything traces to a record or to supplied material.",
+            "unsupported_claims": [],
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+    state = _state()
+    state["packet"] = {
+        **state["packet"],
+        "supplied_material": [
+            {
+                "kind": "observation",
+                "statement": "I waited 45 minutes at the airport taxi rank.",
+                "note": "August 2026",
+            }
+        ],
+    }
+
+    run_v3_groundedness_stage(state, dependencies)
+
+    prompt = llm.prompts[0]
+    assert "SUPPLIED MATERIAL" in prompt
+    assert "I waited 45 minutes at the airport taxi rank." in prompt
+    assert "August 2026" in prompt
+    # The scope rule travels with it, or the checker has no way to tell the
+    # observation from the generalisation it does not support.
+    assert "does not support" in prompt
+
+
+def test_grounding_without_material_says_so_rather_than_leaving_a_hole():
+    llm = FakeLLM(
+        json_response={
+            "grounded": True,
+            "assessment": "Everything traces to a record.",
+            "unsupported_claims": [],
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+
+    run_v3_groundedness_stage(_state(), dependencies)
+
+    assert "SUPPLIED MATERIAL" in llm.prompts[0]
+    assert "must rest on the evidence records" in llm.prompts[0]
+
+
+def test_an_unreadable_verdict_is_retried_once_then_recorded_as_unchecked():
+    """Finding 02. `{}` used to arrive downstream as a verified pass."""
+
+    class MalformedLLM(FakeLLM):
+        def invoke_json(self, *, prompt: str, **_kwargs):
+            self.prompts.append(prompt)
+            return {}, "{}"
+
+    llm = MalformedLLM()
+    dependencies, recorder = _dependencies(llm)
+
+    updates = run_v3_groundedness_stage(_state(), dependencies)
+
+    assert len(llm.prompts) == 2
+    assert "YOUR PREVIOUS RESPONSE WAS REJECTED" in llm.prompts[1]
+    groundedness = updates["groundedness"]
+    assert groundedness["checked"] is False
+    assert groundedness["status"] == "unchecked"
+    assert len(groundedness["rejected_responses"]) == 2
+    assert recorder.recorded[0][1]["groundedness"]["checked"] is False
+
+
+def test_a_retried_verdict_that_parses_is_used():
+    class RecoveringLLM(FakeLLM):
+        responses = [
+            {},
+            {
+                "grounded": True,
+                "assessment": "Second answer parses.",
+                "unsupported_claims": [],
+            },
+        ]
+
+        def invoke_json(self, *, prompt: str, **_kwargs):
+            self.prompts.append(prompt)
+            import json as _json
+
+            payload = self.responses[len(self.prompts) - 1]
+            return payload, _json.dumps(payload)
+
+    llm = RecoveringLLM()
+    dependencies, _recorder = _dependencies(llm)
+
+    updates = run_v3_groundedness_stage(_state(), dependencies)
+
+    assert updates["groundedness"]["checked"] is True
+    assert updates["groundedness"]["status"] == "supported"
+    # The rejected first answer stays on the record even though the run
+    # recovered: a checker that needs two attempts is worth seeing.
+    assert updates["groundedness"]["rejected_responses"] == ["empty response"]
+
+
 def test_grounding_failure_degrades_to_unchecked_instead_of_failing_the_run():
     class ExplodingLLM(FakeLLM):
         def invoke_json(self, *, prompt: str, **_kwargs):

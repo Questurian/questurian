@@ -400,3 +400,58 @@ def build_packet(
             for item in brief.material
         ],
     )
+
+
+# What the checker is told about first-hand material, once, so the writer's
+# desk and the checker's desk describe it the same way.
+NO_SUPPLIED_MATERIAL = (
+    "None. Every factual statement in this draft must rest on the evidence "
+    "records above."
+)
+
+
+def supplied_material_text(packet: WritingPacket | dict[str, Any] | None) -> str:
+    """The operator's own words, rendered for a stage that is not compose.
+
+    Finding 01: compose received `brief.material` and grounding did not, so a
+    checker reading only the web records had no way to tell a legitimate
+    first-hand observation from an invented one. It could only call it
+    unsupported -- and repair is instructed to delete unsupported assertions,
+    which is how the one thing in the article nobody else could have written
+    gets removed.
+
+    Verbatim and by id, from the frozen packet rather than from the live
+    brief, so a resumed run checks the draft against the material the draft
+    was actually written from.
+
+    This is a hand-off, not a verification: the material is supplied
+    experience, not an independently checked fact, and the caller's prompt is
+    responsible for saying so.
+    """
+    if packet is None:
+        return NO_SUPPLIED_MATERIAL
+    if isinstance(packet, dict):
+        material = [
+            item if isinstance(item, dict) else {}
+            for item in (packet.get("supplied_material") or [])
+        ]
+        items = [
+            PacketMaterial(
+                kind=str(entry.get("kind") or "").strip() or "material",
+                statement=str(entry.get("statement") or "").strip(),
+                note=str(entry.get("note") or "").strip(),
+            )
+            for entry in material
+        ]
+        items = [item for item in items if item.statement]
+    else:
+        items = [item for item in packet.supplied_material if item.statement.strip()]
+
+    if not items:
+        return NO_SUPPLIED_MATERIAL
+
+    return "\n".join(
+        f"- material_{index} [{item.kind}] {item.statement}"
+        + (f" ({item.note})" if item.note else "")
+        for index, item in enumerate(items, start=1)
+    )

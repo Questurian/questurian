@@ -144,3 +144,33 @@ EDITORIAL_AUGMENTATION_SCHEMA: dict[str, Any] = {
         },
     },
 }
+
+
+# The grounding call used to be asked in prose with nothing enforcing the
+# shape, and `{}` came back looking like a pass (finding 02). The schema is the
+# cheap half of the fix on providers that enforce one; `_sanitize_groundedness`
+# is the half that runs everywhere, and it is the one the verdict rests on.
+#
+# Stricter than the others on purpose. Everything named here is something the
+# verdict cannot be read without, so a schema that let it through would only be
+# moving the refusal one stage later.
+GROUNDEDNESS_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "required": ["grounded", "assessment", "unsupported_claims"],
+    "properties": {
+        "grounded": {"type": "boolean"},
+        "assessment": {"type": "string"},
+        "unsupported_claims": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["claim", "reason", "severity"],
+                "properties": {
+                    "claim": {"type": "string"},
+                    "reason": {"type": "string"},
+                    "severity": {"type": "string", "enum": ["high", "low"]},
+                },
+            },
+        },
+    },
+}

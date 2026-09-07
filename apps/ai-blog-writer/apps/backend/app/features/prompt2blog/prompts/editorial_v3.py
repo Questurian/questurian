@@ -157,18 +157,42 @@ What does NOT count:
 - Uncertainty or qualification that the evidence record itself states.
 - Restatement or paraphrase of something a record does say.
 - Advice framed as judgement rather than fact.
+- Anything the SUPPLIED MATERIAL below covers, within the scope it states.
+
+First-hand material:
+The writer was given the material below by the person commissioning the
+article. It is their own experience, stated in their own words. It is not a
+web source and it was never sent to research, so no evidence record will
+mention it. Treat it as support, at the scope it states and no wider.
+- A statement resting on supplied material is supported, including a
+  paraphrase that keeps its scope. "I waited 45 minutes on my visit" supports
+  "the wait ran about forty-five minutes on a recent visit".
+- A statement that widens it into a general rule is NOT supported. The same
+  material does not support "everyone waits 45 minutes" or "expect a
+  45-minute wait".
+- Supplied material is experience, not a verified fact. Do not treat it as
+  confirming, correcting, or overriding an evidence record. Where the two
+  disagree, say so in `assessment`; do not resolve it and do not raise a
+  claim purely because they differ.
 
 Rules:
 - severity is "high" when a reader could be misled into a booking, spending,
   legal, or safety decision. Otherwise "low".
 - Quote the claim as it appears in the draft.
 - grounded is true only when there are no high-severity unsupported claims.
+- `grounded: false` requires at least one high-severity entry saying why.
+- severity is exactly "high" or "low". No other value is accepted.
+- `assessment` is always a non-empty sentence, including when nothing is
+  unsupported.
 - Do not rewrite the article.
 
 {evidence_disposition_policy}
 
 EVIDENCE RECORDS:
 {evidence_records}
+
+SUPPLIED MATERIAL (first-hand, from the commissioner):
+{supplied_material}
 
 DRAFT TITLE:
 {rewritten_title}
