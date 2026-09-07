@@ -54,6 +54,11 @@ export function SectionEditor({
   // one accepted edit is a correction, and only the person making it knows
   // whether they meant "this one was wrong" or "we always want this".
   const [reason, setReason] = useState('')
+  // Which version of the article this screen has seen. Read off each
+  // proposal and each accepted write, and sent back with the next one, so a
+  // write from this tab is refused rather than applied over a version it
+  // never read. -1 until a proposal has said.
+  const [revision, setRevision] = useState(-1)
 
   useEffect(() => {
     let live = true
@@ -69,18 +74,27 @@ export function SectionEditor({
     setBusy(true)
     setError('')
     proposeSectionEdit(runId, { section_id: sectionId, action_id: actionId })
-      .then(setProposal)
+      .then(next => {
+        setProposal(next)
+        setRevision(next.base_revision)
+      })
       .catch((failure: Error) => setError(failure.message))
       .finally(() => setBusy(false))
   }
 
-  const keep = () => {
+  const review = proposal?.review ?? null
+  // Anything the checker did not pass: it found something, or it never managed
+  // to look. Both are a decision for a person, and neither is a pass.
+  const needsDecision = !review || review.status !== 'supported'
+
+  const keep = (acceptFindings = false) => {
     if (!proposal) return
     setBusy(true)
-    applySectionEdit(runId, proposal, reason)
+    applySectionEdit(runId, proposal, reason, acceptFindings)
       .then(result => {
         setProposal(null)
         setReason('')
+        setRevision(result.revision)
         onApplied(result.markdown)
       })
       .catch((failure: Error) => setError(failure.message))
@@ -127,16 +141,85 @@ export function SectionEditor({
             </p>
           )}
 
+          {/* The check the figure warning above cannot do. That one compares
+              sets of numbers, so swapping two prices the research already
+              carries is invisible to it -- every number is present and both
+              claims are false. This is a reading of what the new text
+              asserts. */}
+          {!proposal.could_not_do && review?.status === 'unsupported' && (
+            <div className="p2b-editor-invented" role="status">
+              <p>
+                The checker read this against the research and does not think it
+                holds up:
+              </p>
+              <p>{review.assessment}</p>
+              <ul>
+                {review.unsupported_claims.map(finding => (
+                  <li key={finding.claim}>
+                    <strong>{finding.claim}</strong> — {finding.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {!proposal.could_not_do && (!review || review.status === 'unchecked') && (
+            /* Not a pass. "We looked and it holds up" and "we did not manage
+               to look" are different answers, and showing the second as
+               silence is how unchecked prose comes to wear the stamp of
+               checked prose. */
+            <p className="p2b-editor-invented" role="status">
+              This edit has not been checked against the research
+              {review?.assessment ? `: ${review.assessment}` : '.'} Read it
+              yourself before keeping it.
+            </p>
+          )}
+
           {proposal.could_not_do && (
             /* A refusal is an answer. Rendered where a revision would have been,
                because an editor who asked for something the evidence cannot
-               support needs to read that rather than hunt for it. */
+               support needs to read that rather than hunt for it.
+
+               It is also the end of this proposal. The server normalises a
+               refused answer back to the original text, so there is nothing
+               below to apply, and "Use this" is not offered. That is different
+               from an introduced-figure warning, which is advisory: a person
+               may look at a flagged number, decide they know where it came
+               from, and keep the edit. Nobody can knowingly accept a change
+               the model has just said it did not make. */
             <p className="p2b-editor-refused">{proposal.could_not_do}</p>
           )}
 
           {proposal.what_changed && (
             <p className="p2b-editor-summary">{proposal.what_changed}</p>
           )}
+
+          {/* Beside the text diff, not inside it. A diff answers "what words
+              moved"; an editor deciding whether to keep this is asking whether
+              a price got attached to a different thing. */}
+          {!proposal.could_not_do &&
+            (proposal.factual_changes?.text_changes.length ?? 0) > 0 && (
+              <section
+                className="p2b-editor-factual"
+                aria-label="What changed factually"
+              >
+                <p className="p2b-label">What changed factually</p>
+                <ul>
+                  {proposal.factual_changes?.text_changes.map(change => (
+                    <li key={`${change.kind}:${change.text}`}>
+                      <strong>{change.text}</strong> — {change.note}
+                    </li>
+                  ))}
+                </ul>
+                {/* Said out loud, because a list that looks authoritative gets
+                    read as one. These are exact differences in text; whether
+                    the change is wrong is the checker's answer above. */}
+                <p className="p2b-note">
+                  Exact differences between the two texts, not a judgement about
+                  whether the change is wrong.
+                </p>
+              </section>
+            )}
 
           <div className="p2b-editor-diff">
             <section aria-label="The section now">
@@ -149,6 +232,7 @@ export function SectionEditor({
             </section>
           </div>
 
+          {!proposal.could_not_do && (
           <label className="p2b-field">
             <span className="p2b-label">Why you wanted this (optional)</span>
             <input
@@ -159,23 +243,32 @@ export function SectionEditor({
               onChange={event => setReason(event.target.value)}
             />
           </label>
+          )}
 
           <div className="p2b-intake-actions">
-            <button
-              type="button"
-              className="p2b-primary"
-              disabled={busy || proposal.revised.trim() === proposal.original.trim()}
-              onClick={keep}
-            >
-              Use this
-            </button>
+            {!proposal.could_not_do && (
+              <button
+                type="button"
+                className="p2b-primary"
+                disabled={
+                  busy || proposal.revised.trim() === proposal.original.trim()
+                }
+                onClick={() => keep(needsDecision)}
+              >
+                {/* The label says which button this is. Pressing "Use this"
+                    on an edit the checker flagged is a different act from
+                    pressing it on one that passed, and the server records it
+                    as one. */}
+                {needsDecision ? 'Use it anyway' : 'Use this'}
+              </button>
+            )}
             <button
               type="button"
               className="p2b-secondary"
               disabled={busy}
               onClick={() => setProposal(null)}
             >
-              Keep what I had
+              {proposal.could_not_do ? 'Ask for something else' : 'Keep what I had'}
             </button>
           </div>
         </div>
@@ -188,8 +281,14 @@ export function SectionEditor({
           disabled={busy}
           onClick={() => {
             setBusy(true)
-            undoSectionEdit(runId)
-              .then(result => result.undone && onApplied(result.markdown))
+            // The revision this screen is looking at, which is the one the
+            // last apply returned. An undo without it can take back somebody
+            // else's edit as a side effect of taking back your own.
+            undoSectionEdit(runId, revision)
+              .then(result => {
+                setRevision(result.revision)
+                if (result.undone) onApplied(result.markdown)
+              })
               .catch((failure: Error) => setError(failure.message))
               .finally(() => setBusy(false))
           }}

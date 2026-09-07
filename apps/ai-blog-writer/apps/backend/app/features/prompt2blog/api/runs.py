@@ -6,6 +6,7 @@ handed the loop to one request and froze the whole server while it ran, which
 is what made a research pass look like an outage.
 """
 
+import logging
 from contextlib import nullcontext
 from typing import Any, Literal
 from uuid import uuid4
@@ -37,7 +38,24 @@ from utils.llm_model_policy import (
     claude_provider,
 )
 
+from ..article_edits import (
+    ArticleMissing,
+    EditRefused,
+    RevisionConflict,
+    commit_article_edit,
+    read_article,
+)
 from ..config import FEATURE_NAME
+from ..edit_review import SUPPORTED, binding_failure, review_section_edit
+from ..factual_changes import factual_changes
+from ..pricing import Prompt2BlogTokenUsageTracker
+from ..run_recorder import USAGE_LEDGER_STAGE
+from ..editor_spend import (
+    EditorAttempt,
+    attempt_from_tracker,
+    read_editor_spend,
+    record_editor_attempt,
+)
 from ..contracts_v4 import Prompt2BlogV4Request
 from ..drafts_view import build_drafts_report, render_drafts_page
 from ..intake_v3 import (
@@ -50,6 +68,7 @@ from ..models import PipelineV4RuntimeRequest
 from ..options import default_target_word_count
 from ..orchestrator_v3 import resume_pipeline_v3, run_pipeline_v3
 from ..provenance import (
+    invalidated_confirmation_count,
     Confirmation,
     ConfirmationRecord,
     PacketNotStored,
@@ -78,11 +97,14 @@ from ..section_edit_v4 import (
     undo_last,
 )
 from ..run_recorder import RunRecorder
-from ..dependencies import dependencies_for_run
+from ..dependencies import DefaultPrompt2BlogLLM, PipelineDependencies
 from ..selection_v4 import selection_from_flags
 from ..support import _clean_string_list, _safe_dict, _safe_str
 
 router = APIRouter()
+
+
+logger = logging.getLogger(__name__)
 
 # One sentence per refusal, written for the operator rather than the log. Every
 # key is a `ResumePlan.reason`; a reason with no entry falls back to the generic
@@ -362,11 +384,21 @@ def get_provenance(run_id: str) -> JSONResponse:
     # here rather than shown as stale. A confirmation beside changed prose is
     # worse than none: it is the one thing on the screen that says a person
     # checked.
-    live = prune_confirmations(stored_confirmations(run_id), markdown)
+    stored = stored_confirmations(run_id)
+    live = prune_confirmations(stored, markdown)
     report = build_provenance(
         run_id, markdown, packet, live.model_dump(mode="json")
     )
-    return JSONResponse(report.model_dump(mode="json"))
+    payload = report.model_dump(mode="json")
+    # Dropping a confirmation whose passage changed is right. Dropping it in
+    # silence is not: somebody read that passage against its source and said
+    # so, and an edit throws that away. The count says how much checking needs
+    # doing again. The stored records are only filtered on read, so an undo
+    # brings them back.
+    payload["summary"]["invalidated_confirmations"] = invalidated_confirmation_count(
+        stored, markdown
+    )
+    return JSONResponse(payload)
 
 
 @router.post("/provenance/{run_id}/confirm", dependencies=[Depends(require_staff)])
@@ -443,6 +475,26 @@ class ApplyEditRequest(BaseModel):
 
     proposal: EditProposal
     reason: str = ""
+    # A person saying "I have read what the checker said and I want this
+    # anyway". Required for anything the checker did not pass, including an
+    # edit it never managed to read, and recorded on the edit itself.
+    #
+    # Not a way around the check. The findings are shown first, the decision is
+    # a separate press, and the history afterwards says which claims were
+    # accepted over.
+    accept_findings: bool = False
+
+
+class UndoEditRequest(BaseModel):
+    """Which version of the article the undo was pressed against.
+
+    Undo is a write like any other. Pressed on a screen showing revision 10
+    while a colleague saved revision 11, an unguarded undo restores the
+    markdown from before *this tab's* last edit -- erasing their work as a
+    side effect of taking back one's own.
+    """
+
+    base_revision: int = -1
 
 
 class PatternDecisionRequest(BaseModel):
@@ -465,22 +517,29 @@ def _finished_run(run_id: str) -> dict[str, Any]:
     return output
 
 
-def _edit_history(run_id: str) -> EditHistory:
-    stored = _safe_dict(
-        _safe_dict(read_stage_result(run_id, SECTION_EDIT_STAGE)).get("data")
-    )
-    return EditHistory.model_validate(stored) if stored else EditHistory()
+# What each refusal means to the person who pressed the button. Keyed on the
+# reason the apply returned, so a refusal nobody wrote a sentence for still
+# falls through to the staleness message rather than to a blank one.
+_APPLY_REFUSALS = {
+    "this proposal says it could not make the change and changes the text as "
+    "well": (
+        "This proposal says it could not make the change, and offers changed "
+        "text anyway. That is not an edit anyone asked for. Ask again, or ask "
+        "for something the evidence supports."
+    ),
+    "this proposal does not change the section": (
+        "This proposal leaves the section exactly as it is, so there is "
+        "nothing to apply."
+    ),
+}
 
 
-def _save_article(run_id: str, output: dict[str, Any], markdown: str) -> None:
-    """Rewrite the article, leaving the pipeline's own record of it alone.
-
-    `write_artifact` takes the markdown out of the payload and stores it in its
-    own column, so the artifact -- what the pipeline produced and scored -- is
-    passed back unchanged. A hand edit changes the article; it does not change
-    the run's account of how the article was made.
-    """
-    RunRecorder().record_artifact(run_id, {**output["artifact"], "markdown": markdown})
+# Article markdown is written in exactly one place now: `commit_article_edit`,
+# which holds the write lock, checks the revision, and writes the article and
+# its history together. The two helpers that used to live here -- one reading
+# the history on its own, one saving the article on its own -- were the two
+# halves of the lost update, and a route that reaches for either of them again
+# has left the transaction.
 
 
 @router.get("/section-edit/actions", dependencies=[Depends(require_staff)])
@@ -507,6 +566,10 @@ def propose_edit(run_id: str, request: SectionEditRequest) -> JSONResponse:
 
     This is the one route here that spends money -- one model call per request
     -- and it spends it on a section rather than an article.
+
+    Every attempt is recorded, whatever it produced. Five proposals an editor
+    read and threw away cost exactly as much as five they kept, and this route
+    used to leave no trace of any of them on the article's receipt.
     """
     output = _finished_run(run_id)
     try:
@@ -515,15 +578,30 @@ def propose_edit(run_id: str, request: SectionEditRequest) -> JSONResponse:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     artifact = _safe_dict(output["artifact"]).get("pipeline_v3") or {}
+    attempt_id = uuid4().hex
+    # Deliberately not `dependencies_for_run`, which restores the run's whole
+    # ledger. The tracker here should hold this one call and nothing else, so
+    # what is written afterwards cannot be an earlier leg's rows appearing
+    # again under a new id.
+    dependencies = PipelineDependencies(
+        llm=DefaultPrompt2BlogLLM(
+            usage_tracker=Prompt2BlogTokenUsageTracker(run_id=run_id),
+            run_id=run_id,
+        )
+    )
+    tracker = dependencies.llm.usage_tracker
     try:
         proposal = propose_section_edit(
             run_id=run_id,
             content=output["markdown"],
+            # Stamped on the proposal so the apply can refuse a write against
+            # a document that has moved, not just against a section that has.
+            base_revision=int(output.get("article_revision") or 0),
             section_id=request.section_id,
             action_id=request.action_id,
             brief=_safe_dict(_safe_dict(artifact).get("brief")),
             packet=packet,
-            dependencies=dependencies_for_run(run_id),
+            dependencies=dependencies,
             # The plan, for the section purposes the memory reads off it. A run
             # whose outline was rejected has none, and the memory then rests on
             # the excerpts alone rather than refusing.
@@ -532,8 +610,152 @@ def propose_edit(run_id: str, request: SectionEditRequest) -> JSONResponse:
             ).get("outline"),
         )
     except ValueError as exc:
+        # A bad section or action id, caught before the call. Nothing was
+        # spent, so nothing is recorded.
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return JSONResponse(proposal.model_dump(mode="json"))
+    except Exception as exc:  # noqa: BLE001 -- recorded, then re-raised
+        # A call that failed after the provider had already charged for it is
+        # the case worth being careful about. Whatever the tracker got hold of
+        # is written; a tracker holding nothing is recorded as unmeasured
+        # rather than as zero.
+        record_editor_attempt(
+            run_id,
+            attempt_from_tracker(
+                tracker,
+                attempt_id=attempt_id,
+                kind="propose",
+                section_id=request.section_id,
+                action_id=request.action_id,
+                outcome="failed",
+                error=str(exc),
+            ),
+        )
+        raise
+
+    record_editor_attempt(
+        run_id,
+        attempt_from_tracker(
+            tracker,
+            attempt_id=attempt_id,
+            kind="propose",
+            section_id=request.section_id,
+            action_id=request.action_id,
+            outcome="refused" if proposal.could_not_do else "proposed",
+        ),
+    )
+
+    if proposal.changed:
+        # A second call, and it is worth saying why rather than letting it look
+        # like an oversight. The cheap check compares sets of figures, so
+        # swapping two prices the packet already holds is invisible to it: every
+        # number is present and both claims are false. Nothing short of reading
+        # what the sentence asserts catches that.
+        #
+        # Only on a proposal that changed something. A refusal and a no-op have
+        # no new prose to judge, and paying to be told that unchanged text is
+        # still grounded is paying for nothing.
+        review_attempt_id = uuid4().hex
+        review_tracker = Prompt2BlogTokenUsageTracker(run_id=run_id)
+        review_llm = DefaultPrompt2BlogLLM(
+            usage_tracker=review_tracker, run_id=run_id
+        )
+        try:
+            proposal = proposal.model_copy(
+                update={
+                    "review": review_section_edit(
+                        llm=review_llm,
+                        run_id=run_id,
+                        section_id=request.section_id,
+                        content=output["markdown"],
+                        original=proposal.original,
+                        candidate=proposal.revised,
+                        packet=packet,
+                        base_revision=proposal.base_revision,
+                    )
+                }
+            )
+            review_outcome = proposal.review.status
+        except Exception as exc:  # noqa: BLE001 -- degrades, never blocks
+            # A checker outage does not cost an editor the proposal they have
+            # already paid for. It comes back unreviewed, which the apply
+            # treats as a decision for a person rather than as a pass.
+            logger.warning("Prompt2Blog edit review failed: %s", exc)
+            review_outcome = "failed"
+        record_editor_attempt(
+            run_id,
+            attempt_from_tracker(
+                review_tracker,
+                attempt_id=review_attempt_id,
+                kind="review",
+                section_id=request.section_id,
+                action_id=request.action_id,
+                outcome=review_outcome,
+            ),
+        )
+
+    payload = proposal.model_dump(mode="json")
+    if proposal.changed:
+        # What changed factually, beside the text diff. Costs no call: the
+        # exact half is computed from the two strings, and the reading half is
+        # the review that was already made. Bound to the same candidate, so an
+        # operator cannot read a panel for one piece of prose and apply
+        # another.
+        payload["factual_changes"] = factual_changes(
+            original=proposal.original,
+            candidate=proposal.revised,
+            review=proposal.review,
+            base_revision=proposal.base_revision,
+        ).as_dict()
+    return JSONResponse(payload)
+
+
+@router.get("/section-edit/{run_id}/spend", dependencies=[Depends(require_staff)])
+def read_edit_spend(run_id: str) -> JSONResponse:
+    """What has been spent on this article since the pipeline finished.
+
+    Beside the pipeline's own total rather than merged into it. "What the
+    article cost to make" and "what has been spent on it since" are different
+    questions, and the combined figure is computed here from the two durable
+    records instead of being stored as a third one that can disagree with
+    both.
+    """
+    _finished_run(run_id)
+    spend = read_editor_spend(run_id)
+    ledger = _safe_dict(
+        _safe_dict(read_stage_result(run_id, USAGE_LEDGER_STAGE)).get("data")
+    )
+    # The ledger's own split: money that left an account, and the notional
+    # API-equivalent price of the calls that drew a flat subscription. Adding
+    # the two produces a number true of nothing, so they are added only to
+    # their own kind.
+    pipeline_cost = _safe_dict(ledger.get("cost"))
+    editor_totals = spend.totals()
+    billed = pipeline_cost.get("billed_cost_usd")
+    subscription = pipeline_cost.get("subscription_cost_usd")
+    return JSONResponse(
+        {
+            "run_id": run_id,
+            "pipeline": ledger.get("totals") or {},
+            "pipeline_cost": pipeline_cost,
+            "editor": editor_totals,
+            "attempts": [item.model_dump(mode="json") for item in spend.attempts],
+            # What this article has actually cost, pipeline plus editing.
+            "combined_billed_cost_usd": (
+                round(float(billed) + editor_totals["billed_cost_usd"], 6)
+                if isinstance(billed, (int, float))
+                else None
+            ),
+            # What the subscription calls would have cost on the API. Real
+            # tokens, notional money, never added to the line above.
+            "combined_subscription_cost_usd": (
+                round(
+                    float(subscription) + editor_totals["subscription_cost_usd"], 6
+                )
+                if isinstance(subscription, (int, float))
+                else None
+            ),
+        }
+    )
 
 
 @router.post("/section-edit/{run_id}/apply", dependencies=[Depends(require_staff)])
@@ -542,57 +764,221 @@ def apply_edit(
     request: ApplyEditRequest,
     staff_id: str = Depends(staff_user_id),
 ) -> JSONResponse:
-    """Write an accepted proposal into the draft.
+    """Write an accepted proposal into the draft, in one transaction.
 
-    A proposal read on one screen while another edit landed on the same section
-    is refused rather than applied over the top of it.
+    Everything that decides whether this edit may land happens inside that
+    transaction, against the markdown and history as they actually are: the
+    document revision, the section hash, the refusal invariant, and the write
+    of both the article and its history. The route used to read, check, write
+    the article and then write the history -- four steps with no lock, so two
+    tabs editing different sections of the same draft each passed their own
+    section's hash and the second write discarded the first edit.
     """
+    proposal = request.proposal
+    if proposal.run_id and proposal.run_id != run_id:
+        # A proposal names the run it was written for. Applying it to another
+        # one would land prose written against a different article's evidence
+        # on whatever section happens to share its id.
+        raise HTTPException(
+            status_code=400,
+            detail="This proposal was written for a different run.",
+        )
     output = _finished_run(run_id)
     artifact = _safe_dict(_safe_dict(output["artifact"]).get("pipeline_v3"))
-    result = apply_proposal(
-        content=output["markdown"],
-        proposal=request.proposal,
-        history=_edit_history(run_id),
-        editor=staff_id or "",
-        now=_now_iso(),
-        reason=request.reason,
-        # So a correction that only ever happens on one kind of piece cannot
-        # later be read as a rule about all of them (improvement 05).
-        form_id=_safe_str(_safe_dict(artifact.get("brief")).get("form_id")),
+    form_id = _safe_str(_safe_dict(artifact.get("brief")).get("form_id"))
+
+    # Whether the review attached to this proposal is a review *of this
+    # proposal*. It was generated on the server, travelled to a browser as
+    # JSON, and came back in a request body -- so the object being trusted is
+    # one the client had every opportunity to rewrite, and a verdict that says
+    # a candidate is grounded says it about the candidate it read.
+    try:
+        packet = frozen_packet(run_id)
+    except PacketNotStored:
+        # An older run with no stored packet cannot have its edits reviewed at
+        # all. That is a decision for a person, which is what an unverified
+        # review already becomes below.
+        packet = {}
+    unverified = binding_failure(
+        proposal.review,
+        run_id=run_id,
+        section_id=proposal.section_id,
+        candidate=proposal.revised,
+        packet=packet,
     )
-    if not result.applied:
+    review_status = (
+        proposal.review.status
+        if proposal.review is not None and not unverified
+        else "unchecked"
+    )
+    findings = (
+        [
+            claim["claim"]
+            for claim in proposal.review.unsupported_claims
+            if claim.get("claim")
+        ]
+        if proposal.review is not None and not unverified
+        else []
+    )
+    # Only for an edit that could actually land. A refusal and a no-op are
+    # rejected below on their own terms, and reporting one of those as "the
+    # checker did not pass it" would explain the wrong thing.
+    reviewable = proposal.changed and not proposal.could_not_do
+    if reviewable and review_status != SUPPORTED and not request.accept_findings:
+        # Advisory, not a gate on the article: the existing draft is untouched
+        # and still saveable. What is refused is landing prose a checker did
+        # not pass without a person saying they read that and want it anyway.
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": (
+                    "The checker did not pass this edit. Read the findings, "
+                    "then apply again with `accept_findings` if you want it "
+                    "anyway."
+                ),
+                "review_status": review_status,
+                "binding_failure": unverified,
+                "unsupported_claims": (
+                    proposal.review.unsupported_claims
+                    if proposal.review is not None and not unverified
+                    else []
+                ),
+                "assessment": (
+                    proposal.review.assessment
+                    if proposal.review is not None and not unverified
+                    else ""
+                ),
+            },
+        )
+
+    def edit(markdown: str, history: EditHistory) -> tuple[str, EditHistory]:
+        result = apply_proposal(
+            content=markdown,
+            proposal=proposal,
+            history=history,
+            editor=staff_id or "",
+            now=_now_iso(),
+            reason=request.reason,
+            # So a correction that only ever happens on one kind of piece
+            # cannot later be read as a rule about all of them (improvement
+            # 05).
+            form_id=form_id,
+            review_status=review_status,
+            # Only when a person actually overrode something. An empty list on
+            # a passed edit and an empty list on an accepted one would be the
+            # same row.
+            accepted_despite=findings if review_status != SUPPORTED else [],
+        )
+        if not result.applied:
+            # The reason, not a guess at it. Staleness was the only refusal
+            # this route knew about, so a proposal refused for saying it could
+            # not make the change was reported as a draft that had moved --
+            # which sends an editor to re-read a section nothing has touched.
+            reason = result.rejected[0]["reason"] if result.rejected else ""
+            raise EditRefused(
+                _APPLY_REFUSALS.get(reason)
+                or (
+                    "That section has changed since this edit was proposed. "
+                    "Read it again and ask for the change from where it is now."
+                )
+            )
+        return result.markdown, result.history
+
+    try:
+        committed = commit_article_edit(
+            run_id=run_id,
+            expected_revision=(
+                proposal.base_revision if proposal.base_revision >= 0 else None
+            ),
+            edit=edit,
+            edit_id=proposal.edit_id,
+        )
+    except ArticleMissing as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RevisionConflict as exc:
         raise HTTPException(
             status_code=409,
             detail=(
-                "That section has changed since this edit was proposed. "
-                "Read it again and ask for the change from where it is now."
+                "The article has changed since this edit was proposed -- "
+                "another edit landed, or the run was re-finalised. Re-read it "
+                "and ask again from where it is now."
             ),
-        )
-    _save_article(run_id, output, result.markdown)
-    RunRecorder().record_stage(
-        run_id, SECTION_EDIT_STAGE, result.history.model_dump(mode="json")
+        ) from exc
+    except EditRefused as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    return JSONResponse(
+        {
+            "markdown": committed.markdown,
+            "edits": len(committed.history.edits),
+            "revision": committed.revision,
+            "review_status": review_status,
+            # So a repeated click is reported as the edit it already is,
+            # rather than as a second one.
+            "already_applied": committed.already_applied,
+        }
     )
-    return JSONResponse({"markdown": result.markdown, "edits": len(result.history.edits)})
 
 
 @router.post("/section-edit/{run_id}/undo", dependencies=[Depends(require_staff)])
-def undo_edit(run_id: str) -> JSONResponse:
-    """Put the draft back to what it was before the last applied edit."""
-    output = _finished_run(run_id)
-    undone = undo_last(_edit_history(run_id))
-    if undone is None:
-        # Not an error. Pressing undo on an unedited draft is a question with
-        # a plain answer.
-        return JSONResponse(
-            {"markdown": output["markdown"], "edits": 0, "undone": False}
+def undo_edit(
+    run_id: str, request: UndoEditRequest | None = None
+) -> JSONResponse:
+    """Put the draft back to what it was before the last applied edit.
+
+    Guarded by the same revision check as an apply, because it is the same
+    kind of write. Pressed on a screen showing revision 10 while a colleague
+    saved revision 11, an unguarded undo restores the markdown from before
+    *this tab's* last edit and erases theirs on the way past.
+
+    The restore is a new revision, not a return to an old one. Nothing is
+    rewound; the article moves forward to prose it held before.
+    """
+    base_revision = request.base_revision if request else -1
+
+    def edit(_markdown: str, history: EditHistory) -> tuple[str, EditHistory]:
+        undone = undo_last(history)
+        if undone is None:
+            # Not an error. Pressing undo on an unedited draft is a question
+            # with a plain answer.
+            raise EditRefused("")
+        return undone
+
+    try:
+        committed = commit_article_edit(
+            run_id=run_id,
+            expected_revision=base_revision if base_revision >= 0 else None,
+            edit=edit,
         )
-    markdown, history = undone
-    _save_article(run_id, output, markdown)
-    RunRecorder().record_stage(
-        run_id, SECTION_EDIT_STAGE, history.model_dump(mode="json")
-    )
+    except ArticleMissing as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RevisionConflict as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "The article has changed since this screen read it. Re-read "
+                "it before undoing, so an undo does not take back somebody "
+                "else's edit."
+            ),
+        ) from exc
+    except EditRefused:
+        state = read_article(run_id)
+        return JSONResponse(
+            {
+                "markdown": state.markdown,
+                "edits": 0,
+                "undone": False,
+                "revision": state.revision,
+            }
+        )
+
     return JSONResponse(
-        {"markdown": markdown, "edits": len(history.edits), "undone": True}
+        {
+            "markdown": committed.markdown,
+            "edits": len(committed.history.edits),
+            "undone": True,
+            "revision": committed.revision,
+        }
     )
 
 

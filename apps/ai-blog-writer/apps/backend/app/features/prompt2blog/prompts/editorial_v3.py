@@ -394,7 +394,9 @@ How editing works here:
   The opening block has no heading — leave `heading` empty for it.
 - You cannot add a section, delete one, or reorder them. That is a planning
   decision and this pass does not hold the plan. Change length inside the
-  sections that exist.
+  sections that exist. `content` may not contain a `##` or `#` line of its own
+  and `heading` may not span lines; an entry that does is discarded.
+- Only the sections under SECTIONS YOU MAY CHANGE are yours to change.
 - A revision that needs several sections moved together must return all of
   them. Do not fix half of a structural problem.
 
@@ -441,6 +443,12 @@ SECTIONS CONTAINING A FLAGGED CLAIM:
 
 SECTION MAP:
 {section_map}
+
+SECTIONS YOU MAY CHANGE:
+An entry for any other section is discarded and that section keeps its current
+text. This list is what the required revisions and the flagged claims actually
+point at; it is not a judgement about the rest of the draft.
+{editable_sections}
 
 PREVIOUS TITLE:
 {previous_title}

@@ -32,6 +32,8 @@ const ACTIONS = [
 function proposal(overrides: Partial<SectionEditProposal> = {}): SectionEditProposal {
   return {
     run_id: 'run-1',
+    edit_id: 'edit-1',
+    base_revision: 4,
     section_id: 's1',
     heading: 'Where to eat',
     action_id: 'clarify_recommendation',
@@ -41,6 +43,12 @@ function proposal(overrides: Partial<SectionEditProposal> = {}): SectionEditProp
     what_changed: 'Named the choice instead of listing both.',
     could_not_do: '',
     introduced_figures: [],
+    review: {
+      status: 'supported',
+      checked: true,
+      assessment: 'Every figure matches the record it comes from.',
+      unsupported_claims: [],
+    },
     ...overrides,
   }
 }
@@ -84,7 +92,13 @@ describe('nothing lands unread', () => {
 
   it('applies only when the editor says to', async () => {
     proposeSectionEdit.mockResolvedValue(proposal())
-    applySectionEdit.mockResolvedValue({ markdown: '# edited', edits: 1 })
+    applySectionEdit.mockResolvedValue({
+      markdown: '# edited',
+      edits: 1,
+      revision: 5,
+      review_status: 'supported',
+      already_applied: false,
+    })
     open()
 
     await userEvent.click(
@@ -148,6 +162,30 @@ describe('what it refuses to hide', () => {
     ).toBeInTheDocument()
   })
 
+  it('does not offer to apply a refusal', async () => {
+    // The server normalises a refused answer back to the original, so there is
+    // nothing to apply. Offering "Use this" beside a refusal was how a model
+    // saying "cannot support this" still got its changed text accepted.
+    proposeSectionEdit.mockResolvedValue(
+      proposal({
+        revised: '## Where to eat\n\nBoth are good.',
+        could_not_do: 'Nothing on the desk says which suits whom.',
+      }),
+    )
+    open()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Make the recommendation clearer' }),
+    )
+
+    await screen.findByText('Nothing on the desk says which suits whom.')
+    expect(screen.queryByRole('button', { name: 'Use this' })).toBeNull()
+    expect(
+      screen.getByRole('button', { name: 'Ask for something else' }),
+    ).toBeInTheDocument()
+    expect(applySectionEdit).not.toHaveBeenCalled()
+  })
+
   it('calls out a figure that came from nowhere', async () => {
     proposeSectionEdit.mockResolvedValue(
       proposal({ introduced_figures: ['12 minutes'] }),
@@ -188,6 +226,7 @@ describe('taking it back', () => {
       markdown: '# original',
       edits: 0,
       undone: true,
+      revision: 6,
     })
     render(
       <SectionEditor
@@ -212,6 +251,7 @@ describe('taking it back', () => {
       markdown: '# original',
       edits: 0,
       undone: false,
+      revision: 4,
     })
     render(
       <SectionEditor
@@ -229,5 +269,158 @@ describe('taking it back', () => {
 
     await waitFor(() => expect(undoSectionEdit).toHaveBeenCalled())
     expect(applied).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('what the checker found', () => {
+  it('shows the findings and asks for a decision', async () => {
+    // The figure warning compares sets of numbers, so a swap of two prices the
+    // research already carries is invisible to it. This is the reading of what
+    // the new text asserts.
+    proposeSectionEdit.mockResolvedValue(
+      proposal({
+        revised: '## Where to eat\n\nThe stalls cost $40.',
+        review: {
+          status: 'unsupported',
+          checked: true,
+          assessment: 'The prices are attached to the wrong things.',
+          unsupported_claims: [
+            {
+              claim: 'The stalls cost $40',
+              reason: 'The record says the stalls cost $8.',
+              severity: 'high',
+            },
+          ],
+        },
+      }),
+    )
+    open()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Make the recommendation clearer' }),
+    )
+
+    expect(
+      await screen.findByText('The prices are attached to the wrong things.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('The stalls cost $40')).toBeInTheDocument()
+    // A different press from the one on an edit that passed, and the server
+    // records it as one.
+    expect(
+      screen.getByRole('button', { name: 'Use it anyway' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Use this' })).toBeNull()
+  })
+
+  it('does not show an unchecked edit as a checked one', async () => {
+    proposeSectionEdit.mockResolvedValue(
+      proposal({
+        review: {
+          status: 'unchecked',
+          checked: false,
+          assessment: 'Grounding could not be completed: the checker is down.',
+          unsupported_claims: [],
+        },
+      }),
+    )
+    open()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Say it in fewer words' }),
+    )
+
+    expect(
+      await screen.findByText(/has not been checked against the research/),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Use it anyway' }),
+    ).toBeInTheDocument()
+  })
+
+  it('shows factual differences beside the diff, labelled as differences', async () => {
+    // A diff answers "what words moved". An editor deciding whether to keep
+    // this is asking whether a caveat went.
+    proposeSectionEdit.mockResolvedValue(
+      proposal({
+        factual_changes: {
+          text_changes: [
+            {
+              kind: 'qualification_removed',
+              text: 'as of',
+              note: 'A phrase that limited a claim is no longer there.',
+            },
+          ],
+          text_changes_are:
+            'exact differences between the two texts, not a judgement about whether the change is wrong',
+          review: null,
+          review_status: 'supported',
+          candidate_hash: 'abc',
+          base_revision: 4,
+        },
+      }),
+    )
+    open()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Say it in fewer words' }),
+    )
+
+    const panel = await screen.findByRole('region', {
+      name: 'What changed factually',
+    })
+    expect(panel).toHaveTextContent('as of')
+    expect(panel).toHaveTextContent(/not a judgement/)
+  })
+
+  it('does not show a factual panel when nothing factual changed', async () => {
+    proposeSectionEdit.mockResolvedValue(
+      proposal({
+        factual_changes: {
+          text_changes: [],
+          text_changes_are: 'exact differences',
+          review: null,
+          review_status: 'supported',
+          candidate_hash: 'abc',
+          base_revision: 4,
+        },
+      }),
+    )
+    open()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Say it in fewer words' }),
+    )
+
+    await screen.findByRole('button', { name: 'Use this' })
+    expect(
+      screen.queryByRole('region', { name: 'What changed factually' }),
+    ).toBeNull()
+  })
+
+  it('applies a passed edit without asking for an override', async () => {
+    proposeSectionEdit.mockResolvedValue(proposal())
+    applySectionEdit.mockResolvedValue({
+      markdown: '# edited',
+      edits: 1,
+      revision: 5,
+      review_status: 'supported',
+      already_applied: false,
+    })
+    open()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Say it in fewer words' }),
+    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Use this' }))
+
+    await waitFor(() =>
+      expect(applySectionEdit).toHaveBeenCalledWith(
+        'run-1',
+        expect.anything(),
+        '',
+        false,
+      ),
+    )
   })
 })

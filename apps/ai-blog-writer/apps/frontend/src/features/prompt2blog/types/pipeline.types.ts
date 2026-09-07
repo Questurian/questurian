@@ -253,7 +253,17 @@ export type Prompt2BlogRunCost = {
   attributed_total_tokens?: number
   ledger_version?: number
   measurement_status: 'complete' | 'partial' | 'unavailable'
+  /**
+   * Real spend and notional spend added together. True of nothing — a Claude
+   * call on the flat subscription charges nobody, and this adds its
+   * API-equivalent price to money that actually moved. Kept for older runs;
+   * read the two fields below instead.
+   */
   estimated_cost_usd: number | null
+  /** What the run actually cost. Per-token billing only. */
+  billed_cost_usd?: number | null
+  /** What the subscription calls would have cost on the API. Not a charge. */
+  subscription_cost_usd?: number | null
   currency: 'USD'
   by_model: Array<{
     model: string

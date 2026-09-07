@@ -133,7 +133,14 @@ def read_all_stage_results(run_id: str) -> Dict[str, Any]:
 
 
 def write_artifact(run_id: str, payload: Dict[str, Any]) -> str:
-    """Write final artifact with markdown."""
+    """Write final artifact with markdown.
+
+    Advances `article_revision`. Every path that writes an article's markdown
+    goes through here, so an edit proposed against one version of the prose is
+    refused after any of them -- not only after another hand edit. A resume
+    that re-finalises a run is exactly as much a reason to re-read a section as
+    a colleague's edit in another tab.
+    """
     markdown = payload.pop("markdown", "")
 
     with get_db_connection() as conn:
@@ -144,7 +151,8 @@ def write_artifact(run_id: str, payload: Dict[str, Any]) -> str:
             ON CONFLICT(run_id) DO UPDATE SET
                 markdown = excluded.markdown,
                 artifact = excluded.artifact,
-                created_at = excluded.created_at
+                created_at = excluded.created_at,
+                article_revision = outputs.article_revision + 1
         """,
             (
                 run_id,
@@ -159,13 +167,18 @@ def read_output(run_id: str) -> Optional[Dict[str, Any]]:
     """Read final output (markdown + artifact)."""
     with get_db_connection() as conn:
         row = conn.execute(
-            "SELECT markdown, artifact FROM outputs WHERE run_id = ?", (run_id,)
+            "SELECT markdown, artifact, article_revision FROM outputs "
+            "WHERE run_id = ?",
+            (run_id,),
         ).fetchone()
         if not row:
             return None
         return {
             "markdown": row["markdown"],
             "artifact": json.loads(row["artifact"]),
+            # What an edit proposed against this text must be applied to. A
+            # caller that ignores it gets the old behaviour and the old bug.
+            "article_revision": row["article_revision"],
         }
 
 

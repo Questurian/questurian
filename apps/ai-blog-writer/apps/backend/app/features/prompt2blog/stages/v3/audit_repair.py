@@ -34,6 +34,11 @@ from ...content.sections import (
     segment_article,
 )
 from ...schemas import REPAIR_SECTIONS_SCHEMA
+from .repair_targets import (
+    resolve_repair_targets,
+    screen_against_targets,
+    targets_block,
+)
 from ...support import _format_style_directive, _json, _safe_dict, _safe_str
 
 
@@ -329,12 +334,25 @@ def run_v3_repair_stage(
     previous_content = rewrite["improved_content"]
     sections = segment_article(previous_content)
     flagged = locate_claims(sections, unsupported_claims)
+    # Worked out before the call, not after it. The claim-id screen refuses an
+    # edit resting on a fact this article was not written from; nothing refused
+    # an edit to a paragraph nobody complained about, so a pass asked to fix
+    # one section could rewrite the opening and be applied for it.
+    targets = resolve_repair_targets(
+        sections=sections,
+        required_revisions=required_revisions,
+        flagged=flagged,
+        article_wide=[length_revision] if length_revision else [],
+    )
 
     prompt = P2B_V3_REPAIR_PROMPT.format(
         required_revisions=_json(required_revisions),
         unsupported_claims=_json(unsupported_claims),
         flagged_sections=_json(flagged) if flagged else "None located by quote.",
         section_map=section_manifest(sections),
+        # The same list the screen enforces, so repair is not refused for
+        # doing what it was asked.
+        editable_sections=targets_block(targets, sections),
         previous_title=rewrite["improved_title"],
         previous_content=previous_content,
         facts=stage_context_text(state["stage_contexts"], "repair_facts")
@@ -364,11 +382,20 @@ def run_v3_repair_stage(
         parsed_dict.get("sections"),
         allowed_claim_ids=_packet_claim_ids(state),
     )
+    screened, scope_rejections = screen_against_targets(screened, targets)
     edit = apply_section_replacements(previous_content, screened)
     edit_report = {
         **edit.as_dict(),
-        "rejected": [*edit.as_dict()["rejected"], *cited_rejections],
+        "rejected": [
+            *edit.as_dict()["rejected"],
+            *cited_rejections,
+            *scope_rejections,
+        ],
         "section_count": len(sections),
+        # On the record whether or not anything was refused. A pass that was
+        # allowed the whole document because no revision could be located is
+        # not describable afterwards as a targeted one.
+        "targets": targets.as_dict(),
     }
 
     repaired = _sanitize_rewrite(

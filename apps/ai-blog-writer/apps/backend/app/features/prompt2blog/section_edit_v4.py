@@ -31,6 +31,7 @@ person still has to press apply.
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -39,6 +40,7 @@ from pydantic import BaseModel, Field
 from .article_memory import build_article_memory
 from .content.sections import ArticleSection, segment_article
 from .dependencies import PipelineDependencies
+from .edit_review import EditReview
 from .provenance import _figures
 from .support import _safe_dict, _safe_str
 
@@ -240,6 +242,17 @@ class EditProposal(BaseModel):
 
     schema_version: int = SECTION_EDIT_SCHEMA_VERSION
     run_id: str
+    # This proposal, once, forever. A double-click and a retried request send
+    # the same object twice; the second arrives against a revision the first
+    # advanced past, and without an id that reads as a conflict and sends an
+    # editor to re-read prose that already says what they wanted.
+    edit_id: str = ""
+    # Which version of the whole article this was read from. The section hash
+    # says the paragraph has not moved; this says the document has not, which
+    # is the difference between refusing an edit to prose that changed and
+    # refusing a write that would discard someone else's accepted edit
+    # elsewhere in the same draft.
+    base_revision: int = -1
     section_id: str
     heading: str = ""
     action_id: str
@@ -251,10 +264,18 @@ class EditProposal(BaseModel):
     what_changed: str = ""
     could_not_do: str = ""
     # Figures in the proposal that are in neither the original nor the packet.
-    # Deterministic, cheap, and the exact shape of the failure this invites: an
+    # Deterministic, cheap, and the exact shape of one failure this invites: an
     # editor asks for a stronger recommendation and gets a number that would
     # make one.
+    #
+    # A warning aid, and no longer the whole factual review. It compares sets
+    # of tokens, so swapping two prices the packet already contains is
+    # invisible to it -- which is what `review` is for.
     introduced_figures: list[str] = Field(default_factory=list)
+    # What a checker made of the candidate, read against the frozen packet in
+    # the article it sits in. `None` on a refusal or a no-op, where there is no
+    # new prose to judge.
+    review: EditReview | None = None
 
     @property
     def changed(self) -> bool:
@@ -262,14 +283,35 @@ class EditProposal(BaseModel):
 
 
 def _packet_figures(packet: dict[str, Any]) -> set[str]:
-    text = " ".join(
-        _safe_str(_safe_dict(fact).get("text")) for fact in packet.get("facts") or []
-    )
-    material = " ".join(
-        _safe_str(_safe_dict(item).get("statement"))
-        for item in packet.get("supplied_material") or []
-    )
-    return _figures(f"{text} {material}")
+    """Every figure the model was shown, which is not the same as every fact.
+
+    This has to cover exactly what `_facts_block` puts in the prompt. It used
+    to read `text` and `statement` only, while the prompt also carries each
+    fact's as-of date, the operator's note on it, and the limit notes -- so a
+    model that correctly wrote "as of March 2026" had 2026 reported as a figure
+    it invented.
+
+    Found on the first live call this code ever made, against a brief whose
+    `fails_if` was "quotes a fare without saying when it was true". The model
+    did the right thing and the guard called it an invention. A warning that
+    fires on correct work is worse than no warning: it is the one an editor
+    learns to click past.
+    """
+    parts: list[str] = []
+    for fact in packet.get("facts") or []:
+        record = _safe_dict(fact)
+        parts.extend(
+            (
+                _safe_str(record.get("text")),
+                _safe_str(record.get("as_of")),
+                _safe_str(record.get("operator_note")),
+            )
+        )
+    for note in packet.get("notes") or []:
+        parts.append(_safe_str(_safe_dict(note).get("text")))
+    for item in packet.get("supplied_material") or []:
+        parts.append(_safe_str(_safe_dict(item).get("statement")))
+    return _figures(" ".join(part for part in parts if part))
 
 
 def find_section(content: str, section_id: str) -> ArticleSection | None:
@@ -288,6 +330,7 @@ def propose_section_edit(
     brief: dict[str, Any],
     packet: dict[str, Any],
     dependencies: PipelineDependencies,
+    base_revision: int = -1,
     model_name: str | None = None,
     outline: dict[str, Any] | None = None,
 ) -> EditProposal:
@@ -334,12 +377,26 @@ def propose_section_edit(
         # considered cut, and this pass may not delete a section in any case.
         revised = original
         could_not_do = could_not_do or "The edit came back empty, so nothing changed."
+    if could_not_do:
+        # A refusal and a replacement are different answers, and a response
+        # that gives both has not answered. The prompt asks for the original
+        # back verbatim alongside `could_not_do`; what came back on the probe
+        # was "Cannot support this" beside prose carrying a $999 nobody had
+        # ever seen, and the screen offered it as an ordinary proposal because
+        # the text differed from the original.
+        #
+        # Normalised here rather than shown with a warning. An advisory
+        # finding is something a person may knowingly accept; there is nothing
+        # to accept in a change the model has just said it could not make.
+        revised = original
 
     introduced = sorted(
         _figures(revised) - _figures(original) - _packet_figures(packet)
     )
     return EditProposal(
         run_id=run_id,
+        edit_id=uuid.uuid4().hex,
+        base_revision=base_revision,
         section_id=section_id,
         heading=section.heading,
         action_id=action_id,
@@ -360,6 +417,9 @@ def propose_section_edit(
 class AppliedEdit(BaseModel):
     """One applied edit, and the whole draft as it was before it."""
 
+    # The proposal this came from, so a repeat of it can be recognised as the
+    # same edit rather than applied a second time.
+    edit_id: str = ""
     section_id: str
     action_id: str
     applied_at: str = ""
@@ -381,6 +441,12 @@ class AppliedEdit(BaseModel):
     # Which form the article was, so a correction that only ever happens on one
     # kind of piece cannot be read as a rule about all of them.
     form_id: str = ""
+    # What the checker said about this text, and -- when it said something an
+    # editor went ahead anyway -- that they did. Recorded rather than implied:
+    # "nobody checked", "it checked out" and "it did not and we kept it" are
+    # three different things to find in a history six weeks later.
+    review_status: str = "unchecked"
+    accepted_despite: list[str] = Field(default_factory=list)
 
 
 class EditHistory(BaseModel):
@@ -412,6 +478,8 @@ def apply_proposal(
     now: str,
     reason: str = "",
     form_id: str = "",
+    review_status: str = "unchecked",
+    accepted_despite: list[str] | None = None,
 ) -> ApplyResult:
     """Write one accepted proposal into the draft, keeping what it replaced.
 
@@ -420,8 +488,46 @@ def apply_proposal(
     applied over the top of it. `apply_section_replacements` already enforces
     that, along with the rules that an edit may not empty a section and may not
     give the opening block a heading.
+
+    The refusal invariant is checked here too, not only where the proposal was
+    made. `propose_section_edit` normalises a refused answer back to the
+    original, but a proposal reaches this function as a request body: the
+    server that decided what a refusal means has to be the server that holds
+    the meaning, or a client can hand the same object back with the prose put
+    in again and have it accepted as an ordinary edit.
     """
     from .content.sections import apply_section_replacements
+
+    if proposal.could_not_do and proposal.changed:
+        return ApplyResult(
+            markdown=content,
+            history=history,
+            rejected=[
+                {
+                    "section_id": proposal.section_id,
+                    "reason": (
+                        "this proposal says it could not make the change and "
+                        "changes the text as well"
+                    ),
+                }
+            ],
+        )
+    if not proposal.changed:
+        # Not an error, and not history either. An accepted edit is a record
+        # of prose a person chose over other prose, and pattern learning reads
+        # that record: a no-op filed into it is a correction that never
+        # happened, counting towards the threshold that decides whether the
+        # voice file should change.
+        return ApplyResult(
+            markdown=content,
+            history=history,
+            rejected=[
+                {
+                    "section_id": proposal.section_id,
+                    "reason": "this proposal does not change the section",
+                }
+            ],
+        )
 
     result = apply_section_replacements(
         content,
@@ -444,6 +550,7 @@ def apply_proposal(
         edits=[
             *history.edits,
             AppliedEdit(
+                edit_id=proposal.edit_id,
                 section_id=proposal.section_id,
                 action_id=proposal.action_id,
                 applied_at=now,
@@ -454,6 +561,8 @@ def apply_proposal(
                 after=proposal.revised,
                 reason=reason,
                 form_id=form_id,
+                review_status=review_status,
+                accepted_despite=list(accepted_despite or []),
             ),
         ],
     )

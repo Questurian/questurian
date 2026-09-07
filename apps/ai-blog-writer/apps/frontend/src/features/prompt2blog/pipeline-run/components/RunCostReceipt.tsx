@@ -28,9 +28,26 @@ export function RunCostReceipt({ cost }: { cost: RunCost }) {
             routing -- so every receipt said "Custom stack" and named nothing. */}
         <h4>{cost.models.writer || 'Model not recorded'}</h4>
       </div>
+      {/* Two numbers, because they are two different things. The headline is
+          money that left an account. Claude runs on the flat subscription, so
+          its calls charge nobody -- but the CLI reports what they would have
+          cost on the API, and that figure used to be added straight into the
+          headline. On the chifa run that turned $0.36 of real spend into
+          $2.65 on screen. */}
       <div className="p2b-run-cost__total">
-        <span>Estimated run cost</span>
-        <strong>{formatUsd(cost.estimated_cost_usd, cost.measurement_status)}</strong>
+        <span>Billed this run</span>
+        <strong>
+          {formatUsd(
+            cost.billed_cost_usd ?? cost.estimated_cost_usd,
+            cost.measurement_status,
+          )}
+        </strong>
+        {cost.subscription_cost_usd != null && cost.subscription_cost_usd > 0 && (
+          <span className="p2b-run-cost__subscription">
+            + {formatUsd(cost.subscription_cost_usd)} on the Claude subscription,
+            not charged
+          </span>
+        )}
       </div>
     </div>
     <div className="p2b-run-cost__metrics">

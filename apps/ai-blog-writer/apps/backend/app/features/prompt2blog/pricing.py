@@ -203,6 +203,47 @@ class Prompt2BlogTokenUsageTracker:
             for key in STAGE_USAGE_KEYS
         }
 
+    def cost_split(self) -> dict[str, Any]:
+        """Money that left an account, and money that did not, kept apart.
+
+        A `rate-table` price is real spend: a Vertex call billed per token. A
+        `measured` price comes from the Claude Code CLI and is what the same
+        work would have cost at API rates -- those calls draw the plan holder's
+        flat allowance, so nobody is charged for them.
+
+        Adding the two produces a number that is true of nothing. On the two
+        runs measured for `run_billed_cost_usd`, chifa 3750891f was $0.36
+        billed beside $2.29 notional and ceviche 8a7e9aa4 $0.38 beside $1.97 --
+        so a single "estimated run cost" reported roughly seven times the money
+        that actually moved.
+
+        The budget breaker already reads the two apart. This is the same rule,
+        exposed to everything that reports a figure to a person rather than
+        recomputed by each of them.
+        """
+        billed = 0.0
+        subscription = 0.0
+        unpriced = 0
+        for entry in self.calls:
+            cost = entry.get("cost_usd")
+            if not isinstance(cost, (int, float)) or isinstance(cost, bool):
+                unpriced += 1
+                continue
+            if entry.get("cost_basis") == COST_BASIS_MEASURED:
+                subscription += float(cost)
+            elif entry.get("cost_basis") == COST_BASIS_RATE_TABLE:
+                billed += float(cost)
+            else:
+                unpriced += 1
+        return {
+            # What this run actually cost, in money.
+            "billed_cost_usd": round(billed, 6),
+            # What the subscription calls would have cost on the API. Real
+            # tokens, notional money -- never added to the line above.
+            "subscription_cost_usd": round(subscription, 6),
+            "unpriced_calls": unpriced,
+        }
+
     def begin_stage(self, stage: str) -> int:
         """Open a numbered attempt of `stage`; later calls are filed under it.
 
@@ -234,6 +275,7 @@ class Prompt2BlogTokenUsageTracker:
             "by_attempt": self._attempt_rows(),
             "by_stage": self._stage_rows(),
             "totals": self.totals(),
+            "cost": self.cost_split(),
             "successful_calls": self.successful_calls,
             "unmetered_calls": self.successful_calls - self.measured_calls,
         }
@@ -590,11 +632,16 @@ class Prompt2BlogTokenUsageTracker:
                 row["total_tokens"] for row in stage_rows
             ),
             "ledger_version": LEDGER_VERSION,
+            # Kept, and no longer the number a person is shown. It adds real
+            # per-token spend to the notional API-equivalent price of calls
+            # that drew a flat subscription, which is true of nothing -- see
+            # `cost_split`. The two figures beside it are the ones to read.
             "estimated_cost_usd": (
                 round(estimated_cost_usd, 6)
                 if self.measured_calls and fully_priced
                 else None
             ),
+            **self.cost_split(),
             "currency": "USD",
             "by_model": model_rows,
             "by_stage": stage_rows,
