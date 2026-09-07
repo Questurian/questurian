@@ -436,3 +436,52 @@ def test_the_exact_quote_safeguard_is_untouched():
     }
 
     assert _material_from(payload, state) == []
+
+
+def test_a_rule_about_every_item_leaves_must_name_for_fails_if():
+    """`must_name` is a coverage checklist, so a rule in it is enforced repetition.
+
+    Run e001d48c was briefed with "For each working ascensor named: what a
+    visitor pays at the window" and three more like it. The finished article
+    printed the fare in six of its seven sections; the writer was obeying, and
+    the audit scored the same list, so saying it once would have failed. The
+    repetition was identical in the first draft and after repair, which is how
+    it was traced back to the brief rather than to the repair loop.
+    """
+    deps = _deps(
+        _payload(
+            must_name=[
+                "The visitor fare of 1,000 pesos",
+                "For each working ascensor named: what a visitor pays",
+                "Each ascensor: the street you step out onto",
+            ],
+            fails_if="reads like a tourist board",
+        )
+    )
+
+    brief = build_brief(_agreed(), deps)
+
+    assert brief.must_name == ["The visitor fare of 1,000 pesos"]
+    # Kept, not discarded: the obligation moves to the line the whole article
+    # is judged against instead of a list scored one entry at a time.
+    assert brief.fails_if.startswith("reads like a tourist board")
+    assert "For each working ascensor named: what a visitor pays" in brief.fails_if
+    assert "Each ascensor: the street you step out onto" in brief.fails_if
+
+
+def test_a_name_that_merely_starts_with_every_is_still_a_name():
+    deps = _deps(_payload(must_name=["Every Man Jack bar", "Huaca Pucllana"]))
+
+    brief = build_brief(_agreed(), deps)
+
+    assert brief.must_name == ["Every Man Jack bar", "Huaca Pucllana"]
+
+
+def test_the_prompt_tells_the_brief_writer_not_to_write_per_item_rules():
+    deps = _deps(_payload())
+    build_brief(_agreed(), deps)
+
+    prompt = deps.llm.prompts[0]
+    assert "Never write a rule" in prompt
+    assert '"For each museum named: what it costs" is not a name' in prompt
+    assert "belongs in `fails_if`" in prompt

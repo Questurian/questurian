@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from typing import Any, get_args
 
 from pydantic import ValidationError
@@ -148,6 +149,11 @@ rather than leaving it blank.
   list: one name per entry, never several in one string separated by commas.
   A single entry reading "Surquillo market, Miraflores, the municipal ranking"
   is three obligations the system can then only measure as one.
+  Every entry names ONE thing the article must contain. Never write a rule
+  about every item -- "For each museum named: what it costs" is not a name,
+  and the writer reads this list as a checklist to satisfy in the prose, so a
+  rule like that comes back as the same fact repeated in every section. If the
+  operator wants a detail carried for each item, that belongs in `fails_if`.
 - `material` is what they personally have. For each entry, `quoted_answer` must
   be an EXACT copy of one of their answers above -- do not summarise, tidy or
   merge. `kind` is firsthand, interview, or research.
@@ -212,6 +218,37 @@ def _material_from(payload: dict[str, Any], state: GrillState) -> list[BriefMate
             BriefMaterial(kind=kind, statement=quoted, note=_safe_str(record.get("note")))
         )
     return material
+
+
+# A `must_name` entry that begins "for each" is not a name, it is a rule about
+# every item the article names. Narrow on purpose: a bare "Every ..." can open
+# a real name ("Every Man Jack bar"), so that form only counts as a rule when
+# it also carries the colon that introduces what must be said about each item.
+_PER_ITEM_RULE = re.compile(
+    r"^for\s+(?:each|every)\b|^(?:each|every)\b[^:]*:", re.IGNORECASE
+)
+
+
+def _split_per_item_rules(entries: list[str]) -> tuple[list[str], list[str]]:
+    """Separate the names the article must carry from rules about every item.
+
+    `must_name` is a coverage checklist: the writer reads it in the brief and
+    the audit scores the finished article entry by entry. A rule in that list
+    is therefore an instruction to repeat something for every item, enforced.
+
+    Run e001d48c was briefed with four such entries -- "For each working
+    ascensor named: what a visitor pays at the window" and three more -- and
+    the article printed the fare in six of its seven sections. The writer was
+    obeying. The same repetition appeared in the first draft and survived
+    repair unchanged, because nothing in the repair loop was what put it there.
+
+    The rules are not discarded. They move to `fails_if`, which is prose the
+    writer weighs and the line the article is judged against as a whole, rather
+    than a list scored one line at a time.
+    """
+    names = [item for item in entries if not _PER_ITEM_RULE.match(item.strip())]
+    rules = [item for item in entries if _PER_ITEM_RULE.match(item.strip())]
+    return names, rules
 
 
 def _deduped(values: list[str], *, casefold: bool = False) -> list[str]:
@@ -391,6 +428,25 @@ def _build_brief_once(
         # article about somewhere else gets written.
         raise ValueError("The grill did not settle a location; ask before briefing.")
 
+    must_name, per_item_rules = _split_per_item_rules(
+        _deduped(_safe_str_list(payload.get("must_name")), casefold=True)
+    )
+    fails_if = _safe_str(payload.get("fails_if"))
+    if per_item_rules:
+        logger.info(
+            "Brief moved %s per-item rule(s) out of must_name: %s",
+            len(per_item_rules),
+            "; ".join(per_item_rules),
+        )
+        fails_if = "\n".join(
+            (
+                fails_if,
+                "It also fails on any of these, which are rules about every "
+                "item the article names rather than names in their own right:",
+                *(f"- {rule}" for rule in per_item_rules),
+            )
+        )
+
     fields: dict[str, Any] = {
         "seed": state.seed,
         "location": resolved_location,
@@ -403,12 +459,9 @@ def _build_brief_once(
         "outcome": _safe_str(payload.get("outcome")),
         "spine": _safe_str(payload.get("spine")),
         # Casefolded, because that is what the contract compares on.
-        "must_name": _deduped(
-            _safe_str_list(payload.get("must_name")),
-            casefold=True,
-        ),
+        "must_name": must_name,
         "material": _material_from(payload, state),
-        "fails_if": _safe_str(payload.get("fails_if")),
+        "fails_if": fails_if,
     }
     # Fingerprinted over the contents, before the fingerprint is one of them.
     fingerprint_source = {
