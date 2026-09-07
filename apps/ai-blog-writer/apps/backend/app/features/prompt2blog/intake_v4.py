@@ -905,13 +905,36 @@ def settle_premise(
             "about what is true, and it has to be attributable."
         )
 
-    work_order = load_work_order(run_id)
+    previous_order = load_work_order(run_id)
     evidence = load_evidence(run_id)
     notes = _stage_data(run_id, RESEARCH_STAGE).get("notes") or {}
 
     evidence, work_order = strike_assumption(
-        evidence, work_order, assumption_id=assumption_id
+        evidence, previous_order, assumption_id=assumption_id
     )
+    # Withdrawing an assumption does not unmake the facts that were found, so
+    # the questions that declared it keep their searches. Their notes have to
+    # be re-stamped against the new work order here, because striking removes
+    # the assumption from every requirement that named it and so changes those
+    # requirements' fingerprints. Without this, the notes are read back against
+    # a plan they no longer match and are silently discarded -- the next
+    # re-ask then restructures the dossier out of what is left, and questions
+    # that were answered disappear from it.
+    #
+    # Measured on run e001d48c (2026-09-06): striking one assumption three
+    # questions declared, then re-asking a fourth, cut the dossier from 66
+    # claims over seven questions to 23 over four, threw away a search that had
+    # just been bought, and put a run that had passed the gate back behind it.
+    #
+    # Read against the plan the notes were gathered under, written under the
+    # plan that replaces it. `notes_from_record` still refuses notes whose
+    # question or brief actually changed; this only says that an assumption a
+    # person deliberately withdrew is not such a change.
+    kept_notes = notes_from_record(_stage_data(run_id, NOTES_STAGE), previous_order)
+    if kept_notes:
+        services.recorder.record_stage(
+            run_id, NOTES_STAGE, notes_stage_record(work_order, kept_notes)
+        )
     _record(
         services,
         run_id,

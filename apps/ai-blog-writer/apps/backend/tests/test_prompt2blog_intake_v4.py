@@ -715,3 +715,51 @@ def test_the_brief_writer_is_told_one_name_per_entry(isolated_db):
     prompt = build_brief_prompt(_load_grill(run_id))
 
     assert "one name per entry" in prompt
+
+
+def test_withdrawing_a_premise_keeps_the_searches_the_questions_that_named_it_bought(
+    isolated_db,
+):
+    """Striking an assumption must not throw away the answers it touched.
+
+    `strike_assumption` removes the assumption from every requirement that
+    declared it, which changes those requirements' fingerprints, and
+    `notes_from_record` drops a note whose fingerprint moved. So the questions
+    the operator was explicitly told would keep their answers were the exact
+    ones that lost them, silently, at the next read.
+
+    Measured on run e001d48c (2026-09-06): the dossier fell from 66 claims
+    over seven questions to 23 over four, a search bought minutes earlier was
+    discarded, and a run that had passed the gate was back behind it.
+    """
+    from app.features.prompt2blog.contracts_v4 import WorkOrderAssumption
+    from app.features.prompt2blog.intake_v4 import settle_premise
+
+    payload = {
+        **WORK_ORDER_PAYLOAD,
+        "premise": [{"assumption_id": "a1", "statement": "Prices are published."}],
+        "requirements": [
+            {**item, "assumption_ids": ["a1"]}
+            for item in WORK_ORDER_PAYLOAD["requirements"]
+        ],
+    }
+    calls: list[str] = []
+    services = _with_research(
+        _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, payload])
+    )
+    services.research.gather = lambda prompt, _model: (
+        calls.append(prompt) or ("Notes.", ["https://example.pe/a"], 800)
+    )
+    run_id = _to_work_order(services)
+    do_research(run_id, services)
+    assert len(calls) == 3
+    assert load_work_order(run_id).premise == [
+        WorkOrderAssumption(assumption_id="a1", statement="Prices are published.")
+    ]
+
+    settle_premise(
+        run_id, services, assumption_id="a1", note="Nobody publishes one list."
+    )
+    do_research(run_id, services)
+
+    assert len(calls) == 3, "a withdrawn assumption re-bought searches it kept"
