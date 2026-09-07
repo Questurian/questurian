@@ -224,3 +224,131 @@ def test_undo_on_an_unedited_draft_is_a_plain_answer_not_an_error(isolated_db):
     assert payload["edits"] == 0
     assert payload["revision"] == 0
     assert payload["markdown"] == ARTICLE
+
+
+# ---------------------------------------------------------------------------
+# What the route spends
+# ---------------------------------------------------------------------------
+
+
+def _seed_packet(run_id: str) -> None:
+    from app.core import write_stage_result
+
+    write_stage_result(
+        run_id,
+        "pipeline_input_v3",
+        {"data": {"packet": {"facts": [{"text": "A costs $20."}]}}},
+    )
+
+
+def _stub_llm(monkeypatch, response: dict, usage: dict | None) -> None:
+    """Replace the provider call, keeping the tracker the route built.
+
+    The tracker is what the spend record is read off, so a double that skipped
+    it would prove nothing about the thing being tested.
+    """
+    from app.features.prompt2blog.dependencies import DefaultPrompt2BlogLLM
+
+    def invoke_json(self, *, job_id, prompt, **kwargs):
+        if usage is not None:
+            self.usage_tracker.begin_stage(job_id)
+            self.usage_tracker.record("gemini-2.5-flash", usage)
+        return response, "{}"
+
+    monkeypatch.setattr(DefaultPrompt2BlogLLM, "invoke_json", invoke_json)
+
+
+def _propose(run_id: str, action_id: str = "shorten"):
+    from app.features.prompt2blog.api import runs as runs_api
+
+    return runs_api.propose_edit(
+        run_id,
+        runs_api.SectionEditRequest(section_id="s1", action_id=action_id),
+    )
+
+
+USAGE = {"input_tokens": 1200, "output_tokens": 400, "total_tokens": 1600}
+
+
+def test_a_discarded_proposal_is_still_on_the_receipt(isolated_db, monkeypatch):
+    from app.features.prompt2blog.api import runs as runs_api
+    from app.features.prompt2blog.editor_spend import read_editor_spend
+
+    _seed("r-spend")
+    _seed_packet("r-spend")
+    _stub_llm(
+        monkeypatch, {"revised": "## Prices\n\nA is $20.", "could_not_do": ""}, USAGE
+    )
+
+    response_payload(_propose("r-spend"))
+    # And thrown away: nothing is applied.
+
+    spend = read_editor_spend("r-spend")
+    assert len(spend.attempts) == 1
+    assert spend.attempts[0].outcome == "proposed"
+    assert spend.totals()["input_tokens"] == 1200
+
+    payload = response_payload(runs_api.read_edit_spend("r-spend"))
+    assert payload["editor"]["attempts"] == 1
+    assert payload["editor"]["input_tokens"] == 1200
+
+
+def test_a_refused_proposal_is_recorded_as_refused(isolated_db, monkeypatch):
+    from app.features.prompt2blog.editor_spend import read_editor_spend
+
+    _seed("r-refused")
+    _seed_packet("r-refused")
+    _stub_llm(
+        monkeypatch,
+        {
+            "revised": "## Prices\n\nA is the winner.",
+            "could_not_do": "The facts do not support choosing.",
+        },
+        USAGE,
+    )
+
+    response_payload(_propose("r-refused", "clarify_recommendation"))
+
+    spend = read_editor_spend("r-refused")
+    assert spend.attempts[0].outcome == "refused"
+    assert spend.totals()["input_tokens"] == 1200
+
+
+def test_a_failed_call_is_recorded_and_the_article_survives(isolated_db, monkeypatch):
+    from app.features.prompt2blog.dependencies import DefaultPrompt2BlogLLM
+    from app.features.prompt2blog.editor_spend import read_editor_spend
+
+    _seed("r-failed")
+    _seed_packet("r-failed")
+
+    def explode(self, *, job_id, prompt, **kwargs):
+        raise RuntimeError("provider timed out")
+
+    monkeypatch.setattr(DefaultPrompt2BlogLLM, "invoke_json", explode)
+
+    with pytest.raises(RuntimeError):
+        _propose("r-failed")
+
+    spend = read_editor_spend("r-failed")
+    assert spend.attempts[0].outcome == "failed"
+    assert spend.attempts[0].measurement == "unknown"
+    assert spend.totals()["unmeasured_attempts"] == 1
+    # The article is untouched and still saveable.
+    assert read_article("r-failed").markdown == ARTICLE
+
+
+def test_applying_a_proposal_does_not_charge_for_it_again(isolated_db, monkeypatch):
+    from app.features.prompt2blog.editor_spend import read_editor_spend
+
+    _seed("r-apply")
+    _seed_packet("r-apply")
+    _stub_llm(
+        monkeypatch, {"revised": "## Prices\n\nA is $20.", "could_not_do": ""}, USAGE
+    )
+
+    proposed = response_payload(_propose("r-apply"))
+    before = read_editor_spend("r-apply").totals()
+
+    _apply("r-apply", EditProposal.model_validate(proposed))
+
+    assert read_editor_spend("r-apply").totals() == before

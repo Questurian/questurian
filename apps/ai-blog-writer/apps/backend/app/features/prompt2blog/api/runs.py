@@ -45,6 +45,14 @@ from ..article_edits import (
     read_article,
 )
 from ..config import FEATURE_NAME
+from ..pricing import Prompt2BlogTokenUsageTracker
+from ..run_recorder import USAGE_LEDGER_STAGE
+from ..editor_spend import (
+    EditorAttempt,
+    attempt_from_tracker,
+    read_editor_spend,
+    record_editor_attempt,
+)
 from ..contracts_v4 import Prompt2BlogV4Request
 from ..drafts_view import build_drafts_report, render_drafts_page
 from ..intake_v3 import (
@@ -85,7 +93,7 @@ from ..section_edit_v4 import (
     undo_last,
 )
 from ..run_recorder import RunRecorder
-from ..dependencies import dependencies_for_run
+from ..dependencies import DefaultPrompt2BlogLLM, PipelineDependencies
 from ..selection_v4 import selection_from_flags
 from ..support import _clean_string_list, _safe_dict, _safe_str
 
@@ -533,6 +541,10 @@ def propose_edit(run_id: str, request: SectionEditRequest) -> JSONResponse:
 
     This is the one route here that spends money -- one model call per request
     -- and it spends it on a section rather than an article.
+
+    Every attempt is recorded, whatever it produced. Five proposals an editor
+    read and threw away cost exactly as much as five they kept, and this route
+    used to leave no trace of any of them on the article's receipt.
     """
     output = _finished_run(run_id)
     try:
@@ -541,6 +553,18 @@ def propose_edit(run_id: str, request: SectionEditRequest) -> JSONResponse:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     artifact = _safe_dict(output["artifact"]).get("pipeline_v3") or {}
+    attempt_id = uuid4().hex
+    # Deliberately not `dependencies_for_run`, which restores the run's whole
+    # ledger. The tracker here should hold this one call and nothing else, so
+    # what is written afterwards cannot be an earlier leg's rows appearing
+    # again under a new id.
+    dependencies = PipelineDependencies(
+        llm=DefaultPrompt2BlogLLM(
+            usage_tracker=Prompt2BlogTokenUsageTracker(run_id=run_id),
+            run_id=run_id,
+        )
+    )
+    tracker = dependencies.llm.usage_tracker
     try:
         proposal = propose_section_edit(
             run_id=run_id,
@@ -552,7 +576,7 @@ def propose_edit(run_id: str, request: SectionEditRequest) -> JSONResponse:
             action_id=request.action_id,
             brief=_safe_dict(_safe_dict(artifact).get("brief")),
             packet=packet,
-            dependencies=dependencies_for_run(run_id),
+            dependencies=dependencies,
             # The plan, for the section purposes the memory reads off it. A run
             # whose outline was rejected has none, and the memory then rests on
             # the excerpts alone rather than refusing.
@@ -561,8 +585,74 @@ def propose_edit(run_id: str, request: SectionEditRequest) -> JSONResponse:
             ).get("outline"),
         )
     except ValueError as exc:
+        # A bad section or action id, caught before the call. Nothing was
+        # spent, so nothing is recorded.
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 -- recorded, then re-raised
+        # A call that failed after the provider had already charged for it is
+        # the case worth being careful about. Whatever the tracker got hold of
+        # is written; a tracker holding nothing is recorded as unmeasured
+        # rather than as zero.
+        record_editor_attempt(
+            run_id,
+            attempt_from_tracker(
+                tracker,
+                attempt_id=attempt_id,
+                kind="propose",
+                section_id=request.section_id,
+                action_id=request.action_id,
+                outcome="failed",
+                error=str(exc),
+            ),
+        )
+        raise
+
+    record_editor_attempt(
+        run_id,
+        attempt_from_tracker(
+            tracker,
+            attempt_id=attempt_id,
+            kind="propose",
+            section_id=request.section_id,
+            action_id=request.action_id,
+            outcome="refused" if proposal.could_not_do else "proposed",
+        ),
+    )
     return JSONResponse(proposal.model_dump(mode="json"))
+
+
+@router.get("/section-edit/{run_id}/spend", dependencies=[Depends(require_staff)])
+def read_edit_spend(run_id: str) -> JSONResponse:
+    """What has been spent on this article since the pipeline finished.
+
+    Beside the pipeline's own total rather than merged into it. "What the
+    article cost to make" and "what has been spent on it since" are different
+    questions, and the combined figure is computed here from the two durable
+    records instead of being stored as a third one that can disagree with
+    both.
+    """
+    _finished_run(run_id)
+    spend = read_editor_spend(run_id)
+    ledger = _safe_dict(
+        _safe_dict(read_stage_result(run_id, USAGE_LEDGER_STAGE)).get("data")
+    )
+    pipeline_cost = _safe_dict(ledger.get("totals")).get("estimated_cost_usd")
+    editor_totals = spend.totals()
+    return JSONResponse(
+        {
+            "run_id": run_id,
+            "pipeline": ledger.get("totals") or {},
+            "editor": editor_totals,
+            "attempts": [item.model_dump(mode="json") for item in spend.attempts],
+            # Only when both halves are numbers. A combined total that quietly
+            # treats an unknown as zero is worse than no combined total.
+            "combined_cost_usd": (
+                round(float(pipeline_cost) + editor_totals["estimated_cost_usd"], 6)
+                if isinstance(pipeline_cost, (int, float))
+                else None
+            ),
+        }
+    )
 
 
 @router.post("/section-edit/{run_id}/apply", dependencies=[Depends(require_staff)])
