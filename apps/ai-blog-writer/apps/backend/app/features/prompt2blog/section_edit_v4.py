@@ -36,6 +36,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from .article_memory import build_article_memory
 from .content.sections import ArticleSection, segment_article
 from .dependencies import PipelineDependencies
 from .provenance import _figures
@@ -165,6 +166,15 @@ Hard rules:
   asked for is not.
 - `what_changed` is one sentence, for a person deciding whether to keep this.
 
+WHAT THE REST OF THE ARTICLE ALREADY DOES (navigation, not evidence):
+This is here so you do not explain a second time what another section has
+already explained, and do not recommend something the article has already
+decided against. It is quoted from the draft, not summarised. It is NOT a
+source of facts: every figure and date you write must still come from the
+ORIGINAL SECTION or the FACTS AVAILABLE, and a number that appears only here
+is a number you may not use.
+{memory}
+
 THE ARTICLE THIS SECTION BELONGS TO:
 {brief}
 
@@ -279,6 +289,7 @@ def propose_section_edit(
     packet: dict[str, Any],
     dependencies: PipelineDependencies,
     model_name: str | None = None,
+    outline: dict[str, Any] | None = None,
 ) -> EditProposal:
     """Ask for one change to one section. Nothing is written.
 
@@ -294,8 +305,15 @@ def propose_section_edit(
         raise ValueError(f"This draft has no section '{section_id}'")
 
     original = section.render()
+    # Rebuilt from the draft as it is now, so an edit accepted a minute ago is
+    # already part of what the next one is told (improvement 03). Free and
+    # deterministic, which is why refreshing it costs nothing to do every time
+    # rather than being cached and going stale.
+    memory = build_article_memory(content, outline)
     prompt = P2B_SECTION_EDIT_PROMPT.format(
         instruction=action.instruction,
+        memory=memory.for_prompt(excluding=section_id)
+        or "This article has no other sections.",
         brief=_brief_block(brief),
         facts=_facts_block(packet),
         original=original,

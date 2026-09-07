@@ -496,6 +496,12 @@ def propose_edit(run_id: str, request: SectionEditRequest) -> JSONResponse:
             brief=_safe_dict(_safe_dict(artifact).get("brief")),
             packet=packet,
             dependencies=dependencies_for_run(run_id),
+            # The plan, for the section purposes the memory reads off it. A run
+            # whose outline was rejected has none, and the memory then rests on
+            # the excerpts alone rather than refusing.
+            outline=_safe_dict(
+                _safe_dict(read_stage_result(run_id, "stage_v3_outline")).get("data")
+            ).get("outline"),
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

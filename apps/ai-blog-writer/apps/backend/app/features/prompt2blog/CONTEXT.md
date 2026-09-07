@@ -50,6 +50,7 @@ them for the v2 fallback. Do not delete or renumber them.
 | `provenance.py` | Which chosen fact each passage of the finished article shares a figure or phrase with |
 | `evaluation.py` | Frozen writing inputs, blind draft comparison, and per-criterion scoring |
 | `section_edit_v4.py` | One operator-asked improvement to one section, proposed against the frozen facts and applied only on acceptance |
+| `article_memory.py` | What the rest of the draft already said, quoted from it, so a targeted edit does not repeat or contradict it |
 | `content/` | Pure source-text, Markdown, and editorial-block transformations |
 | `quality.py` | Deterministic checks, sanitizers, and repair gating |
 | `llm.py`, `dependencies.py` | Shared-LLM adapter and explicit dependency bundle |
