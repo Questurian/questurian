@@ -74,7 +74,13 @@ V3_OUTLINE_SCHEMA: dict[str, Any] = {
                 "required": ["heading"],
                 "properties": {
                     "heading": {"type": "string"},
-                    "purpose": {"type": "string"},
+                    # Replaces `purpose`, which was in this schema and defined
+                    # nowhere, so it came back as the heading said twice
+                    # (improvement 01). Not added to `required`: the rule at
+                    # the top of this file holds, and a missing payoff is a
+                    # plan `validate_v3_outline` rejects with a reason rather
+                    # than a call the transport refuses without one.
+                    "reader_payoff": {"type": "string"},
                     "claim_ids": {"type": "array", "items": {"type": "string"}},
                     "target_words": {"type": "integer", "minimum": 0},
                 },

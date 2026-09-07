@@ -143,21 +143,21 @@ def _outline_payload(**overrides) -> dict[str, Any]:
         "sections": [
             {
                 "heading": "What Lima costs now",
-                "purpose": "Establish the current cost baseline for Lima.",
+                "reader_payoff": "Whether a monthly budget stretches in Lima today.",
                 "claim_ids": ["c1"],
                 "requirement_ids": ["r1"],
                 "target_words": 300,
             },
             {
                 "heading": "The tradeoffs behind the price",
-                "purpose": "Show the practical tradeoffs a resident meets.",
+                "reader_payoff": "Which tradeoff a resident should accept for the price.",
                 "claim_ids": ["c2"],
                 "requirement_ids": ["r2"],
                 "target_words": 300,
             },
             {
                 "heading": "How the picture changed",
-                "purpose": "Compare the current baseline with earlier reporting.",
+                "reader_payoff": "Whether to move now or wait, given how costs moved.",
                 "claim_ids": ["c3"],
                 "requirement_ids": ["r3"],
                 "target_words": 300,
@@ -191,8 +191,8 @@ def test_city_only_outline_wording_covers_city_country_primary_subject(
     work_order["scope"]["references"] = []
     payload = _outline_payload()
     payload["sections"][0]["heading"] = f"What {subject_mention} costs now"
-    payload["sections"][0]["purpose"] = (
-        f"Establish the current cost baseline for {subject_mention}."
+    payload["sections"][0]["reader_payoff"] = (
+        f"Whether a monthly budget stretches in {subject_mention} today."
     )
 
     accepted, diagnostics = validate_v3_outline(
@@ -262,7 +262,9 @@ def test_sections_may_carry_the_subject_implicitly_when_the_framing_names_it():
     implicit = _outline_payload()
     for section in implicit["sections"]:
         section["heading"] = section["heading"].replace("Lima", "the city")
-        section["purpose"] = section["purpose"].replace("Lima", "the city")
+        section["reader_payoff"] = section["reader_payoff"].replace(
+            "Lima", "the city"
+        )
 
     accepted, diagnostics = _validate(implicit)
 
@@ -426,14 +428,14 @@ def _five_section_payload() -> dict[str, Any]:
     payload["sections"] = payload["sections"] + [
         {
             "heading": "Where the money actually goes",
-            "purpose": "Break the monthly figure into what a resident pays.",
+            "reader_payoff": "Which line of the monthly figure to cut first.",
             "claim_ids": ["c1"],
             "requirement_ids": ["r1"],
             "target_words": 150,
         },
         {
             "heading": "What a long stay commits you to",
-            "purpose": "Say what the decision costs beyond money.",
+            "reader_payoff": "Whether the non-monetary cost is one to accept.",
             "claim_ids": ["c2"],
             "requirement_ids": ["r2"],
             "target_words": 150,
@@ -508,19 +510,36 @@ def test_a_plan_that_passes_is_not_touched():
     (Path(__file__).parent / 'fixtures/p2b-outline-rejections.json').read_text()
 ), ids=lambda case: case['run_id'])
 def test_recorded_outline_rejections(case):
+    """Real plans from real runs, checked against the scope rules that judged them.
+
+    These are captured model responses, kept verbatim -- their value is that
+    nobody wrote them to pass. They predate `reader_payoff`, so every one of
+    them now fails `payoffs_stated`, which is the new rule working rather than
+    a regression: a plan with no promise per section is exactly what
+    improvement 01 refuses. So the assertion is on the checks these runs were
+    recorded for, not on the overall verdict, and the payoff gap is asserted
+    separately so it cannot drift back to passing unnoticed.
+    """
     dependencies, recorder = _dependencies(FakeLLM(json_response=case['outline']))
     updates = run_v3_outline_stage(_state(
         work_order=case['work_order'],
         packet={'facts': [{'claim_id': cid} for cid in case['claim_ids']]},
     ), dependencies)
     assert recorder.recorded[0][1]['candidate_outline'] == sanitize_v3_outline(case['outline'])
-    expected = not case['run_id'].startswith('a3c20e41')
-    assert updates['outline_accepted'] is expected
-    if expected:
-        assert len(updates['outline']['sections']) == 6
-        assert 'Planned sections' in updates['outline_text']
-    else:
-        assert updates['outline']['sections'] == []
+    checks = recorder.recorded[0][1]['checks']
+
+    # Planned before section payoffs existed, so none of them states one.
+    assert checks['payoffs_stated'] is False
+    assert updates['outline_accepted'] is False
+
+    # a3c20e41 is the recording of a plan that organised two sections around a
+    # context-only place. That is the one check it misses; its claims resolve
+    # and it names its subject like the others.
+    assert checks['claims_resolve'] is True
+    assert checks['covers_primary_subject'] is True
+    assert checks['no_context_only_sections'] is not case['run_id'].startswith(
+        'a3c20e41'
+    )
 
 
 @pytest.mark.parametrize('title', ['El Centro transfers', 'Dorado transfers', 'International Airport transfers'])

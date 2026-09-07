@@ -100,8 +100,18 @@ def test_an_interview_may_divide_into_two_sections():
         {
             "working_title": "Two questions",
             "sections": [
-                {"heading": "On the route", "claim_ids": [], "target_words": 400},
-                {"heading": "On the price", "claim_ids": [], "target_words": 400},
+                {
+                    "heading": "On the route",
+                    "reader_payoff": "Which leg of the trip is worth the detour.",
+                    "claim_ids": [],
+                    "target_words": 400,
+                },
+                {
+                    "heading": "On the price",
+                    "reader_payoff": "Whether the fare quoted is the one to book.",
+                    "claim_ids": [],
+                    "target_words": 400,
+                },
             ],
         },
         max_sections=structure.max_sections,

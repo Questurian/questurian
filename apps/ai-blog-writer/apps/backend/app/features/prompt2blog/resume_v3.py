@@ -77,7 +77,13 @@ RESUME_HISTORY_STAGE = "pipeline_resume_v3"
 # the whole dossier -- the exact silent widening the packet exists to prevent.
 # Refused, and a refusal costs nothing: starting again is what happened before
 # resume existed at all.
-RESUME_SNAPSHOT_VERSION = 5
+#
+# 6: section payoffs (improvement 01). A version-5 snapshot's outline sections
+# carry `purpose`, and the formatters that hand the plan to compose and to the
+# audit read `reader_payoff`, so a resumed leg would fail on the field name --
+# or, if that were papered over, write from a plan whose promises the audit
+# would then check against nothing. Refused by version, which says why.
+RESUME_SNAPSHOT_VERSION = 6
 
 # State entries rebuilt on the way back in rather than stored. `request` is a
 # pydantic model and is written out under its own key; `completed` belongs to

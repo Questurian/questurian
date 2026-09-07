@@ -5,6 +5,7 @@ summary: Sequences a realistic trip plan across an approved time window and geog
 order: 10
 opening: direct-answer
 sections: 3-12
+payoff: decision
 closing: takeaways
 ---
 

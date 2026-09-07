@@ -25,6 +25,7 @@ from ...quality import (
 )
 from ...quality_v3 import v3_constraint_brief
 from ...content.markdown import sections_changed
+from ...content.outline_v3 import format_payoff_promises
 from ...content.style_cleanup import clean_up_style
 from ...content.sections import (
     apply_section_replacements,
@@ -89,6 +90,10 @@ def _audit_v3_rewrite(
         style_directive=_format_style_directive(state["option_context"]),
         grounding_verdict=_json(groundedness),
         measured_checks=_measured_checks_block(computed_checks),
+        # What the plan promised, so the auditor compares the draft against a
+        # written commitment instead of against whatever it would have planned
+        # (improvement 01).
+        section_promises=format_payoff_promises(_safe_dict(state.get("outline"))),
         rewritten_title=rewrite["improved_title"],
         rewritten_content=rewrite["improved_content"],
     )
@@ -100,6 +105,17 @@ def _audit_v3_rewrite(
         model_name=state["audit_model"],
     )
     quality = _sanitize_quality(parsed)
+    # A promise the draft did not keep is a revision request, whether or not
+    # the auditor also wrote one. Repair reads `required_revisions` and nothing
+    # else, so an unresolved payoff that stayed in its own list would be
+    # recorded and never acted on.
+    for unresolved in quality["unresolved_payoffs"]:
+        instruction = (
+            f"The section \"{unresolved['heading']}\" does not deliver what "
+            f"the plan promised the reader: {unresolved['why']}"
+        )
+        if not any(unresolved["heading"] in item for item in quality["required_revisions"]):
+            quality["required_revisions"].append(instruction)
     # The auditor answered with a quote; this is where that becomes a verdict.
     fails_if = evaluate_fails_if(quality, rewrite["improved_content"])
     quality["fails_if_check"] = fails_if

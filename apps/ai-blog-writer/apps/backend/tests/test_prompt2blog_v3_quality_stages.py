@@ -722,7 +722,10 @@ def test_the_audit_scores_editing_burden_not_rule_compliance():
     assert "What remains is personalisation" in prompt
     assert "A fact catalog is not coverage" in prompt
     assert "cap overall_score at 7" in prompt
-    assert "Reader decision support is a scored dimension" in prompt
+    # The rule that used to ask the auditor to work out for itself what each
+    # section owed the reader. It now checks the plan's written promises
+    # instead (improvement 01).
+    assert "SECTION PROMISES below is what the plan said" in prompt
     assert "is the floor this scale starts" in prompt
 
 
@@ -941,3 +944,83 @@ def test_an_auditor_revision_about_length_survives_when_the_length_is_fine():
     assert recorder.recorded[0][1]["required_revisions"] == [
         "Shorten the opening paragraph."
     ]
+
+
+def test_the_plans_promises_reach_the_auditor():
+    """The auditor compares the draft against what the plan committed to.
+
+    It used to be asked what each section *should* have done for the reader,
+    which is a second opinion about the plan rather than a check on the draft.
+    """
+    llm = FakeLLM(json_response={"overall_score": 8, "quality_summary": "Fine."})
+    dependencies, _recorder = _dependencies(llm)
+    outline = {
+        "sections": [
+            {
+                "heading": "What Lima costs now",
+                "reader_payoff": "Whether a monthly budget stretches in Lima today.",
+            }
+        ]
+    }
+
+    run_v3_quality_audit_stage(_state(outline=outline), dependencies)
+
+    prompt = llm.prompts[0]
+    assert "SECTION PROMISES" in prompt
+    assert (
+        "What Lima costs now -> Whether a monthly budget stretches in Lima today."
+        in prompt
+    )
+
+
+def test_an_unresolved_promise_becomes_a_revision_repair_can_act_on():
+    """Repair reads `required_revisions` and nothing else.
+
+    An unresolved payoff that stayed in its own list would be recorded on the
+    run and never acted on, which is the quietest way for a check to do
+    nothing.
+    """
+    llm = FakeLLM(
+        json_response={
+            "overall_score": 8,
+            "required_revisions": [],
+            "unresolved_payoffs": [
+                {
+                    "heading": "The tradeoffs behind the price",
+                    "why": "Lists three options and never says which suits whom.",
+                }
+            ],
+            "quality_summary": "Fine.",
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+
+    updates = run_v3_quality_audit_stage(_state(), dependencies)
+    revisions = updates["quality"]["required_revisions"]
+
+    assert any("The tradeoffs behind the price" in item for item in revisions)
+    assert any("never says which suits whom" in item for item in revisions)
+
+
+def test_a_promise_the_auditor_already_wrote_up_is_not_repeated():
+    llm = FakeLLM(
+        json_response={
+            "overall_score": 8,
+            "required_revisions": [
+                "Rewrite The tradeoffs behind the price so it names a winner."
+            ],
+            "unresolved_payoffs": [
+                {
+                    "heading": "The tradeoffs behind the price",
+                    "why": "Lists three options and never says which suits whom.",
+                }
+            ],
+            "quality_summary": "Fine.",
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+
+    updates = run_v3_quality_audit_stage(_state(), dependencies)
+    revisions = updates["quality"]["required_revisions"]
+
+    assert len([r for r in revisions if "The tradeoffs behind the price" in r]) == 1

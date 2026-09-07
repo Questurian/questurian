@@ -59,6 +59,51 @@ class EditorialRule(CatalogModel):
 OpeningMode = Literal["direct-answer", "form-led"]
 ClosingMode = Literal["takeaways", "form-led"]
 
+# What one section owes the person reading it.
+#
+# Improvement 01: the outline already carried a `purpose` per section, and
+# nothing in the outline prompt ever said what a purpose was. So it came back
+# as a restatement of the heading -- "covers transport options" under a heading
+# about transport -- and a section could be planned, written and audited
+# without anybody naming what a reader gets out of it.
+#
+# Three kinds, not one, because the report is explicit that this must not turn
+# every form into advice. A profile that ends each section with a
+# recommendation is a worse profile, and forcing it to would trade one
+# formulaic shape for another.
+#
+# `decision`: the reader can now choose, book, or skip something.
+# `answer`:   a question the reader arrived with is now settled.
+# `insight`:  the reader understands something about the subject they did not.
+PayoffMode = Literal["decision", "answer", "insight"]
+
+# What the outline is asked for, and what the audit checks was delivered, in
+# each mode's own words. Kept next to the mode rather than in the prompt files
+# so the planning stage, the writing stage and the auditor cannot describe the
+# same obligation three different ways.
+PAYOFF_NOUNS: dict[str, str] = {
+    "decision": "decision the reader can make",
+    "answer": "question the reader arrived with, answered",
+    "insight": "thing the reader now understands about the subject",
+}
+
+PAYOFF_PLANNING_RULES: dict[str, str] = {
+    "decision": (
+        "one decision this section leaves the reader able to make -- what they "
+        "can now choose, book, skip or budget for, and on what basis"
+    ),
+    "answer": (
+        "one question this section settles for the reader, phrased as the "
+        "question they arrived with rather than as the topic it falls under"
+    ),
+    "insight": (
+        "one thing this section leaves the reader understanding about the "
+        "subject that they did not understand before it. Not a recommendation: "
+        "this form does not give advice, and a section that ends in one is "
+        "doing the wrong job"
+    ),
+}
+
 # The floor under `min_sections`. Below two there is no structure to plan and
 # `sections_changed` has nothing to scope a repair to.
 ABSOLUTE_MIN_SECTIONS = 2
@@ -86,6 +131,12 @@ class FormStructurePolicy(CatalogModel):
     closing: ClosingMode
     min_sections: int = Field(ge=ABSOLUTE_MIN_SECTIONS, le=ABSOLUTE_MAX_SECTIONS)
     max_sections: int = Field(ge=ABSOLUTE_MIN_SECTIONS, le=ABSOLUTE_MAX_SECTIONS)
+    # Defaulted on the model, required in the frontmatter. Those are different
+    # jobs: `_structure_policy` refuses a form file that omits it, so no form
+    # can quietly acquire a payoff kind it did not choose, while a run frozen
+    # before this existed still validates and resumes into the shape it was
+    # written under.
+    payoff: PayoffMode = "decision"
 
     @model_validator(mode="after")
     def _range_is_a_range(self) -> "FormStructurePolicy":
@@ -129,12 +180,35 @@ class FormStructurePolicy(CatalogModel):
             "count is a range, not a target to hit."
         )
 
+    def payoff_noun(self) -> str:
+        return PAYOFF_NOUNS[self.payoff]
+
+    def outline_payoff_rule(self) -> str:
+        return (
+            f"- `reader_payoff` is the point of the section. Write "
+            f"{PAYOFF_PLANNING_RULES[self.payoff]}. One sentence, in the "
+            "reader's terms. It is not a summary of what the section covers: "
+            "a heading already says that, and repeating it back is how a "
+            "section gets planned without ever earning its place."
+        )
+
+    def compose_payoff_rule(self) -> str:
+        return (
+            "- Each planned section states what the reader gets from it. That "
+            f"is the {self.payoff_noun()}, and the section has not done its "
+            "job until the prose actually delivers it -- not gestured at it, "
+            "and not left the reader to work it out from the facts. Where the "
+            "evidence cannot support the payoff as planned, say what it does "
+            "support and what is missing; do not manufacture the payoff."
+        )
+
     def compose_rules(self) -> str:
         """The structural obligations for one form, for the compose prompt."""
         return "\n".join(
             (
                 self.opening_rule(),
                 self.sections_rule(),
+                self.compose_payoff_rule(),
                 self.closing_rule(),
                 "- Structure is the form's to decide and the evidence rules "
                 "are not. A form never licenses an invented scene, quotation, "
@@ -165,6 +239,7 @@ class FormStructurePolicy(CatalogModel):
                 f"{self.max_sections} sections.",
                 f"- {opening}",
                 f"- {closing}",
+                self.outline_payoff_rule(),
             )
         )
 
@@ -353,7 +428,7 @@ def _rule_section(body: str, heading: str) -> str:
 
 
 def _structure_policy(metadata: dict[str, str], path: Path) -> FormStructurePolicy:
-    """Read `opening`, `sections` and `closing` off one form's frontmatter.
+    """Read `opening`, `sections`, `closing` and `payoff` off a form's frontmatter.
 
     Loudly. A malformed range or an unknown mode fails the catalog load, which
     fails at import in every test rather than producing an article shaped by a
@@ -372,6 +447,7 @@ def _structure_policy(metadata: dict[str, str], path: Path) -> FormStructurePoli
             closing=metadata["closing"],
             min_sections=low,
             max_sections=high,
+            payoff=metadata["payoff"],
         )
     except PydanticValidationError as exc:
         raise ValueError(f"Invalid structure policy in {path}: {exc}") from exc
@@ -402,7 +478,7 @@ def _load_rule_directory(
         # somebody else's, which is finding 07 with an extra step. Required,
         # not defaulted.
         if forms:
-            required_keys |= {"opening", "sections", "closing"}
+            required_keys |= {"opening", "sections", "closing", "payoff"}
         missing_keys = required_keys - metadata.keys()
         extra_keys = metadata.keys() - required_keys - {"source_gate"}
         if missing_keys or extra_keys:

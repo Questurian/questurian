@@ -5,6 +5,7 @@ summary: Answers a real question about a place and commits to the answer.
 order: 2
 opening: form-led
 sections: 3-12
+payoff: answer
 closing: form-led
 ---
 

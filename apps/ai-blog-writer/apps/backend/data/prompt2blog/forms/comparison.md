@@ -5,6 +5,7 @@ summary: Evaluates approved co-subjects against consistent criteria for a define
 order: 12
 opening: direct-answer
 sections: 3-12
+payoff: decision
 closing: takeaways
 ---
 

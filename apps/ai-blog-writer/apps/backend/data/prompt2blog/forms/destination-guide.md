@@ -5,6 +5,7 @@ summary: Gives a coherent planning overview of one approved destination.
 order: 8
 opening: direct-answer
 sections: 3-12
+payoff: decision
 closing: takeaways
 ---
 

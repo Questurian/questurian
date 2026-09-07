@@ -5,6 +5,7 @@ summary: Selects and explains a bounded set of options using explicit editorial 
 order: 11
 opening: direct-answer
 sections: 3-12
+payoff: decision
 closing: takeaways
 ---
 

@@ -5,6 +5,7 @@ summary: Helps a defined reader solve one practical travel problem or decision.
 order: 9
 opening: direct-answer
 sections: 3-12
+payoff: decision
 closing: takeaways
 ---
 

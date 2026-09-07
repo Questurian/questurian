@@ -5,6 +5,7 @@ summary: Builds a dated, transparent budget from defined assumptions and sourced
 order: 15
 opening: direct-answer
 sections: 3-12
+payoff: decision
 closing: takeaways
 ---
 

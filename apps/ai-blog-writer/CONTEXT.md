@@ -355,6 +355,14 @@ Rule: the operator cuts it before research runs. Cutting a load-bearing question
 Related terms: Article Brief, Grounded Research.
 Do not confuse with: the Article Brief. The brief persists to the end; the work order persists only until research answers it.
 
+### Reader Payoff
+
+Definition: the one thing a section leaves its reader with, written into the outline as `reader_payoff` and checked against the finished draft by the audit. Its *kind* comes from the approved article form, declared in that form's frontmatter as `payoff`: a **decision** the reader can now make, an **answer** to a question they arrived with, or an **insight** about the subject they did not have.
+Rule: one per section, and no two sections may promise the same thing. A payoff that only restates its heading is reported, not enforced — whether a sentence adds anything to a heading is a judgement, and a plan is not thrown away over one line.
+Rule: a form that does not give advice is never asked for a decision. Forcing every section to end in a recommendation trades one formulaic shape for another.
+Related terms: Article Brief, Work Order.
+Do not confuse with: the Work Order requirement's `purpose`, which says why a *question* was asked of research. The reader payoff is about what a *section of prose* owes the person reading it.
+
 ### Questurian Voice
 
 Definition: the single file describing what a Questurian article is like — treats the reader as an adult with a decision to make, isn't selling anything, warmth is attention rather than adjectives, has a view and says it, never talks about itself. Paired with a separate, much shorter file of mechanical rules (price and date format, no fabricated experiences, sentence-case headings, no in-article attribution).
