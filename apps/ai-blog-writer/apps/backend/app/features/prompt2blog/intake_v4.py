@@ -85,10 +85,17 @@ from .research_v4 import (
     structure_research,
 )
 from .packet_v4 import stale_reason
+from .writer_prompt import (
+    PROMPT_STAGE,
+    WriterPrompt,
+    assemble_writer_prompt,
+    prompt_stage_record,
+)
 from .polish_v4 import build_polish_prompt
 from .run_budget import enforce_run_budget
 from .run_recorder import RunRecorder
 from .support import _safe_dict, _safe_str
+from .editorial_catalog import load_editorial_catalog
 from .options import default_target_word_count
 from .selection_v4 import (
     SELECTION_STAGE,
@@ -275,7 +282,13 @@ def reopen_intake(run_id: str, services: IntakeServices) -> GrillState:
     _open(services, run_id, GRILL_STAGE)
     reopened = reopen_grill(state, services.dependencies)
 
-    for stage in (BRIEF_STAGE, WORK_ORDER_STAGE, RESEARCH_STAGE, NOTES_STAGE):
+    for stage in (
+        BRIEF_STAGE,
+        PROMPT_STAGE,
+        WORK_ORDER_STAGE,
+        RESEARCH_STAGE,
+        NOTES_STAGE,
+    ):
         if read_stage_result(run_id, stage) is not None:
             services.recorder.discard_stage(run_id, stage)
 
@@ -323,6 +336,79 @@ def approve_brief(run_id: str, services: IntakeServices) -> ArticleBrief:
         {**brief_stage_record(brief), STATE_KEY: json.loads(brief.model_dump_json())},
     )
     return brief
+
+
+def load_writer_prompt(run_id: str) -> WriterPrompt | None:
+    """The frozen assignment on this run, if one has been generated."""
+    stored = _stage_data(run_id, PROMPT_STAGE).get(STATE_KEY)
+    if not isinstance(stored, dict):
+        return None
+    return WriterPrompt.model_validate(stored)
+
+
+def _brief_notes(brief: ArticleBrief) -> list[str]:
+    """The readable labels for whatever else the brief carries.
+
+    Labels, never the rules behind them. A topic module ships 100-250 words of
+    instruction and a form ships section counts and evidence requirements;
+    pulling either in here would rebuild the instruction stack ADR 0036 removed,
+    one well-meant include at a time.
+    """
+    catalog = load_editorial_catalog()
+    by_id = {item.id: item.label for item in catalog.topic_modules}
+    tags = {item.id: item.label for item in catalog.audience_tags}
+    notes = []
+    for tag in brief.reader.tags:
+        notes.append(f"Reader is a {tags.get(tag, tag)}")
+    for module in brief.topic_module_ids:
+        notes.append(f"Covers {by_id.get(module, module)}")
+    return notes
+
+
+def _form_label(form_id: str) -> str:
+    for form in load_editorial_catalog().forms:
+        if form.id == form_id:
+            return form.label
+    # The id itself is a readable-enough fallback and a missing catalog entry
+    # is not a reason to refuse to write. It is a reason to see the raw id in
+    # the prompt preview, which is exactly where somebody will notice it.
+    return form_id
+
+
+def generate_prompt(run_id: str, services: IntakeServices) -> WriterPrompt:
+    """Freeze the approved brief into the assignment the writer will receive.
+
+    Costs nothing. No model is asked to write this prompt, no page is fetched,
+    and the operator can press this as many times as they like -- the same
+    brief and the same template give back the same bytes, so a second press is
+    not a second assignment.
+
+    Regenerating over a stale prompt is the point rather than a hazard: the
+    brief is the only thing that can have changed, and a prompt built from a
+    brief that has since changed must not stay on screen looking current.
+    """
+    brief = load_brief(run_id)
+    _open(services, run_id, PROMPT_STAGE)
+    prompt = assemble_writer_prompt(
+        brief,
+        target_word_count=default_target_word_count(),
+        form_label=_form_label(brief.form_id),
+        # Read once, here, and stored on the prompt. The writer is told what
+        # day it is so "currently running" means something, and a receipt read
+        # in six months needs to know which day that was.
+        research_date=date.today(),
+        brief_notes=_brief_notes(brief),
+    )
+    _record(
+        services,
+        run_id,
+        PROMPT_STAGE,
+        {
+            **prompt_stage_record(prompt),
+            STATE_KEY: json.loads(prompt.model_dump_json()),
+        },
+    )
+    return prompt
 
 
 def plan_research(run_id: str, services: IntakeServices) -> Prompt2BlogWorkOrder:
@@ -1474,6 +1560,7 @@ def intake_state(run_id: str) -> dict[str, Any]:
     """Where this run stands, for a page that may have been reloaded."""
     grill = _stage_data(run_id, GRILL_STAGE)
     brief = _stage_data(run_id, BRIEF_STAGE)
+    prompt = _stage_data(run_id, PROMPT_STAGE)
     work_order = _stage_data(run_id, WORK_ORDER_STAGE)
     research = _stage_data(run_id, RESEARCH_STAGE)
     grill_state = _safe_dict(grill.get(STATE_KEY))
@@ -1486,13 +1573,25 @@ def intake_state(run_id: str) -> dict[str, Any]:
         work_order = {}
     if _safe_str(research.get("status")) == "failed":
         research = {}
+    # A prompt built from a brief that has since changed is not this run's
+    # assignment. It stays stored as history and stops counting as progress,
+    # so the run drops back to the brief with one more Generate to press.
+    if prompt and _safe_str(prompt.get("brief_fingerprint")) != _safe_str(
+        brief.get("brief_fingerprint")
+    ):
+        prompt = {}
     return {
         "run_id": run_id,
+        # Ordered newest-stage-first. The two work-order steps sit above
+        # `prompt` rather than below it so a run stored before ADR 0036 still
+        # opens on the screen it stopped at; a new run never reaches them.
         "step": (
             "research"
             if research
             else "work_order"
             if work_order
+            else "prompt"
+            if prompt
             else "brief"
             if brief
             else "grill"
@@ -1514,6 +1613,13 @@ def intake_state(run_id: str) -> dict[str, Any]:
         if grill
         else None,
         "brief": {key: value for key, value in brief.items() if key != STATE_KEY} or None,
+        # The exact bytes, not a summary. What is shown here is what gets sent,
+        # and a preview that paraphrases the assignment is a debug view wearing
+        # the assignment's name.
+        "writer_prompt": {
+            key: value for key, value in prompt.items() if key != STATE_KEY
+        }
+        or None,
         "work_order": {
             key: value for key, value in work_order.items() if key != STATE_KEY
         }

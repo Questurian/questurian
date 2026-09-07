@@ -58,12 +58,34 @@ export interface IntakeBrief {
   seed: string
   location: string
   form_id: string
+  topic_module_ids: string[]
+  primary_reader: string
+  reader_tags: string[]
+  reader_question: string
   spine: string
   outcome: string
   fails_if: string
   must_name: string[]
   /** Shown back in full so you can see what the system thinks you said. */
-  material: { kind: string; statement: string }[]
+  material: { kind: string; statement: string; note?: string }[]
+}
+
+/**
+ * The frozen writing assignment, exactly as the writer will receive it.
+ *
+ * `text` is the whole prompt rather than a summary. Approving a summary of an
+ * assignment nobody has read is how the old pipeline shipped a 41-prohibition
+ * instruction stack that no operator ever saw (ADR 0036).
+ */
+export interface IntakeWriterPrompt {
+  prompt_fingerprint: string
+  brief_fingerprint: string
+  template_version: string
+  style_version: string
+  target_word_count: number
+  research_date: string
+  characters: number
+  text: string
 }
 
 export interface IntakeRequirement {
@@ -411,13 +433,15 @@ export interface IntakeArticle {
   word_count: number | null
 }
 
-export type IntakeStep = 'seed' | 'grill' | 'brief' | 'work_order' | 'research'
+export type IntakeStep = 'seed' | 'grill' | 'brief' | 'prompt' | 'work_order' | 'research'
 
 export interface IntakeState {
   run_id: string
   step: IntakeStep
   grill: IntakeGrill | null
   brief: IntakeBrief | null
+  /** Null until Generate prompt is pressed, and again if the brief changes. */
+  writer_prompt: IntakeWriterPrompt | null
   work_order: IntakeWorkOrder | null
   research: IntakeResearch | null
   /** Present only on the response to a cut: what that decision costs. */

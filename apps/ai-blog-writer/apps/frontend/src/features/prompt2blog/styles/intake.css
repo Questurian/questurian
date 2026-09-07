@@ -333,6 +333,38 @@
   color: var(--accent);
 }
 
+/* One per line. These become the bullets the writer is held to, and a
+   comma-joined run-on hides the one that is wrong. */
+.p2b-must-name {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.p2b-must-name li {
+  margin-bottom: var(--space-1);
+}
+
+/* ---------- the prompt ---------- */
+
+/* The whole assignment, selectable, in a box that scrolls rather than one that
+   truncates. A preview that hides the end of the prompt is the thing this
+   screen exists to stop. */
+.p2b-prompt-text {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4);
+  max-height: 32rem;
+  overflow: auto;
+  background: var(--cream-dark);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
 @media (max-width: 34rem) {
   .p2b-brief {
     grid-template-columns: 1fr;

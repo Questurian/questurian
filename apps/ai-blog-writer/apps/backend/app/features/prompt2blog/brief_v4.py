@@ -490,12 +490,23 @@ def _build_brief_once(
 
 
 def brief_stage_record(brief: ArticleBrief) -> dict[str, Any]:
-    """What the run keeps about the brief the operator approved."""
+    """What the run keeps about the brief the operator approved.
+
+    Every field, not a summary. The brief screen used to show five of them,
+    which was defensible while the brief was one input among a work order and a
+    dossier. It is now the whole assignment (ADR 0036): the reader, the
+    question and the tags all reach the writer, so approving without seeing
+    them is approving something unread.
+    """
     return {
         "brief_fingerprint": brief.brief_fingerprint,
         "seed": brief.seed,
         "location": brief.location,
         "form_id": brief.form_id,
+        "topic_module_ids": list(brief.topic_module_ids),
+        "primary_reader": brief.reader.primary_reader,
+        "reader_tags": list(brief.reader.tags),
+        "reader_question": brief.reader_question,
         "spine": brief.spine,
         "outcome": brief.outcome,
         "fails_if": brief.fails_if,
@@ -503,6 +514,7 @@ def brief_stage_record(brief: ArticleBrief) -> dict[str, Any]:
         # Shown back in full so the operator can see exactly what the system
         # thinks they said about their own material before approving it.
         "material": [
-            {"kind": item.kind, "statement": item.statement} for item in brief.material
+            {"kind": item.kind, "statement": item.statement, "note": item.note}
+            for item in brief.material
         ],
     }

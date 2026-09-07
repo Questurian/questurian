@@ -110,6 +110,17 @@ export function approveBrief(runId: string): Promise<IntakeState> {
   return post(`${INTAKE}/${runId}/brief`)
 }
 
+/**
+ * Freeze the brief into the writer's assignment.
+ *
+ * Costs nothing: no model is asked to write this and no page is fetched, so
+ * pressing it twice is not two assignments. It exists so the exact text can be
+ * read before anything is bought.
+ */
+export function generatePrompt(runId: string): Promise<IntakeState> {
+  return post(`${INTAKE}/${runId}/prompt`)
+}
+
 export function planResearch(runId: string): Promise<IntakeState> {
   return post(`${INTAKE}/${runId}/work-order`)
 }

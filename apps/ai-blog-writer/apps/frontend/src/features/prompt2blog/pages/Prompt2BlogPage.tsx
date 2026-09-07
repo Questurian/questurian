@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { BriefScreen } from '../intake/components/BriefScreen'
 import { GateScreen } from '../intake/components/GateScreen'
 import { GrillScreen } from '../intake/components/GrillScreen'
+import { PromptScreen } from '../intake/components/PromptScreen'
 import { ArticleScreen } from '../intake/components/ArticleScreen'
 import { ResearchScreen } from '../intake/components/ResearchScreen'
 import { RunList } from '../intake/components/RunList'
@@ -25,6 +26,7 @@ const STEP_LABELS: Record<string, string> = {
   seed: 'Starting',
   grill: 'A few questions',
   brief: 'The brief',
+  prompt: 'The prompt',
   work_order: 'The research plan',
   research: 'What we found',
 }
@@ -126,7 +128,15 @@ export function Prompt2BlogPage() {
           <BriefScreen
             brief={state.brief}
             busy={intake.busy}
-            onPlanResearch={intake.planResearch}
+            onGeneratePrompt={intake.generatePrompt}
+            onReopen={intake.reopen}
+          />
+        )}
+
+        {step === 'prompt' && state?.writer_prompt && (
+          <PromptScreen
+            prompt={state.writer_prompt}
+            busy={intake.busy}
             onReopen={intake.reopen}
           />
         )}

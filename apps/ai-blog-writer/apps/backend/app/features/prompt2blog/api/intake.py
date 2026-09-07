@@ -61,6 +61,7 @@ from ..intake_v4 import (
     polish_prompt,
     punch_list,
     intake_state,
+    generate_prompt,
     plan_research,
     reask_question,
     recent_runs,
@@ -73,6 +74,7 @@ from ..intake_v4 import (
 from ..intake_v3 import RUN_INPUT_STAGE, prepare_v3_runtime_request, v3_run_input_artifact
 from ..research_v4 import GATHER_MAX_TOKENS, ResearchDependencies, ResearchUnusable
 from ..work_order_v4 import WorkOrderUnusable
+from ..writer_prompt import PromptCannotBeAssembled
 from .runs import (
     _prompt2blog_credential_for_run,
     _run_pipeline_v3_background as _run_pipeline_v4_background,
@@ -249,6 +251,17 @@ def _handle(action, *args, **kwargs) -> Any:
                 "raw": error.reason,
             },
         ) from error
+    except PromptCannotBeAssembled as error:
+        # 400 and the field name. This is the one failure here the operator can
+        # actually fix, and they fix it in the grill.
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "prompt_cannot_be_assembled",
+                "message": str(error),
+                "raw": error.field,
+            },
+        ) from error
     except ResearchUnusable as error:
         logger.error("Dossier did not fit its contract: %s | %s", error.reason, error.raw[:2000])
         raise HTTPException(
@@ -410,6 +423,20 @@ def reopen(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
 def build_the_brief(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Turn an agreed grill into the brief the run answers to."""
     _handle(approve_brief, run_id, _services(run_id))
+    return JSONResponse(intake_state(run_id))
+
+
+@router.post("/{run_id}/prompt")
+@exclusive_run
+def generate_the_prompt(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """Freeze the approved brief into the assignment the writer will receive.
+
+    The one route here that spends nothing. It calls no model and fetches no
+    page, so it carries no budget check and pressing it twice costs the same as
+    pressing it once. What it produces is the exact text the writer is sent,
+    shown before anything is bought.
+    """
+    _handle(generate_prompt, run_id, _services(run_id))
     return JSONResponse(intake_state(run_id))
 
 

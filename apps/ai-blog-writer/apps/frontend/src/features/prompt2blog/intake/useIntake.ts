@@ -54,6 +54,8 @@ export interface UseIntake {
   answer: (text: string) => Promise<void>
   reopen: () => Promise<void>
   approveBrief: () => Promise<void>
+  /** Freeze the approved brief into the writer's assignment. Costs nothing. */
+  generatePrompt: () => Promise<void>
   planResearch: () => Promise<void>
   research: () => Promise<void>
   cut: (struckIds: string[], added: string[]) => Promise<void>
@@ -174,6 +176,10 @@ export function useIntake(): UseIntake {
     reopen: useCallback(() => run(() => api.reopenGrill(requireRun())), [run, requireRun]),
     approveBrief: useCallback(
       () => run(() => api.approveBrief(requireRun())),
+      [run, requireRun],
+    ),
+    generatePrompt: useCallback(
+      () => run(() => api.generatePrompt(requireRun())),
       [run, requireRun],
     ),
     planResearch: useCallback(

@@ -207,7 +207,9 @@ def test_the_stage_record_shows_material_back_for_approval():
     # what the system thinks they said about their own experience.
     record = brief_stage_record(build_brief(_agreed(), _deps(_payload())))
 
-    assert record["material"] == [{"kind": "firsthand", "statement": FIRSTHAND}]
+    assert record["material"] == [
+        {"kind": "firsthand", "statement": FIRSTHAND, "note": ""}
+    ]
     assert record["fails_if"] == "reads like a tourist board"
 
 

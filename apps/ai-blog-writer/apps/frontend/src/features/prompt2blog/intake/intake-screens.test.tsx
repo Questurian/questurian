@@ -16,6 +16,7 @@ vi.mock('./intake.api', async importOriginal => ({
   undoSectionEdit: (...args: unknown[]) => undoSectionEdit(...args),
 }))
 import { BriefScreen } from './components/BriefScreen'
+import { PromptScreen } from './components/PromptScreen'
 import { ArticleScreen } from './components/ArticleScreen'
 import { GrillScreen } from './components/GrillScreen'
 import { WorkingScreen } from './components/WorkingScreen'
@@ -28,6 +29,7 @@ import type {
   IntakeRunSummary,
   IntakeGrill,
   IntakeWorkOrder,
+  IntakeWriterPrompt,
   IntakeWriting,
 } from './intake.types'
 
@@ -239,6 +241,10 @@ const BRIEF: IntakeBrief = {
   seed: 'Lima is no longer simply the stopover',
   location: 'Lima, Peru',
   form_id: 'destination-guide',
+  topic_module_ids: ['food-drink'],
+  primary_reader: 'a layover traveller with two spare nights',
+  reader_tags: ['first-time-visitor'],
+  reader_question: 'Is Lima worth two extra nights?',
   spine: 'food, cheap beats famous',
   outcome: 'book two extra nights',
   fails_if: 'reads like a tourist board',
@@ -250,23 +256,100 @@ describe('the brief screen', () => {
   it('shows your own words back, exactly', () => {
     // First-hand material skips fact-checking by design, so this screen is the
     // only place a wrong version of what you said can still be caught.
-    render(<BriefScreen brief={BRIEF} busy={false} onPlanResearch={vi.fn()} onReopen={vi.fn()} />)
+    render(
+      <BriefScreen brief={BRIEF} busy={false} onGeneratePrompt={vi.fn()} onReopen={vi.fn()} />,
+    )
 
     expect(screen.getByText('I was there 4 days. mostly ate.')).toBeInTheDocument()
   })
 
   it('shows what would make the article a failure', () => {
-    render(<BriefScreen brief={BRIEF} busy={false} onPlanResearch={vi.fn()} onReopen={vi.fn()} />)
+    render(
+      <BriefScreen brief={BRIEF} busy={false} onGeneratePrompt={vi.fn()} onReopen={vi.fn()} />,
+    )
 
     expect(screen.getByText('reads like a tourist board')).toBeInTheDocument()
   })
 
+  it('shows every field that reaches the writer', () => {
+    // The brief is now the whole assignment (ADR 0036). Approving it while the
+    // reader and the reader's question sit off screen is approving something
+    // unread -- and those two travel verbatim into the prompt.
+    render(
+      <BriefScreen brief={BRIEF} busy={false} onGeneratePrompt={vi.fn()} onReopen={vi.fn()} />,
+    )
+
+    expect(
+      screen.getByText('a layover traveller with two spare nights'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Is Lima worth two extra nights?')).toBeInTheDocument()
+  })
+
   it('cannot be edited in place', () => {
     // Changing it means talking to the grill again: a typed brief is untracked
-    // instruction injected into every stage after it.
-    render(<BriefScreen brief={BRIEF} busy={false} onPlanResearch={vi.fn()} onReopen={vi.fn()} />)
+    // instruction injected straight into the writing assignment.
+    render(
+      <BriefScreen brief={BRIEF} busy={false} onGeneratePrompt={vi.fn()} onReopen={vi.fn()} />,
+    )
 
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  })
+
+  it('says that generating the prompt costs nothing', () => {
+    // The button before this one bought a research plan. This one buys nothing,
+    // and a person who does not know that will not press it to look.
+    render(
+      <BriefScreen brief={BRIEF} busy={false} onGeneratePrompt={vi.fn()} onReopen={vi.fn()} />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Generate prompt' })).toBeInTheDocument()
+    expect(screen.getByText(/costs nothing/)).toBeInTheDocument()
+  })
+})
+
+const WRITER_PROMPT: IntakeWriterPrompt = {
+  prompt_fingerprint: 'wp-1',
+  brief_fingerprint: 'bf-1',
+  template_version: 'writer-prompt-1',
+  style_version: 'short-style-1',
+  target_word_count: 900,
+  research_date: '2026-09-07',
+  characters: 42,
+  text: 'Write an approximately 900-word article from the approved Article Brief below.',
+}
+
+describe('the prompt screen', () => {
+  it('shows the whole assignment, not a summary of it', () => {
+    // The old pipeline assembled its instruction from a form rulebook, a work
+    // order, a packet, an SEO block and forty-one prohibitions, and no operator
+    // ever saw a line of it.
+    render(<PromptScreen prompt={WRITER_PROMPT} busy={false} onReopen={vi.fn()} />)
+
+    expect(screen.getByText(WRITER_PROMPT.text)).toBeInTheDocument()
+  })
+
+  it('cannot be edited in place', () => {
+    // A textarea invites an edit that would be silently discarded: the stored
+    // assignment is the one that gets sent.
+    render(<PromptScreen prompt={WRITER_PROMPT} busy={false} onReopen={vi.fn()} />)
+
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  })
+
+  it('says which writer and which length', () => {
+    render(<PromptScreen prompt={WRITER_PROMPT} busy={false} onReopen={vi.fn()} />)
+
+    expect(screen.getByText(/about 900 words/)).toBeInTheDocument()
+    expect(screen.getByText(/Claude Opus, high effort/)).toBeInTheDocument()
+  })
+
+  it('leads back to the grill rather than offering a text box', () => {
+    const onReopen = vi.fn()
+    render(<PromptScreen prompt={WRITER_PROMPT} busy={false} onReopen={onReopen} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change something' }))
+
+    expect(onReopen).toHaveBeenCalled()
   })
 })
 
