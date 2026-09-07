@@ -47,6 +47,7 @@ from ..article_edits import (
 )
 from ..config import FEATURE_NAME
 from ..edit_review import SUPPORTED, binding_failure, review_section_edit
+from ..factual_changes import factual_changes
 from ..pricing import Prompt2BlogTokenUsageTracker
 from ..run_recorder import USAGE_LEDGER_STAGE
 from ..editor_spend import (
@@ -681,7 +682,20 @@ def propose_edit(run_id: str, request: SectionEditRequest) -> JSONResponse:
             ),
         )
 
-    return JSONResponse(proposal.model_dump(mode="json"))
+    payload = proposal.model_dump(mode="json")
+    if proposal.changed:
+        # What changed factually, beside the text diff. Costs no call: the
+        # exact half is computed from the two strings, and the reading half is
+        # the review that was already made. Bound to the same candidate, so an
+        # operator cannot read a panel for one piece of prose and apply
+        # another.
+        payload["factual_changes"] = factual_changes(
+            original=proposal.original,
+            candidate=proposal.revised,
+            review=proposal.review,
+            base_revision=proposal.base_revision,
+        ).as_dict()
+    return JSONResponse(payload)
 
 
 @router.get("/section-edit/{run_id}/spend", dependencies=[Depends(require_staff)])

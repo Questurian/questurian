@@ -1646,3 +1646,33 @@
   border: 1px solid var(--accent);
   font-weight: 500;
 }
+
+.p2b-editor-invented ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+}
+
+.p2b-editor-invented li + li {
+  margin-top: var(--space-1);
+}
+
+/*
+ * Beside the text diff, and quieter than the checker's findings above it.
+ * These are exact differences between two strings, and styling them as an
+ * alarm would have an editor reading a regex match as a judgement.
+ */
+.p2b-editor-factual {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--panel);
+  border-left: 2px solid var(--border);
+}
+
+.p2b-editor-factual ul {
+  margin: var(--space-2) 0 var(--space-2);
+  padding-left: var(--space-4);
+}
+
+.p2b-editor-factual li + li {
+  margin-top: var(--space-1);
+}

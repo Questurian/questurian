@@ -338,6 +338,66 @@ describe('what the checker found', () => {
     ).toBeInTheDocument()
   })
 
+  it('shows factual differences beside the diff, labelled as differences', async () => {
+    // A diff answers "what words moved". An editor deciding whether to keep
+    // this is asking whether a caveat went.
+    proposeSectionEdit.mockResolvedValue(
+      proposal({
+        factual_changes: {
+          text_changes: [
+            {
+              kind: 'qualification_removed',
+              text: 'as of',
+              note: 'A phrase that limited a claim is no longer there.',
+            },
+          ],
+          text_changes_are:
+            'exact differences between the two texts, not a judgement about whether the change is wrong',
+          review: null,
+          review_status: 'supported',
+          candidate_hash: 'abc',
+          base_revision: 4,
+        },
+      }),
+    )
+    open()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Say it in fewer words' }),
+    )
+
+    const panel = await screen.findByRole('region', {
+      name: 'What changed factually',
+    })
+    expect(panel).toHaveTextContent('as of')
+    expect(panel).toHaveTextContent(/not a judgement/)
+  })
+
+  it('does not show a factual panel when nothing factual changed', async () => {
+    proposeSectionEdit.mockResolvedValue(
+      proposal({
+        factual_changes: {
+          text_changes: [],
+          text_changes_are: 'exact differences',
+          review: null,
+          review_status: 'supported',
+          candidate_hash: 'abc',
+          base_revision: 4,
+        },
+      }),
+    )
+    open()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Say it in fewer words' }),
+    )
+
+    await screen.findByRole('button', { name: 'Use this' })
+    expect(
+      screen.queryByRole('region', { name: 'What changed factually' }),
+    ).toBeNull()
+  })
+
   it('applies a passed edit without asking for an override', async () => {
     proposeSectionEdit.mockResolvedValue(proposal())
     applySectionEdit.mockResolvedValue({

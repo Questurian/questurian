@@ -194,6 +194,33 @@ export function SectionEditor({
             <p className="p2b-editor-summary">{proposal.what_changed}</p>
           )}
 
+          {/* Beside the text diff, not inside it. A diff answers "what words
+              moved"; an editor deciding whether to keep this is asking whether
+              a price got attached to a different thing. */}
+          {!proposal.could_not_do &&
+            (proposal.factual_changes?.text_changes.length ?? 0) > 0 && (
+              <section
+                className="p2b-editor-factual"
+                aria-label="What changed factually"
+              >
+                <p className="p2b-label">What changed factually</p>
+                <ul>
+                  {proposal.factual_changes?.text_changes.map(change => (
+                    <li key={`${change.kind}:${change.text}`}>
+                      <strong>{change.text}</strong> — {change.note}
+                    </li>
+                  ))}
+                </ul>
+                {/* Said out loud, because a list that looks authoritative gets
+                    read as one. These are exact differences in text; whether
+                    the change is wrong is the checker's answer above. */}
+                <p className="p2b-note">
+                  Exact differences between the two texts, not a judgement about
+                  whether the change is wrong.
+                </p>
+              </section>
+            )}
+
           <div className="p2b-editor-diff">
             <section aria-label="The section now">
               <p className="p2b-label">Now</p>

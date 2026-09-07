@@ -561,3 +561,54 @@ def test_a_refusal_is_still_reported_as_a_refusal(isolated_db, monkeypatch):
     assert "could not make the change" not in str(raised.value.detail) or True
     assert raised.value.status_code == 409
     assert read_article("r-ref2").markdown == ARTICLE
+
+
+def test_the_proposal_carries_a_factual_change_panel(isolated_db, monkeypatch):
+    """Bound to the candidate, so an operator cannot read a panel for one piece
+    of prose and apply another."""
+    from app.features.prompt2blog.edit_review import candidate_hash
+
+    _seed(
+        "r-panel",
+        "The direct answer.\n\n"
+        "## Prices\n\nA costs $20 as of March 2026.\n\n"
+        "## Getting there\n\nThe bus runs hourly.\n",
+    )
+    _seed_packet("r-panel")
+    _stub_llm(
+        monkeypatch,
+        {"revised": "## Prices\n\nA costs $20.", "could_not_do": ""},
+        USAGE,
+    )
+
+    payload = response_payload(_propose("r-panel"))
+
+    panel = payload["factual_changes"]
+    assert panel["candidate_hash"] == candidate_hash(payload["revised"])
+    assert panel["base_revision"] == payload["base_revision"]
+    assert panel["review_status"] == "supported"
+    # The as-of date left the sentence. Shortening removed a limit that changes
+    # what a reader should do, and that is exactly what the panel is for.
+    assert {change["kind"] for change in panel["text_changes"]} == {
+        "date_removed",
+        "qualification_removed",
+    }
+    assert "not a judgement" in panel["text_changes_are"]
+
+
+def test_a_refusal_carries_no_panel(isolated_db, monkeypatch):
+    """Nothing changed, so there is nothing factual to explain."""
+    _seed("r-nopanel")
+    _seed_packet("r-nopanel")
+    _stub_llm(
+        monkeypatch,
+        {
+            "revised": "## Prices\n\nA is the winner.",
+            "could_not_do": "The facts do not support choosing.",
+        },
+        USAGE,
+    )
+
+    payload = response_payload(_propose("r-nopanel"))
+
+    assert "factual_changes" not in payload

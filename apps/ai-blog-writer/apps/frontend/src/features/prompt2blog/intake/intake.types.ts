@@ -356,6 +356,26 @@ export interface SectionEditReview {
   unsupported_claims: { claim: string; reason: string; severity: string }[]
 }
 
+/**
+ * What changed factually, in two halves that must not be confused.
+ *
+ * `text_changes` are exact differences between the two strings — a figure that
+ * appeared, a date that fell out, a caveat that is gone. They are not a
+ * judgement: a regex noticing "only" is missing has reasoned about nothing.
+ *
+ * `review` is the reading. It is the only half that can say two prices were
+ * swapped, because every figure is present in both and no comparison of sets
+ * will see it.
+ */
+export interface FactualChanges {
+  text_changes: { kind: string; text: string; note: string }[]
+  text_changes_are: string
+  review: SectionEditReview | null
+  review_status: string
+  candidate_hash: string
+  base_revision: number
+}
+
 export interface SectionEditProposal {
   run_id: string
   /** This proposal, once. A repeated apply of it is the same edit, not a second one. */
@@ -374,6 +394,8 @@ export interface SectionEditProposal {
   introduced_figures: string[]
   /** What the checker made of it. Null on a refusal, which has nothing to judge. */
   review: SectionEditReview | null
+  /** Absent on a refusal or a no-op, where nothing changed to explain. */
+  factual_changes?: FactualChanges
 }
 
 /** The finished article. Its own call: the state is polled, this is not. */
