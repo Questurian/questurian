@@ -84,6 +84,55 @@ def _mentions(text: str, name: str) -> bool:
 _SUBJECT_LEAD_SKIP = {"the", "a", "an"}
 
 
+_SUBJECT_FILLER = {"the", "a", "an", "el", "la", "los", "las", "international"}
+_DESCRIPTIVE_SUFFIX = re.compile(
+    r"\s+(?:(?:international\s+)?airport|cuisine)$", re.IGNORECASE
+)
+# A subject written as a description rather than as a name: "Hill elevators of
+# Valparaiso", "The old town in Quito". Both halves name the same subject.
+_SUBJECT_QUALIFIER = re.compile(r"\s+(?:of|in)\s+", re.IGNORECASE)
+
+
+def _has_meaning(name: str) -> bool:
+    """Whether anything is left of a name once the filler words are removed."""
+    return bool(set(name.casefold().split()) - _SUBJECT_FILLER)
+
+
+def _subject_aliases(primary_subject: str) -> list[str]:
+    """What a plan may call this subject and still be about it.
+
+    Every alias is a complete part of the subject's own name, never a fragment
+    of one: El Dorado International Airport yields El Dorado, never El, Dorado
+    or International Airport.
+
+    A subject is not always a proper name. `primary_subject` is written by the
+    planning model, and it writes a description as readily as a name -- run
+    e001d48c was commissioned on "Hill elevators of Valparaiso", whose plan
+    said Valparaiso and ascensores in every heading and was rejected for never
+    saying the phrase itself. The article was then structured with no section
+    plan at all. So a description splits at its qualifier and either half
+    counts, because neither half is a different subject.
+
+    Deliberately asymmetric. A plan that drifts is caught by the claims it
+    cites -- they come from this run's own dossier -- and by the context-only
+    guard; a plan wrongly rejected here costs the article its whole structure.
+    """
+    locality = primary_subject.split(",", maxsplit=1)[0].strip()
+    aliases = [primary_subject, locality]
+    short_name = _DESCRIPTIVE_SUFFIX.sub("", locality).strip()
+    if short_name != locality:
+        aliases.append(short_name)
+    halves = _SUBJECT_QUALIFIER.split(short_name or locality)
+    if len(halves) > 1:
+        aliases.extend(half.strip() for half in halves)
+    return [alias for alias in aliases if alias and _has_meaning(alias)]
+
+
+def _covers_subject(text: str, primary_subject: str) -> bool:
+    """Whether this line names the article's subject, under any of its names."""
+    return any(_mentions(text, alias) for alias in _subject_aliases(primary_subject))
+
+
 def _names_subject(heading: str, primary_subject: str) -> bool:
     """Whether a heading names the article's own subject.
 
@@ -209,7 +258,7 @@ def validate_v3_outline(
         ),
     ]
     covers_primary_subject = not primary_subject or any(
-        _mentions(value, primary_subject) for value in subject_fields
+        _covers_subject(value, primary_subject) for value in subject_fields
     )
 
     checks = {

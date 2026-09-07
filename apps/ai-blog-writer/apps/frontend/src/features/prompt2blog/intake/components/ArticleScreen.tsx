@@ -108,6 +108,8 @@ export function ArticleScreen({ runId, writing, article, onReopen, busy }: Artic
 
       <Measured checks={writing.constraint_checks} />
 
+      {writing.outline_warning && <p role="status">{writing.outline_warning}</p>}
+
       {article ? (
         <article className="p2b-article-body">
           {article.markdown.split(/\n{2,}/).map((block, index) =>

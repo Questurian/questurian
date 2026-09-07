@@ -302,3 +302,15 @@ def test_every_graph_stage_still_reports(run):
     for stage in intake_v4.GRAPH_STAGES:
         _advance(run, state="running", stage=stage)
         assert intake_v4.writing_state(run) is not None, f"{stage} is the writer"
+
+
+@pytest.mark.parametrize('accepted', [True, False, None])
+def test_outline_fallback_is_visible_without_changing_readiness(run, accepted):
+    from app.core import write_stage_result
+
+    _advance(run, state='completed', stage='complete')
+    if accepted is not None:
+        write_stage_result(run, 'stage_v3_outline', {'data': {'accepted': accepted}})
+    result = intake_v4.writing_state(run)
+    assert bool(result['outline_warning']) is (accepted is False)
+    assert result['readiness_blockers'] == []

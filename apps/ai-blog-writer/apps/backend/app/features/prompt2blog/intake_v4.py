@@ -1250,6 +1250,7 @@ def writing_state(run_id: str) -> dict[str, Any] | None:
         return None
 
     finalize = _stage_data(run_id, "stage_v3_finalize")
+    outline = _stage_data(run_id, "stage_v3_outline")
     return {
         "state": state,
         "stage": stage,
@@ -1261,6 +1262,11 @@ def writing_state(run_id: str) -> dict[str, Any] | None:
         "pipeline_status": _safe_str(finalize.get("pipeline_status")) or None,
         "readiness_blockers": finalize.get("readiness_blockers") or [],
         "constraint_checks": _safe_dict(finalize.get("constraint_checks")),
+        "outline_warning": (
+            "The section plan was unusable. The writer structured this article "
+            "from the Article Brief and selected evidence instead. Review its structure."
+            if outline.get("accepted") is False else None
+        ),
     }
 
 

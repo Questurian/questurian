@@ -53,6 +53,7 @@ def run_v3_outline_stage(
     }
     target_word_count = _target_word_count(_safe_dict(state["option_context"]))
     outline = dict(EMPTY_OUTLINE)
+    candidate = dict(EMPTY_OUTLINE)
     diagnostics: dict[str, Any] = {}
     accepted = False
     repaired = False
@@ -154,6 +155,7 @@ def run_v3_outline_stage(
         stage,
         {
             "outline": outline,
+            "candidate_outline": candidate,
             "accepted": accepted,
             # A plan that needed repair is a signal about the outline model
             # worth reading later, not something to bury in a log line.

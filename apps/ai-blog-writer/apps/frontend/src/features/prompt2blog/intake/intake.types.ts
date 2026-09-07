@@ -212,6 +212,7 @@ export interface IntakeWriting {
   pipeline_status: string | null
   readiness_blockers: string[]
   constraint_checks: Record<string, unknown>
+  outline_warning?: string | null
 }
 
 /**

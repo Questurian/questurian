@@ -1,5 +1,39 @@
 # Handoff: the outline is rejected and the article is written blind
 
+## Resolution — 2026-09-06
+
+Fixed locally; original investigation follows below as historical evidence.
+
+- Root cause: lexical identity was mistaken for editorial coverage. The full
+  airport name was required even when the complete short name appeared.
+  `_names_subject` is not a safe substitute: it accepts the word **El**.
+- Coverage now allows conservative descriptive suffix removal (`International
+  Airport`, `Airport`, `cuisine`), retaining the entire remaining name.
+  El Dorado passes; El Centro, Dorado alone, and International Airport alone
+  do not. This is a bounded lexical check, not general entity resolution.
+- Genuine invalid plans still degrade under the existing nonblocking policy.
+  Passing every rejected plan through, or adding the subject to a heading,
+  would conceal real drift. Both result screens now disclose when the writer
+  had to structure the article without a usable section plan. Saving remains
+  available. The stage also stores `candidate_outline` before fallback so the
+  rejected sections remain directly inspectable.
+- All five mystery records are v3-era runs (`pipeline_input_v3.schema_version`
+  is 3). Their raw responses contain plans; their stored empty outlines are
+  the old rejection output. Four geographic subjects pass the current matcher.
+  `16872313` instead uses “The current shift underway in Lima's dining scene”
+  as its primary subject and still fails. No legacy runtime path was restored.
+- Read-only SQLite backup replay: all 26 previously accepted outlines pass;
+  both Bogotá candidates pass with six sections; `a3c20e41` remains rejected.
+  Historical work orders came from stored commission/result data or the
+  recorded prompt for interrupted runs. Claim IDs were reconstructed from
+  each plan for this scope replay; this does not independently re-audit the
+  old evidence packets.
+- Fixture-based regression tests replay the three real candidates through
+  the outline stage using a fake LLM, without making paid model calls.
+  Validation: 79 backend tests, 46 frontend tests, frontend TypeScript check.
+
+## Original handoff
+
 Written 2026-09-06 for whoever picks this up. Everything below is measured
 against the stored runs in `apps/ai-blog-writer/data/pipeline.db`, not
 reasoned about. **Nothing here is fixed.** One likely cause is identified and

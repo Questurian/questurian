@@ -109,6 +109,12 @@ export function PipelineV3Result({
           View Saved Articles
         </Link>
       </div>
+      {result.quality_review.outline_accepted === false && (
+        <p role="status">
+          The section plan was unusable. The writer structured this article from the
+          Article Brief and selected evidence instead. Review its structure.
+        </p>
+      )}
       {draftsError && (
         <p className="p2b-error" role="alert">
           {draftsError}

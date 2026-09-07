@@ -913,3 +913,17 @@ describe('the list of runs to go back to', () => {
     await waitFor(() => expect(container.querySelector('.p2b-run-list')).toBeNull())
   })
 })
+
+it('shows outline fallback separately from the readiness stamp', () => {
+  renderArticle(
+    <ArticleScreen
+      runId="run-1"
+      writing={writing({ outline_warning: 'The section plan was unusable. Review its structure.' })}
+      article={null}
+      onReopen={vi.fn()}
+      busy={false}
+    />,
+  )
+  expect(screen.getByRole('status')).toHaveTextContent('The section plan was unusable.')
+  expect(screen.getByText(/Ready for staging/)).toBeInTheDocument()
+})

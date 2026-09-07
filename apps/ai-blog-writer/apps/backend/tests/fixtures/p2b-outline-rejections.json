@@ -1,0 +1,473 @@
+[
+  {
+    "run_id": "a3c20e41-0358-471d-8801-8c2b43959f32",
+    "outline": {
+      "working_title": "The Malecón Walk: A Practical Guide to Lima's Coastal Path",
+      "sections": [
+        {
+          "heading": "The Malecón: Lima's Coastal Path and Motorway Contrast",
+          "claim_ids": [
+            "headline_motorway_existence:motorway_existence_1",
+            "headline_motorway_existence:motorway_location_1",
+            "headline_motorway_existence:park_existence_1",
+            "headline_motorway_existence:park_description_1",
+            "headline_motorway_existence:park_length_1",
+            "headline_motorway_existence:park_length_2",
+            "headline_motorway_existence:park_length_3",
+            "headline_motorway_existence:park_length_4",
+            "headline_motorway_existence:park_length_5",
+            "headline_motorway_existence:park_length_6",
+            "headline_motorway_existence:park_length_7",
+            "headline_motorway_existence:park_length_8",
+            "headline_motorway_existence:park_length_9",
+            "headline_motorway_existence:park_length_10",
+            "headline_motorway_existence:park_length_11",
+            "motorway_visibility:motorway_1",
+            "motorway_visibility:motorway_2",
+            "motorway_visibility:motorway_3",
+            "motorway_visibility:motorway_4",
+            "motorway_visibility:motorway_5",
+            "motorway_visibility:park_1",
+            "motorway_visibility:park_2",
+            "motorway_visibility:park_3",
+            "motorway_visibility:park_4",
+            "motorway_visibility:park_5",
+            "walk_start_point_features:C8"
+          ],
+          "purpose": "To introduce the Malecón, its approximate length, and the unique visual contrast between the park above and the motorway below, setting the stage for the walk.",
+          "requirement_ids": [
+            "headline_motorway_existence",
+            "headline_park_existence",
+            "headline_park_length",
+            "motorway_visibility",
+            "park_visibility"
+          ],
+          "target_words": 250
+        },
+        {
+          "heading": "Starting Your Walk: Manuel Bonilla Stadium, Miraflores",
+          "claim_ids": [
+            "headline_motorway_existence:walk_start_point_name_1",
+            "headline_motorway_existence:walk_start_point_name_2",
+            "walk_start_point_features:C1",
+            "walk_start_point_features:C2",
+            "walk_start_point_features:C3",
+            "walk_start_point_features:C4",
+            "walk_start_point_features:C5",
+            "walk_start_point_features:C6",
+            "walk_start_point_features:C7",
+            "walk_start_point_features:C9",
+            "walk_start_point_features:C10"
+          ],
+          "purpose": "To provide the exact northernmost starting point for the continuous Malecón walk and detail the key features and activities available at this beginning section.",
+          "requirement_ids": [
+            "walk_start_point_name",
+            "walk_start_point_features"
+          ],
+          "target_words": 250
+        },
+        {
+          "heading": "The Full Malecón Walk: Distance and Southern End",
+          "claim_ids": [
+            "walk_start_point_features:C11",
+            "walk_start_point_features:C12",
+            "walk_start_point_features:C13",
+            "walk_start_point_features:C14",
+            "walk_start_point_features:C15",
+            "walk_start_point_features:C16",
+            "walk_start_point_features:C17",
+            "walk_start_point_features:C18",
+            "walk_start_point_features:C19"
+          ],
+          "purpose": "To clearly state the total distance of the continuous Malecón path and identify its southernmost publicly accessible ending point, giving the reader a complete scope of the walk.",
+          "requirement_ids": [
+            "walk_total_distance",
+            "walk_end_point_name"
+          ],
+          "target_words": 235
+        }
+      ],
+      "commission_alignment": "This structure directly answers the core reader question by providing a clear, north-to-south progression of the Malecón walk, detailing its start, total distance, and end, allowing a first-time visitor to plan their morning before setting off.",
+      "direct_answer_focus": "This article provides precise details on the Malecón walk's northernmost starting point, its total distance, and its southernmost ending point, enabling immediate planning.",
+      "takeaway_focus": "Readers will know exactly where to begin the Malecón walk, its full length, and where it concludes, allowing them to confidently plan their morning itinerary.",
+      "unsupported_requirements": [
+        "walk_end_point_features",
+        "walk_estimated_duration",
+        "malecón_districts_order",
+        "malecón_miraflores_pois",
+        "malecón_barranco_pois"
+      ]
+    },
+    "work_order": {
+      "primary_subject": "Lima, Peru",
+      "scope": {
+        "mode": "single_subject",
+        "references": [
+          {
+            "name": "Lima, Peru",
+            "role": "primary_subject"
+          },
+          {
+            "name": "Malecón",
+            "role": "context_only"
+          },
+          {
+            "name": "Miraflores",
+            "role": "context_only"
+          },
+          {
+            "name": "Barranco",
+            "role": "context_only"
+          },
+          {
+            "name": "Magdalena del Mar",
+            "role": "context_only"
+          },
+          {
+            "name": "San Isidro",
+            "role": "context_only"
+          }
+        ]
+      }
+    },
+    "target_word_count": 900,
+    "claim_ids": [
+      "headline_motorway_existence:motorway_existence_1",
+      "headline_motorway_existence:motorway_location_1",
+      "headline_motorway_existence:park_description_1",
+      "headline_motorway_existence:park_existence_1",
+      "headline_motorway_existence:park_length_1",
+      "headline_motorway_existence:park_length_10",
+      "headline_motorway_existence:park_length_11",
+      "headline_motorway_existence:park_length_2",
+      "headline_motorway_existence:park_length_3",
+      "headline_motorway_existence:park_length_4",
+      "headline_motorway_existence:park_length_5",
+      "headline_motorway_existence:park_length_6",
+      "headline_motorway_existence:park_length_7",
+      "headline_motorway_existence:park_length_8",
+      "headline_motorway_existence:park_length_9",
+      "headline_motorway_existence:walk_start_point_name_1",
+      "headline_motorway_existence:walk_start_point_name_2",
+      "motorway_visibility:motorway_1",
+      "motorway_visibility:motorway_2",
+      "motorway_visibility:motorway_3",
+      "motorway_visibility:motorway_4",
+      "motorway_visibility:motorway_5",
+      "motorway_visibility:park_1",
+      "motorway_visibility:park_2",
+      "motorway_visibility:park_3",
+      "motorway_visibility:park_4",
+      "motorway_visibility:park_5",
+      "walk_start_point_features:C1",
+      "walk_start_point_features:C10",
+      "walk_start_point_features:C11",
+      "walk_start_point_features:C12",
+      "walk_start_point_features:C13",
+      "walk_start_point_features:C14",
+      "walk_start_point_features:C15",
+      "walk_start_point_features:C16",
+      "walk_start_point_features:C17",
+      "walk_start_point_features:C18",
+      "walk_start_point_features:C19",
+      "walk_start_point_features:C2",
+      "walk_start_point_features:C3",
+      "walk_start_point_features:C4",
+      "walk_start_point_features:C5",
+      "walk_start_point_features:C6",
+      "walk_start_point_features:C7",
+      "walk_start_point_features:C8",
+      "walk_start_point_features:C9"
+    ]
+  },
+  {
+    "run_id": "e23257c0-c2da-47bb-ba3f-e1f95b79bc15",
+    "outline": {
+      "working_title": "What to Book Before You Land at El Dorado",
+      "direct_answer_focus": "The reader lands with a dead phone and an address they cannot yet place in the city. The answer, done while still on gate wifi: book one named private transfer for the arrival time, screenshot the confirmation and the driver's name, photo and plate, and memorise a single fallback to use in arrivals.",
+      "takeaway_focus": "The departure-gate checklist: one transfer booked for the arrival time, the confirmation and driver details screenshotted, one fallback move fixed in memory. The piece closes at the gate, not in the terminal.",
+      "commission_alignment": "It leads with the single booking the reader can finish on gate wifi with nothing but their name on a sign, then ranks the alternatives beneath it in the brief's order, so the first-time arrival in 34B leaves the piece having booked once and memorised one fallback.",
+      "unsupported_requirements": [
+        "Fares and journey times keyed to the three destination zones (La Candelaria; Chapinero/Zona G; Usaquen and the north): the desk holds no verified fare or journey-time figure for any option, and nothing placing those neighbourhoods by distance or route, so the zone-by-zone fare/time table in the brief's spine cannot be planned.",
+        "Matching the address on a booking confirmation to a specific zone: no evidence locates La Candelaria, Chapinero/Zona G or Usaquen relative to El Dorado, so the piece can name the three zones but cannot tell the reader which one their address falls in or what that changes about the ride."
+      ],
+      "sections": [
+        {
+          "heading": "The booking to make from your seat",
+          "purpose": "State the decision plainly: pre-book a private transfer for your arrival time before you lose wifi. Give the reasoning that puts it first for this reader — a driver waits in the arrivals area, past passport control and baggage claim, holding a sign with your name; the price is fixed with all fees, tolls and taxes included and nothing to negotiate; and it removes the taxi line, the surge pricing and the unfamiliar local taxi that catch a tired first-time arrival. Note that this edge over a ride-hailing app is largest for first-timers and families.",
+          "claim_ids": [
+            "req_general_prebooking_1:req_general_prebooking_1_claim_1",
+            "req_general_prebooking_1:req_general_prebooking_1_claim_5",
+            "req_general_prebooking_1:req_general_prebooking_1_claim_2",
+            "req_general_prebooking_5:c1",
+            "req_official_taxi_language_support:uber_reliability_6"
+          ],
+          "target_words": 165
+        },
+        {
+          "heading": "What to screenshot before you leave the gate",
+          "purpose": "Turn the booking into something that survives a phone that will not connect. The transfer company sends the driver's name, photo and licence plate by WhatsApp or email before arrival; capture that and the confirmation as screenshots while still on the airport's free wifi, which reaches every terminal but needs a short registration form before it lets you on.",
+          "claim_ids": [
+            "req_general_prebooking_5:c4",
+            "req_transmilenio_language_proficiency:wifi_loc_1",
+            "req_transmilenio_language_proficiency:wifi_loc_3"
+          ],
+          "target_words": 120
+        },
+        {
+          "heading": "Second choice: the Taxi Imperial desk",
+          "purpose": "The ranked fallback for a reader who lands with no pre-booking. The authorised counters in the arrivals hall issue a printed, pre-calculated fare before you board; the official cars are yellow and run by one authorised company, Taxi Imperial. Say what the call costs — nobody is holding your name, and you join a queue — which is why it sits below a pre-booked transfer rather than beside it.",
+          "claim_ids": [
+            "req_general_prebooking_5:c11",
+            "req_official_taxi_language_support:official_taxi_vehicle_1",
+            "req_official_taxi_language_support:official_taxi_vehicle_2"
+          ],
+          "target_words": 120
+        },
+        {
+          "heading": "Third: InDrive or Uber from the parking deck",
+          "purpose": "Why the apps rank below the desk for someone with no SIM and little Spanish. Pickup is in designated parking areas rather than the curb, and wait times are less predictable than a pre-booked transfer; the airport wifi is enough to book before you walk out, but you need the app, an account and data on the far side. Use the dated UberENGLISH/Duolingo program — over 1,000 drivers enrolled, 60 certified at launch — to show how thin the odds of an English-speaking driver are.",
+          "claim_ids": [
+            "req_general_prebooking_1:req_general_prebooking_1_claim_14",
+            "req_transmilenio_language_proficiency:wifi_rel_6",
+            "req_rideshare_vehicle_type:claim_11",
+            "req_rideshare_vehicle_type:claim_12"
+          ],
+          "target_words": 135
+        },
+        {
+          "heading": "Last: TransMilenio, and the 22:00 cut-off",
+          "purpose": "Place the bus at the bottom of the ranking and rule it out for most of this audience. Public buses do not run 24 hours; if you arrive after 22:00 on any day, or during limited Sunday hours, a taxi or private transfer is the move — and that is the window an overnight flight from North America or Europe tends to land in.",
+          "claim_ids": [
+            "req_transmilenio_times_candelaria:c22"
+          ],
+          "target_words": 80
+        },
+        {
+          "heading": "The one move if nobody is holding your name",
+          "purpose": "The single fallback to memorise before boarding. Message the transfer company or driver on WhatsApp over the airport's free wifi using the details you saved at the gate; ignore anyone who approaches you unsolicited offering a taxi or Uber, since they are outside the airport's official system; if you cannot reach your driver, walk to the Taxi Imperial counter.",
+          "claim_ids": [
+            "req_general_prebooking_5:c20",
+            "req_general_prebooking_5:c22",
+            "req_general_prebooking_5:c11"
+          ],
+          "target_words": 115
+        }
+      ]
+    },
+    "work_order": {
+      "primary_subject": "El Dorado International Airport",
+      "scope": {
+        "mode": "single_subject",
+        "references": [
+          {
+            "name": "El Dorado International Airport",
+            "role": "primary_subject"
+          },
+          {
+            "name": "Bogota",
+            "role": "context_only"
+          },
+          {
+            "name": "La Candelaria",
+            "role": "context_only"
+          },
+          {
+            "name": "Chapinero/Zona G",
+            "role": "context_only"
+          },
+          {
+            "name": "Usaquén and the north",
+            "role": "context_only"
+          },
+          {
+            "name": "Pre-booked private transfer services in Bogota",
+            "role": "context_only"
+          },
+          {
+            "name": "Official airport taxi services at El Dorado International Airport",
+            "role": "context_only"
+          },
+          {
+            "name": "InDrive in Bogota",
+            "role": "context_only"
+          },
+          {
+            "name": "Uber in Bogota",
+            "role": "context_only"
+          },
+          {
+            "name": "TransMilenio in Bogota",
+            "role": "context_only"
+          }
+        ]
+      }
+    },
+    "target_word_count": 900,
+    "claim_ids": [
+      "req_general_prebooking_1:req_general_prebooking_1_claim_1",
+      "req_general_prebooking_1:req_general_prebooking_1_claim_14",
+      "req_general_prebooking_1:req_general_prebooking_1_claim_2",
+      "req_general_prebooking_1:req_general_prebooking_1_claim_5",
+      "req_general_prebooking_5:c1",
+      "req_general_prebooking_5:c11",
+      "req_general_prebooking_5:c20",
+      "req_general_prebooking_5:c22",
+      "req_general_prebooking_5:c4",
+      "req_official_taxi_language_support:official_taxi_vehicle_1",
+      "req_official_taxi_language_support:official_taxi_vehicle_2",
+      "req_official_taxi_language_support:uber_reliability_6",
+      "req_rideshare_vehicle_type:claim_11",
+      "req_rideshare_vehicle_type:claim_12",
+      "req_transmilenio_language_proficiency:wifi_loc_1",
+      "req_transmilenio_language_proficiency:wifi_loc_3",
+      "req_transmilenio_language_proficiency:wifi_rel_6",
+      "req_transmilenio_times_candelaria:c22"
+    ]
+  },
+  {
+    "run_id": "bogota-replan-0906",
+    "outline": {
+      "working_title": "Sorting Your Ride From El Dorado Before You Land",
+      "direct_answer_focus": "Before wifi drops at the departure gate, book one pre-booked private transfer (Safe Transfers Colombia, in the Cielo.Travel network) for your scheduled arrival time, using your flight number and the lead passenger's name, then screenshot the confirmation — that is the whole action, and it is done before boarding.",
+      "sections": [
+        {
+          "heading": "Book the private transfer at the departure gate",
+          "purpose": "State the single recommendation plainly and give the reader the exact booking to complete on wifi: a pre-booked private transfer from El Dorado to a Bogotá address, made for the scheduled arrival time. Specify what the form asks for so the reader can finish it in one sitting, and note in a line that the official airport taxi desk, InDrive, Uber and TransMilenio are all things arranged only after landing, which is why the booking happens now.",
+          "claim_ids": [
+            "req_private_transfer_provider:p1_c1",
+            "req_private_transfer_provider:b1_c5",
+            "req_private_transfer_provider:b1_c6"
+          ],
+          "target_words": 140
+        },
+        {
+          "heading": "The screenshot that survives a dead phone",
+          "purpose": "Tell the reader precisely what the confirmation email contains and why it must be captured as an image before the phone loses signal: exact meeting point, the driver's phone number, and emergency contact details. Frame it as the one artifact they carry through immigration.",
+          "claim_ids": [
+            "req_private_transfer_provider:b1_c10"
+          ],
+          "target_words": 95
+        },
+        {
+          "heading": "Where the driver waits at El Dorado",
+          "purpose": "Walk the reader from the international arrivals hall to the pickup: Gate 5 on the first floor, outside the gate, and the recognition step of looking for a driver holding a sign with their name. This is the part they replay from memory if the phone is dead.",
+          "claim_ids": [
+            "req_private_transfer_provider:a1_c2",
+            "req_private_transfer_provider:a1_c1"
+          ],
+          "target_words": 120
+        },
+        {
+          "heading": "When nobody is holding your name",
+          "purpose": "Give the one fallback move to memorise before landing: wait 15 to 30 minutes past the scheduled pickup, then go to the official prepaid taxi booth ('Taxi Seguro') inside the arrivals hall, which sets a fixed fare and assigns a driver. Make clear this is the single backup, not a menu.",
+          "claim_ids": [
+            "req_private_transfer_provider:f1_c8",
+            "req_private_transfer_provider:f1_c11"
+          ],
+          "target_words": 125
+        },
+        {
+          "heading": "What the ride costs and how long it takes, by zone",
+          "purpose": "Price and time the transfer against the reader's destination rather than a citywide average: La Candelaria roughly 90,000–215,000 COP and 18–30 minutes; Chapinero/Zona G roughly 80,000–195,000 COP and 16–30 minutes; Usaquén and the north roughly 80,000–200,000 COP and 30–60 minutes, in non-peak traffic. Let the reader check the quote on their confirmation against this and see that the north costs the same but takes twice as long.",
+          "claim_ids": [
+            "req_private_transfer_fare_candelaria:c1",
+            "req_private_transfer_fare_candelaria:c17",
+            "req_private_transfer_fare_usaquen:fare_usaquen_range",
+            "req_private_transfer_fare_candelaria:c10",
+            "req_private_transfer_fare_candelaria:c26",
+            "req_private_transfer_fare_usaquen:time_usaquen_range"
+          ],
+          "target_words": 140
+        },
+        {
+          "heading": "Matching your booking address to one of the three zones",
+          "purpose": "Help the first-time arrival place an unfamiliar address into La Candelaria, Chapinero/Zona G, or Usaquén and the north before landing, using landmarks they can match against a hotel listing: the colonial centre around Plaza de Bolívar, the National Capitol, the Primatial Cathedral and El Chorro de Quevedo, where the city was founded in 1538; and Usaquén's cobblestone streets, low whitewashed buildings and Parque de Usaquén, with the Sunday flea market around the plaza. The zone identification feeds directly into the fare and time check above.",
+          "claim_ids": [
+            "req_transmilenio_time_chapinero:c23",
+            "req_transmilenio_time_chapinero:c36",
+            "req_transmilenio_time_chapinero:c38",
+            "req_transmilenio_time_chapinero:c22"
+          ],
+          "target_words": 115
+        }
+      ],
+      "takeaway_focus": "By the time the seatbelt sign goes off the reader has done four things at the gate: booked one named private transfer for their arrival time, saved a screenshot of the confirmation with meeting point and driver number, matched their address to one of the three zones and its fare and time, and memorised the one fallback — wait 15 to 30 minutes, then the Taxi Seguro prepaid booth inside arrivals. Nothing in the piece needs doing after landing.",
+      "commission_alignment": "The structure answers \"what do I book right now, before I lose wifi\" by opening with the single recommended booking and what it requires, then ordering the arrival exactly as the reader will live it: the confirmation to save, where the driver stands, the fallback if he is absent, and how to read cost, time and zone against the address on their confirmation.",
+      "unsupported_requirements": [
+        "The ranked ladder of alternatives beneath the recommendation — official airport taxi from the authorised desk second, InDrive/Uber third, TransMilenio last — each with its own fare, journey time and reasoning: the desk holds no fare, timing, route, availability or reliability evidence for any mode other than the pre-booked private transfer, only the Taxi Seguro prepaid booth inside arrivals as a fallback.",
+        "Zone-keyed fares and journey times to La Candelaria, Chapinero/Zona G, and Usaquén and the north for the official airport taxi, InDrive, Uber or TransMilenio — the keyed fare and time evidence covers the pre-booked private transfer only.",
+        "Any account of InDrive, Uber or TransMilenio pickup procedure, app or account requirements, Spanish-language friction, or the airport TransMilenio route and transfers — no supporting records are on the desk."
+      ]
+    },
+    "work_order": {
+      "primary_subject": "El Dorado International Airport",
+      "scope": {
+        "mode": "single_subject",
+        "references": [
+          {
+            "name": "El Dorado International Airport",
+            "role": "primary_subject"
+          },
+          {
+            "name": "Bogota, Colombia",
+            "role": "context_only"
+          },
+          {
+            "name": "La Candelaria, Bogota",
+            "role": "context_only"
+          },
+          {
+            "name": "Chapinero/Zona G, Bogota",
+            "role": "context_only"
+          },
+          {
+            "name": "Usaquén and the north, Bogota",
+            "role": "context_only"
+          },
+          {
+            "name": "Pre-booked private transfer service from El Dorado International Airport",
+            "role": "context_only"
+          },
+          {
+            "name": "Official airport taxi service from El Dorado International Airport",
+            "role": "context_only"
+          },
+          {
+            "name": "InDrive ride-hailing service in Bogota",
+            "role": "context_only"
+          },
+          {
+            "name": "Uber ride-hailing service in Bogota",
+            "role": "context_only"
+          },
+          {
+            "name": "TransMilenio public transport system in Bogota",
+            "role": "context_only"
+          }
+        ]
+      }
+    },
+    "target_word_count": 900,
+    "claim_ids": [
+      "req_private_transfer_fare_candelaria:c1",
+      "req_private_transfer_fare_candelaria:c10",
+      "req_private_transfer_fare_candelaria:c17",
+      "req_private_transfer_fare_candelaria:c26",
+      "req_private_transfer_fare_usaquen:fare_usaquen_range",
+      "req_private_transfer_fare_usaquen:time_usaquen_range",
+      "req_private_transfer_provider:a1_c1",
+      "req_private_transfer_provider:a1_c2",
+      "req_private_transfer_provider:b1_c10",
+      "req_private_transfer_provider:b1_c5",
+      "req_private_transfer_provider:b1_c6",
+      "req_private_transfer_provider:f1_c11",
+      "req_private_transfer_provider:f1_c8",
+      "req_private_transfer_provider:p1_c1",
+      "req_transmilenio_time_chapinero:c22",
+      "req_transmilenio_time_chapinero:c23",
+      "req_transmilenio_time_chapinero:c36",
+      "req_transmilenio_time_chapinero:c38"
+    ]
+  }
+]

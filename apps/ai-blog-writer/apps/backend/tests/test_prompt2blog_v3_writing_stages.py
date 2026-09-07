@@ -502,3 +502,77 @@ def test_a_plan_that_passes_is_not_touched():
     assert recorder.recorded[0][1]["repaired"] is False
     assert recorder.recorded[0][1]["dropped_headings"] == []
     assert len(updates["outline"]["sections"]) == 3
+
+
+@pytest.mark.parametrize('case', json.loads(
+    (Path(__file__).parent / 'fixtures/p2b-outline-rejections.json').read_text()
+), ids=lambda case: case['run_id'])
+def test_recorded_outline_rejections(case):
+    dependencies, recorder = _dependencies(FakeLLM(json_response=case['outline']))
+    updates = run_v3_outline_stage(_state(
+        work_order=case['work_order'],
+        packet={'facts': [{'claim_id': cid} for cid in case['claim_ids']]},
+    ), dependencies)
+    assert recorder.recorded[0][1]['candidate_outline'] == sanitize_v3_outline(case['outline'])
+    expected = not case['run_id'].startswith('a3c20e41')
+    assert updates['outline_accepted'] is expected
+    if expected:
+        assert len(updates['outline']['sections']) == 6
+        assert 'Planned sections' in updates['outline_text']
+    else:
+        assert updates['outline']['sections'] == []
+
+
+@pytest.mark.parametrize('title', ['El Centro transfers', 'Dorado transfers', 'International Airport transfers'])
+def test_airport_shorthand_does_not_accept_fragments(title):
+    outline = sanitize_v3_outline(_outline_payload())
+    outline['working_title'] = title
+    accepted, checks = validate_v3_outline(outline,
+        work_order={'primary_subject': 'El Dorado International Airport'},
+        claim_ids={'c1', 'c2', 'c3'}, target_word_count=900)
+    assert not accepted
+    assert not checks['covers_primary_subject']
+
+
+def test_a_subject_written_as_a_description_is_covered_by_either_half():
+    """`primary_subject` is not always a proper name.
+
+    Run e001d48c was commissioned on "Hill elevators of Valparaíso". Its plan
+    named Valparaíso and the individual ascensores throughout and was rejected
+    for never writing that exact phrase, so the article was structured with no
+    section plan at all.
+    """
+    runtime = _runtime()
+    work_order = json.loads(json.dumps(runtime.work_order))
+    work_order["primary_subject"] = "Hill elevators of Valparaíso"
+    work_order["scope"]["references"] = []
+    payload = _outline_payload()
+    payload["working_title"] = "Which Valparaíso ascensores are running"
+
+    accepted, diagnostics = validate_v3_outline(
+        sanitize_v3_outline(payload),
+        work_order=work_order,
+        claim_ids={fact["claim_id"] for fact in runtime.packet["facts"]},
+        target_word_count=900,
+    )
+
+    assert accepted is True
+    assert diagnostics["covers_primary_subject"] is True
+
+
+def test_a_described_subject_still_refuses_a_plan_about_something_else():
+    """Widening the aliases must not stop the check catching real drift."""
+    runtime = _runtime()
+    work_order = json.loads(json.dumps(runtime.work_order))
+    work_order["primary_subject"] = "Hill elevators of Valparaíso"
+    work_order["scope"]["references"] = []
+
+    accepted, diagnostics = validate_v3_outline(
+        sanitize_v3_outline(_outline_payload()),
+        work_order=work_order,
+        claim_ids={fact["claim_id"] for fact in runtime.packet["facts"]},
+        target_word_count=900,
+    )
+
+    assert accepted is False
+    assert diagnostics["covers_primary_subject"] is False
