@@ -95,16 +95,25 @@ def test_an_unknown_id_is_refused():
     assert result.rejected[0]["reason"] == "unknown section id"
 
 
-def test_naming_the_same_section_twice_is_refused_the_second_time():
+def test_naming_the_same_section_twice_refuses_both_edits():
+    """An ambiguous response does not get to apply half of itself.
+
+    Keeping the first and refusing the second looked like the conservative
+    choice and is not: a response that named the same paragraph twice does not
+    know what it wants there, and whichever of the two arrived first is not
+    evidence about which one it meant.
+    """
     result = apply_section_replacements(
         ARTICLE,
         [_edit("s1", "First rewrite."), _edit("s1", "Second rewrite.")],
     )
 
-    assert result.applied == ["s1"]
-    assert "First rewrite." in result.content
-    assert "Second rewrite." not in result.content
-    assert result.rejected[0]["reason"] == "named more than once"
+    assert result.applied == []
+    assert result.content == ARTICLE
+    assert [item["reason"] for item in result.rejected] == [
+        "named more than once",
+        "named more than once",
+    ]
 
 
 def test_a_stale_hash_is_refused():
