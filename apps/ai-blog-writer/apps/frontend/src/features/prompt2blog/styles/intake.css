@@ -1577,3 +1577,72 @@
   font-size: 0.8125rem;
   line-height: 1.55;
 }
+
+/*
+ * Asking for one change to one section.
+ *
+ * The proposal is shown, never applied. Two panes side by side rather than an
+ * inline diff: an editor is judging whether the new prose reads better, and a
+ * word-level diff answers a different question — what moved — while making the
+ * prose harder to read as prose.
+ */
+.p2b-editor {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-4) var(--space-5);
+  background: var(--panel-soft, var(--accent-softer));
+  border-left: 2px solid var(--accent);
+}
+
+.p2b-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.p2b-editor-diff {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.p2b-editor-diff pre {
+  margin: var(--space-1) 0 0;
+  padding: var(--space-3);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  line-height: 1.6;
+}
+
+.p2b-editor-summary {
+  margin: var(--space-3) 0 0;
+  color: var(--ink-light);
+}
+
+/*
+ * A refusal is an answer. Rendered where a revision would have been, because
+ * an editor who asked for something the evidence cannot support needs to read
+ * that rather than hunt for it.
+ */
+.p2b-editor-refused {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--panel);
+  border-left: 2px solid var(--border);
+  font-style: italic;
+}
+
+/*
+ * Above everything, including the prose. A number the evidence never carried is
+ * the specific way this feature fails, and it must not be skimmed past.
+ */
+.p2b-editor-invented {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--accent);
+  font-weight: 500;
+}

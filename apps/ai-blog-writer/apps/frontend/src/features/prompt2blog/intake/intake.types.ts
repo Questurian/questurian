@@ -328,6 +328,34 @@ export interface ProvenanceReport {
   summary: Record<string, unknown> & { means: string }
 }
 
+/** One improvement an editor may ask for. A closed list, not a text box. */
+export interface SectionEditAction {
+  action_id: string
+  label: string
+}
+
+/**
+ * A change offered, not made.
+ *
+ * `could_not_do` is as much of an answer as `revised`. A request the evidence
+ * cannot support must come back as a refusal with a reason, because the
+ * failure mode of asking for a stronger recommendation is a model inventing
+ * the thing that would make it stronger.
+ */
+export interface SectionEditProposal {
+  run_id: string
+  section_id: string
+  heading: string
+  action_id: string
+  text_hash: string
+  original: string
+  revised: string
+  what_changed: string
+  could_not_do: string
+  /** Figures in the revision that are in neither the original nor the packet. */
+  introduced_figures: string[]
+}
+
 /** The finished article. Its own call: the state is polled, this is not. */
 export interface IntakeArticle {
   run_id: string

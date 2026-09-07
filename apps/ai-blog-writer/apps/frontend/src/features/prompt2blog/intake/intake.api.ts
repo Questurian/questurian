@@ -7,6 +7,8 @@ import type {
   IntakeState,
   ProvenanceReport,
   PunchList,
+  SectionEditAction,
+  SectionEditProposal,
   SelectionReview,
   VenueToCheck,
 } from './intake.types'
@@ -254,6 +256,64 @@ export async function confirmProvenance(
   })
   if (!response.ok) {
     throw await readError(response, 'Could not record that check.')
+  }
+}
+
+/** The improvements an editor may ask for. */
+export async function readEditActions(): Promise<{ actions: SectionEditAction[] }> {
+  const response = await apiFetch(`${FEATURE_PREFIX}/section-edit/actions`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not read the available edits.')
+  }
+  return (await response.json()) as { actions: SectionEditAction[] }
+}
+
+/** Ask for one change to one section. Spends a model call; writes nothing. */
+export async function proposeSectionEdit(
+  runId: string,
+  body: { section_id: string; action_id: string },
+): Promise<SectionEditProposal> {
+  const response = await apiFetch(`${FEATURE_PREFIX}/section-edit/${runId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!response.ok) {
+    throw await readError(response, 'Could not draft that change.')
+  }
+  return (await response.json()) as SectionEditProposal
+}
+
+/** Write an accepted proposal into the draft. */
+export async function applySectionEdit(
+  runId: string,
+  proposal: SectionEditProposal,
+): Promise<{ markdown: string; edits: number }> {
+  const response = await apiFetch(`${FEATURE_PREFIX}/section-edit/${runId}/apply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(proposal),
+  })
+  if (!response.ok) {
+    throw await readError(response, 'Could not apply that change.')
+  }
+  return (await response.json()) as { markdown: string; edits: number }
+}
+
+/** Put the draft back to what it was before the last applied edit. */
+export async function undoSectionEdit(
+  runId: string,
+): Promise<{ markdown: string; edits: number; undone: boolean }> {
+  const response = await apiFetch(`${FEATURE_PREFIX}/section-edit/${runId}/undo`, {
+    method: 'POST',
+  })
+  if (!response.ok) {
+    throw await readError(response, 'Could not undo the last change.')
+  }
+  return (await response.json()) as {
+    markdown: string
+    edits: number
+    undone: boolean
   }
 }
 
