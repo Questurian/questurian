@@ -5,6 +5,7 @@ import { buildStageArticleUrl } from '../../../blogArticles'
 import type { IntakeArticle, IntakeWriting } from '../intake.types'
 import { PolishPrompt } from './PolishPrompt'
 import { ProvenancePanel } from './ProvenancePanel'
+import { SectionEditor } from './SectionEditor'
 import { PunchList } from './PunchList'
 
 /**
@@ -70,10 +71,42 @@ function Measured({ checks }: { checks: Record<string, unknown> }) {
   )
 }
 
+
+/**
+ * The article's blocks, each carrying the id of the section it belongs to.
+ *
+ * The backend addresses sections positionally — the block before the first
+ * `##` is `s0` — so the only way this screen and an edit request can agree
+ * about which section is which is for both to count `##` headings in document
+ * order. Doing it here, once, keeps that counting out of the render.
+ */
+function addressedBlocks(markdown: string) {
+  let sectionIndex = 0
+  return markdown.split(/\n{2,}/).map((block, index) => {
+    const heading = block.startsWith('#')
+    if (heading) sectionIndex += 1
+    return {
+      key: index,
+      heading,
+      text: heading ? block.replace(/^#+\s*/, '') : block,
+      sectionId: `s${sectionIndex}`,
+    }
+  })
+}
+
 export function ArticleScreen({ runId, writing, article, onReopen, busy }: ArticleScreenProps) {
   // Which paragraph the operator asked about. Null until they ask: the map is
   // a finding aid and nothing about the article changes because it exists.
   const [asking, setAsking] = useState<string | null>(null)
+  // The article after hand edits. Null while it is still exactly what the
+  // pipeline produced, so nothing about this screen changes on a run nobody
+  // edited.
+  const [edited, setEdited] = useState<string | null>(null)
+  // Which section is open for editing, by the same positional id the backend
+  // addresses sections with: the block before the first `##` is s0.
+  const [editing, setEditing] = useState<{ id: string; heading: string } | null>(
+    null,
+  )
 
   if (writing.state === 'failed') {
     return (
@@ -118,25 +151,41 @@ export function ArticleScreen({ runId, writing, article, onReopen, busy }: Artic
 
       {article ? (
         <article className="p2b-article-body">
-          {article.markdown.split(/\n{2,}/).map((block, index) =>
-            block.startsWith('#') ? (
-              <h3 key={index}>{block.replace(/^#+\s*/, '')}</h3>
+          {addressedBlocks(edited ?? article.markdown).map(block =>
+            block.heading ? (
+              <h3 key={block.key}>
+                {block.text}
+                <button
+                  type="button"
+                  className="p2b-passage-source"
+                  aria-label={`Edit ${block.text}`}
+                  onClick={() =>
+                    setEditing({ id: block.sectionId, heading: block.text })
+                  }
+                >
+                  edit
+                </button>
+              </h3>
             ) : (
               // A button rather than a click handler on the paragraph: this is
               // an action, and an editor reading with a keyboard has the same
               // right to ask where a price came from as one with a mouse.
               <p
-                key={index}
+                key={block.key}
                 className={
-                  asking === block ? 'p2b-passage p2b-passage-asking' : 'p2b-passage'
+                  asking === block.text
+                    ? 'p2b-passage p2b-passage-asking'
+                    : 'p2b-passage'
                 }
               >
-                {block}
+                {block.text}
                 <button
                   type="button"
                   className="p2b-passage-source"
                   aria-label="Where did this passage come from?"
-                  onClick={() => setAsking(current => (current === block ? null : block))}
+                  onClick={() =>
+                    setAsking(current => (current === block.text ? null : block.text))
+                  }
                 >
                   source
                 </button>
@@ -150,6 +199,20 @@ export function ArticleScreen({ runId, writing, article, onReopen, busy }: Artic
 
       {asking && (
         <ProvenancePanel runId={runId} selected={asking} onClose={() => setAsking(null)} />
+      )}
+
+      {editing && (
+        <SectionEditor
+          runId={runId}
+          sectionId={editing.id}
+          heading={editing.heading}
+          onApplied={markdown => {
+            setEdited(markdown)
+            // The map described the prose that was there a moment ago.
+            setAsking(null)
+          }}
+          onClose={() => setEditing(null)}
+        />
       )}
 
       <PunchList runId={runId} />

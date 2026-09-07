@@ -11,6 +11,7 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel, Field
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.core import (
@@ -59,9 +60,19 @@ from ..provenance import (
     stored_confirmations,
 )
 from ..resume_v3 import plan_resume
+from ..section_edit_v4 import (
+    EDIT_ACTIONS,
+    SECTION_EDIT_STAGE,
+    EditHistory,
+    EditProposal,
+    apply_proposal,
+    propose_section_edit,
+    undo_last,
+)
 from ..run_recorder import RunRecorder
+from ..dependencies import dependencies_for_run
 from ..selection_v4 import selection_from_flags
-from ..support import _clean_string_list, _safe_str
+from ..support import _clean_string_list, _safe_dict, _safe_str
 
 router = APIRouter()
 
@@ -405,6 +416,145 @@ def confirm_provenance(
         run_id, PROVENANCE_STAGE, updated.model_dump(mode="json")
     )
     return JSONResponse(updated.model_dump(mode="json"))
+
+
+class SectionEditRequest(BaseModel):
+    """Which section, and which of the offered improvements."""
+
+    section_id: str = Field(min_length=1)
+    action_id: str = Field(min_length=1)
+
+
+def _finished_run(run_id: str) -> dict[str, Any]:
+    status = read_status(run_id)
+    if not status or status.get("feature") != FEATURE_NAME:
+        raise HTTPException(status_code=404, detail="Run not found.")
+    output = read_output(run_id)
+    if not output:
+        raise HTTPException(
+            status_code=404, detail="This run has not produced an article yet."
+        )
+    return output
+
+
+def _edit_history(run_id: str) -> EditHistory:
+    stored = _safe_dict(
+        _safe_dict(read_stage_result(run_id, SECTION_EDIT_STAGE)).get("data")
+    )
+    return EditHistory.model_validate(stored) if stored else EditHistory()
+
+
+def _save_article(run_id: str, output: dict[str, Any], markdown: str) -> None:
+    """Rewrite the article, leaving the pipeline's own record of it alone.
+
+    `write_artifact` takes the markdown out of the payload and stores it in its
+    own column, so the artifact -- what the pipeline produced and scored -- is
+    passed back unchanged. A hand edit changes the article; it does not change
+    the run's account of how the article was made.
+    """
+    RunRecorder().record_artifact(run_id, {**output["artifact"], "markdown": markdown})
+
+
+@router.get("/section-edit/actions", dependencies=[Depends(require_staff)])
+def section_edit_actions() -> JSONResponse:
+    """The improvements an editor may ask for.
+
+    A closed list rather than a free-text box. "Make this better" is a request
+    only a model with an opinion can satisfy, and the opinion it reaches for is
+    the house style of the internet; each of these names a specific defect.
+    """
+    return JSONResponse(
+        {
+            "actions": [
+                {"action_id": action.action_id, "label": action.label}
+                for action in EDIT_ACTIONS
+            ]
+        }
+    )
+
+
+@router.post("/section-edit/{run_id}", dependencies=[Depends(require_staff)])
+def propose_edit(run_id: str, request: SectionEditRequest) -> JSONResponse:
+    """Ask for one change to one section. Nothing is written.
+
+    This is the one route here that spends money -- one model call per request
+    -- and it spends it on a section rather than an article.
+    """
+    output = _finished_run(run_id)
+    try:
+        packet = frozen_packet(run_id)
+    except PacketNotStored as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    artifact = _safe_dict(output["artifact"]).get("pipeline_v3") or {}
+    try:
+        proposal = propose_section_edit(
+            run_id=run_id,
+            content=output["markdown"],
+            section_id=request.section_id,
+            action_id=request.action_id,
+            brief=_safe_dict(_safe_dict(artifact).get("brief")),
+            packet=packet,
+            dependencies=dependencies_for_run(run_id),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(proposal.model_dump(mode="json"))
+
+
+@router.post("/section-edit/{run_id}/apply", dependencies=[Depends(require_staff)])
+def apply_edit(
+    run_id: str,
+    proposal: EditProposal,
+    staff_id: str = Depends(staff_user_id),
+) -> JSONResponse:
+    """Write an accepted proposal into the draft.
+
+    A proposal read on one screen while another edit landed on the same section
+    is refused rather than applied over the top of it.
+    """
+    output = _finished_run(run_id)
+    result = apply_proposal(
+        content=output["markdown"],
+        proposal=proposal,
+        history=_edit_history(run_id),
+        editor=staff_id or "",
+        now=_now_iso(),
+    )
+    if not result.applied:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "That section has changed since this edit was proposed. "
+                "Read it again and ask for the change from where it is now."
+            ),
+        )
+    _save_article(run_id, output, result.markdown)
+    RunRecorder().record_stage(
+        run_id, SECTION_EDIT_STAGE, result.history.model_dump(mode="json")
+    )
+    return JSONResponse({"markdown": result.markdown, "edits": len(result.history.edits)})
+
+
+@router.post("/section-edit/{run_id}/undo", dependencies=[Depends(require_staff)])
+def undo_edit(run_id: str) -> JSONResponse:
+    """Put the draft back to what it was before the last applied edit."""
+    output = _finished_run(run_id)
+    undone = undo_last(_edit_history(run_id))
+    if undone is None:
+        # Not an error. Pressing undo on an unedited draft is a question with
+        # a plain answer.
+        return JSONResponse(
+            {"markdown": output["markdown"], "edits": 0, "undone": False}
+        )
+    markdown, history = undone
+    _save_article(run_id, output, markdown)
+    RunRecorder().record_stage(
+        run_id, SECTION_EDIT_STAGE, history.model_dump(mode="json")
+    )
+    return JSONResponse(
+        {"markdown": markdown, "edits": len(history.edits), "undone": True}
+    )
 
 
 @router.get("/drafts/{run_id}", response_class=HTMLResponse)
