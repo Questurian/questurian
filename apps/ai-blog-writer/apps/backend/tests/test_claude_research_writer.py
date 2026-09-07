@@ -206,6 +206,58 @@ def test_the_structured_writer_is_unchanged(monkeypatch):
     assert "WebFetch" in denied
 
 
+# --- refusing rather than degrading -----------------------------------------
+
+
+def test_research_refuses_when_no_claude_can_reach_the_web(monkeypatch):
+    """Every other writer call substitutes silently when Claude is off.
+
+    That is right for prose: a Gemini paragraph is still a paragraph. It is
+    wrong here, because the assignment tells the writer to verify fares and
+    opening hours, so a model that cannot open a page would answer it by
+    inventing them. A refusal is recoverable; a confidently sourced article
+    with invented sources is not.
+    """
+    from app.shared import writer_invocation
+
+    monkeypatch.setattr(
+        writer_invocation, "_claude_subscription_available", lambda: False
+    )
+
+    with pytest.raises(writer_invocation.WriterModelError, match="search the web"):
+        writer_invocation.invoke_research_writer(
+            prompt="Write it.", model_name="claude-opus-5-high"
+        )
+
+
+def test_research_is_gated_on_the_subscription_not_the_writer_flag(monkeypatch):
+    """`WRITER_PROVIDER` answers a different question.
+
+    It says whether ordinary prose calls should be diverted to the CLI, and it
+    is off on this machine while Claude itself is reachable and working.
+    Gating research on it would refuse to research on a machine whose Claude
+    is fine.
+    """
+    from app.shared import writer_invocation
+
+    monkeypatch.delenv(cli_writer.WRITER_PROVIDER_ENV, raising=False)
+    monkeypatch.setattr(
+        writer_invocation,
+        "_cli_writer",
+        lambda: cli_writer,
+    )
+    monkeypatch.setattr(
+        writer_invocation, "_claude_subscription_available", lambda: True
+    )
+    _capture(monkeypatch)
+
+    reply = writer_invocation.invoke_research_writer(
+        prompt="Write it.", model_name="claude-opus-5-high"
+    )
+
+    assert reply["text"]
+
+
 # --- what comes back --------------------------------------------------------
 
 

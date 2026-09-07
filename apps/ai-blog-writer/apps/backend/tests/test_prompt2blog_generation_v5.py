@@ -292,9 +292,24 @@ def test_the_run_reports_generation_rather_than_a_graph_run(isolated_db):
     _write(run_id, services, _writer())
     state = intake_state(run_id)
 
+    assert state["step"] == "draft"
     assert state["writing"] is None
     assert state["generation"]["state"] == "succeeded"
     assert state["generation"]["headline"] == "Two nights in Lima"
+
+
+def test_a_failed_run_stays_on_the_draft_step(isolated_db):
+    """Allowance was spent and something has to say so.
+
+    Dropping back to the prompt screen would look like nothing happened, and
+    the obvious response to that is to press Generate again.
+    """
+    services = _intake()
+    run_id = _to_prompt(services)
+
+    _write(run_id, services, _explodes(ClaudeCliWriterError("down")))
+
+    assert intake_state(run_id)["step"] == "draft"
 
 
 # --- failing without losing anything ----------------------------------------

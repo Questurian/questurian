@@ -483,7 +483,14 @@ export interface IntakeArticle {
   word_count: number | null
 }
 
-export type IntakeStep = 'seed' | 'grill' | 'brief' | 'prompt' | 'work_order' | 'research'
+export type IntakeStep =
+  | 'seed'
+  | 'grill'
+  | 'brief'
+  | 'prompt'
+  | 'draft'
+  | 'work_order'
+  | 'research'
 
 export interface IntakeState {
   run_id: string

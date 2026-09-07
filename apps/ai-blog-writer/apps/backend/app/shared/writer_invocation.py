@@ -167,17 +167,40 @@ def invoke_research_writer(
     A refusal is recoverable. A confidently sourced article with invented
     sources is not.
     """
-    if not _claude_cli_writer_enabled():
+    if not _claude_subscription_available():
         raise WriterModelError(
-            "This article is written by a researching writer, which only the "
-            "Claude subscription path can do. Switch WRITER_PROVIDER to "
-            "claude-cli, or nothing will be able to look anything up."
+            "This article is written by a researching writer, and only the "
+            "Claude subscription CLI on this machine can search the web. Set "
+            "CLAUDE_SUBSCRIPTION_MODELS_ENABLED=1, or nothing will be able to "
+            "look anything up."
         )
     cli_writer = _cli_writer()
     try:
         return cli_writer.invoke_research_text(prompt=prompt, model_name=model_name)
     except cli_writer.ClaudeCliWriterError as exc:
         raise WriterModelError(f"Research writer call failed: {exc}") from exc
+
+
+def _claude_subscription_available() -> bool:
+    """Whether the subscription CLI is the path a claude-* name would take.
+
+    Deliberately not `_claude_cli_writer_enabled`. That one reads
+    `WRITER_PROVIDER`, which answers "should ordinary prose calls be diverted to
+    the CLI" -- a different question, and one that is off on this machine while
+    Claude itself is reachable and working. Gating research on it would refuse
+    to research on a machine whose Claude is fine.
+
+    The API-key path is not enough either. It can write, and it cannot open a
+    page, and the pages are the whole point of this call.
+    """
+    try:
+        from utils.llm_model_policy import (
+            CLAUDE_PROVIDER_SUBSCRIPTION_CLI,
+            claude_provider,
+        )
+    except ImportError:  # pragma: no cover - the helper is always present
+        return False
+    return claude_provider() == CLAUDE_PROVIDER_SUBSCRIPTION_CLI
 
 
 def _claude_cli_writer_enabled() -> bool:

@@ -1612,6 +1612,7 @@ def intake_state(run_id: str) -> dict[str, Any]:
     grill = _stage_data(run_id, GRILL_STAGE)
     brief = _stage_data(run_id, BRIEF_STAGE)
     prompt = _stage_data(run_id, PROMPT_STAGE)
+    generation = generation_state(run_id)
     work_order = _stage_data(run_id, WORK_ORDER_STAGE)
     research = _stage_data(run_id, RESEARCH_STAGE)
     grill_state = _safe_dict(grill.get(STATE_KEY))
@@ -1637,7 +1638,13 @@ def intake_state(run_id: str) -> dict[str, Any]:
         # `prompt` rather than below it so a run stored before ADR 0036 still
         # opens on the screen it stopped at; a new run never reaches them.
         "step": (
-            "research"
+            # A run that has been written stays on the draft, including after a
+            # failed attempt: allowance was spent and something has to say so.
+            # Dropping back to the prompt screen would look like nothing
+            # happened.
+            "draft"
+            if generation
+            else "research"
             if research
             else "work_order"
             if work_order
@@ -1681,6 +1688,6 @@ def intake_state(run_id: str) -> dict[str, Any]:
         "research_progress": _stage_data(run_id, PROGRESS_STAGE) or None,
         # The ADR 0036 writer. Null on every run that never used it, so an old
         # run still reports through `writing` below.
-        "generation": generation_state(run_id),
+        "generation": generation,
         "writing": writing_state(run_id),
     }
