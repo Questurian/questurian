@@ -3,6 +3,9 @@ id: cost-budget-breakdown
 label: "Cost & Budget Breakdown"
 summary: Builds a dated, transparent budget from defined assumptions and sourced costs.
 order: 15
+opening: direct-answer
+sections: 3-12
+closing: takeaways
 ---
 
 ## Use when

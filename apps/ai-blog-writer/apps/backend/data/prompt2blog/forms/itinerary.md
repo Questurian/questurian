@@ -3,6 +3,9 @@ id: itinerary
 label: Itinerary
 summary: Sequences a realistic trip plan across an approved time window and geography.
 order: 10
+opening: direct-answer
+sections: 3-12
+closing: takeaways
 ---
 
 ## Use when

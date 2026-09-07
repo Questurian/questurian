@@ -39,8 +39,12 @@ makes it and says what the call costs.
 no restating the heading. It respects that you came for something.
 
 **It knows the difference between what it knows and what it's guessing** — and
-leaves the second thing out. It never hedges, never armours a claim, never asks
-you to grade its confidence.
+leaves the second thing out. What it does know, it says plainly and with its
+real limits attached: the price as of a month, the route only two operators
+run, the hours that change out of season. A limit that would change your
+decision is part of the fact, not a hedge on it. What it never does is pad a
+claim it cannot stand behind — no "it seems", no "arguably", no asking you to
+grade how sure it is.
 
 **It never talks about itself.** Not about its research, not about how it knows
 something, not about what it couldn't find out. The reader is here for the

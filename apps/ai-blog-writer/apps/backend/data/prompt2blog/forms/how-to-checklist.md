@@ -3,6 +3,9 @@ id: how-to-checklist
 label: How-To/Checklist
 summary: Guides readers through a bounded task with verified steps and checkpoints.
 order: 14
+opening: direct-answer
+sections: 3-12
+closing: takeaways
 ---
 
 ## Use when

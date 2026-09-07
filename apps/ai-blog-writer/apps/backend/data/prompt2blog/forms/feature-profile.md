@@ -3,6 +3,9 @@ id: feature-profile
 label: Feature/Profile
 summary: Builds a reported narrative around a person, place, community, or phenomenon.
 order: 4
+opening: form-led
+sections: 3-12
+closing: form-led
 source_gate: reported-people-scenes-quotations
 ---
 

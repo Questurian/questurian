@@ -83,14 +83,22 @@ def test_the_voice_says_what_a_good_piece_is_rather_than_only_what_is_banned():
     assert all(phrase in body for phrase in positives)
 
 
-def test_the_anti_ai_enforcement_pass_is_still_wired_in():
+def test_the_style_backstop_is_still_wired_in_and_is_section_scoped():
     """ADR 0032 said this was dropped for Prompt2Blog. It never was.
 
-    The pass is what removes "mosaic-covered" and "six-month" from a draft
+    The backstop is what removes "mosaic-covered" and "six-month" from a draft
     before anyone sees it, and it stopped working once already when the model
-    gateway migration left these calls without a job id. If it is ever removed
-    deliberately, amend ADR 0032 again and delete this test in the same change
-    -- do not delete it to make a cleanup pass go green.
+    gateway migration left these calls without a job id. It is worth keeping.
+
+    What was not worth keeping is the shape it had: the whole article handed
+    to a model with a list of style errors and nothing else, which is finding
+    05. It is now `clean_up_style`, which sends only the sections carrying an
+    error and gives the pass the scope lock so it can see what a qualification
+    is for. ADR 0032 is amended to say so.
+
+    If this is ever removed deliberately, amend the ADR again and delete this
+    test in the same change -- do not delete it to make a cleanup pass go
+    green.
     """
     from pathlib import Path
 
@@ -98,9 +106,15 @@ def test_the_anti_ai_enforcement_pass_is_still_wired_in():
     compose = (stages / "compose.py").read_text()
     repair = (stages / "audit_repair.py").read_text()
 
-    assert "enforce_anti_ai(" in compose
-    assert "enforce_anti_ai(" in repair
-    # And each still names its job, which is what broke in 3bdaef2f.
     for source in (compose, repair):
-        call = source.split("enforce_anti_ai(", 1)[1].split("\n    )", 1)[0]
+        assert "clean_up_style(" in source
+        call = source.split("clean_up_style(", 1)[1].split("\n    )", 1)[0]
+        # Each still names its job, which is what broke in 3bdaef2f.
         assert "job_id=" in call
+        # And each hands the pass the scope and caveats the old one never saw.
+        assert "guard=" in call
+
+    # The whole-article rewrite is gone from the writer path. Other pipelines
+    # still call the shared helper; Prompt2Blog does not.
+    assert "enforce_anti_ai(" not in compose
+    assert "enforce_anti_ai(" not in repair

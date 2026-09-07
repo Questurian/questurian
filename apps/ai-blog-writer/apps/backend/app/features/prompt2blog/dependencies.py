@@ -38,15 +38,6 @@ class Prompt2BlogLLM(Protocol):
         schema: dict[str, Any] | None = None,
     ) -> tuple[dict[str, Any], str]: ...
 
-    def enforce_anti_ai(
-        self,
-        text: str,
-        *,
-        model_name: str | None,
-        max_tokens: int,
-        context: str,
-    ) -> str: ...
-
 
 @dataclass(frozen=True)
 class DefaultPrompt2BlogLLM:
@@ -66,14 +57,6 @@ class DefaultPrompt2BlogLLM:
 
     def invoke_json(self, **kwargs: Any) -> tuple[dict[str, Any], str]:
         return llm._invoke_json_llm(
-            **kwargs,
-            usage_recorder=self.usage_tracker.record,
-            correlation_id=self.run_id or self.usage_tracker.run_id,
-        )
-
-    def enforce_anti_ai(self, text: str, **kwargs: Any) -> str:
-        return llm._enforce_anti_ai_markdown_with_model(
-            text,
             **kwargs,
             usage_recorder=self.usage_tracker.record,
             correlation_id=self.run_id or self.usage_tracker.run_id,

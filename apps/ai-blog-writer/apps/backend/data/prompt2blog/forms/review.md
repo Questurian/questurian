@@ -3,6 +3,9 @@ id: review
 label: Review
 summary: Evaluates a specific experience, service, place, or product against declared criteria.
 order: 13
+opening: direct-answer
+sections: 3-12
+closing: takeaways
 source_gate: documented-evaluation
 ---
 

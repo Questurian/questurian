@@ -25,8 +25,15 @@ from ...quality import (
 )
 from ...quality_v3 import v3_constraint_brief
 from ...content.markdown import sections_changed
-from ...schemas import REWRITE_SCHEMA
-from ...support import _format_style_directive, _json
+from ...content.style_cleanup import clean_up_style
+from ...content.sections import (
+    apply_section_replacements,
+    locate_claims,
+    section_manifest,
+    segment_article,
+)
+from ...schemas import REPAIR_SECTIONS_SCHEMA
+from ...support import _format_style_directive, _json, _safe_dict, _safe_str
 
 
 # The measurements are deterministic and cheap, so they run before the audit
@@ -209,15 +216,72 @@ def run_v3_quality_audit_stage(
     return updates
 
 
+def _packet_claim_ids(state: Prompt2BlogV3GraphState) -> set[str]:
+    packet = state.get("packet") or {}
+    return {
+        _safe_str(fact.get("claim_id"))
+        for fact in (packet.get("facts") or [])
+        if isinstance(fact, dict) and _safe_str(fact.get("claim_id"))
+    }
+
+
+def _screen_section_edits(
+    raw_sections: Any,
+    *,
+    allowed_claim_ids: set[str],
+) -> tuple[Any, list[dict[str, str]]]:
+    """Drop edits that cite a fact this article was not written from.
+
+    Finding 03 gives repair the packet and permission to use it. The boundary
+    that makes that safe is that the packet is the whole permission: an id
+    from the wider dossier names a fact a person deliberately cut, and an id
+    that names nothing at all is a fact the model supplied itself.
+
+    An id is not proof the sentence means what the claim means -- grounding
+    runs again on the assembled article for that. This only refuses the ones
+    that cannot be checked at all.
+    """
+    if not isinstance(raw_sections, list):
+        # Handed straight on rather than flattened to an empty list, so the
+        # edit report says the response was the wrong shape instead of
+        # reporting a repair that proposed nothing.
+        return raw_sections, []
+    kept: list[Any] = []
+    rejected: list[dict[str, str]] = []
+    for raw in raw_sections:
+        record = _safe_dict(raw)
+        cited = [
+            _safe_str(item)
+            for item in (record.get("claim_ids") or [])
+            if _safe_str(item)
+        ]
+        unknown = sorted(set(cited) - allowed_claim_ids)
+        if unknown:
+            rejected.append(
+                {
+                    "section_id": _safe_str(record.get("section_id")) or "(missing)",
+                    "reason": f"cites facts outside the packet: {', '.join(unknown)}",
+                }
+            )
+            continue
+        kept.append(raw)
+    return kept, rejected
+
+
 def run_v3_repair_stage(
     state: Prompt2BlogV3GraphState,
     dependencies: PipelineDependencies,
 ) -> dict[str, Any]:
-    """Repair prose and structure only.
+    """Repair the sections the auditor named, and only those.
 
-    Repair can never create a fact or change the brief, so an unsupported
-    claim is deleted rather than hedged or replaced. Research gaps remain
-    metadata; the reader never sees the pipeline narrate its own absence.
+    Two findings meet here. Repair no longer returns a whole article (06): it
+    returns replacements for named sections, and the code applies them to the
+    original document, so prose nobody complained about is the original bytes
+    rather than a promise. And it can now reach the facts a person chose for
+    this article (03), including the ones the first draft left out, which is
+    what makes a revision like "support the comparison" answerable at all.
+
+    The draft it produces is re-grounded and re-audited exactly as before.
     """
     stage = "stage_v3_repair"
     run_id = state["run_id"]
@@ -246,16 +310,24 @@ def run_v3_repair_stage(
         ]
     unsupported_claims = list(groundedness["unsupported_claims"])
 
+    previous_content = rewrite["improved_content"]
+    sections = segment_article(previous_content)
+    flagged = locate_claims(sections, unsupported_claims)
+
     prompt = P2B_V3_REPAIR_PROMPT.format(
         required_revisions=_json(required_revisions),
         unsupported_claims=_json(unsupported_claims),
+        flagged_sections=_json(flagged) if flagged else "None located by quote.",
+        section_map=section_manifest(sections),
         previous_title=rewrite["improved_title"],
-        previous_content=rewrite["improved_content"],
+        previous_content=previous_content,
+        facts=stage_context_text(state["stage_contexts"], "repair_facts")
+        or "THE FACTS AVAILABLE TO THIS REPAIR\n- None recorded for this run.",
         instructions=stage_context_text(state["stage_contexts"], "repair_lock"),
         style_directive=_format_style_directive(state["option_context"]),
     )
-    # Repair rewrites the whole article, so it runs on a prose model -- the
-    # writer's, unless the route named a different one.
+    # Repair rewrites prose, so it runs on a prose model -- the writer's,
+    # unless the route named a different one.
     #
     # Worth being separable from the draft: the two are not the same job. The
     # draft writes into an open space; repair is handed a list of required
@@ -269,37 +341,56 @@ def run_v3_repair_stage(
         max_tokens=6144,
         temperature=0.1,
         model_name=repair_model,
-        schema=REWRITE_SCHEMA,
+        schema=REPAIR_SECTIONS_SCHEMA,
     )
+    parsed_dict = _safe_dict(parsed)
+    screened, cited_rejections = _screen_section_edits(
+        parsed_dict.get("sections"),
+        allowed_claim_ids=_packet_claim_ids(state),
+    )
+    edit = apply_section_replacements(previous_content, screened)
+    edit_report = {
+        **edit.as_dict(),
+        "rejected": [*edit.as_dict()["rejected"], *cited_rejections],
+        "section_count": len(sections),
+    }
+
     repaired = _sanitize_rewrite(
-        parsed,
+        {
+            **parsed_dict,
+            "improved_content": edit.content,
+        },
         fallback_title=rewrite["improved_title"],
-        fallback_content=rewrite["improved_content"],
+        fallback_content=previous_content,
     )
-    # Repair may change what the auditor named and nothing else. Checked rather
-    # than trusted: the point of scoping repair is that it cannot damage
-    # working prose, and a pass that quietly rewrites a section nobody
-    # complained about has done exactly that. Recorded rather than rejected --
-    # keep-best already refuses a worse draft, and refusing here would throw
-    # away a repair that fixed the real problem too.
-    touched = sections_changed(
-        rewrite["improved_content"], repaired["improved_content"]
-    )
-    # The same model that just wrote this text: the enforcement pass is another
-    # rewrite of it, not a separate judgement.
-    repaired["improved_content"] = dependencies.llm.enforce_anti_ai(
+    # Which sections moved, from the applied edits rather than from a diff.
+    # A pass that changed nothing is now a visible outcome instead of a draft
+    # that looks repaired.
+    touched = sections_changed(previous_content, repaired["improved_content"])
+    # And the style cleanup edits sections too (finding 05), on the same model
+    # that just wrote the text: this is another pass over it, not a separate
+    # judgement. It is given the repair lock, so the caveats a repaired
+    # sentence is carrying are visible to the pass tidying it.
+    repaired["improved_content"], style_report = clean_up_style(
         repaired["improved_content"],
+        dependencies=dependencies,
         job_id="p2b.repair",
         model_name=repair_model,
-        max_tokens=6144,
+        max_tokens=4096,
         context="prompt2blog v3 repair",
+        guard=stage_context_text(state["stage_contexts"], "repair_lock"),
     )
     _append_stage_trace(
         state["trace"],
         state["include_debug"],
         stage=stage,
         model_name=repair_model,
-        input_payload={"attempt": attempt, "sections_touched": touched},
+        input_payload={
+            "attempt": attempt,
+            "sections_touched": touched,
+            "section_edits": edit_report,
+            "style_cleanup": style_report,
+        },
         prompt=prompt,
         raw_response=raw_response,
         parsed=parsed,
@@ -309,17 +400,22 @@ def run_v3_repair_stage(
         run_id,
         stage,
         {
-            "repair_applied": True,
+            "repair_applied": edit.changed,
             "attempt": attempt,
             "rewrite": repaired,
             "required_revisions": required_revisions,
             "unsupported_claims": unsupported_claims,
+            "section_edits": edit_report,
+            "style_cleanup": style_report,
             "raw_response": raw_response,
         },
     )
     return {
         "current_stage": stage,
-        "repair_applied": True,
+        # False when every proposed edit was refused. The run still continues
+        # -- the existing draft is intact and saveable -- but the receipt does
+        # not claim a repair that did not happen.
+        "repair_applied": edit.changed,
         "repair_attempts": attempt,
         "rewrite": repaired,
     }

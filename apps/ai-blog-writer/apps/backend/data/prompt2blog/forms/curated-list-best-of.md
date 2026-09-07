@@ -3,6 +3,9 @@ id: curated-list-best-of
 label: Curated List/Best Of
 summary: Selects and explains a bounded set of options using explicit editorial criteria.
 order: 11
+opening: direct-answer
+sections: 3-12
+closing: takeaways
 ---
 
 ## Use when

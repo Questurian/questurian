@@ -888,52 +888,123 @@ def _sanitize_quality(parsed: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+class GroundednessMalformed(ValueError):
+    """The checker answered, but not with a verdict anyone can read.
+
+    Raised rather than normalised. The whole point of finding 02 is that a
+    response nobody can read used to arrive downstream wearing a pass: `{}`
+    became `checked: true, grounded: true`, and an article nothing had checked
+    carried the stamp of one that had.
+    """
+
+
+# The only two severities the prompt offers. A third value means the response
+# was not written against the contract, and guessing which one it meant is how
+# a high-severity finding becomes a low one.
+_GROUNDEDNESS_SEVERITIES = ("high", "low")
+
+
+def _groundedness_claims(parsed: dict[str, Any]) -> list[dict[str, str]]:
+    """Read the findings list, or refuse the whole response.
+
+    One unreadable entry refuses everything. A findings list is a set of
+    reasons a draft should not ship, and silently dropping the entry that
+    could not be parsed shortens exactly that list.
+    """
+    claims_raw = parsed.get("unsupported_claims")
+    if not isinstance(claims_raw, list):
+        raise GroundednessMalformed("unsupported_claims is not a list")
+
+    claims: list[dict[str, str]] = []
+    for item in claims_raw:
+        if not isinstance(item, dict):
+            raise GroundednessMalformed("a finding is not an object")
+        claim = _safe_str(item.get("claim"))
+        if not claim:
+            raise GroundednessMalformed("a finding names no claim")
+        severity = _safe_str(item.get("severity")).lower()
+        if severity not in _GROUNDEDNESS_SEVERITIES:
+            raise GroundednessMalformed(f"unknown severity: {severity or 'missing'}")
+        claims.append(
+            {
+                "claim": claim,
+                "reason": _safe_str(item.get("reason")) or "Reason not stated.",
+                "severity": severity,
+            }
+        )
+    return claims
+
+
 def _sanitize_groundedness(parsed: dict[str, Any]) -> dict[str, Any]:
-    """Normalise the grounding check.
+    """Read the grounding check, or refuse it.
 
     The audit scored `too_close_to_source`, the plagiarism direction. Nothing
     checked the opposite direction: claims in the draft that the sources do not
     support. For travel content -- visa rules, prices, safety guidance -- that
     is the more consequential failure.
-    """
-    claims_raw = parsed.get("unsupported_claims")
-    claims: list[dict[str, str]] = []
-    if isinstance(claims_raw, list):
-        for item in claims_raw:
-            record = _safe_dict(item)
-            claim = _safe_str(record.get("claim"))
-            if not claim:
-                continue
-            severity = _safe_str(record.get("severity")).lower()
-            claims.append(
-                {
-                    "claim": claim,
-                    "reason": _safe_str(record.get("reason")) or "Reason not stated.",
-                    "severity": "high" if severity == "high" else "low",
-                }
-            )
 
+    Every field the verdict rests on is required, because the alternative is
+    the finding-02 behaviour: absence read as agreement. A response that fails
+    any of these is a `GroundednessMalformed`, and the stage turns that into
+    `unchecked` -- which readiness already treats as a blocker -- rather than
+    into a pass.
+
+    One normalisation survives, in the safe direction only: a response that
+    says `grounded: true` while naming a high-severity finding is trusted on
+    the finding. That keeps the finding on the record for repair to act on,
+    and it cannot manufacture a pass. The other direction -- `grounded: false`
+    with nothing to point at -- is refused, because a fail nobody can act on
+    and a pass are the same thing by the time repair reads it.
+    """
+    if not isinstance(parsed, dict) or not parsed:
+        raise GroundednessMalformed("empty response")
+
+    grounded_raw = parsed.get("grounded")
+    if not isinstance(grounded_raw, bool):
+        raise GroundednessMalformed("grounded is not a boolean")
+
+    assessment = _safe_str(parsed.get("assessment"))
+    if not assessment:
+        raise GroundednessMalformed("assessment is missing")
+
+    claims = _groundedness_claims(parsed)
     high_severity = [claim for claim in claims if claim["severity"] == "high"]
+    if not grounded_raw and not high_severity:
+        raise GroundednessMalformed(
+            "grounded is false but no high-severity claim explains why"
+        )
+
+    grounded = not high_severity
     return {
         "checked": True,
-        "grounded": not high_severity,
-        "assessment": _safe_str(parsed.get("assessment"))
-        or "Grounding assessment not provided.",
+        "grounded": grounded,
+        "status": "supported" if grounded else "unsupported",
+        "assessment": assessment,
         "unsupported_claims": claims,
         "high_severity_count": len(high_severity),
     }
 
 
-def unchecked_groundedness() -> dict[str, Any]:
-    """Result used when the grounding check could not run.
+def unchecked_groundedness(reason: str = "") -> dict[str, Any]:
+    """Result used when the grounding check could not run, or could not be read.
 
     Treated as grounded so a checker outage degrades the signal rather than
-    blocking the run, but recorded as unchecked so it is visible.
+    blocking the run, but recorded as unchecked so it is visible -- and
+    readiness reads `checked`, so an unchecked draft is never called verified.
+
+    `reason` says which of the two happened. "The provider failed" and "the
+    provider answered with something unreadable" are different problems with
+    different fixes, and the row that only says `checked: false` cannot tell
+    them apart.
     """
     return {
         "checked": False,
         "grounded": True,
-        "assessment": "Grounding check did not run.",
+        "status": "unchecked",
+        "assessment": "Grounding check did not run."
+        if not reason
+        else f"Grounding could not be completed: {reason}",
+        "unchecked_reason": reason,
         "unsupported_claims": [],
         "high_severity_count": 0,
     }

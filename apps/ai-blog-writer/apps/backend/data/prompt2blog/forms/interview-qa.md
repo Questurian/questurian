@@ -3,6 +3,9 @@ id: interview-qa
 label: Interview/Q&A
 summary: Presents attributable answers from a named interview around a focused reader question.
 order: 5
+opening: form-led
+sections: 2-12
+closing: form-led
 source_gate: attributable-responses
 ---
 

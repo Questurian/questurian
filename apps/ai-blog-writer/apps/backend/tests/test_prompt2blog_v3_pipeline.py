@@ -211,6 +211,19 @@ class SpentTokens:
         }
 
 
+def _first_section_edit(repair_prompt: str) -> dict[str, Any]:
+    """Answer the SECTION MAP the way a model that read it would."""
+    lines = repair_prompt.split("SECTION MAP:\n", 1)[1].splitlines()
+    first = next(line for line in lines if line.startswith("- s"))
+    section_id, bracketed = first[2:].split(" ", 1)
+    text_hash = bracketed.split("[", 1)[1].split("]", 1)[0]
+    return {
+        "section_id": section_id,
+        "text_hash": text_hash,
+        "content": "Repaired opening paragraph for the Lima cost article.",
+    }
+
+
 @dataclass
 class ScriptedLLM:
     quality_scores: list[int]
@@ -272,7 +285,16 @@ class ScriptedLLM:
         if "repair pass" in prompt:
             self.prompts.append(("repair", prompt))
             self._record_model("repair", model_name)
-            return DRAFT, json.dumps(DRAFT)
+            # Repair returns section replacements now, not a whole article, so
+            # the scripted one has to answer the way the real contract does:
+            # read the id and the hash off the SECTION MAP in the prompt.
+            payload = {
+                "improved_title": DRAFT["improved_title"],
+                "sections": [_first_section_edit(prompt)],
+                "improvements_applied": ["Tightened the opening section."],
+                "remaining_gaps": [],
+            }
+            return payload, json.dumps(payload)
         self.prompts.append(("compose", prompt))
         self._record_model("compose", model_name)
         return DRAFT, json.dumps(DRAFT)
@@ -315,7 +337,13 @@ def test_the_lima_brief_runs_end_to_end_through_the_graph():
         "r3": "supported",
     }
     contexts = payload["debug"]["stage_contexts"]
-    assert set(contexts) == {"outline", "compose", "audit", "repair_lock"}
+    assert set(contexts) == {
+        "outline",
+        "compose",
+        "audit",
+        "repair_lock",
+        "repair_facts",
+    }
     assert contexts["compose"]["character_count"] > contexts["audit"]["character_count"]
     assert len(contexts["compose"]["fingerprint"]) == 64
     assert "instruction_text" not in payload["debug"]
@@ -545,7 +573,13 @@ def test_a_low_score_spends_a_repair_pass_and_re_checks_grounding():
     assert recorder.order.count("stage_v3_groundedness") == 2
     assert recorder.order.count("stage_v3_quality_audit") == 2
     repair_prompt = next(prompt for kind, prompt in llm.prompts if kind == "repair")
-    assert "you may not change the brief" in " ".join(repair_prompt.split())
+    assert "Do not change the brief" in " ".join(repair_prompt.split())
+    # Finding 06: repair replaces named sections, and the code applies them.
+    edits = recorder.stages["stage_v3_repair"]["section_edits"]
+    assert edits["applied_section_ids"] == ["s0"]
+    assert edits["rejected"] == []
+    # Finding 03: and it can reach the facts a person chose for this article.
+    assert "THE FACTS AVAILABLE TO THIS REPAIR" in repair_prompt
 
 
 def test_a_weak_draft_buys_one_repair_and_then_asks_for_a_human():

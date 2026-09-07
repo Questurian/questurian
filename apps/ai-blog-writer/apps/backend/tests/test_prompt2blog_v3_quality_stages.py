@@ -182,6 +182,107 @@ def test_grounding_compares_the_draft_with_the_exact_evidence_records():
     assert recorder.recorded[0][0] == "stage_v3_groundedness"
 
 
+def test_grounding_reads_the_first_hand_material_the_writer_was_given():
+    """Finding 01. Compose saw `brief.material`; the checker did not."""
+    llm = FakeLLM(
+        json_response={
+            "grounded": True,
+            "assessment": "Everything traces to a record or to supplied material.",
+            "unsupported_claims": [],
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+    state = _state()
+    state["packet"] = {
+        **state["packet"],
+        "supplied_material": [
+            {
+                "kind": "observation",
+                "statement": "I waited 45 minutes at the airport taxi rank.",
+                "note": "August 2026",
+            }
+        ],
+    }
+
+    run_v3_groundedness_stage(state, dependencies)
+
+    prompt = llm.prompts[0]
+    assert "SUPPLIED MATERIAL" in prompt
+    assert "I waited 45 minutes at the airport taxi rank." in prompt
+    assert "August 2026" in prompt
+    # The scope rule travels with it, or the checker has no way to tell the
+    # observation from the generalisation it does not support.
+    assert "does not support" in prompt
+
+
+def test_grounding_without_material_says_so_rather_than_leaving_a_hole():
+    llm = FakeLLM(
+        json_response={
+            "grounded": True,
+            "assessment": "Everything traces to a record.",
+            "unsupported_claims": [],
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+
+    run_v3_groundedness_stage(_state(), dependencies)
+
+    assert "SUPPLIED MATERIAL" in llm.prompts[0]
+    assert "must rest on the evidence records" in llm.prompts[0]
+
+
+def test_an_unreadable_verdict_is_retried_once_then_recorded_as_unchecked():
+    """Finding 02. `{}` used to arrive downstream as a verified pass."""
+
+    class MalformedLLM(FakeLLM):
+        def invoke_json(self, *, prompt: str, **_kwargs):
+            self.prompts.append(prompt)
+            return {}, "{}"
+
+    llm = MalformedLLM()
+    dependencies, recorder = _dependencies(llm)
+
+    updates = run_v3_groundedness_stage(_state(), dependencies)
+
+    assert len(llm.prompts) == 2
+    assert "YOUR PREVIOUS RESPONSE WAS REJECTED" in llm.prompts[1]
+    groundedness = updates["groundedness"]
+    assert groundedness["checked"] is False
+    assert groundedness["status"] == "unchecked"
+    assert len(groundedness["rejected_responses"]) == 2
+    assert recorder.recorded[0][1]["groundedness"]["checked"] is False
+
+
+def test_a_retried_verdict_that_parses_is_used():
+    class RecoveringLLM(FakeLLM):
+        responses = [
+            {},
+            {
+                "grounded": True,
+                "assessment": "Second answer parses.",
+                "unsupported_claims": [],
+            },
+        ]
+
+        def invoke_json(self, *, prompt: str, **_kwargs):
+            self.prompts.append(prompt)
+            import json as _json
+
+            payload = self.responses[len(self.prompts) - 1]
+            return payload, _json.dumps(payload)
+
+    llm = RecoveringLLM()
+    dependencies, _recorder = _dependencies(llm)
+
+    updates = run_v3_groundedness_stage(_state(), dependencies)
+
+    assert updates["groundedness"]["checked"] is True
+    assert updates["groundedness"]["status"] == "supported"
+    # The rejected first answer stays on the record even though the run
+    # recovered: a checker that needs two attempts is worth seeing.
+    assert updates["groundedness"]["rejected_responses"] == ["empty response"]
+
+
 def test_grounding_failure_degrades_to_unchecked_instead_of_failing_the_run():
     class ExplodingLLM(FakeLLM):
         def invoke_json(self, *, prompt: str, **_kwargs):
@@ -293,8 +394,7 @@ def test_repair_is_told_it_may_not_create_facts_or_change_the_commission():
 
     prompt = llm.prompts[0]
     normalized_prompt = " ".join(prompt.split())
-    assert "Repair prose and structure only" in prompt
-    assert "you may not change the brief" in normalized_prompt
+    assert "Do not change the brief" in prompt
     assert "Never promote a context-only reference" in prompt
     assert "UNSUPPORTED CLAIMS" in prompt
     assert "Rent averages 900 dollars." in prompt
@@ -311,6 +411,179 @@ def test_repair_is_told_it_may_not_create_facts_or_change_the_commission():
     assert recorder.recorded[0][1]["unsupported_claims"][0]["severity"] == "high"
     assert len(prompt) < 20_000
     assert updates["repair_attempts"] == 1
+
+
+def _repair_state(**overrides):
+    state = _state(
+        rewrite={
+            "improved_title": "What Lima costs now",
+            "improved_content": (
+                "The short answer is that rent decides it.\n\n"
+                "## What Lima costs now\n\nBody about Lima costs.\n\n"
+                "## What decides the answer\n\nBody about the tradeoffs."
+            ),
+            "improvements_applied": [],
+            "remaining_gaps": [],
+        },
+        quality={"required_revisions": ["Tighten the opening."]},
+        groundedness={
+            "checked": True,
+            "grounded": True,
+            "high_severity_count": 0,
+            "unsupported_claims": [],
+        },
+    )
+    state.update(overrides)
+    return state
+
+
+def _section_of(state, section_id: str):
+    from app.features.prompt2blog.content.sections import segment_article
+
+    return next(
+        item
+        for item in segment_article(state["rewrite"]["improved_content"])
+        if item.section_id == section_id
+    )
+
+
+def test_repair_replaces_one_section_and_leaves_the_others_byte_for_byte():
+    """Finding 06. The boundary is the code, not the sentence asking for it."""
+    state = _repair_state()
+    target = _section_of(state, "s1")
+    llm = FakeLLM(
+        json_response={
+            "improved_title": "What Lima costs now",
+            "sections": [
+                {
+                    "section_id": "s1",
+                    "text_hash": target.text_hash,
+                    "content": "A tighter body about Lima costs.",
+                }
+            ],
+        }
+    )
+    dependencies, recorder = _dependencies(llm)
+
+    updates = run_v3_repair_stage(state, dependencies)
+
+    content = updates["rewrite"]["improved_content"]
+    assert "A tighter body about Lima costs." in content
+    assert "The short answer is that rent decides it." in content
+    assert "Body about the tradeoffs." in content
+    assert "Body about Lima costs." not in content
+    assert recorder.recorded[0][1]["section_edits"]["applied_section_ids"] == ["s1"]
+
+
+def test_a_repair_that_names_a_section_it_was_not_given_changes_nothing():
+    state = _repair_state()
+    llm = FakeLLM(
+        json_response={
+            "sections": [
+                {
+                    "section_id": "s9",
+                    "text_hash": "whatever",
+                    "content": "A section this draft does not have.",
+                }
+            ]
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+
+    updates = run_v3_repair_stage(state, dependencies)
+
+    # The existing draft survives intact and is still saveable; the receipt
+    # does not claim a repair that did not happen.
+    assert (
+        updates["rewrite"]["improved_content"]
+        == state["rewrite"]["improved_content"]
+    )
+    assert updates["repair_applied"] is False
+
+
+def test_a_repair_response_of_the_wrong_shape_is_recorded_as_one():
+    state = _repair_state()
+    llm = FakeLLM(json_response={"sections": "a whole article, as prose"})
+    dependencies, recorder = _dependencies(llm)
+
+    updates = run_v3_repair_stage(state, dependencies)
+
+    assert updates["repair_applied"] is False
+    rejected = recorder.recorded[0][1]["section_edits"]["rejected"]
+    assert rejected[0]["reason"] == "sections is not a list"
+
+
+def test_repair_is_shown_the_chosen_facts_it_may_recover():
+    """Finding 03. The packet reaches repair, so an omitted fact is available."""
+    state = _repair_state()
+    llm = FakeLLM(json_response={"sections": []})
+    dependencies, _recorder = _dependencies(llm)
+
+    run_v3_repair_stage(state, dependencies)
+
+    prompt = llm.prompts[0]
+    assert "THE FACTS AVAILABLE TO THIS REPAIR" in prompt
+    assert "SECTION MAP:" in prompt
+    # The claim text itself, verbatim from the frozen packet.
+    for fact in state["packet"]["facts"]:
+        assert fact["text"] in prompt
+
+
+def test_an_edit_citing_a_fact_outside_the_packet_is_refused():
+    """The permission is the packet, and only the packet.
+
+    An id from the wider dossier names a fact a person deliberately cut; an id
+    that names nothing is a fact the model supplied itself. Both undo the
+    editorial decision the packet exists to hold.
+    """
+    state = _repair_state()
+    target = _section_of(state, "s1")
+    llm = FakeLLM(
+        json_response={
+            "sections": [
+                {
+                    "section_id": "s1",
+                    "text_hash": target.text_hash,
+                    "content": "A body citing a fact nobody chose.",
+                    "claim_ids": ["c-not-in-the-packet"],
+                }
+            ]
+        }
+    )
+    dependencies, recorder = _dependencies(llm)
+
+    updates = run_v3_repair_stage(state, dependencies)
+
+    assert "A body citing a fact nobody chose." not in (
+        updates["rewrite"]["improved_content"]
+    )
+    rejected = recorder.recorded[0][1]["section_edits"]["rejected"]
+    assert "outside the packet" in rejected[0]["reason"]
+
+
+def test_an_edit_citing_a_chosen_fact_is_applied():
+    state = _repair_state()
+    target = _section_of(state, "s1")
+    chosen = state["packet"]["facts"][0]["claim_id"]
+    llm = FakeLLM(
+        json_response={
+            "sections": [
+                {
+                    "section_id": "s1",
+                    "text_hash": target.text_hash,
+                    "content": "A body that finally uses the omitted comparison.",
+                    "claim_ids": [chosen],
+                }
+            ]
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+
+    updates = run_v3_repair_stage(state, dependencies)
+
+    assert "finally uses the omitted comparison" in (
+        updates["rewrite"]["improved_content"]
+    )
 
 
 def test_settling_restores_the_best_draft_and_its_own_grounding_verdict():
