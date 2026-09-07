@@ -284,15 +284,22 @@ export async function proposeSectionEdit(
   return (await response.json()) as SectionEditProposal
 }
 
-/** Write an accepted proposal into the draft. */
+/**
+ * Write an accepted proposal into the draft.
+ *
+ * `reason` is optional and nothing is inferred from its absence. It is the
+ * difference between "this one was wrong" and "we always want this", and only
+ * the person pressing the button knows which they meant.
+ */
 export async function applySectionEdit(
   runId: string,
   proposal: SectionEditProposal,
+  reason = '',
 ): Promise<{ markdown: string; edits: number }> {
   const response = await apiFetch(`${FEATURE_PREFIX}/section-edit/${runId}/apply`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(proposal),
+    body: JSON.stringify({ proposal, reason }),
   })
   if (!response.ok) {
     throw await readError(response, 'Could not apply that change.')
