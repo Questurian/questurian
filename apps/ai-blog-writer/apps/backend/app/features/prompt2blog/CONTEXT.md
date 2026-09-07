@@ -48,11 +48,8 @@ them for the v2 fallback. Do not delete or renumber them.
 | `orchestrator_v3.py`, `graph/topology_v3.py` | The v3 run entrypoints and its shorter generation topology |
 | `resume_v3.py` | The state snapshot a failed v3 run is picked back up from |
 | `provenance.py` | Which chosen fact each passage of the finished article shares a figure or phrase with |
-<<<<<<< HEAD
 | `evaluation.py` | Frozen writing inputs, blind draft comparison, and per-criterion scoring |
-=======
 | `section_edit_v4.py` | One operator-asked improvement to one section, proposed against the frozen facts and applied only on acceptance |
->>>>>>> 212da191 (feat(p2b): ask for one change to one section, and read it before it lands)
 | `content/` | Pure source-text, Markdown, and editorial-block transformations |
 | `quality.py` | Deterministic checks, sanitizers, and repair gating |
 | `llm.py`, `dependencies.py` | Shared-LLM adapter and explicit dependency bundle |
