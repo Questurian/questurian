@@ -5,6 +5,7 @@ summary: Reports a timely development, what changed, and what readers should kno
 order: 1
 opening: direct-answer
 sections: 2-12
+payoff: answer
 closing: form-led
 ---
 

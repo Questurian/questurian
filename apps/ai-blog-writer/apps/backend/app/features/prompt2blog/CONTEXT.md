@@ -43,10 +43,12 @@ them for the v2 fallback. Do not delete or renumber them.
 | `evidence_v3.py`, `instructions_v3.py` | V3 evidence normalization, canonical instruction layers, and stage-specific contexts |
 | `selection_v4.py`, `packet_v4.py` | Which facts this article is written from, and the deterministic view of them the writing stages read |
 | `research_readiness_v3.py`, `intake_v3.py` | The v3 research gate, its `needs_research` result, and v3 run input |
+| `evidence_health.py` | Deterministic read of the chosen facts: undated prices, unreachable sources, unsettled conflicts, a promise of currency the evidence cannot keep |
 | `stages/v3/`, `prompts/editorial_v3.py`, `content/outline_v3.py` | V3 writing stages, their prompts, and pure section-plan scope guards |
 | `orchestrator_v3.py`, `graph/topology_v3.py` | The v3 run entrypoints and its shorter generation topology |
 | `resume_v3.py` | The state snapshot a failed v3 run is picked back up from |
 | `provenance.py` | Which chosen fact each passage of the finished article shares a figure or phrase with |
+| `evaluation.py` | Frozen writing inputs, blind draft comparison, and per-criterion scoring |
 | `content/` | Pure source-text, Markdown, and editorial-block transformations |
 | `quality.py` | Deterministic checks, sanitizers, and repair gating |
 | `llm.py`, `dependencies.py` | Shared-LLM adapter and explicit dependency bundle |

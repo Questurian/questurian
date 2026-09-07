@@ -5,6 +5,7 @@ summary: Builds a reported narrative around a person, place, community, or pheno
 order: 4
 opening: form-led
 sections: 3-12
+payoff: insight
 closing: form-led
 source_gate: reported-people-scenes-quotations
 ---

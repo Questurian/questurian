@@ -5,6 +5,7 @@ summary: Presents attributable answers from a named interview around a focused r
 order: 5
 opening: form-led
 sections: 2-12
+payoff: answer
 closing: form-led
 source_gate: attributable-responses
 ---

@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 from uuid import uuid4
 
@@ -49,6 +50,7 @@ from .grill_v4 import (
 )
 from .coverage_v4 import CoverageVerdict, assess_coverage
 from .notes_v4 import PUNCH_LIST_STAGE, build_punch_list
+from .evidence_health import assess_evidence_health
 from .gate_v4 import (
     GateAnswerRefused,
     answer_requirement,
@@ -602,6 +604,20 @@ def review_selection(run_id: str) -> dict[str, Any]:
         # the operator can still do something about it. Empty when the choice
         # still describes what it was made from.
         "stale_reason": stale_reason(brief, work_order, evidence, selection),
+        # What is weak about the facts that are actually going to the writer
+        # (improvement 08). Here rather than at the gate because this is the
+        # last screen before prose exists and the first one that knows which
+        # facts were chosen -- a stale price the operator already cut is not
+        # this article's problem, and reporting it would bury the one that is.
+        #
+        # Advisory. Nothing here blocks: the operator can read that the newest
+        # price is eighteen months old and decide it does not matter, which is
+        # a judgement no deterministic check is entitled to make for them.
+        "evidence_health": assess_evidence_health(
+            brief,
+            apply_selection(evidence, selection),
+            today=date.today(),
+        ).as_record(),
     }
 
 

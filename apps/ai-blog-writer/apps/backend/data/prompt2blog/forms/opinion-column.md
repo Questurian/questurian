@@ -5,6 +5,7 @@ summary: Advances a clearly identified viewpoint using evidence and transparent 
 order: 6
 opening: form-led
 sections: 2-12
+payoff: insight
 closing: form-led
 ---
 

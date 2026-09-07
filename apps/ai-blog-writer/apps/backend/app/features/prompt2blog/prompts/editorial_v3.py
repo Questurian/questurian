@@ -14,7 +14,7 @@ Return strict JSON only:
   "sections": [
     {{
       "heading": "string",
-      "purpose": "string",
+      "reader_payoff": "string",
       "claim_ids": ["string"],
       "target_words": 0
     }}
@@ -28,6 +28,9 @@ Rules:
 {structure_rules}
 - Headings must be specific and distinct. No generic "Introduction" or
   "Conclusion" headings.
+- Every section must earn its place. Two sections may not promise the reader
+  the same thing; if they do, they are one section, or one of them has no
+  reason to exist.
 - Every section must name the claim_ids it rests on, using IDs from the facts
   below. Never cite a claim that is not there: what you are shown is the whole
   desk, and a fact outside it is one a person decided this article does not
@@ -102,6 +105,17 @@ Hard rules:
 {structure_rules}
 - Follow the STYLE DIRECTIVE exactly. Tone, length, and brand voice are
   requirements, not suggestions.
+- You are not obliged to use every fact you were given. A section that names
+  ten things and judges none of them is a directory; three details you explain
+  are worth more than ten you list, and the reader can only act on the ones you
+  explained. Where the plan marks a fact as colour and droppable, dropping it
+  is a decision you are allowed to make. What you may never drop is an
+  obligation under must_name, or a limit that changes what the reader should
+  do.
+- The "Room to work" line under a section is advice and never a maximum. One
+  complicated fact can need more explaining than five simple ones, so the count
+  cannot decide anything for you; it is there because you cannot otherwise see
+  how much room the plan left you.
 - Follow the SECTION PLAN when one is provided: use its headings, in order, and
   hold each section to roughly its word budget. Depart from it only where the
   evidence makes a planned section unsupportable. Record that departure in
@@ -225,6 +239,9 @@ Return strict JSON only:
   }},
   "fails_if_quote": "string",
   "fails_if_why": "string",
+  "unresolved_payoffs": [
+    {{"heading": "string", "why": "string"}}
+  ],
   "required_revisions": ["string"],
   "quality_summary": "string"
 }}
@@ -289,12 +306,20 @@ Rules:
 - Score honestly. A draft that merely avoids mistakes is a 7, not a 9. Being
   grounded, complete, and constraint-compliant is the floor this scale starts
   from, not what earns the top of it.
-- Reader decision support is a scored dimension, not a nicety. For each
-  section, ask what decision it lets the reader make and whether the draft
-  actually resolves it. A section that lays out options without saying what
-  separates them -- what each is better and worse for, and who should choose
-  which -- has covered its requirement without doing its job. Name any such
-  section in required_revisions.
+- SECTION PROMISES below is what the plan said each section would leave the
+  reader with. It is not yours to re-decide; your job is whether the draft
+  delivered it. For every promise that the prose does not keep, add an entry
+  to unresolved_payoffs naming that heading and one line on what is missing --
+  what the reader was going to be able to decide, or understand, or have
+  answered, and still cannot. Quote or paraphrase the specific gap; "does not
+  fully deliver" is not an answer anybody can act on.
+  A section that lays out options without saying what separates them -- what
+  each is better and worse for, and who should choose which -- has covered its
+  requirement without keeping its promise. Every unresolved payoff also
+  belongs in required_revisions, and unresolved payoffs weigh on
+  overall_score: a draft that leaves any of them open cannot score above 8.
+  Where the promises list says none were recorded, return an empty
+  unresolved_payoffs rather than inventing the promises you would have made.
 - A fact catalog is not coverage. Prose that walks a list of named items with
   their prices, hours, or figures attached, in sequence, without comparison or
   judgement, reads as a directory rather than an article. It can be entirely
@@ -323,6 +348,9 @@ GROUNDING VERDICT (authoritative on factual support):
 
 MEASURED CHECKS (counted, not judged):
 {measured_checks}
+
+SECTION PROMISES (what the plan said each section would give the reader):
+{section_promises}
 
 DRAFT TITLE:
 {rewritten_title}

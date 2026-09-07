@@ -409,6 +409,28 @@ export interface SelectableClaim {
   confidence: string
 }
 
+export interface EvidenceHealthFinding {
+  kind:
+    | 'undated_time_sensitive'
+    | 'no_source_to_return_to'
+    | 'unsettled_conflict'
+    | 'currency_promise_unmet'
+  subject_ids: string[]
+  detail: string
+  /** The article promised something its evidence cannot support. */
+  blocks_currency_promise: boolean
+}
+
+export interface EvidenceHealth {
+  promises_currency: boolean
+  /** The most recent date on a price or a time, when the piece promised now. */
+  checked_against: string
+  unmet_promise: boolean
+  findings: EvidenceHealthFinding[]
+  /** Says what a date is and is not evidence of. Rendered, never dropped. */
+  means: string
+}
+
 export interface SelectionReview {
   /**
    * False on a run that never selected. That used to mean the article would be
@@ -430,5 +452,16 @@ export interface SelectionReview {
    * the hand-off would refuse with, shown while it can still be acted on.
    */
   stale_reason?: string
+  /**
+   * What is weak about the facts actually going to the writer — a price with
+   * no date on it, a fact nobody can go back and re-check, two chosen
+   * statements that disagree, or a promise of currency the evidence is too old
+   * to keep.
+   *
+   * Advisory, always. A date says how much the article is entitled to claim,
+   * never whether a fact is true, and the operator is the one who decides
+   * whether eighteen months matters for this piece.
+   */
+  evidence_health?: EvidenceHealth
 }
 

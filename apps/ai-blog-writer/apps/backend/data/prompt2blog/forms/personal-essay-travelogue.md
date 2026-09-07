@@ -5,6 +5,7 @@ summary: Shapes supplied lived experience into a reflective journey grounded in 
 order: 7
 opening: form-led
 sections: 2-12
+payoff: insight
 closing: form-led
 source_gate: first-person-material
 ---

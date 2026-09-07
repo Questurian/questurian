@@ -34,7 +34,12 @@ def _sanitize_section(raw: Any) -> dict[str, Any] | None:
         return None
     return {
         "heading": heading,
-        "purpose": _safe_str(record.get("purpose")) or "Purpose not stated.",
+        # Empty when the planner did not say, and left empty on purpose. The
+        # old field filled itself in with "Purpose not stated.", which is a
+        # sentence, so every downstream check saw a section that had stated
+        # its purpose. `validate_v3_outline` can only catch a missing payoff
+        # if a missing payoff still looks missing here.
+        "reader_payoff": _safe_str(record.get("reader_payoff")),
         "claim_ids": _string_list(record.get("claim_ids")),
         "target_words": max(0, _safe_int(record.get("target_words"), default=0)),
     }
@@ -162,6 +167,46 @@ def _names_subject(heading: str, primary_subject: str) -> bool:
     return bool(words) and _mentions(heading, words[0])
 
 
+# Words that carry no promise on their own. A payoff built only out of these
+# and the heading's own words has restated the heading, which is the exact
+# thing improvement 01 is about: the plan says a section exists and never says
+# what a reader leaves it with.
+_PAYOFF_FILLER = frozenset(
+    {
+        "a", "an", "and", "the", "this", "that", "these", "those", "of", "for",
+        "to", "in", "on", "at", "by", "with", "about", "from", "it", "its",
+        "is", "are", "be", "will", "can", "reader", "readers", "section",
+        "article", "piece", "explains", "explain", "covers", "cover", "covered",
+        "describes", "describe", "outlines", "outline", "gives", "give",
+        "provides", "provide", "shows", "show", "details", "detail",
+        "discusses", "discuss", "introduces", "introduce", "presents",
+        "present", "what", "which", "how", "why", "where", "when", "who",
+    }
+)
+
+
+def _payoff_words(text: str) -> set[str]:
+    return {
+        word
+        for word in re.findall(r"[\w']+", text.casefold())
+        if word not in _PAYOFF_FILLER
+    }
+
+
+def _restates_heading(heading: str, payoff: str) -> bool:
+    """Whether a payoff says only what its heading already said.
+
+    Deliberately generous to the planner. A payoff is only called a
+    restatement when, after filler and the heading's own words are removed,
+    it has nothing of its own left. "Covers the transport options" under
+    "Transport options" is caught; "Which transfer to book before 6am, and
+    what it costs" is not, and neither is a payoff that merely happens to
+    reuse the heading's nouns while going on to say something.
+    """
+    remaining = _payoff_words(payoff) - _payoff_words(heading)
+    return not remaining
+
+
 # Facts per hundred words above which a section stops being prose.
 #
 # Run 9e66bf84 gave one 200-word section 56 claims -- three and a half words
@@ -179,6 +224,7 @@ def validate_v3_outline(
     claim_ids: set[str],
     target_word_count: int,
     min_sections: int = MIN_OUTLINE_SECTIONS,
+    fact_roles: dict[str, str] | None = None,
 ) -> tuple[bool, dict[str, Any]]:
     """Check a plan against the work order's scope and the writer's packet.
 
@@ -191,6 +237,13 @@ def validate_v3_outline(
     wrong against this article -- and it would hand compose a section built on
     a claim that is not in its context, which is how a writer ends up
     inventing one.
+
+    `fact_roles` is the packet's own labelling of what each fact is for, and it
+    is what turns a crowded section from a number into advice: eight facts in a
+    hundred and forty words is a different problem when five of them are colour
+    the writer may simply leave out (improvement 04). Optional, because the
+    density reporting has to keep working for a selection made before roles
+    existed.
     """
     sections = outline.get("sections") or []
     planned_words = sum(_safe_int(s.get("target_words"), default=0) for s in sections)
@@ -208,6 +261,22 @@ def validate_v3_outline(
             if claim_id not in claim_ids
         }
     )
+    roles = fact_roles or {}
+
+    def _spare(section: dict[str, Any]) -> list[str]:
+        """The facts in this section whose job is colour.
+
+        The one thing that makes a crowded section actionable. `texture` is the
+        packet's own word for a fact chosen to carry the place rather than to
+        prove anything, so it is the one a writer can drop without losing an
+        obligation or a qualification.
+        """
+        return [
+            claim_id
+            for claim_id in section["claim_ids"]
+            if roles.get(claim_id) == "texture"
+        ]
+
     crowded_sections = [
         {
             "heading": section["heading"],
@@ -216,12 +285,30 @@ def validate_v3_outline(
             "claims_per_hundred_words": round(
                 len(section["claim_ids"]) * 100 / words, 1
             ),
+            # How much of the crowding the writer is allowed to relieve. A
+            # section carrying eight facts of which five are colour has room in
+            # it; one carrying eight load-bearing facts is over-planned, and
+            # needs a different plan rather than a lighter hand.
+            "spare_claims": _spare(section),
         }
         for section in sections
         if (words := _safe_int(section.get("target_words"), default=0)) > 0
         and len(section["claim_ids"]) * 100 / words
         > CROWDED_CLAIMS_PER_HUNDRED_WORDS
     ]
+
+    # The same fact planned into two sections. Not a scope error and never a
+    # reason to fail a plan -- a price can legitimately be recalled where it
+    # matters again -- but it is the cheapest repetition there is, and it was
+    # invisible: the article said the same thing twice and nothing in the run
+    # record said where it came from.
+    repeated_claims = [
+        {"claim_id": claim_id, "headings": headings}
+        for claim_id, headings in _repeated_placements(sections)
+    ]
+    placed = {
+        claim_id for section in sections for claim_id in section["claim_ids"]
+    }
 
     scope = _safe_dict(work_order.get("scope"))
     references = scope.get("references") or []
@@ -263,11 +350,36 @@ def validate_v3_outline(
         *(
             value
             for section in sections
-            for value in (section["heading"], section["purpose"])
+            for value in (section["heading"], section["reader_payoff"])
         ),
     ]
     covers_primary_subject = not primary_subject or any(
         _covers_subject(value, primary_subject) for value in subject_fields
+    )
+
+    # What each section promises the reader, and whether it promised anything
+    # (improvement 01). A section with no payoff is a heading with facts under
+    # it, and two sections promising the same thing is one section.
+    missing_payoffs = sorted(
+        section["heading"] for section in sections if not section["reader_payoff"]
+    )
+    payoff_keys = [
+        " ".join(sorted(_payoff_words(section["reader_payoff"])))
+        for section in sections
+        if section["reader_payoff"]
+    ]
+    duplicate_payoffs = sorted(
+        {key for key in payoff_keys if payoff_keys.count(key) > 1 and key}
+    )
+    # Read, not enforced -- the same treatment `crowded_sections` gets, and for
+    # the same reason. Whether a sentence adds something to its heading is a
+    # judgement, and a plan thrown away over this one would cost an article its
+    # whole structure to fix a line of prose.
+    restated_payoffs = sorted(
+        section["heading"]
+        for section in sections
+        if section["reader_payoff"]
+        and _restates_heading(section["heading"], section["reader_payoff"])
     )
 
     checks = {
@@ -275,6 +387,8 @@ def validate_v3_outline(
         # divides into two sections is that form working, and failing the plan
         # for it sent compose in with no plan at all.
         "enough_sections": len(sections) >= min_sections,
+        "payoffs_stated": not missing_payoffs,
+        "payoffs_distinct": not duplicate_payoffs,
         "headings_unique": len({s["heading"].casefold() for s in sections})
         == len(sections),
         "within_word_budget": within_budget,
@@ -295,7 +409,16 @@ def validate_v3_outline(
         # this redesign exists for, and seeing it in the run record is how we
         # find out whether narrowing the packet actually fixed it.
         "crowded_sections": crowded_sections,
+        "repeated_claims": repeated_claims,
+        # Chosen for this article and placed nowhere. Reported so the distance
+        # between what an operator picked and what the plan uses is visible;
+        # never a failure, because "leave out what the piece is better without"
+        # is what the outline prompt asks for.
+        "unplaced_claims": sorted(claim_ids - placed),
         "context_only_headings": context_only_headings,
+        "missing_payoffs": missing_payoffs,
+        "duplicate_payoffs": duplicate_payoffs,
+        "restated_payoffs": restated_payoffs,
     }
     return all(checks.values()), diagnostics
 
@@ -362,7 +485,81 @@ def outline_focus_only(outline: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def format_v3_outline_for_prompt(outline: dict[str, Any]) -> str:
+# Facts per hundred words below which a section has room to explain rather
+# than merely to list. Deliberately lower than the crowding threshold: between
+# the two is the ordinary middle, where nothing needs saying either way.
+ROOMY_CLAIMS_PER_HUNDRED_WORDS = 2.0
+
+
+def _repeated_placements(
+    sections: list[dict[str, Any]],
+) -> list[tuple[str, list[str]]]:
+    """Facts the plan put in more than one section.
+
+    Shared by the diagnostics and by the section brief so the run record and
+    the writer cannot disagree about which facts are doubled.
+    """
+    placements: dict[str, list[str]] = {}
+    for section in sections:
+        for claim_id in section["claim_ids"]:
+            placements.setdefault(claim_id, []).append(section["heading"])
+    return [
+        (claim_id, headings)
+        for claim_id, headings in sorted(placements.items())
+        if len(headings) > 1
+    ]
+
+
+def _room_to_work(section: dict[str, Any], roles: dict[str, str]) -> str | None:
+    """One line telling the writer how much room this section actually has.
+
+    Improvement 04. The writer was handed a list of facts and a word budget and
+    left to reconcile them, and when they do not reconcile the only prose that
+    satisfies both is a catalogue: run 9e66bf84 planned 56 claims into 200
+    words, which is three and a half words each.
+
+    Advice, never a maximum. One complex fact can need more explanation than
+    five simple ones, so a number here cannot decide anything -- what it can do
+    is say which facts are droppable, which is the part the writer could not
+    know.
+    """
+    claims = section["claim_ids"]
+    words = _safe_int(section.get("target_words"), default=0)
+    if not claims or words <= 0:
+        return None
+
+    spare = [claim_id for claim_id in claims if roles.get(claim_id) == "texture"]
+    density = len(claims) * 100 / words
+    crowded = density > CROWDED_CLAIMS_PER_HUNDRED_WORDS
+
+    if crowded:
+        opening = (
+            f"{len(claims)} facts in ~{words} words is a list, not a section. "
+            "Explain the two or three that carry the point."
+        )
+    elif density <= ROOMY_CLAIMS_PER_HUNDRED_WORDS:
+        opening = (
+            f"{len(claims)} facts in ~{words} words. There is room here to say "
+            "what they mean, not only what they are."
+        )
+    else:
+        opening = f"{len(claims)} facts in ~{words} words."
+
+    if spare:
+        tail = f" Colour, droppable: {', '.join(spare)}."
+    elif crowded:
+        # Only worth saying where the writer would otherwise be looking for
+        # something to cut. On a section with room, "nothing is spare" is an
+        # answer to a question nobody asked.
+        tail = " Every fact here is load-bearing, so the room has to come from the prose."
+    else:
+        tail = ""
+    return f"   Room to work: {opening}{tail}"
+
+
+def format_v3_outline_for_prompt(
+    outline: dict[str, Any], *, fact_roles: dict[str, str] | None = None
+) -> str:
     """Render a validated plan as the section brief compose writes against."""
     sections = outline.get("sections") or []
     if not sections:
@@ -394,8 +591,24 @@ def format_v3_outline_for_prompt(outline: dict[str, Any]) -> str:
         budget = f" (~{target} words)" if target else ""
         claims = ", ".join(section["claim_ids"]) or "none"
         lines.append(f"{index}. {section['heading']}{budget}")
-        lines.append(f"   Purpose: {section['purpose']}")
+        lines.append(f"   What the reader gets: {section['reader_payoff']}")
         lines.append(f"   Evidence claims: {claims}")
+        room = _room_to_work(section, fact_roles or {})
+        if room:
+            lines.append(room)
+
+    repeated = _repeated_placements(sections)
+    if repeated:
+        lines.append("")
+        lines.append(
+            "The same fact is planned into more than one section. State it "
+            "once, in the section that needs it most, unless the second use "
+            "genuinely does new work:"
+        )
+        lines.extend(
+            f"- {claim_id}: {' / '.join(headings)}"
+            for claim_id, headings in repeated
+        )
 
     takeaway = _safe_str(outline.get("takeaway_focus"))
     if takeaway:
@@ -412,3 +625,26 @@ def format_v3_outline_for_prompt(outline: dict[str, Any]) -> str:
         lines.extend(f"- {item}" for item in unsupported)
 
     return "\n".join(lines)
+
+
+def format_payoff_promises(outline: dict[str, Any]) -> str:
+    """The promises the plan made, for the stage that checks they were kept.
+
+    The auditor used to be asked to work out for itself what each section
+    should have done for the reader, which is a second opinion about the plan
+    rather than a check on the draft. The plan already said. Handing it over
+    turns "does this section do its job" from a judgement about what the job
+    might have been into a comparison against a written promise.
+    """
+    sections = outline.get("sections") or []
+    promises = [
+        f"{index}. {section['heading']} -> {section['reader_payoff']}"
+        for index, section in enumerate(sections, start=1)
+        if section.get("reader_payoff")
+    ]
+    if not promises:
+        # An honest absence. A run whose plan was rejected has no promises to
+        # check, and inventing some here would put the auditor back to guessing
+        # with an air of authority.
+        return "No section promises were recorded for this run."
+    return "\n".join(promises)
