@@ -43,6 +43,12 @@ function proposal(overrides: Partial<SectionEditProposal> = {}): SectionEditProp
     what_changed: 'Named the choice instead of listing both.',
     could_not_do: '',
     introduced_figures: [],
+    review: {
+      status: 'supported',
+      checked: true,
+      assessment: 'Every figure matches the record it comes from.',
+      unsupported_claims: [],
+    },
     ...overrides,
   }
 }
@@ -90,6 +96,7 @@ describe('nothing lands unread', () => {
       markdown: '# edited',
       edits: 1,
       revision: 5,
+      review_status: 'supported',
       already_applied: false,
     })
     open()
@@ -262,5 +269,98 @@ describe('taking it back', () => {
 
     await waitFor(() => expect(undoSectionEdit).toHaveBeenCalled())
     expect(applied).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('what the checker found', () => {
+  it('shows the findings and asks for a decision', async () => {
+    // The figure warning compares sets of numbers, so a swap of two prices the
+    // research already carries is invisible to it. This is the reading of what
+    // the new text asserts.
+    proposeSectionEdit.mockResolvedValue(
+      proposal({
+        revised: '## Where to eat\n\nThe stalls cost $40.',
+        review: {
+          status: 'unsupported',
+          checked: true,
+          assessment: 'The prices are attached to the wrong things.',
+          unsupported_claims: [
+            {
+              claim: 'The stalls cost $40',
+              reason: 'The record says the stalls cost $8.',
+              severity: 'high',
+            },
+          ],
+        },
+      }),
+    )
+    open()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Make the recommendation clearer' }),
+    )
+
+    expect(
+      await screen.findByText('The prices are attached to the wrong things.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('The stalls cost $40')).toBeInTheDocument()
+    // A different press from the one on an edit that passed, and the server
+    // records it as one.
+    expect(
+      screen.getByRole('button', { name: 'Use it anyway' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Use this' })).toBeNull()
+  })
+
+  it('does not show an unchecked edit as a checked one', async () => {
+    proposeSectionEdit.mockResolvedValue(
+      proposal({
+        review: {
+          status: 'unchecked',
+          checked: false,
+          assessment: 'Grounding could not be completed: the checker is down.',
+          unsupported_claims: [],
+        },
+      }),
+    )
+    open()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Say it in fewer words' }),
+    )
+
+    expect(
+      await screen.findByText(/has not been checked against the research/),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Use it anyway' }),
+    ).toBeInTheDocument()
+  })
+
+  it('applies a passed edit without asking for an override', async () => {
+    proposeSectionEdit.mockResolvedValue(proposal())
+    applySectionEdit.mockResolvedValue({
+      markdown: '# edited',
+      edits: 1,
+      revision: 5,
+      review_status: 'supported',
+      already_applied: false,
+    })
+    open()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Say it in fewer words' }),
+    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Use this' }))
+
+    await waitFor(() =>
+      expect(applySectionEdit).toHaveBeenCalledWith(
+        'run-1',
+        expect.anything(),
+        '',
+        false,
+      ),
+    )
   })
 })

@@ -82,10 +82,15 @@ export function SectionEditor({
       .finally(() => setBusy(false))
   }
 
-  const keep = () => {
+  const review = proposal?.review ?? null
+  // Anything the checker did not pass: it found something, or it never managed
+  // to look. Both are a decision for a person, and neither is a pass.
+  const needsDecision = !review || review.status !== 'supported'
+
+  const keep = (acceptFindings = false) => {
     if (!proposal) return
     setBusy(true)
-    applySectionEdit(runId, proposal, reason)
+    applySectionEdit(runId, proposal, reason, acceptFindings)
       .then(result => {
         setProposal(null)
         setReason('')
@@ -133,6 +138,40 @@ export function SectionEditor({
               This draft introduces {proposal.introduced_figures.join(', ')}, which
               is in neither the original nor the research. Do not keep it without
               checking where it came from.
+            </p>
+          )}
+
+          {/* The check the figure warning above cannot do. That one compares
+              sets of numbers, so swapping two prices the research already
+              carries is invisible to it -- every number is present and both
+              claims are false. This is a reading of what the new text
+              asserts. */}
+          {!proposal.could_not_do && review?.status === 'unsupported' && (
+            <div className="p2b-editor-invented" role="status">
+              <p>
+                The checker read this against the research and does not think it
+                holds up:
+              </p>
+              <p>{review.assessment}</p>
+              <ul>
+                {review.unsupported_claims.map(finding => (
+                  <li key={finding.claim}>
+                    <strong>{finding.claim}</strong> — {finding.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {!proposal.could_not_do && (!review || review.status === 'unchecked') && (
+            /* Not a pass. "We looked and it holds up" and "we did not manage
+               to look" are different answers, and showing the second as
+               silence is how unchecked prose comes to wear the stamp of
+               checked prose. */
+            <p className="p2b-editor-invented" role="status">
+              This edit has not been checked against the research
+              {review?.assessment ? `: ${review.assessment}` : '.'} Read it
+              yourself before keeping it.
             </p>
           )}
 
@@ -187,9 +226,13 @@ export function SectionEditor({
                 disabled={
                   busy || proposal.revised.trim() === proposal.original.trim()
                 }
-                onClick={keep}
+                onClick={() => keep(needsDecision)}
               >
-                Use this
+                {/* The label says which button this is. Pressing "Use this"
+                    on an edit the checker flagged is a different act from
+                    pressing it on one that passed, and the server records it
+                    as one. */}
+                {needsDecision ? 'Use it anyway' : 'Use this'}
               </button>
             )}
             <button

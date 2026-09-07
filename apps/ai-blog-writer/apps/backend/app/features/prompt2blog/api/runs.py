@@ -6,6 +6,7 @@ handed the loop to one request and froze the whole server while it ran, which
 is what made a research pass look like an outage.
 """
 
+import logging
 from contextlib import nullcontext
 from typing import Any, Literal
 from uuid import uuid4
@@ -45,6 +46,7 @@ from ..article_edits import (
     read_article,
 )
 from ..config import FEATURE_NAME
+from ..edit_review import SUPPORTED, binding_failure, review_section_edit
 from ..pricing import Prompt2BlogTokenUsageTracker
 from ..run_recorder import USAGE_LEDGER_STAGE
 from ..editor_spend import (
@@ -98,6 +100,9 @@ from ..selection_v4 import selection_from_flags
 from ..support import _clean_string_list, _safe_dict, _safe_str
 
 router = APIRouter()
+
+
+logger = logging.getLogger(__name__)
 
 # One sentence per refusal, written for the operator rather than the log. Every
 # key is a `ResumePlan.reason`; a reason with no entry falls back to the generic
@@ -458,6 +463,14 @@ class ApplyEditRequest(BaseModel):
 
     proposal: EditProposal
     reason: str = ""
+    # A person saying "I have read what the checker said and I want this
+    # anyway". Required for anything the checker did not pass, including an
+    # edit it never managed to read, and recorded on the edit itself.
+    #
+    # Not a way around the check. The findings are shown first, the decision is
+    # a separate press, and the history afterwards says which claims were
+    # accepted over.
+    accept_findings: bool = False
 
 
 class UndoEditRequest(BaseModel):
@@ -618,6 +631,56 @@ def propose_edit(run_id: str, request: SectionEditRequest) -> JSONResponse:
             outcome="refused" if proposal.could_not_do else "proposed",
         ),
     )
+
+    if proposal.changed:
+        # A second call, and it is worth saying why rather than letting it look
+        # like an oversight. The cheap check compares sets of figures, so
+        # swapping two prices the packet already holds is invisible to it: every
+        # number is present and both claims are false. Nothing short of reading
+        # what the sentence asserts catches that.
+        #
+        # Only on a proposal that changed something. A refusal and a no-op have
+        # no new prose to judge, and paying to be told that unchanged text is
+        # still grounded is paying for nothing.
+        review_attempt_id = uuid4().hex
+        review_tracker = Prompt2BlogTokenUsageTracker(run_id=run_id)
+        review_llm = DefaultPrompt2BlogLLM(
+            usage_tracker=review_tracker, run_id=run_id
+        )
+        try:
+            proposal = proposal.model_copy(
+                update={
+                    "review": review_section_edit(
+                        llm=review_llm,
+                        run_id=run_id,
+                        section_id=request.section_id,
+                        content=output["markdown"],
+                        original=proposal.original,
+                        candidate=proposal.revised,
+                        packet=packet,
+                        base_revision=proposal.base_revision,
+                    )
+                }
+            )
+            review_outcome = proposal.review.status
+        except Exception as exc:  # noqa: BLE001 -- degrades, never blocks
+            # A checker outage does not cost an editor the proposal they have
+            # already paid for. It comes back unreviewed, which the apply
+            # treats as a decision for a person rather than as a pass.
+            logger.warning("Prompt2Blog edit review failed: %s", exc)
+            review_outcome = "failed"
+        record_editor_attempt(
+            run_id,
+            attempt_from_tracker(
+                review_tracker,
+                attempt_id=review_attempt_id,
+                kind="review",
+                section_id=request.section_id,
+                action_id=request.action_id,
+                outcome=review_outcome,
+            ),
+        )
+
     return JSONResponse(proposal.model_dump(mode="json"))
 
 
@@ -684,6 +747,70 @@ def apply_edit(
     artifact = _safe_dict(_safe_dict(output["artifact"]).get("pipeline_v3"))
     form_id = _safe_str(_safe_dict(artifact.get("brief")).get("form_id"))
 
+    # Whether the review attached to this proposal is a review *of this
+    # proposal*. It was generated on the server, travelled to a browser as
+    # JSON, and came back in a request body -- so the object being trusted is
+    # one the client had every opportunity to rewrite, and a verdict that says
+    # a candidate is grounded says it about the candidate it read.
+    try:
+        packet = frozen_packet(run_id)
+    except PacketNotStored:
+        # An older run with no stored packet cannot have its edits reviewed at
+        # all. That is a decision for a person, which is what an unverified
+        # review already becomes below.
+        packet = {}
+    unverified = binding_failure(
+        proposal.review,
+        run_id=run_id,
+        section_id=proposal.section_id,
+        candidate=proposal.revised,
+        packet=packet,
+    )
+    review_status = (
+        proposal.review.status
+        if proposal.review is not None and not unverified
+        else "unchecked"
+    )
+    findings = (
+        [
+            claim["claim"]
+            for claim in proposal.review.unsupported_claims
+            if claim.get("claim")
+        ]
+        if proposal.review is not None and not unverified
+        else []
+    )
+    # Only for an edit that could actually land. A refusal and a no-op are
+    # rejected below on their own terms, and reporting one of those as "the
+    # checker did not pass it" would explain the wrong thing.
+    reviewable = proposal.changed and not proposal.could_not_do
+    if reviewable and review_status != SUPPORTED and not request.accept_findings:
+        # Advisory, not a gate on the article: the existing draft is untouched
+        # and still saveable. What is refused is landing prose a checker did
+        # not pass without a person saying they read that and want it anyway.
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": (
+                    "The checker did not pass this edit. Read the findings, "
+                    "then apply again with `accept_findings` if you want it "
+                    "anyway."
+                ),
+                "review_status": review_status,
+                "binding_failure": unverified,
+                "unsupported_claims": (
+                    proposal.review.unsupported_claims
+                    if proposal.review is not None and not unverified
+                    else []
+                ),
+                "assessment": (
+                    proposal.review.assessment
+                    if proposal.review is not None and not unverified
+                    else ""
+                ),
+            },
+        )
+
     def edit(markdown: str, history: EditHistory) -> tuple[str, EditHistory]:
         result = apply_proposal(
             content=markdown,
@@ -696,6 +823,11 @@ def apply_edit(
             # cannot later be read as a rule about all of them (improvement
             # 05).
             form_id=form_id,
+            review_status=review_status,
+            # Only when a person actually overrode something. An empty list on
+            # a passed edit and an empty list on an accepted one would be the
+            # same row.
+            accepted_despite=findings if review_status != SUPPORTED else [],
         )
         if not result.applied:
             # The reason, not a guess at it. Staleness was the only refusal
@@ -740,6 +872,7 @@ def apply_edit(
             "markdown": committed.markdown,
             "edits": len(committed.history.edits),
             "revision": committed.revision,
+            "review_status": review_status,
             # So a repeated click is reported as the edit it already is,
             # rather than as a second one.
             "already_applied": committed.already_applied,

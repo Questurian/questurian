@@ -342,6 +342,20 @@ export interface SectionEditAction {
  * failure mode of asking for a stronger recommendation is a model inventing
  * the thing that would make it stronger.
  */
+/**
+ * What a checker made of a candidate section, read against the frozen packet.
+ *
+ * Three answers, never two. `unchecked` is not a pass and is not a fail: a
+ * checker that could not answer is a reason for a person to look, not a reason
+ * to call the prose verified.
+ */
+export interface SectionEditReview {
+  status: 'supported' | 'unsupported' | 'unchecked'
+  checked: boolean
+  assessment: string
+  unsupported_claims: { claim: string; reason: string; severity: string }[]
+}
+
 export interface SectionEditProposal {
   run_id: string
   /** This proposal, once. A repeated apply of it is the same edit, not a second one. */
@@ -358,6 +372,8 @@ export interface SectionEditProposal {
   could_not_do: string
   /** Figures in the revision that are in neither the original nor the packet. */
   introduced_figures: string[]
+  /** What the checker made of it. Null on a refusal, which has nothing to judge. */
+  review: SectionEditReview | null
 }
 
 /** The finished article. Its own call: the state is polled, this is not. */

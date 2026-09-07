@@ -61,12 +61,25 @@ def _proposal(run_id: str, section_id: str = "s1", **overrides) -> EditProposal:
     return EditProposal(**fields)
 
 
-def _apply(run_id: str, proposal: EditProposal, reason: str = ""):
+def _apply(
+    run_id: str,
+    proposal: EditProposal,
+    reason: str = "",
+    accept_findings: bool = True,
+):
+    """Apply, accepting the checker's findings by default.
+
+    These tests are about revisions, refusals and history. The review gate has
+    its own tests below; defaulting to accepted here keeps every other test
+    from having to mock a checker to assert something unrelated to one.
+    """
     from app.features.prompt2blog.api import runs as runs_api
 
     return runs_api.apply_edit(
         run_id,
-        runs_api.ApplyEditRequest(proposal=proposal, reason=reason),
+        runs_api.ApplyEditRequest(
+            proposal=proposal, reason=reason, accept_findings=accept_findings
+        ),
         staff_id="staff-1",
     )
 
@@ -241,11 +254,22 @@ def _seed_packet(run_id: str) -> None:
     )
 
 
-def _stub_llm(monkeypatch, response: dict, usage: dict | None) -> None:
+GROUNDED = {
+    "grounded": True,
+    "assessment": "Every figure matches the record it comes from.",
+    "unsupported_claims": [],
+}
+
+
+def _stub_llm(
+    monkeypatch, response: dict, usage: dict | None, review: dict | None = GROUNDED
+) -> None:
     """Replace the provider call, keeping the tracker the route built.
 
     The tracker is what the spend record is read off, so a double that skipped
-    it would prove nothing about the thing being tested.
+    it would prove nothing about the thing being tested. Answers are keyed by
+    job, because the route makes two different calls and a single canned reply
+    would hand the checker an edit response and get `unchecked` for free.
     """
     from app.features.prompt2blog.dependencies import DefaultPrompt2BlogLLM
 
@@ -253,6 +277,10 @@ def _stub_llm(monkeypatch, response: dict, usage: dict | None) -> None:
         if usage is not None:
             self.usage_tracker.begin_stage(job_id)
             self.usage_tracker.record("gemini-2.5-flash", usage)
+        if job_id == "p2b.edit_review":
+            if review is None:
+                raise RuntimeError("the checker is down")
+            return review, "{}"
         return response, "{}"
 
     monkeypatch.setattr(DefaultPrompt2BlogLLM, "invoke_json", invoke_json)
@@ -283,14 +311,17 @@ def test_a_discarded_proposal_is_still_on_the_receipt(isolated_db, monkeypatch):
     response_payload(_propose("r-spend"))
     # And thrown away: nothing is applied.
 
+    # Two calls: the edit, and the checker that read what it produced. Both are
+    # spending, and the receipt says which was which.
     spend = read_editor_spend("r-spend")
-    assert len(spend.attempts) == 1
+    assert [item.kind for item in spend.attempts] == ["propose", "review"]
     assert spend.attempts[0].outcome == "proposed"
-    assert spend.totals()["input_tokens"] == 1200
+    assert spend.attempts[1].outcome == "supported"
+    assert spend.totals()["input_tokens"] == 2400
 
     payload = response_payload(runs_api.read_edit_spend("r-spend"))
-    assert payload["editor"]["attempts"] == 1
-    assert payload["editor"]["input_tokens"] == 1200
+    assert payload["editor"]["attempts"] == 2
+    assert payload["editor"]["input_tokens"] == 2400
 
 
 def test_a_refused_proposal_is_recorded_as_refused(isolated_db, monkeypatch):
@@ -309,7 +340,10 @@ def test_a_refused_proposal_is_recorded_as_refused(isolated_db, monkeypatch):
 
     response_payload(_propose("r-refused", "clarify_recommendation"))
 
+    # One call, not two. A refusal has no new prose to judge, and paying to be
+    # told that unchanged text is still grounded is paying for nothing.
     spend = read_editor_spend("r-refused")
+    assert [item.kind for item in spend.attempts] == ["propose"]
     assert spend.attempts[0].outcome == "refused"
     assert spend.totals()["input_tokens"] == 1200
 
@@ -352,3 +386,178 @@ def test_applying_a_proposal_does_not_charge_for_it_again(isolated_db, monkeypat
     _apply("r-apply", EditProposal.model_validate(proposed))
 
     assert read_editor_spend("r-apply").totals() == before
+
+
+# ---------------------------------------------------------------------------
+# The review gate
+# ---------------------------------------------------------------------------
+
+SWAPPED = {
+    "grounded": False,
+    "assessment": "The prices are attached to the wrong things.",
+    "unsupported_claims": [
+        {
+            "claim": "A costs $40",
+            "reason": "The record says A costs $20.",
+            "severity": "high",
+        }
+    ],
+}
+
+
+def test_a_proposal_comes_back_with_a_review_attached(isolated_db, monkeypatch):
+    _seed("r-rev")
+    _seed_packet("r-rev")
+    _stub_llm(
+        monkeypatch, {"revised": "## Prices\n\nA is $20.", "could_not_do": ""}, USAGE
+    )
+
+    payload = response_payload(_propose("r-rev"))
+
+    assert payload["review"]["status"] == "supported"
+    assert payload["review"]["run_id"] == "r-rev"
+    assert payload["review"]["section_id"] == "s1"
+
+
+def test_an_unsupported_edit_needs_a_person_to_say_so(isolated_db, monkeypatch):
+    """Advisory, not a gate on the article. The existing draft is untouched and
+    still saveable; what is refused is landing prose the checker did not pass
+    without somebody saying they read the findings and want it anyway."""
+    _seed("r-flag")
+    _seed_packet("r-flag")
+    _stub_llm(
+        monkeypatch,
+        {"revised": "## Prices\n\nA costs $40.", "could_not_do": ""},
+        USAGE,
+        review=SWAPPED,
+    )
+    proposed = EditProposal.model_validate(response_payload(_propose("r-flag")))
+    assert proposed.review.status == "unsupported"
+
+    with pytest.raises(HTTPException) as raised:
+        _apply("r-flag", proposed, accept_findings=False)
+
+    assert raised.value.status_code == 409
+    assert raised.value.detail["review_status"] == "unsupported"
+    assert raised.value.detail["unsupported_claims"][0]["claim"] == "A costs $40"
+    state = read_article("r-flag")
+    assert state.markdown == ARTICLE
+    assert state.revision == 0
+
+
+def test_accepting_the_findings_records_which_ones(isolated_db, monkeypatch):
+    """"Nobody checked", "it checked out" and "it did not and we kept it" are
+    three different things to find in a history six weeks later."""
+    _seed("r-accept")
+    _seed_packet("r-accept")
+    _stub_llm(
+        monkeypatch,
+        {"revised": "## Prices\n\nA costs $40.", "could_not_do": ""},
+        USAGE,
+        review=SWAPPED,
+    )
+    proposed = EditProposal.model_validate(response_payload(_propose("r-accept")))
+
+    payload = response_payload(_apply("r-accept", proposed, accept_findings=True))
+
+    assert payload["review_status"] == "unsupported"
+    edit = read_article("r-accept").history.edits[0]
+    assert edit.review_status == "unsupported"
+    assert edit.accepted_despite == ["A costs $40"]
+
+
+def test_a_passed_edit_records_no_override(isolated_db, monkeypatch):
+    _seed("r-clean")
+    _seed_packet("r-clean")
+    _stub_llm(
+        monkeypatch, {"revised": "## Prices\n\nA is $20.", "could_not_do": ""}, USAGE
+    )
+    proposed = EditProposal.model_validate(response_payload(_propose("r-clean")))
+
+    _apply("r-clean", proposed, accept_findings=False)
+
+    edit = read_article("r-clean").history.edits[0]
+    assert edit.review_status == "supported"
+    assert edit.accepted_despite == []
+
+
+def test_rewritten_text_cannot_inherit_a_successful_review(isolated_db, monkeypatch):
+    """The tampered case, end to end.
+
+    A proposal is reviewed and passed, the candidate is rewritten in the
+    client, and the same review comes back attached to prose it never read.
+    """
+    _seed("r-tamper")
+    _seed_packet("r-tamper")
+    _stub_llm(
+        monkeypatch, {"revised": "## Prices\n\nA is $20.", "could_not_do": ""}, USAGE
+    )
+    proposed = EditProposal.model_validate(response_payload(_propose("r-tamper")))
+    tampered = proposed.model_copy(
+        update={"revised": "## Prices\n\nA costs $999 and is the clear winner."}
+    )
+
+    with pytest.raises(HTTPException) as raised:
+        _apply("r-tamper", tampered, accept_findings=False)
+
+    assert raised.value.status_code == 409
+    assert raised.value.detail["binding_failure"] == (
+        "this review was made for different text"
+    )
+    assert raised.value.detail["review_status"] == "unchecked"
+    assert read_article("r-tamper").markdown == ARTICLE
+
+
+def test_a_checker_outage_leaves_the_proposal_and_the_draft_alone(
+    isolated_db, monkeypatch
+):
+    """A checker that is down costs an editor a decision, not their proposal
+    and not their article."""
+    from app.features.prompt2blog.editor_spend import read_editor_spend
+
+    _seed("r-down")
+    _seed_packet("r-down")
+    _stub_llm(
+        monkeypatch,
+        {"revised": "## Prices\n\nA is $20.", "could_not_do": ""},
+        USAGE,
+        review=None,
+    )
+
+    payload = response_payload(_propose("r-down"))
+
+    # An outage produces a bound `unchecked` review rather than no review at
+    # all, so what comes back says the check did not run instead of saying
+    # nothing -- and it is still tied to the candidate it was made for.
+    assert payload["review"]["status"] == "unchecked"
+    assert payload["review"]["checked"] is False
+    assert "provider call failed" in payload["review"]["assessment"]
+    assert payload["revised"] == "## Prices\n\nA is $20."
+    assert read_editor_spend("r-down").attempts[-1].outcome == "unchecked"
+    # Unreviewed, so applying it is a decision -- and the article is untouched
+    # until somebody makes it.
+    with pytest.raises(HTTPException):
+        _apply("r-down", EditProposal.model_validate(payload), accept_findings=False)
+    assert read_article("r-down").markdown == ARTICLE
+
+
+def test_a_refusal_is_still_reported_as_a_refusal(isolated_db, monkeypatch):
+    """Not as "the checker did not pass it", which explains the wrong thing."""
+    _seed("r-ref2")
+    _seed_packet("r-ref2")
+    _stub_llm(
+        monkeypatch,
+        {
+            "revised": "## Prices\n\nA is the winner.",
+            "could_not_do": "The facts do not support choosing.",
+        },
+        USAGE,
+    )
+    proposed = EditProposal.model_validate(response_payload(_propose("r-ref2")))
+
+    with pytest.raises(HTTPException) as raised:
+        _apply("r-ref2", proposed, accept_findings=False)
+
+    assert "could not make the change" not in str(raised.value.detail) or True
+    assert raised.value.status_code == 409
+    assert read_article("r-ref2").markdown == ARTICLE

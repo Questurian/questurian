@@ -295,16 +295,18 @@ export async function applySectionEdit(
   runId: string,
   proposal: SectionEditProposal,
   reason = '',
+  acceptFindings = false,
 ): Promise<{
   markdown: string
   edits: number
   revision: number
+  review_status: string
   already_applied: boolean
 }> {
   const response = await apiFetch(`${FEATURE_PREFIX}/section-edit/${runId}/apply`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ proposal, reason }),
+    body: JSON.stringify({ proposal, reason, accept_findings: acceptFindings }),
   })
   if (!response.ok) {
     throw await readError(response, 'Could not apply that change.')
@@ -313,6 +315,7 @@ export async function applySectionEdit(
     markdown: string
     edits: number
     revision: number
+    review_status: string
     already_applied: boolean
   }
 }
