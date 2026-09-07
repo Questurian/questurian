@@ -3,7 +3,13 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
 import { buildStageArticleUrl } from '../../../blogArticles'
-import type { IntakeDraft, IntakeGeneration } from '../intake.types'
+import { FindingList, ReviewedArticle } from './ReviewedArticle'
+import type {
+  IntakeDraft,
+  IntakeGeneration,
+  IntakeReview,
+  IntakeReviewResult,
+} from '../intake.types'
 
 /**
  * The article the writer produced.
@@ -25,9 +31,18 @@ interface DraftScreenProps {
   runId: string
   generation: IntakeGeneration
   draft: IntakeDraft | null
+  /** Where the detector stands. Null until somebody asks for a read. */
+  reviewState: IntakeReview | null
+  /** What the last read found. */
+  review: IntakeReviewResult | null
   busy: boolean
   onRetry: () => void
   onReopen: () => void
+  onReview: () => void
+  onSettleFinding: (
+    findingId: string,
+    verdict: 'agreed' | 'not_a_fault' | null,
+  ) => void
 }
 
 function Receipt({ generation }: { generation: IntakeGeneration }) {
@@ -88,15 +103,94 @@ function Receipt({ generation }: { generation: IntakeGeneration }) {
   )
 }
 
+/**
+ * What the detector is doing, or what it found.
+ *
+ * A read costs money and takes minutes, so this says which of those is true
+ * rather than leaving the page silent. It never says a draft is clean unless a
+ * read actually came back with nothing: an absent review and a review with no
+ * findings are different answers and must not look alike.
+ */
+function ReviewBar({
+  reviewState,
+  reviewing,
+  busy,
+  onReview,
+}: {
+  reviewState: IntakeReview | null
+  reviewing: boolean
+  busy: boolean
+  onReview: () => void
+}) {
+  const cost = reviewState?.cost_usd
+  return (
+    <div className="p2b-review-bar">
+      <button type="button" onClick={onReview} disabled={busy || reviewing}>
+        {reviewing
+          ? 'Reading it…'
+          : reviewState?.has_review
+            ? 'Read it again'
+            : 'Read this draft'}
+      </button>
+
+      {reviewing && (
+        <p className="p2b-muted">
+          An editor is reading this against the brief and checking the facts it
+          rests on. A few minutes. You can leave this page.
+        </p>
+      )}
+
+      {!reviewing && !reviewState && (
+        <p className="p2b-muted">
+          Nobody has read this yet. Nothing here has been fact-checked.
+        </p>
+      )}
+
+      {reviewState?.state === 'failed' && (
+        <p className="p2b-fails-if">
+          {reviewState.message ?? 'The draft could not be read.'}
+        </p>
+      )}
+
+      {/* Kept separate from the count above: a read of an article that has
+          since been rewritten is not wrong, it is simply not about this one. */}
+      {reviewState?.stale && (
+        <p className="p2b-fails-if">
+          The findings below are from a read of an earlier draft. This article
+          has been rewritten since, so read them as history.
+        </p>
+      )}
+
+      {!reviewing && reviewState?.has_review && !reviewState.stale && (
+        <p className="p2b-muted">
+          {reviewState.finding_count === 0
+            ? 'The editor read this and found nothing wrong with it.'
+            : `${reviewState.finding_count} finding${reviewState.finding_count === 1 ? '' : 's'}, marked below.`}
+          {typeof cost === 'number' ? ` That read cost $${cost.toFixed(2)}.` : ''}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function DraftScreen({
   runId,
   generation,
   draft,
+  reviewState,
+  review,
   busy,
   onRetry,
   onReopen,
+  onReview,
+  onSettleFinding,
 }: DraftScreenProps) {
   const failed = generation.state === 'failed'
+  const reviewing = reviewState?.state === 'running'
+  // Marked up only when the read is about the article actually on screen. A
+  // stale review's quotes point at paragraphs that no longer exist, so its
+  // findings are listed rather than pinned to whatever they happen to match.
+  const marked = review && reviewState?.has_review && !reviewState.stale
 
   return (
     <section className="p2b-intake" aria-label="The draft">
@@ -120,11 +214,35 @@ export function DraftScreen({
           <h2 className="p2b-draft-headline">{draft.headline || 'Untitled'}</h2>
           <p className="p2b-muted">{draft.word_count} words</p>
 
-          <article className="p2b-draft-body">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {draft.article_markdown}
-            </ReactMarkdown>
-          </article>
+          <ReviewBar
+            reviewState={reviewState}
+            reviewing={reviewing}
+            busy={busy}
+            onReview={onReview}
+          />
+
+          {marked ? (
+            <ReviewedArticle
+              article={draft.article_markdown}
+              review={review}
+              onSettle={onSettleFinding}
+            />
+          ) : (
+            <article className="p2b-draft-body">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {draft.article_markdown}
+              </ReactMarkdown>
+            </article>
+          )}
+
+          {/* Kept readable rather than hidden. A read of a draft that has
+              since been rewritten is still a read somebody paid for. */}
+          {review && reviewState?.stale && review.findings.length > 0 && (
+            <div className="p2b-material">
+              <p className="p2b-label">Findings from the earlier draft</p>
+              <FindingList findings={review.findings} onSettle={onSettleFinding} />
+            </div>
+          )}
 
           {/* Beside the article, never inside it. */}
           <div className="p2b-material">

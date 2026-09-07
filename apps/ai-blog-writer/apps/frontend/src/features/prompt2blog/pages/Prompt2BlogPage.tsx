@@ -102,9 +102,13 @@ export function Prompt2BlogPage() {
               runId={state!.run_id}
               generation={generation}
               draft={intake.draft}
+              reviewState={state!.review}
+              review={intake.review}
               busy={intake.busy}
               onRetry={intake.generateArticle}
               onReopen={intake.reopen}
+              onReview={intake.reviewDraft}
+              onSettleFinding={intake.settleFinding}
             />
           )
         ) : handedToTheWriter ? (

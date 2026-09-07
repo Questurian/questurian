@@ -183,6 +183,14 @@ def parse_review(raw: str, *, draft_version: str) -> Review:
 
     No findings is a legitimate result and not an error. The prompt says so out
     loud, because an editor that believes it must return something always will.
+
+    No findings *and* no verdict is a different thing, and it is refused. The
+    prompt asks for the verdict unconditionally, so a reply carrying neither
+    did not do the assignment -- and the reply that looks like this in practice
+    is a refusal, which arrives from the CLI as an ordinary success with the
+    apology in the text. Read as a review it would be filed as a clean article
+    with nothing wrong, which is the most expensive way to be wrong here: the
+    one signal the detection phase runs on, saying all clear.
     """
     text = (raw or "").strip()
     if not text:
@@ -213,6 +221,13 @@ def parse_review(raw: str, *, draft_version: str) -> Review:
                 quote=quote,
                 problem=problem,
             )
+        )
+
+    if not findings and not verdict.strip():
+        raise ReviewRefused(
+            "The editor returned neither findings nor a verdict, so this is "
+            "not a review of the draft.",
+            text,
         )
 
     issues = []
@@ -260,6 +275,26 @@ def review_draft(
     )
     review = parse_review(_safe_str(reply.get("text")), draft_version=draft_version)
     return review, reply
+
+
+def review_writer() -> ResearchWriter:
+    """The real transport, resolved through the model registry.
+
+    Its own job rather than the writer's. Borrowing `p2b.write` would work and
+    would file every review's cost and served model on the writer's line, which
+    is the fault that had every Claude call in v4 recorded as Haiku: the
+    accounting was wrong in a way no test could see, because the calls
+    themselves were fine.
+
+    Deferred behind a function so importing this module does not pull in the
+    provider stack.
+    """
+    from app.shared.model_calls import research_text
+
+    def call(*, prompt: str, model_name: str | None = None) -> dict[str, Any]:
+        return research_text("p2b.review", prompt=prompt, model=model_name)
+
+    return call
 
 
 def review_record(review: Review, reply: dict[str, Any]) -> dict[str, Any]:

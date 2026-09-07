@@ -69,6 +69,7 @@ from ..intake_v4 import (
     generate_prompt,
     plan_research,
     start_generation,
+    start_review,
     reask_question,
     recent_runs,
     reopen_intake,
@@ -88,6 +89,14 @@ from ..generation_v5 import (
     finished_draft,
     run_attempt,
 )
+from ..editor_v5 import review_writer
+from ..review_v5 import (
+    NothingToReview,
+    ReviewAlreadyRunning,
+    finished_review,
+    mark_finding,
+    run_review,
+)
 from .runs import (
     _prompt2blog_credential_for_run,
     _run_pipeline_v3_background as _run_pipeline_v4_background,
@@ -95,6 +104,7 @@ from .runs import (
 from ..run_budget import RunTokenCeilingReached
 from ..selection_v4 import SelectionRefused
 from ..work_order_v4 import PlanHasNothingWorthReading, PlanTooLargeToFinish
+from ..support import _safe_str
 
 logger = logging.getLogger(__name__)
 
@@ -276,6 +286,19 @@ def _handle(action, *args, **kwargs) -> Any:
         raise HTTPException(
             status_code=409,
             detail={"error": "no_current_prompt", "message": str(error)},
+        ) from error
+    except ReviewAlreadyRunning as error:
+        # 409 for the reason `already_writing` is one: nothing went wrong and
+        # nothing was spent twice. A second request arrived while the first
+        # read was still in the model.
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "already_reviewing", "message": str(error)},
+        ) from error
+    except NothingToReview as error:
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "nothing_to_review", "message": str(error)},
         ) from error
     except PromptCannotBeAssembled as error:
         # 400 and the field name. This is the one failure here the operator can
@@ -783,6 +806,120 @@ def read_draft(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     article plus the reply it was parsed out of.
     """
     return JSONResponse(_handle(finished_draft, run_id))
+
+
+class VerdictRequest(BaseModel):
+    """What the operator makes of one finding.
+
+    `None` clears a verdict rather than recording a third opinion: undecided is
+    the absence of an answer, and storing it as one would make "I have not
+    looked at this yet" indistinguishable from "I looked and could not say".
+    """
+
+    verdict: str | None = None
+
+
+def _read_the_draft_background(
+    run_id: str,
+    review_id: str,
+    brief,
+    draft: dict,
+    services,
+    credential,
+) -> None:
+    """The read itself, off the request.
+
+    Failures are contained here because `run_review` has already recorded them.
+    An exception escaping a background task writes nothing anybody can read and
+    leaves the page saying "reading" forever.
+    """
+    try:
+        scope = (
+            prompt2blog_credential_scope(credential.token)
+            if credential is not None
+            else nullcontext()
+        )
+        with quota_breaker_scope(), scope:
+            run_review(
+                run_id,
+                review_id,
+                brief,
+                _safe_str(draft.get("article_markdown")),
+                _safe_str(draft.get("research_note")),
+                _safe_str(draft.get("content_hash")),
+                review_writer(),
+                services.recorder,
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception("Prompt2Blog review crashed", extra={"run_id": run_id})
+
+
+@router.post("/{run_id}/review", status_code=202)
+@exclusive_run
+def review_the_draft(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+    _staff=Depends(require_staff),
+) -> JSONResponse:
+    """Read the finished draft and say what is wrong with it.
+
+    Detection only. Nothing here proposes replacement text and nothing applies
+    a change; the findings are input to fixing the writer, not edits waiting
+    for a button.
+
+    The claim on the run is written synchronously, before this returns, so a
+    double click finds it already there. The read is minutes of work and runs
+    in the background; the page polls `GET /intake/{run_id}`, which starts
+    nothing.
+    """
+    review_id, brief, draft = _handle(start_review, run_id, _services(run_id))
+    credential = _prompt2blog_credential_for_run()
+    background_tasks.add_task(
+        _read_the_draft_background,
+        run_id,
+        review_id,
+        brief,
+        draft,
+        _services(run_id),
+        credential,
+    )
+    return JSONResponse(intake_state(run_id), status_code=202)
+
+
+@router.get("/{run_id}/review")
+def read_review(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """The findings, for reading.
+
+    Its own call rather than part of the polled state, for the reason the draft
+    is: this is every finding with its quote and its problem, plus the reply it
+    was parsed out of.
+    """
+    return JSONResponse(_handle(finished_review, run_id))
+
+
+@router.post("/{run_id}/review/{review_id}/finding/{finding_id}")
+def settle_a_finding(
+    run_id: str,
+    review_id: str,
+    finding_id: str,
+    request: VerdictRequest,
+    _staff=Depends(require_staff),
+) -> JSONResponse:
+    """Record what the operator makes of one finding.
+
+    Costs nothing and changes nothing about the article. The verdict is kept
+    beside the model's finding, never over it, so the cross-run read can skip
+    what has already been thrown out without losing what was said.
+    """
+    _handle(
+        mark_finding,
+        run_id,
+        review_id,
+        finding_id,
+        request.verdict,
+        _services(run_id).recorder,
+    )
+    return JSONResponse(_handle(finished_review, run_id))
 
 
 @router.post("/{run_id}/write", status_code=202)

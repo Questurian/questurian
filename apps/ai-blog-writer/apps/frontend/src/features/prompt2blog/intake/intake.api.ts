@@ -4,6 +4,7 @@ import type {
   GateQuestion,
   IntakeArticle,
   IntakeDraft,
+  IntakeReviewResult,
   IntakeRunSummary,
   IntakeState,
   ProvenanceReport,
@@ -140,6 +141,51 @@ export async function readDraft(runId: string): Promise<IntakeDraft> {
     throw await readError(response, 'Could not read the article.')
   }
   return (await response.json()) as IntakeDraft
+}
+
+/**
+ * Read the finished draft and say what is wrong with it.
+ *
+ * Detection only: nothing here proposes replacement text and nothing applies a
+ * change. It spends, so it is never called on a poll or a mount.
+ */
+export function reviewDraft(runId: string): Promise<IntakeState> {
+  return post(`${INTAKE}/${runId}/review`)
+}
+
+/** The findings, once there are some. Its own call: this is every quote. */
+export async function readReview(runId: string): Promise<IntakeReviewResult> {
+  const response = await apiFetch(`${INTAKE}/${runId}/review`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not read the review.')
+  }
+  return (await response.json()) as IntakeReviewResult
+}
+
+/**
+ * Record what the operator makes of one finding.
+ *
+ * Costs nothing and changes nothing about the article. `null` clears a verdict
+ * rather than recording a third opinion.
+ */
+export async function settleFinding(
+  runId: string,
+  reviewId: string,
+  findingId: string,
+  verdict: 'agreed' | 'not_a_fault' | null,
+): Promise<IntakeReviewResult> {
+  const response = await apiFetch(
+    `${INTAKE}/${runId}/review/${reviewId}/finding/${findingId}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verdict }),
+    },
+  )
+  if (!response.ok) {
+    throw await readError(response, 'Could not record that.')
+  }
+  return (await response.json()) as IntakeReviewResult
 }
 
 export function planResearch(runId: string): Promise<IntakeState> {

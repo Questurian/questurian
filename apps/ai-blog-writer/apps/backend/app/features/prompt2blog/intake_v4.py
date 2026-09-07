@@ -90,6 +90,12 @@ from .generation_v5 import (
     begin_attempt,
     generation_state,
     latest_attempt,
+    latest_draft,
+)
+from .review_v5 import (
+    NothingToReview,
+    begin_review,
+    review_state,
 )
 from .writer_prompt import (
     PROMPT_STAGE,
@@ -453,6 +459,40 @@ def start_generation(run_id: str, services: IntakeServices) -> tuple[str, Writer
         extra={"run_id": run_id, "feature": FEATURE_NAME},
     )
     return attempt_id, prompt
+
+
+def start_review(
+    run_id: str, services: IntakeServices
+) -> tuple[str, ArticleBrief, dict[str, Any]]:
+    """Claim the run for one read of its draft, and hand back what to read.
+
+    The claim is written to storage here, synchronously, before the caller
+    schedules any background work -- the same rule the writing attempt follows,
+    and for the same reason: a second request arriving while the first is still
+    in the model has to find the claim already there.
+
+    Reads the newest *successful* draft, so a failed rewrite after a good
+    article leaves the good article reviewable.
+    """
+    draft = latest_draft(run_id)
+    if draft is None:
+        raise NothingToReview(
+            "There is no article on this run yet, so there is nothing to read."
+        )
+    # Loaded before the claim, so a run whose brief cannot be read refuses
+    # without leaving a review row that will never finish.
+    brief = load_brief(run_id)
+    review_id = begin_review(
+        run_id,
+        _safe_str(draft.get("content_hash")),
+        _safe_str(draft.get("attempt_id")),
+        services.recorder,
+    )
+    logger.info(
+        "Prompt2Blog review opened",
+        extra={"run_id": run_id, "feature": FEATURE_NAME},
+    )
+    return review_id, brief, draft
 
 
 def plan_research(run_id: str, services: IntakeServices) -> Prompt2BlogWorkOrder:
@@ -1613,6 +1653,10 @@ def intake_state(run_id: str) -> dict[str, Any]:
     brief = _stage_data(run_id, BRIEF_STAGE)
     prompt = _stage_data(run_id, PROMPT_STAGE)
     generation = generation_state(run_id)
+    # Keyed on the draft that is actually on screen, so a read of an article
+    # that has since been rewritten reports itself as stale rather than hanging
+    # findings on paragraphs that no longer exist.
+    review = review_state(run_id, _safe_str((latest_draft(run_id) or {}).get("content_hash")) or None)
     work_order = _stage_data(run_id, WORK_ORDER_STAGE)
     research = _stage_data(run_id, RESEARCH_STAGE)
     grill_state = _safe_dict(grill.get(STATE_KEY))
@@ -1689,5 +1733,8 @@ def intake_state(run_id: str) -> dict[str, Any]:
         # The ADR 0036 writer. Null on every run that never used it, so an old
         # run still reports through `writing` below.
         "generation": generation,
+        # The detector. Null until somebody asks for a read: it costs money and
+        # nothing starts it on its own.
+        "review": review,
         "writing": writing_state(run_id),
     }

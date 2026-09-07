@@ -31,7 +31,10 @@ import type {
   IntakeGrill,
   IntakeWorkOrder,
   IntakeDraft,
+  IntakeFinding,
   IntakeGeneration,
+  IntakeReview,
+  IntakeReviewResult,
   IntakeWriterPrompt,
   IntakeWriting,
 } from './intake.types'
@@ -426,9 +429,63 @@ const DRAFT: IntakeDraft = {
   raw: 'everything that came back',
 }
 
+const REVIEW_STATE: IntakeReview = {
+  state: 'succeeded',
+  review_id: 'rv-1',
+  reviews: 1,
+  started_at: '2026-09-07T10:00:00+00:00',
+  finished_at: '2026-09-07T10:03:00+00:00',
+  failure: null,
+  message: null,
+  raw: null,
+  has_review: true,
+  stale: false,
+  reviewed_draft_version: 'dv-1',
+  finding_count: 1,
+  served_model: 'claude-opus-5-20260101',
+  turns: 8,
+  elapsed_seconds: 190,
+  cost_usd: 0.66,
+  parse_issue: null,
+}
+
+const FINDING: IntakeFinding = {
+  finding_id: 'f1',
+  label: 'Museum price wrong by threefold',
+  severity: 'serious',
+  quote: 'Surquillo market opens at six.',
+  problem: 'It opens at five. The whole plan rests on the wrong hour.',
+  whole_article: false,
+}
+
+const REVIEW_RESULT: IntakeReviewResult = {
+  run_id: 'r-1',
+  review_id: 'rv-1',
+  draft_version: 'dv-1',
+  findings: [FINDING],
+  verdict: 'Good on the food, wrong on the times.',
+  parse_issue: '',
+  raw: 'everything the editor said',
+  served_model: 'claude-opus-5-20260101',
+  turns: 8,
+  elapsed_seconds: 190,
+  cost_usd: 0.66,
+}
+
 function renderDraft(
   generation: Partial<IntakeGeneration> = {},
   draft: IntakeDraft | null = DRAFT,
+  review: { state: Partial<IntakeReview> | null; result: IntakeReviewResult | null } = {
+    state: null,
+    result: null,
+  },
+  handlers: {
+    onReview?: () => void
+    onSettleFinding?: (
+      findingId: string,
+      verdict: 'agreed' | 'not_a_fault' | null,
+    ) => void
+  } = {},
 ) {
   return render(
     <MemoryRouter>
@@ -436,9 +493,13 @@ function renderDraft(
         runId="r-1"
         generation={{ ...GENERATION, ...generation }}
         draft={draft}
+        reviewState={review.state ? { ...REVIEW_STATE, ...review.state } : null}
+        review={review.result}
         busy={false}
         onRetry={vi.fn()}
         onReopen={vi.fn()}
+        onReview={handlers.onReview ?? vi.fn()}
+        onSettleFinding={handlers.onSettleFinding ?? vi.fn()}
       />
     </MemoryRouter>,
   )
@@ -531,6 +592,134 @@ describe('the draft screen', () => {
     renderDraft({ parse_issue: 'The writer returned no headline.' })
 
     expect(screen.getByText('The writer returned no headline.')).toBeInTheDocument()
+  })
+})
+
+describe('the detector on the draft screen', () => {
+  it('does not claim a draft is clean before anybody has read it', () => {
+    // The dangerous version of this screen is one that looks reviewed by
+    // default. An absent review and a review that found nothing are different
+    // answers and must not look alike.
+    renderDraft()
+
+    expect(screen.getByRole('button', { name: /read this draft/i })).toBeInTheDocument()
+    expect(screen.getByText(/Nobody has read this yet/)).toBeInTheDocument()
+  })
+
+  it('says a clean read found nothing, rather than saying nothing', () => {
+    renderDraft({}, DRAFT, {
+      state: { finding_count: 0 },
+      result: { ...REVIEW_RESULT, findings: [] },
+    })
+
+    expect(screen.getByText(/found nothing wrong with it/)).toBeInTheDocument()
+  })
+
+  it('marks the paragraph the finding is about', () => {
+    renderDraft({}, DRAFT, { state: {}, result: REVIEW_RESULT })
+
+    expect(
+      screen.getByRole('button', { name: /Museum price wrong by threefold/ }),
+    ).toBeInTheDocument()
+  })
+
+  it('shows the exact quote and the problem once the mark is opened', () => {
+    // The mark is only paragraph-accurate, so the quote it was made from has
+    // to be readable beside it.
+    renderDraft({}, DRAFT, { state: {}, result: REVIEW_RESULT })
+
+    fireEvent.click(screen.getByRole('button', { name: /Museum price wrong/ }))
+
+    expect(screen.getByText(/It opens at five/)).toBeInTheDocument()
+  })
+
+  it('offers a verdict on a finding and nothing that applies a fix', () => {
+    // Detection only. An apply button here would be fixing before anybody
+    // knows what is actually wrong with these articles.
+    const onSettleFinding = vi.fn()
+    renderDraft({}, DRAFT, { state: {}, result: REVIEW_RESULT }, { onSettleFinding })
+
+    fireEvent.click(screen.getByRole('button', { name: /Museum price wrong/ }))
+    fireEvent.click(screen.getByRole('button', { name: /real problem/i }))
+
+    expect(onSettleFinding).toHaveBeenCalledWith('f1', 'agreed')
+    expect(screen.queryByRole('button', { name: /apply|fix|rewrite/i })).toBeNull()
+  })
+
+  it('lets a verdict be taken back', () => {
+    const onSettleFinding = vi.fn()
+    renderDraft(
+      {},
+      DRAFT,
+      {
+        state: {},
+        result: { ...REVIEW_RESULT, findings: [{ ...FINDING, verdict: 'agreed' }] },
+      },
+      { onSettleFinding },
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Museum price wrong/ }))
+    fireEvent.click(screen.getByRole('button', { name: /real problem/i }))
+
+    expect(onSettleFinding).toHaveBeenCalledWith('f1', null)
+  })
+
+  it('keeps a finding whose quote is nowhere in the article', () => {
+    // The failure this guards against is silent: an unmatched quote used to
+    // mean the finding appeared nowhere at all, in a review whose whole value
+    // is that every finding gets read.
+    renderDraft({}, DRAFT, {
+      state: {},
+      result: {
+        ...REVIEW_RESULT,
+        findings: [{ ...FINDING, quote: 'a sentence that is not in the article' }],
+      },
+    })
+
+    expect(screen.getByText('About the whole piece')).toBeInTheDocument()
+    expect(screen.getByText(/It opens at five/)).toBeInTheDocument()
+  })
+
+  it('does not hang a read of an earlier draft on the article now on screen', () => {
+    // Its quotes point at paragraphs that no longer exist. It is not wrong; it
+    // is simply not about this article, and it stays readable as history.
+    renderDraft({}, DRAFT, { state: { stale: true }, result: REVIEW_RESULT })
+
+    expect(screen.getByText(/read of an earlier draft/)).toBeInTheDocument()
+    expect(screen.getByText('Findings from the earlier draft')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Museum price wrong by threefold/ })).toBeNull()
+  })
+
+  it('says what a read cost', () => {
+    renderDraft({}, DRAFT, { state: {}, result: REVIEW_RESULT })
+
+    expect(screen.getByText(/\$0\.66/)).toBeInTheDocument()
+  })
+
+  it('says what it is doing while it reads, instead of going silent', () => {
+    renderDraft({}, DRAFT, {
+      state: { state: 'running', has_review: false },
+      result: null,
+    })
+
+    expect(screen.getByRole('button', { name: /reading it/i })).toBeDisabled()
+    expect(screen.getByText(/checking the facts it rests on/)).toBeInTheDocument()
+  })
+
+  it('explains a failed read without touching the article', () => {
+    renderDraft({}, DRAFT, {
+      state: {
+        state: 'failed',
+        has_review: false,
+        finding_count: 0,
+        failure: 'quota_exhausted',
+        message: 'The Claude account has no allowance left.',
+      },
+      result: null,
+    })
+
+    expect(screen.getByText(/no allowance left/)).toBeInTheDocument()
+    expect(screen.getByText('Surquillo market opens at six.')).toBeInTheDocument()
   })
 })
 

@@ -53,8 +53,50 @@ Tests: backend 2012, frontend 819, tsc clean, gateway 89.
 
 ## Where the work is now: the detection phase
 
-**`editor_v5.py` is built but wired to nothing.** No API route, no UI, no
-storage. It is a module and a proven prompt.
+**The detector is wired up.** `editor_v5.py` was a module and a proven prompt
+with no route, no storage and no UI; it now has all three. What was added:
+
+- **`p2b.review` in the gateway.** Its own job, on the research transport, at
+  `claude-opus-5-high`. Borrowing `p2b.write` would have worked and would have
+  filed every review's cost and served model on the writer's line -- the fault
+  that had every v4 Claude call recorded as Haiku. Deliberately *not* filed
+  with `p2b.audit` and `p2b.edit_review` on Gemini, even though the shared
+  blind-spot argument applies: the detector has to open pages, and the museum
+  price finding is not producible without retrieving the museum's own page.
+  The reason is written into `jobs.json`'s `writerNote` so a later reader does
+  not "fix" it for consistency.
+- **`review_v5.py`**, the lifecycle, shaped like `generation_v5.py`. The claim
+  is written before the call, reviews accumulate rather than overwrite, and
+  every row carries the draft version it read.
+- **A read is not the run.** `begin_review` records the run's status and puts
+  it back when the read finishes, either way. A failed review must not mark a
+  run failed when its article is finished and staged, and a review of a run
+  whose last write failed must not come out looking completed.
+- **Three routes**: start a read, read the findings, settle one finding.
+- **The draft screen** marks flagged paragraphs, opens the finding on click,
+  and offers *Real problem* / *Not a fault*. Nothing applies anything.
+- **`scripts/p2b-findings.py`**, the cross-run read. This is the thing the
+  phase actually runs on.
+
+Two decisions made while building, both by the owner:
+
+- **Findings are marked on the article**, not listed under it. They anchor to
+  the *paragraph*, not to an exact span: the editor copies its quote by hand
+  out of an article containing bold and links, so character-exact matching
+  fails often and fails silently. A quote that matches nothing, and a
+  WHOLE ARTICLE finding, are listed below the article rather than dropped.
+  `components/findings.ts` holds the matching and is tested on its own.
+- **The operator can mark a finding** agreed or not-a-fault. Nothing in the app
+  acts on it; it exists so the cross-run script can drop findings already
+  thrown out. Kept beside the model's words, never over them.
+
+One change to the parser, and it matters: a reply with **no findings and no
+verdict** is now refused rather than read as a clean article. That shape is
+what a Claude refusal looks like, and it arrives as an ordinary success. Read
+as a review it would report the one wrong answer this phase cannot afford --
+the signal it runs on, saying all clear.
+
+Tests: backend 2039, frontend 844, gateway 89, tsc clean.
 
 The owner's framing, and it governs what comes next:
 
@@ -102,15 +144,16 @@ phase is worth running.
 
 ## What to do next
 
-1. **Wire the detector up** so a draft can be reviewed from the draft screen and
-   the review is stored on the run. Detection only. A `REVIEW_STAGE` constant
-   exists; nothing writes it yet.
+1. ~~Wire the detector up.~~ Done, above. **Not yet exercised against a real
+   model** -- every test drives it with a scripted reply, so the first real
+   review through the UI is still the proving run.
 2. **Run it across several articles** on genuinely different briefs -- the owner
    has said the ascensores topic is dull and wants a real one. Collect the
    findings.
-3. **Read the labels across runs.** The ones that recur are the real fault
-   categories. Fix those at the source: in the brief, in the writer prompt, in
-   the grill. One at a time, each with evidence behind it.
+3. **Read the labels across runs**, with `python3 scripts/p2b-findings.py`. The
+   ones that recur are the real fault categories. Fix those at the source: in
+   the brief, in the writer prompt, in the grill. One at a time, each with
+   evidence behind it.
 4. Only after that: decide whether anything should propose fixes, and whether
    phase 5 (deleting the retired work-order, research, gate, selection, packet
    and graph modules) should run. **The owner has explicitly said not to delete
