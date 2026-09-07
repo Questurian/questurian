@@ -229,7 +229,7 @@ def _screen_section_edits(
     raw_sections: Any,
     *,
     allowed_claim_ids: set[str],
-) -> tuple[list[Any], list[dict[str, str]]]:
+) -> tuple[Any, list[dict[str, str]]]:
     """Drop edits that cite a fact this article was not written from.
 
     Finding 03 gives repair the packet and permission to use it. The boundary
@@ -242,7 +242,10 @@ def _screen_section_edits(
     that cannot be checked at all.
     """
     if not isinstance(raw_sections, list):
-        return [], []
+        # Handed straight on rather than flattened to an empty list, so the
+        # edit report says the response was the wrong shape instead of
+        # reporting a repair that proposed nothing.
+        return raw_sections, []
     kept: list[Any] = []
     rejected: list[dict[str, str]] = []
     for raw in raw_sections:

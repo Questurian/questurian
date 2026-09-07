@@ -501,6 +501,18 @@ def test_a_repair_that_names_a_section_it_was_not_given_changes_nothing():
     assert updates["repair_applied"] is False
 
 
+def test_a_repair_response_of_the_wrong_shape_is_recorded_as_one():
+    state = _repair_state()
+    llm = FakeLLM(json_response={"sections": "a whole article, as prose"})
+    dependencies, recorder = _dependencies(llm)
+
+    updates = run_v3_repair_stage(state, dependencies)
+
+    assert updates["repair_applied"] is False
+    rejected = recorder.recorded[0][1]["section_edits"]["rejected"]
+    assert rejected[0]["reason"] == "sections is not a list"
+
+
 def test_repair_is_shown_the_chosen_facts_it_may_recover():
     """Finding 03. The packet reaches repair, so an omitted fact is available."""
     state = _repair_state()

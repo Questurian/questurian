@@ -34,12 +34,16 @@ from app.shared.text import validate_anti_ai_tells_markdown
 
 from ..dependencies import PipelineDependencies
 from ..support import _safe_dict, _safe_str
-from .sections import ArticleSection, apply_section_replacements, segment_article
+from .sections import (
+    H2_LINE,
+    ArticleSection,
+    apply_section_replacements,
+    segment_article,
+)
 
 logger = logging.getLogger(__name__)
 
 _LINE_PREFIX = re.compile(r"^Line (\d+):")
-_H2_LINE = re.compile(r"^##[ \t]+\S")
 
 STYLE_CLEANUP_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -126,7 +130,7 @@ def _section_line_spans(content: str) -> dict[str, tuple[int, int]]:
     start = 1
     lines = content.split("\n")
     for number, line in enumerate(lines, start=1):
-        if _H2_LINE.match(line):
+        if H2_LINE.match(line):
             spans[f"s{index}"] = (start, number - 1)
             index += 1
             start = number

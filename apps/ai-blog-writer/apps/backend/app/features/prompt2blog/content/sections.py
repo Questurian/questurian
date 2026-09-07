@@ -30,7 +30,10 @@ from ..support import _safe_dict, _safe_str
 # the direct answer -- and it needs an address like everything else.
 OPENING_SECTION_ID = "s0"
 
-_H2 = re.compile(r"^##[ \t]+(.+?)[ \t]*$")
+# Exported: the style cleanup walks the same lines to work out which
+# section an error's line number falls in, and a second copy of this
+# rule that drifted would put an edit in the wrong place.
+H2_LINE = re.compile(r"^##[ \t]+(.+?)[ \t]*$")
 
 
 def _hash(text: str) -> str:
@@ -88,7 +91,7 @@ def segment_article(content: str) -> list[ArticleSection]:
         )
 
     for line in _safe_str(content).split("\n"):
-        match = _H2.match(line)
+        match = H2_LINE.match(line)
         if match:
             flush()
             heading = match.group(1).strip()
