@@ -40,13 +40,23 @@ interface ArticleScreenProps {
   busy: boolean
 }
 
-function Measured({ checks }: { checks: Record<string, unknown> }) {
+function Measured({
+  checks,
+  stale = false,
+}: {
+  checks: Record<string, unknown>
+  // True once the article has been hand-edited. These numbers were measured on
+  // the pipeline's draft and nothing has re-measured them, so they are dimmed
+  // and labelled rather than removed: they are still the last real reading of
+  // this article, and hiding them would lose that.
+  stale?: boolean
+}) {
   const count = Number(checks.sentence_count ?? 0)
   if (!count) return null
   const share = Number(checks.sentence_widest_band_share ?? 0)
   const note = String(checks.sentence_variety_note ?? '')
   return (
-    <div className="p2b-measured">
+    <div className={stale ? 'p2b-measured p2b-measured--stale' : 'p2b-measured'}>
       <dl>
         <div>
           <dt>Sentences</dt>
@@ -127,15 +137,38 @@ export function ArticleScreen({ runId, writing, article, onReopen, busy }: Artic
   }
 
   const ready = writing.pipeline_status === 'ready_for_staging'
+  // Everything above the article -- the readiness verdict, the measured
+  // checks, the word count -- describes the draft the pipeline wrote. A hand
+  // edit changes the article and cannot change that assessment: nothing
+  // re-runs the audit, and nothing should, because an audit is a pre-writing
+  // gate and this is after.
+  //
+  // So the moment the text below stops being the text that was assessed, the
+  // assessment says whose it is. Showing "Ready for staging · 1,420 words"
+  // over prose somebody has since cut by two hundred words is the screen
+  // asserting something nobody checked.
+  const handEdited = edited !== null
+  // Recomputed rather than carried over. It is the one figure here that is
+  // deterministic and free, so a stale one is a choice.
+  const liveWordCount = handEdited
+    ? edited.replace(/[#*_>`]/g, ' ').split(/\s+/).filter(Boolean).length
+    : writing.word_count
 
   return (
     <section className="p2b-intake p2b-article" aria-label="The finished article">
       <p className="p2b-eyebrow">
-        {ready ? 'Ready for staging' : 'Written, with notes'}
-        {writing.word_count ? ` · ${writing.word_count} words` : ''}
+        {handEdited ? 'Edited by hand' : ready ? 'Ready for staging' : 'Written, with notes'}
+        {liveWordCount ? ` · ${liveWordCount} words` : ''}
       </p>
 
       <h2 className="p2b-article-title">{writing.final_title || article?.title}</h2>
+
+      {handEdited && (
+        <p className="p2b-stale-assessment" role="status">
+          The checks below describe the draft the pipeline wrote, not the text
+          on this page. Nothing has re-read the article since you edited it.
+        </p>
+      )}
 
       {writing.readiness_blockers.length > 0 && (
         <ul className="p2b-blockers">
@@ -145,7 +178,7 @@ export function ArticleScreen({ runId, writing, article, onReopen, busy }: Artic
         </ul>
       )}
 
-      <Measured checks={writing.constraint_checks} />
+      <Measured checks={writing.constraint_checks} stale={handEdited} />
 
       {writing.outline_warning && <p role="status">{writing.outline_warning}</p>}
 

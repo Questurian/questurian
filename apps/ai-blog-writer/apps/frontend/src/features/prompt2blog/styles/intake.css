@@ -1690,3 +1690,34 @@
   font-size: 0.85em;
   font-weight: 400;
 }
+
+/*
+ * The pipeline's assessment, still on screen after a hand edit.
+ *
+ * It described the draft the pipeline wrote. Nothing re-reads an article after
+ * prose exists -- the audit is a pre-writing gate by design -- so these numbers
+ * cannot be refreshed and must not be presented as though they described what
+ * the reader is looking at.
+ */
+.p2b-stale-assessment {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--border);
+  color: var(--ink-light);
+}
+
+.p2b-measured--stale {
+  opacity: 0.6;
+}
+
+/*
+ * Checking an edit undid. Deliberately not styled as an error: nothing is
+ * broken, a person's verification simply no longer describes the prose and
+ * has to be redone.
+ */
+.p2b-provenance-invalidated {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--accent);
+  color: var(--ink-light);
+}

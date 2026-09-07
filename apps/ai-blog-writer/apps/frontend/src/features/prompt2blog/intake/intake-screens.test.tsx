@@ -3,9 +3,17 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 
 const listRuns = vi.fn()
+const readEditActions = vi.fn()
+const proposeSectionEdit = vi.fn()
+const applySectionEdit = vi.fn()
+const undoSectionEdit = vi.fn()
 vi.mock('./intake.api', async importOriginal => ({
   ...(await importOriginal<typeof import('./intake.api')>()),
   listRuns: () => listRuns(),
+  readEditActions: () => readEditActions(),
+  proposeSectionEdit: (...args: unknown[]) => proposeSectionEdit(...args),
+  applySectionEdit: (...args: unknown[]) => applySectionEdit(...args),
+  undoSectionEdit: (...args: unknown[]) => undoSectionEdit(...args),
 }))
 import { BriefScreen } from './components/BriefScreen'
 import { ArticleScreen } from './components/ArticleScreen'
@@ -753,6 +761,86 @@ describe('the finished article screen', () => {
     expect(screen.getByText('75')).toBeInTheDocument()
     expect(screen.getByText('57%')).toBeInTheDocument()
     expect(screen.getByText(/nothing here blocks/i)).toBeInTheDocument()
+  })
+
+  it('says the checks describe the pipeline draft once the article is edited', async () => {
+    // Nothing re-reads an article after prose exists -- the audit is a
+    // pre-writing gate by design. So a hand edit cannot refresh these numbers,
+    // and the screen must stop implying they describe what is on it. Showing
+    // "Ready for staging - 914 words" over prose somebody has since cut is the
+    // page asserting something nobody checked.
+    readEditActions.mockResolvedValue({
+      actions: [{ action_id: 'shorten', label: 'Say it in fewer words' }],
+    })
+    proposeSectionEdit.mockResolvedValue({
+      run_id: 'run-1',
+      edit_id: 'e1',
+      base_revision: 0,
+      section_id: 's1',
+      heading: 'The elevation contrast',
+      action_id: 'shorten',
+      text_hash: 'abc',
+      original: '## The elevation contrast\n\nCusco sits at 3,399 meters.',
+      revised: '## The elevation contrast\n\nCusco is at 3,399 m.',
+      what_changed: 'Tightened it.',
+      could_not_do: '',
+      introduced_figures: [],
+      review: {
+        status: 'supported',
+        checked: true,
+        assessment: 'Every figure matches its record.',
+        unsupported_claims: [],
+      },
+    })
+    applySectionEdit.mockResolvedValue({
+      markdown: '## The elevation contrast\n\nCusco is at 3,399 m.',
+      edits: 1,
+      revision: 1,
+      review_status: 'supported',
+      already_applied: false,
+    })
+
+    renderArticle(
+      <ArticleScreen
+        runId="run-1"
+        writing={writing({
+          constraint_checks: {
+            sentence_count: 75,
+            sentence_mean_words: 11.3,
+            sentence_widest_band_share: 0.57,
+            sentences_over_25_words: 1,
+            sentence_variety_note: 'Nothing here blocks.',
+          },
+        })}
+        article={{
+          run_id: 'r',
+          title: 'T',
+          form_label: 'Destination Guide',
+          markdown: '## The elevation contrast\n\nCusco sits at 3,399 meters.',
+          pipeline_status: 'ready_for_staging',
+          readiness_blockers: [],
+          constraint_checks: {},
+          word_count: 914,
+        }}
+        onReopen={vi.fn()}
+        busy={false}
+      />,
+    )
+
+    expect(screen.getByText(/ready for staging/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit The elevation contrast' }))
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Say it in fewer words' }),
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Use this' }))
+
+    expect(
+      await screen.findByText(/describe the draft the pipeline wrote/i),
+    ).toBeInTheDocument()
+    // The stamp stops claiming the article is the one that was assessed.
+    expect(screen.queryByText(/ready for staging/i)).toBeNull()
+    expect(screen.getByText(/edited by hand/i)).toBeInTheDocument()
   })
 
   it('a needs-revision stamp is shown and never obeyed', () => {

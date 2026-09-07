@@ -24,9 +24,12 @@ from model_gateway import JOBS_BY_ID
 
 FEATURE = Path(__file__).resolve().parents[1] / "app" / "features" / "prompt2blog"
 
-# `job_id="p2b.something"`, as every call site writes it. A call site building
-# its id from a variable is not covered, and there are none.
-JOB_ID_CALL = re.compile(r"""job_id\s*=\s*["']([\w.]+)["']""")
+# Both shapes this codebase uses: `job_id="p2b.x"` passed at the call, and
+# `job_id: str = "p2b.x"` as a dataclass or signature default. The second is
+# how the grill and the two evidence passes name theirs, and a sweep that only
+# knew the first would have reported them as uncovered while calling itself
+# complete.
+JOB_ID_CALL = re.compile(r"""job_id(?:\s*:\s*str)?\s*=\s*["']([\w.]+)["']""")
 
 
 def _job_ids_in_source() -> set[str]:
@@ -42,6 +45,9 @@ def test_the_sweep_finds_the_call_sites_it_is_meant_to():
     assert "p2b.compose" in found
     assert "p2b.section_edit" in found
     assert "p2b.edit_review" in found
+    # The default-argument shape, which the first version of this regex missed.
+    assert "p2b.grill" in found
+    assert "p2b.evidence_rank" in found
 
 
 @pytest.mark.parametrize("job_id", sorted(_job_ids_in_source()))

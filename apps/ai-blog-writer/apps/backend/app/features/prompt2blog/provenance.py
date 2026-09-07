@@ -477,15 +477,33 @@ def prune_confirmations(
     than none, because it is the one thing on the screen that says somebody
     checked.
     """
+    return _partition_confirmations(confirmations, markdown)[0]
+
+
+def _partition_confirmations(
+    confirmations: dict[str, Any] | None, markdown: str
+) -> tuple[ConfirmationRecord, int]:
+    """The confirmations still standing, and how many an edit invalidated."""
     if not confirmations:
-        return ConfirmationRecord()
+        return ConfirmationRecord(), 0
     live = {passage.text_hash for passage in segment_passages(markdown)}
     record = ConfirmationRecord.model_validate(confirmations)
-    return ConfirmationRecord(
-        confirmations=[
-            item for item in record.confirmations if item.passage_hash in live
-        ]
-    )
+    kept = [item for item in record.confirmations if item.passage_hash in live]
+    return ConfirmationRecord(confirmations=kept), len(record.confirmations) - len(kept)
+
+
+def invalidated_confirmation_count(
+    confirmations: dict[str, Any] | None, markdown: str
+) -> int:
+    """How much checking an edit silently undid.
+
+    Dropping the confirmation is right; dropping it in silence is not. Somebody
+    read a passage against its source and said so, and an edit to that passage
+    throws that away -- so the count is surfaced and the operator is told the
+    work needs doing again. The records themselves are only filtered on read,
+    never deleted, so an undo brings them back.
+    """
+    return _partition_confirmations(confirmations, markdown)[1]
 
 
 # ---------------------------------------------------------------------------

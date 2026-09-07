@@ -184,6 +184,21 @@ export function ProvenancePanel({ runId, selected, onClose }: ProvenancePanelPro
         </p>
       )}
 
+      {/* An edit to a confirmed passage throws the confirmation away, which is
+          right -- a confirmation beside changed prose is the one thing on this
+          screen that says a person checked. Saying nothing about it is not
+          right: somebody did that work and needs to know it has to be done
+          again. */}
+      {Number(report.summary.invalidated_confirmations ?? 0) > 0 && (
+        <p className="p2b-provenance-invalidated" role="status">
+          {String(report.summary.invalidated_confirmations)} confirmation
+          {Number(report.summary.invalidated_confirmations) === 1 ? '' : 's'} no
+          longer applies: the passage was edited after somebody checked it.
+          Undoing the edit brings it back; otherwise the passage needs checking
+          again.
+        </p>
+      )}
+
       {/* Said on the screen, not only in the payload. A list of facts beside a
           sentence reads as a check unless something says it is not one. */}
       <p className="p2b-provenance-means">{report.summary.means}</p>

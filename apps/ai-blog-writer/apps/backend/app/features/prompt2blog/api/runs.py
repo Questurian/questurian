@@ -68,6 +68,7 @@ from ..models import PipelineV4RuntimeRequest
 from ..options import default_target_word_count
 from ..orchestrator_v3 import resume_pipeline_v3, run_pipeline_v3
 from ..provenance import (
+    invalidated_confirmation_count,
     Confirmation,
     ConfirmationRecord,
     PacketNotStored,
@@ -383,11 +384,21 @@ def get_provenance(run_id: str) -> JSONResponse:
     # here rather than shown as stale. A confirmation beside changed prose is
     # worse than none: it is the one thing on the screen that says a person
     # checked.
-    live = prune_confirmations(stored_confirmations(run_id), markdown)
+    stored = stored_confirmations(run_id)
+    live = prune_confirmations(stored, markdown)
     report = build_provenance(
         run_id, markdown, packet, live.model_dump(mode="json")
     )
-    return JSONResponse(report.model_dump(mode="json"))
+    payload = report.model_dump(mode="json")
+    # Dropping a confirmation whose passage changed is right. Dropping it in
+    # silence is not: somebody read that passage against its source and said
+    # so, and an edit throws that away. The count says how much checking needs
+    # doing again. The stored records are only filtered on read, so an undo
+    # brings them back.
+    payload["summary"]["invalidated_confirmations"] = invalidated_confirmation_count(
+        stored, markdown
+    )
+    return JSONResponse(payload)
 
 
 @router.post("/provenance/{run_id}/confirm", dependencies=[Depends(require_staff)])
