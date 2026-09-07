@@ -51,6 +51,7 @@ no article.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -170,6 +171,27 @@ DEDUPE_SCHEMA = require_non_empty({
     "required": ["groups"],
 })
 
+FOLD_SCHEMA = require_non_empty({
+    "type": "object",
+    "properties": {
+        "groups": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "general": {"type": "string"},
+                    "restatements": {"type": "array", "items": {"type": "string"}},
+                    "attribute": {"type": "string"},
+                },
+                "required": ["general", "restatements"],
+            },
+        },
+    },
+    "required": ["groups"],
+})
+
+FOLD_MAX_TOKENS = 8_000
+
 # What a fact is for in the finished piece. Editorial roles, and deliberately
 # not the work order's question kinds: a load-bearing question can produce a
 # fact whose job in the article is colour, and a texture question can produce
@@ -268,6 +290,45 @@ Rules:
   label, never shorten one, and never use any other name for a claim.
 - Every label you return must be one of the labels above, and no label may
   appear twice anywhere in your answer.
+"""
+
+
+def build_fold_prompt(claims: list[Any]) -> str:
+    """Group one fact restated item by item, and name the claim that covers all of it."""
+    to_handle, _ = handles(claims)
+    listed = "\n".join(f"- {to_handle[claim.claim_id]} | {claim.text}" for claim in claims)
+    return f"""\
+You are finding one fact that the dossier states over and over, once per item.
+
+Research asks about each place separately, so a fare that is the same
+everywhere arrives as one claim per place. To a reader that is a single
+sentence. To the writer it looks like fifteen separate things to say, and the
+article ends up saying the fare fifteen times.
+
+CLAIMS
+{listed}
+
+Return strict JSON only:
+{{"groups": [{{"general": "f1", "restatements": ["f7"], "attribute": "fare"}}]}}
+
+Rules:
+- A group is ONE attribute, at ONE value, stated for several different items.
+  "The fare is 200 across the network" with "Barón is 200", "Cordillera is
+  200", "El Peral is 200" is a group. The general claim goes in `general` and
+  the item-by-item ones go in `restatements`.
+- `general` MUST be a claim that already covers every item in the group. It is
+  the claim a reader would accept on its own. If no claim in the dossier states
+  the general case, DO NOT make a group: picking one item to stand for the rest
+  would delete the others from the article.
+- A DIFFERENT VALUE IS NEVER A RESTATEMENT. If one item costs 300 where the
+  rest cost 200, that item is the exception the reader needs most. Leave it
+  out of the group and leave it alone.
+- Group only what is genuinely the same attribute. A fare and an opening time
+  are two attributes, however alike the sentences look.
+- Never invent or rewrite claim text. You are naming which claim covers the
+  others, not writing one.
+- Use the labels above exactly as written (f1, f2, ...). Never invent a label
+  and never use a label twice anywhere in your answer.
 """
 
 
@@ -391,6 +452,7 @@ class SelectionDependencies:
 
     llm: Any
     dedupe_job_id: str = "p2b.evidence_dedupe"
+    fold_job_id: str = "p2b.evidence_fold"
     rank_job_id: str = "p2b.evidence_rank"
     # None means the gateway answers for the jobs above, which is what makes
     # both changeable from the dashboard.
@@ -606,6 +668,119 @@ def _deduplicate(
         loser: survivor
         for loser, survivor in merged.items()
         if survivor not in merged
+    }, True
+
+
+_CLOCK = re.compile(r"\b(\d{1,2}):(\d{2})\s*(a\.?m\.?|p\.?m\.?)?", re.IGNORECASE)
+_NUMBER = re.compile(r"\d[\d,.]*")
+
+
+def _figures(text: str) -> set[str]:
+    """Every number a claim states, in one spelling.
+
+    Times are normalised to a 24-hour clock and thousands separators dropped,
+    so "9:30 PM" and "21:30" are one figure and "$1,000" and "1000" are one
+    figure. Without that the guard below refuses folds it should allow, which
+    is the safe direction but a wasteful one.
+    """
+    found: set[str] = set()
+    remainder = text
+    for hour, minute, meridiem in _CLOCK.findall(text):
+        value = int(hour) % 12
+        if meridiem and meridiem.lower().startswith("p"):
+            value += 12
+        elif not meridiem:
+            value = int(hour)
+        found.add(f"{value:02d}:{minute}")
+    remainder = _CLOCK.sub(" ", remainder)
+    for number in _NUMBER.findall(remainder):
+        cleaned = number.replace(",", "").rstrip(".")
+        if cleaned:
+            found.add(str(int(float(cleaned))) if cleaned.replace(".", "", 1).isdigit() else cleaned)
+    return found
+
+
+def _fold_restatements(
+    survivors: list[Any],
+    evidence: EvidencePackage,
+    dependencies: SelectionDependencies,
+) -> tuple[dict[str, str], bool]:
+    """Restated claim id -> the general claim that already covers it.
+
+    Deduplication is forbidden to merge these, and rightly: "Baron costs 200"
+    and "Cordillera costs 200" are two true statements about two different
+    places, and a pass that treated them as one fact would also merge two
+    genuinely different prices. So they all survive, and the writer receives
+    one fact fifteen times.
+
+    Measured on run e001d48c: of 164 claims reaching the ranker, 30 were the
+    fare and 18 were the opening hours -- the same two numbers restated once
+    per ascensor. Deduplication merged three claims in the whole dossier. The
+    article printed the fare in six of its seven sections.
+
+    This pass folds the restatements into the claim that already states the
+    general case, so the writer receives "the fare is 200, except at
+    Concepcion" once. Nothing is authored: the survivor is a claim research
+    returned, and `apply_selection` hands it the sources and questions of
+    everything folded into it.
+
+    Never raises. A fold that fails leaves every claim standing.
+    """
+    _, from_handle = handles(survivors)
+    known = {claim.claim_id for claim in survivors}
+    texts = {claim.claim_id: claim.text for claim in survivors}
+    disputed = _disputed_pairs(evidence)
+    try:
+        parsed, _raw = dependencies.llm.invoke_json(
+            job_id=dependencies.fold_job_id,
+            prompt=build_fold_prompt(survivors),
+            model_name=dependencies.model_name,
+            schema=FOLD_SCHEMA,
+            max_tokens=FOLD_MAX_TOKENS,
+            temperature=0.0,
+        )
+    except Exception as exc:  # noqa: BLE001 -- a lost fold costs nothing
+        logger.warning("Prompt2Blog evidence fold failed: %s", exc)
+        return {}, False
+
+    folded: dict[str, str] = {}
+    for group in _rows(parsed, "groups"):
+        general = from_handle.get(_safe_str(group.get("general")), "")
+        if general not in known or general in folded:
+            continue
+        for item in group.get("restatements") or []:
+            restatement = from_handle.get(_safe_str(item), "")
+            if restatement not in known or restatement == general:
+                continue
+            if restatement in folded:
+                continue
+            if frozenset((restatement, general)) in disputed:
+                logger.warning(
+                    "Prompt2Blog fold refused %s into %s: the dossier records "
+                    "them as conflicting",
+                    restatement,
+                    general,
+                )
+                continue
+            # The exception is the fact the reader needs most, and it is the
+            # one this pass would quietly delete. A restatement may not state a
+            # figure the general claim does not: 300 folded into 200 is the
+            # price of one ascensor disappearing from the article.
+            extra = _figures(texts[restatement]) - _figures(texts[general])
+            if extra:
+                logger.info(
+                    "Prompt2Blog fold refused %s into %s: it states %s, which "
+                    "the general claim does not",
+                    restatement,
+                    general,
+                    ", ".join(sorted(extra)),
+                )
+                continue
+            folded[restatement] = general
+    return {
+        item: general
+        for item, general in folded.items()
+        if general not in folded
     }, True
 
 
@@ -927,7 +1102,12 @@ def select_evidence(
 ) -> Selection:
     """Deduplicate, rank, and draw the line the operator will move."""
     merged, deduped = _deduplicate(evidence, dependencies)
-    survivors = [claim for claim in evidence.claims if claim.claim_id not in merged]
+    standing = [claim for claim in evidence.claims if claim.claim_id not in merged]
+    # Then the same fact restated once per item, which deduplication is right
+    # to leave alone and which reaches the writer as fifteen obligations.
+    folded, folded_ran = _fold_restatements(standing, evidence, dependencies)
+    merged = {**merged, **folded}
+    survivors = [claim for claim in standing if claim.claim_id not in folded]
     order, reasons, roles, ranked = _rank(brief, work_order, survivors, dependencies)
 
     keep_count = target_claim_count(target_word_count, len(order))
@@ -956,6 +1136,11 @@ def select_evidence(
     notes = []
     if not deduped:
         notes.append("Deduplication did not run, so nothing was merged.")
+    if not folded_ran:
+        notes.append(
+            "The restatement fold did not run, so a fact stated once per item "
+            "reaches the writer once per item."
+        )
     if not ranked:
         notes.append(
             "Ranking did not run, so this order is the dossier's own and says "

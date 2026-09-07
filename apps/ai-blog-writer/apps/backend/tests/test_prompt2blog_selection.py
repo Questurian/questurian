@@ -127,11 +127,13 @@ class _LLM:
         self,
         *,
         groups: list[dict] | None = None,
+        folds: list[dict] | None = None,
         ranked: list[str] | None = None,
         texture: list[str] | None = None,
         roles: dict[str, str] | None = None,
     ):
         self.groups = groups
+        self.folds = folds
         self.ranked = ranked
         self.texture = texture
         self.roles = roles or {}
@@ -145,6 +147,10 @@ class _LLM:
             if self.groups is None:
                 raise RuntimeError("the dedupe model is having a day")
             return {"groups": self.groups}, "{}"
+        if job_id.endswith("fold"):
+            if self.folds is None:
+                return {"groups": []}, "{}"
+            return {"groups": self.folds}, "{}"
         # The colour pass runs under the same job id and is told apart by its
         # prompt, exactly as the real one is.
         if "THE DETAILS" in prompt:
@@ -461,7 +467,11 @@ def test_the_ranker_is_told_what_the_piece_fails_if_it_does_not_do():
     assert _brief().fails_if in rank_prompt
     assert _brief().reader_question in rank_prompt
     assert _brief().seed in rank_prompt
-    assert llm.jobs == ["p2b.evidence_dedupe", "p2b.evidence_rank"]
+    assert llm.jobs == [
+        "p2b.evidence_dedupe",
+        "p2b.evidence_fold",
+        "p2b.evidence_rank",
+    ]
 
 
 def test_dedupe_is_told_a_summary_and_its_details_are_not_duplicates():
@@ -930,3 +940,140 @@ def test_a_merged_claim_carries_no_role_into_the_record():
     selection = _select(evidence, llm)
 
     assert "c2" not in selection.roles
+
+
+def _fares() -> EvidencePackage:
+    """One fare, stated generally and then restated for three ascensores.
+
+    The shape run e001d48c hit: 30 of 164 claims were the fare and 18 the
+    opening hours, all saying the same two numbers once per item, and
+    deduplication is right to leave every one of them standing.
+    """
+    evidence = _package(1)
+    texts = {
+        "c1": "The general fare on Valparaiso's ascensores is 200 pesos.",
+        "c2": "The fare for Ascensor Baron is 200 pesos.",
+        "c3": "The fare for Ascensor Cordillera is 200 pesos.",
+        "c4": "The fare for Ascensor Concepcion is 300 pesos.",
+    }
+    claims = [
+        EvidenceClaim(
+            claim_id=claim_id,
+            text=text,
+            source_ids=["s1"],
+            requirement_ids=["r1"],
+            confidence="high",
+        )
+        for claim_id, text in texts.items()
+    ]
+    return evidence.model_copy(
+        update={
+            "claims": claims,
+            "requirements": [
+                EvidenceRequirement(
+                    requirement_id="r1", status="supported", claim_ids=list(texts)
+                )
+            ],
+        }
+    )
+
+
+def test_one_fact_restated_per_item_reaches_the_writer_once():
+    """Deduplication cannot merge these and should not: "Baron is 200" and
+    "Cordillera is 200" are two true statements about two places. To a reader
+    they are one sentence, and the writer that receives all of them writes the
+    fare in every section."""
+    llm = _LLM(
+        groups=[],
+        folds=[{"general": "f1", "restatements": ["f2", "f3"], "attribute": "fare"}],
+        ranked=["f1", "f4"],
+    )
+
+    selection = _select(_fares(), llm)
+
+    assert selection.merged == {"c2": "c1", "c3": "c1"}
+    assert "c2" not in selection.order and "c3" not in selection.order
+    # The general claim and the exception both survive.
+    assert set(selection.order) == {"c1", "c4"}
+
+
+def test_the_exception_is_never_folded_into_the_rule():
+    """300 folded into 200 is one ascensor's price disappearing from the
+    article, and it is the price the reader needs most."""
+    llm = _LLM(
+        groups=[],
+        folds=[{"general": "f1", "restatements": ["f2", "f4"], "attribute": "fare"}],
+        ranked=["f1", "f4"],
+    )
+
+    selection = _select(_fares(), llm)
+
+    assert selection.merged == {"c2": "c1"}, "the 300-peso claim was folded away"
+    assert "c4" in selection.order
+
+
+def test_a_fold_across_a_recorded_disagreement_is_refused():
+    evidence = _fares()
+    disputed = evidence.model_copy(
+        update={
+            "conflicts": [
+                EvidenceConflict(
+                    conflict_id="k1",
+                    claim_ids=["c1", "c2"],
+                    summary="Two fares for the same ride.",
+                )
+            ]
+        }
+    )
+    llm = _LLM(
+        groups=[],
+        folds=[{"general": "f1", "restatements": ["f2"], "attribute": "fare"}],
+        ranked=["f1", "f2", "f3", "f4"],
+    )
+
+    selection = _select(disputed, llm)
+
+    assert selection.merged == {}
+
+
+def test_a_fold_that_falls_over_keeps_every_fact_and_says_so():
+    class Falls(_LLM):
+        def invoke_json(self, *, prompt: str, job_id: str = "", **kwargs: Any):
+            if job_id.endswith("fold"):
+                raise RuntimeError("the fold model is having a day")
+            return super().invoke_json(prompt=prompt, job_id=job_id, **kwargs)
+
+    selection = _select(_fares(), Falls(groups=[], ranked=["f1", "f2", "f3", "f4"]))
+
+    assert selection.merged == {}
+    assert len(selection.order) == 4
+    assert "once per item" in selection.note
+
+
+def test_the_fold_is_told_not_to_pick_an_item_to_stand_for_the_rest():
+    """Without a general claim there is nothing to fold into: choosing one
+    ascensor to represent the others deletes the others from the article."""
+    llm = _LLM(groups=[], ranked=["f1", "f2", "f3", "f4"])
+
+    _select(_fares(), llm)
+
+    fold_prompt = llm.prompts[1]
+    assert "DO NOT make a group" in fold_prompt
+    assert "A DIFFERENT VALUE IS NEVER A RESTATEMENT" in fold_prompt
+    assert "Never invent or rewrite claim text" in fold_prompt
+
+
+def test_a_folded_claim_hands_over_its_sources_like_any_other_merge():
+    evidence = _fares()
+    llm = _LLM(
+        groups=[],
+        folds=[{"general": "f1", "restatements": ["f2"], "attribute": "fare"}],
+        ranked=["f1", "f3", "f4"],
+    )
+
+    selection = _select(evidence, llm)
+    applied = apply_selection(evidence, selection)
+
+    survivor = next(c for c in applied.claims if c.claim_id == "c1")
+    assert "s1" in survivor.source_ids
+    assert "r1" in survivor.requirement_ids

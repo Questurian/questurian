@@ -125,6 +125,14 @@
       "defaultModel": "gemini-2.5-flash"
     },
     {
+      "id": "p2b.evidence_fold",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Fold one fact restated per item into the claim that covers them all. Grouping, not judgement.",
+      "site": "features/prompt2blog/selection_v4.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
       "id": "p2b.evidence_rank",
       "app": "ai-blog-writer",
       "call": "json",
