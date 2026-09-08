@@ -334,6 +334,7 @@ describe('the prompt screen', () => {
         busy={false}
         onGenerate={vi.fn()}
         onReopen={vi.fn()}
+        onPaste={vi.fn()}
       />)
 
     expect(screen.getByText(WRITER_PROMPT.text)).toBeInTheDocument()
@@ -347,6 +348,7 @@ describe('the prompt screen', () => {
         busy={false}
         onGenerate={vi.fn()}
         onReopen={vi.fn()}
+        onPaste={vi.fn()}
       />)
 
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
@@ -358,6 +360,7 @@ describe('the prompt screen', () => {
         busy={false}
         onGenerate={vi.fn()}
         onReopen={vi.fn()}
+        onPaste={vi.fn()}
       />)
 
     expect(screen.getByText(/about 900 words/)).toBeInTheDocument()
@@ -373,6 +376,7 @@ describe('the prompt screen', () => {
         busy={false}
         onGenerate={vi.fn()}
         onReopen={vi.fn()}
+        onPaste={vi.fn()}
       />,
     )
 
@@ -387,6 +391,7 @@ describe('the prompt screen', () => {
       busy={false}
       onGenerate={vi.fn()}
       onReopen={onReopen}
+      onPaste={vi.fn()}
     />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Change something' }))
@@ -411,11 +416,83 @@ const GENERATION: IntakeGeneration = {
   elapsed_seconds: 512.4,
   cost_usd: 0.42,
   tool_denials: [],
+  source: 'written',
+  written_by: null,
   has_draft: true,
   headline: 'Two nights in Lima',
   word_count: 912,
   parse_issue: null,
 }
+
+describe('bringing in an article written somewhere else', () => {
+  function renderPrompt(onPaste = vi.fn()) {
+    render(
+      <PromptScreen
+        prompt={WRITER_PROMPT}
+        busy={false}
+        onGenerate={vi.fn()}
+        onReopen={vi.fn()}
+        onPaste={onPaste}
+      />,
+    )
+    return onPaste
+  }
+
+  it('offers the way back in without pushing it', () => {
+    // The prompt is a copy-paste artifact by design. This is the return path,
+    // and it stays folded away so it does not compete with the button that
+    // writes the article here.
+    renderPrompt()
+
+    expect(
+      screen.getByRole('button', { name: /paste an article instead/i }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).toBeNull()
+  })
+
+  it('says plainly that it costs nothing and destroys nothing', () => {
+    renderPrompt()
+
+    expect(screen.getByText(/Costs nothing/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/does not replace a draft this run already has/),
+    ).toBeInTheDocument()
+  })
+
+  it('files the pasted text against the run', () => {
+    const onPaste = renderPrompt()
+    fireEvent.click(screen.getByRole('button', { name: /paste an article instead/i }))
+
+    fireEvent.change(screen.getByLabelText('The article'), {
+      target: { value: '# A headline\n\nThe article.' },
+    })
+    fireEvent.change(screen.getByLabelText(/Who wrote it/), {
+      target: { value: 'a browser, some other model' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /use this as the draft/i }))
+
+    expect(onPaste).toHaveBeenCalledWith(
+      '# A headline\n\nThe article.',
+      'a browser, some other model',
+    )
+  })
+
+  it('will not file an empty paste', () => {
+    renderPrompt()
+    fireEvent.click(screen.getByRole('button', { name: /paste an article instead/i }))
+
+    expect(screen.getByRole('button', { name: /use this as the draft/i })).toBeDisabled()
+  })
+
+  it('asks who wrote it and says the answer is not checked', () => {
+    // Recorded as the operator's word. Nothing here resolves a model, so
+    // nothing here may look like it did.
+    renderPrompt()
+    fireEvent.click(screen.getByRole('button', { name: /paste an article instead/i }))
+
+    expect(screen.getByText(/Recorded as your word/)).toBeInTheDocument()
+  })
+})
 
 const DRAFT: IntakeDraft = {
   run_id: 'r-1',
@@ -688,6 +765,26 @@ describe('the detector on the draft screen', () => {
     expect(screen.getByText(/read of an earlier draft/)).toBeInTheDocument()
     expect(screen.getByText('Findings from the earlier draft')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Museum price wrong by threefold/ })).toBeNull()
+  })
+
+  it('reports no model, no time and no cost for an article it did not write', () => {
+    // The v4 receipts named Opus while Flash wrote the article. This app made
+    // no call for a pasted draft, so it claims none.
+    renderDraft({
+      source: 'pasted',
+      written_by: 'a browser, some other model',
+      served_model: null,
+      requested_model: null,
+      cost_usd: null,
+      turns: null,
+      elapsed_seconds: null,
+    })
+
+    expect(screen.getByText(/Written outside this app and pasted in/)).toBeInTheDocument()
+    expect(screen.getByText(/as told to us, not checked/)).toBeInTheDocument()
+    expect(screen.getByText('Nothing was spent here')).toBeInTheDocument()
+    expect(screen.queryByText(/at API rates/)).toBeNull()
+    expect(screen.queryByText(/exchanges with the model/)).toBeNull()
   })
 
   it('says what a read cost', () => {

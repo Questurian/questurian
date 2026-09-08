@@ -98,6 +98,10 @@ export interface IntakeGeneration {
   elapsed_seconds: number | null
   cost_usd: number | null
   tool_denials: string[]
+  /** `written` here, or `pasted` when the article was brought in from elsewhere. */
+  source: 'written' | 'pasted'
+  /** Who the operator says wrote a pasted draft. Their word, not a reading. */
+  written_by: string | null
   /** True while an earlier good draft survives a later failed attempt. */
   has_draft: boolean
   headline: string | null

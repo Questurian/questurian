@@ -22,7 +22,12 @@ from app.core import read_stage_result
 
 from .support import _safe_dict, _safe_str
 from .writer_prompt import WriterPrompt
-from .writer_v5 import ResearchWriter, WriterRefused, write_article
+from .writer_v5 import (
+    ResearchWriter,
+    WriterRefused,
+    parse_writer_output,
+    write_article,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -237,6 +242,106 @@ def run_attempt(
     recorder.complete(run_id)
 
 
+# Where a draft came from. Absent on every attempt written before this existed,
+# which reads as `written` and is correct: nothing else could have made one.
+SOURCE_WRITTEN = "written"
+SOURCE_PASTED = "pasted"
+
+
+class NothingToPaste(ValueError):
+    """The pasted text carries no article."""
+
+
+def record_pasted_draft(
+    run_id: str,
+    markdown: str,
+    prompt: WriterPrompt,
+    recorder: Any,
+    *,
+    written_by: str = "",
+) -> str:
+    """File an article somebody wrote elsewhere as this run's draft.
+
+    The operator takes the frozen prompt to whatever model they like and brings
+    the result back. Everything downstream of the draft -- the detector, Saved
+    Articles, staging into Payload -- then works on it unchanged, because all of
+    those read the draft rather than the call that produced it.
+
+    It lands as an ordinary attempt in the same accumulating list, so pasting
+    never destroys an article the run already had, and the prompt fingerprint is
+    recorded because a draft filed against an assignment nobody can identify is
+    not evidence of anything.
+
+    What it deliberately does not do is pretend. There is no served model, no
+    turn count, no cost and no elapsed time, because this app measured none of
+    them; `written_by` is whatever the operator typed and is labelled as their
+    word, not a reading. A receipt that reported a model here would be the same
+    lie as the v4 receipts that named Opus while Flash wrote the article.
+    """
+    # The same parser the writer's own replies go through, so a pasted article
+    # is split exactly the way a written one is and everything downstream sees
+    # one shape. Its refusal is re-raised as this module's, because "the writer
+    # refused" is a sentence about a call that was never made.
+    try:
+        draft = parse_writer_output(markdown)
+    except WriterRefused as error:
+        raise NothingToPaste(
+            "There is no article in that text. Paste the whole reply, "
+            "headline and all."
+        ) from error
+    if not draft.article_markdown.strip():
+        raise NothingToPaste(
+            "There is no article in that text. Paste the whole reply, "
+            "headline and all."
+        )
+    attempt_id = str(uuid4())
+    attempts = _attempts(run_id)
+    now = _now()
+    attempts.append(
+        {
+            "attempt_id": attempt_id,
+            "state": STATE_SUCCEEDED,
+            "source": SOURCE_PASTED,
+            # The operator's own words for where it came from. Never a model
+            # name this app resolved, because it resolved none.
+            "written_by": _safe_str(written_by),
+            "prompt_fingerprint": prompt.prompt_fingerprint,
+            "brief_fingerprint": prompt.brief_fingerprint,
+            "started_at": now,
+            "finished_at": now,
+            "draft": {
+                "headline": draft.headline,
+                "article_markdown": draft.article_markdown,
+                "research_note": draft.research_note,
+                "parse_issue": draft.parse_issue,
+                "content_hash": _content_hash(draft.article_markdown),
+                "word_count": len(draft.article_markdown.split()),
+                "raw": draft.raw[:400_000],
+            },
+        }
+    )
+    recorder.start_stage(run_id, WRITE_STAGE)
+    _write_attempts(recorder, run_id, attempts)
+    recorder.record_artifact(
+        run_id,
+        {
+            "markdown": draft.article_markdown,
+            "prompt2blog_v5": {
+                "final_title": draft.headline,
+                "form": {"label": prompt.form_label},
+                "research_note": draft.research_note,
+                "prompt_fingerprint": prompt.prompt_fingerprint,
+                "brief_fingerprint": prompt.brief_fingerprint,
+                "source": SOURCE_PASTED,
+                "written_by": _safe_str(written_by),
+                "parse_issue": draft.parse_issue,
+            },
+        },
+    )
+    recorder.complete(run_id)
+    return attempt_id
+
+
 def _content_hash(article: str) -> str:
     """A version id for one draft's text.
 
@@ -333,6 +438,11 @@ def generation_state(run_id: str) -> dict[str, Any] | None:
         "elapsed_seconds": attempt.get("elapsed_seconds"),
         "cost_usd": attempt.get("cost_usd"),
         "tool_denials": attempt.get("tool_denials") or [],
+        # `written` unless somebody brought the article in from elsewhere. The
+        # screen reads this to decide whether to show a receipt at all: there is
+        # nothing to report about a call this app never made.
+        "source": _safe_str(attempt.get("source")) or SOURCE_WRITTEN,
+        "written_by": _safe_str(attempt.get("written_by")) or None,
         # A previous good draft survives a later failure, so this is not
         # conditional on the newest attempt succeeding.
         "has_draft": draft is not None,

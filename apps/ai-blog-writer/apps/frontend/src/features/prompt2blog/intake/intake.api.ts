@@ -134,6 +134,25 @@ export function generateArticle(runId: string): Promise<IntakeState> {
   return post(`${INTAKE}/${runId}/generate`)
 }
 
+/**
+ * File an article written somewhere else against this run.
+ *
+ * The frozen prompt is a copy-paste artifact, so it can be taken to any model.
+ * This is the way back: once the article is on the run, the review, Saved
+ * Articles and staging all work on it unchanged. Costs nothing and calls
+ * nothing, and it never overwrites a draft the run already has.
+ */
+export function pasteDraft(
+  runId: string,
+  markdown: string,
+  writtenBy: string,
+): Promise<IntakeState> {
+  return post(`${INTAKE}/${runId}/draft`, {
+    markdown,
+    written_by: writtenBy,
+  })
+}
+
 /** The article, once there is one. Its own call: this is the whole text. */
 export async function readDraft(runId: string): Promise<IntakeDraft> {
   const response = await apiFetch(`${INTAKE}/${runId}/draft`)

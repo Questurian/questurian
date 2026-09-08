@@ -63,6 +63,8 @@ export interface UseIntake {
   generatePrompt: () => Promise<void>
   /** Send that assignment to the researching writer. This one spends. */
   generateArticle: () => Promise<void>
+  /** File an article written elsewhere against this run. Costs nothing. */
+  pasteDraft: (markdown: string, writtenBy: string) => Promise<void>
   /** The article the writer produced, once there is one. */
   draft: IntakeDraft | null
   /** Read the draft and say what is wrong with it. This one spends. */
@@ -244,6 +246,11 @@ export function useIntake(): UseIntake {
     ),
     generateArticle: useCallback(
       () => run(() => api.generateArticle(requireRun())),
+      [run, requireRun],
+    ),
+    pasteDraft: useCallback(
+      (markdown: string, writtenBy: string) =>
+        run(() => api.pasteDraft(requireRun(), markdown, writtenBy)),
       [run, requireRun],
     ),
     draft,

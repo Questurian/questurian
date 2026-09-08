@@ -91,6 +91,7 @@ from .generation_v5 import (
     generation_state,
     latest_attempt,
     latest_draft,
+    record_pasted_draft,
 )
 from .review_v5 import (
     NothingToReview,
@@ -459,6 +460,27 @@ def start_generation(run_id: str, services: IntakeServices) -> tuple[str, Writer
         extra={"run_id": run_id, "feature": FEATURE_NAME},
     )
     return attempt_id, prompt
+
+
+def paste_draft(
+    run_id: str, markdown: str, services: IntakeServices, *, written_by: str = ""
+) -> str:
+    """File an article written outside this app against this run.
+
+    Held to the same rule as the writer: the prompt has to be the one this run
+    is currently holding. A draft filed against a prompt built from a brief that
+    has since changed matches no assignment on the run, and the receipt would
+    say it came from an article nobody agreed to.
+    """
+    prompt = current_writer_prompt(run_id)
+    attempt_id = record_pasted_draft(
+        run_id, markdown, prompt, services.recorder, written_by=written_by
+    )
+    logger.info(
+        "Prompt2Blog draft pasted in",
+        extra={"run_id": run_id, "feature": FEATURE_NAME},
+    )
+    return attempt_id
 
 
 def start_review(

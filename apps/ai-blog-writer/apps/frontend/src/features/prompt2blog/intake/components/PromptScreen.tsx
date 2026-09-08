@@ -19,10 +19,20 @@ interface PromptScreenProps {
   busy: boolean
   onGenerate: () => void
   onReopen: () => void
+  onPaste: (markdown: string, writtenBy: string) => void
 }
 
-export function PromptScreen({ prompt, busy, onGenerate, onReopen }: PromptScreenProps) {
+export function PromptScreen({
+  prompt,
+  busy,
+  onGenerate,
+  onReopen,
+  onPaste,
+}: PromptScreenProps) {
   const [copied, setCopied] = useState(false)
+  const [pasting, setPasting] = useState(false)
+  const [pasted, setPasted] = useState('')
+  const [writtenBy, setWrittenBy] = useState('')
 
   const copy = async () => {
     try {
@@ -90,6 +100,79 @@ export function PromptScreen({ prompt, busy, onGenerate, onReopen }: PromptScree
         To change what the article is, go back to the grill. Editing this text by
         hand would be instruction nothing on the run can account for.
       </p>
+
+      {/* The other way out of this screen.
+          The prompt is a copy-paste artifact on purpose, so it can be carried
+          to any model. This brings the result back, and once the article is on
+          the run everything after it -- the read, Saved Articles, staging --
+          works on it unchanged. */}
+      <div className="p2b-material">
+        <p className="p2b-label">Wrote it somewhere else?</p>
+        {pasting ? (
+          <>
+            <p className="p2b-muted">
+              Paste the whole reply, headline and research note included. It gets
+              split the same way as one written here.
+            </p>
+            <label className="p2b-visually-hidden" htmlFor="p2b-pasted">
+              The article
+            </label>
+            <textarea
+              id="p2b-pasted"
+              className="p2b-paste-box"
+              value={pasted}
+              rows={10}
+              placeholder={'# The headline\n\nThe article.\n\n## Research note\n\n- a source'}
+              onChange={event => setPasted(event.target.value)}
+              disabled={busy}
+            />
+            <label className="p2b-paste-label" htmlFor="p2b-written-by">
+              Who wrote it? Recorded as your word, since nothing here can check it.
+            </label>
+            <input
+              id="p2b-written-by"
+              className="p2b-paste-who"
+              value={writtenBy}
+              placeholder="which model, and where"
+              onChange={event => setWrittenBy(event.target.value)}
+              disabled={busy}
+            />
+            <div className="p2b-intake-actions">
+              <button
+                type="button"
+                onClick={() => onPaste(pasted, writtenBy)}
+                disabled={busy || !pasted.trim()}
+              >
+                Use this as the draft
+              </button>
+              <button
+                type="button"
+                className="p2b-secondary"
+                onClick={() => setPasting(false)}
+                disabled={busy}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="p2b-muted">
+              Copy the prompt above, write the article wherever you like, and
+              bring it back. Costs nothing, and it does not replace a draft this
+              run already has.
+            </p>
+            <button
+              type="button"
+              className="p2b-secondary"
+              onClick={() => setPasting(true)}
+              disabled={busy}
+            >
+              Paste an article instead
+            </button>
+          </>
+        )}
+      </div>
     </section>
   )
 }

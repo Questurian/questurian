@@ -68,6 +68,7 @@ from ..intake_v4 import (
     intake_state,
     generate_prompt,
     plan_research,
+    paste_draft,
     start_generation,
     start_review,
     reask_question,
@@ -85,6 +86,7 @@ from ..writer_prompt import PromptCannotBeAssembled
 from ..writer_v5 import research_writer
 from ..generation_v5 import (
     GenerationAlreadyRunning,
+    NothingToPaste,
     NothingToWriteFrom,
     finished_draft,
     run_attempt,
@@ -294,6 +296,11 @@ def _handle(action, *args, **kwargs) -> Any:
         raise HTTPException(
             status_code=409,
             detail={"error": "already_reviewing", "message": str(error)},
+        ) from error
+    except NothingToPaste as error:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "nothing_to_paste", "message": str(error)},
         ) from error
     except NothingToReview as error:
         raise HTTPException(
@@ -806,6 +813,38 @@ def read_draft(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     article plus the reply it was parsed out of.
     """
     return JSONResponse(_handle(finished_draft, run_id))
+
+
+class PastedDraftRequest(BaseModel):
+    """An article written somewhere else, brought back to this run."""
+
+    markdown: str = Field(min_length=1)
+    # Whatever the operator says wrote it. Recorded as their word and shown as
+    # their word; nothing here resolves a model.
+    written_by: str = ""
+
+
+@router.post("/{run_id}/draft", status_code=201)
+@exclusive_run
+def paste_the_draft(
+    run_id: str,
+    request: PastedDraftRequest,
+    _staff=Depends(require_staff),
+) -> JSONResponse:
+    """File an article written outside this app as this run's draft.
+
+    The frozen prompt is a copy-paste artifact, so an operator can take it to
+    any model they like. This is the way back: once the article is on the run,
+    the detector, Saved Articles and staging into Payload all work on it
+    unchanged, because every one of those reads the draft rather than the call
+    that made it.
+
+    Costs nothing and calls nothing. It also never overwrites: the draft lands
+    as another attempt beside whatever the run already had.
+    """
+    _handle(paste_draft, run_id, request.markdown, _services(run_id),
+            written_by=request.written_by)
+    return JSONResponse(intake_state(run_id), status_code=201)
 
 
 class VerdictRequest(BaseModel):

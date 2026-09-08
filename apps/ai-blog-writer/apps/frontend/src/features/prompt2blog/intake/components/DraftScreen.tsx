@@ -46,6 +46,26 @@ interface DraftScreenProps {
 }
 
 function Receipt({ generation }: { generation: IntakeGeneration }) {
+  // An article this app did not write has no receipt, because this app measured
+  // nothing about it. Reporting a model, a duration or a cost here would be the
+  // same lie as the v4 receipts that named Opus while Flash did the writing.
+  if (generation.source === 'pasted') {
+    return (
+      <dl className="p2b-brief p2b-receipt">
+        <dt>Where this came from</dt>
+        <dd>
+          Written outside this app and pasted in
+          {generation.written_by ? `, ${generation.written_by}` : ''}
+          {/* Their word. Nothing here resolved a model, so nothing here
+              claims one. */}
+          <span className="p2b-muted"> (as told to us, not checked)</span>
+        </dd>
+        <dt>Cost</dt>
+        <dd>Nothing was spent here</dd>
+      </dl>
+    )
+  }
+
   const minutes = generation.elapsed_seconds
     ? Math.round(generation.elapsed_seconds / 60)
     : null

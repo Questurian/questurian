@@ -1949,3 +1949,42 @@
   font-size: 0.8125rem;
   cursor: pointer;
 }
+
+/* ---------- an article written somewhere else ---------- */
+
+/* The prompt is a copy-paste artifact by design, so it can be carried to any
+   model. This is the way back in. */
+.p2b-paste-box {
+  display: block;
+  width: 100%;
+  margin: var(--space-3) 0 var(--space-3);
+  padding: var(--space-3);
+  background: var(--cream, #fff);
+  border: 1px solid var(--rule, rgba(0, 0, 0, 0.14));
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.p2b-paste-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.p2b-paste-who {
+  display: block;
+  width: 100%;
+  max-width: 26rem;
+  margin-bottom: var(--space-3);
+  padding: 0.5rem var(--space-3);
+  background: var(--cream, #fff);
+  border: 1px solid var(--rule, rgba(0, 0, 0, 0.14));
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: 0.875rem;
+}

@@ -163,6 +163,7 @@ export function Prompt2BlogPage() {
             busy={intake.busy}
             onGenerate={intake.generateArticle}
             onReopen={intake.reopen}
+            onPaste={intake.pasteDraft}
           />
         )}
 
