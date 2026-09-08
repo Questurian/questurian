@@ -32,7 +32,7 @@ from .contracts_v4 import ArticleBrief
 # that tells two assignments apart.
 PROMPT_STAGE = "stage_v5_writer_prompt"
 
-TEMPLATE_VERSION = "writer-prompt-3"
+TEMPLATE_VERSION = "writer-prompt-4"
 STYLE_VERSION = "short-style-1"
 
 # The short style block, and the reason it lives in Python rather than beside
@@ -77,7 +77,7 @@ Where evidence contradicts the brief, preserve the reader's purpose and use the 
 
 When the brief makes one question true of every item you cover, whether each place can be reached, sat in, ordered from or afforded, answer it for every item, including the ones where you could not establish it. A reader told the answer four times and not the fifth concludes the fifth is fine: silence reads as reassurance rather than as a gap, so the item whose answer was hardest to find is the one the omission hurts most. Carry it in the prose where the reader meets that item, not as a labelled field repeated under every heading.
 
-The seed is a starting idea. Write a headline that accurately describes the finished article. Make clear what you selected versus what exists overall.
+The seed is the headline. Somebody wrote it deliberately and it is what this article will be published under, so use it as given. Change it only if what you established makes it inaccurate, and say in the research note what was wrong with it. Make clear what you selected versus what exists overall.
 
 Today's date is {research_date}. Treat that as the present when you judge whether a source is current.
 

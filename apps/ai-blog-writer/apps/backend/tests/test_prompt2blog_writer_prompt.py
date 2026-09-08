@@ -227,6 +227,26 @@ def test_a_promise_made_to_the_reader_is_kept_for_every_item():
     assert "not as a labelled field repeated under every heading" in text
 
 
+def test_the_operators_headline_is_used_rather_than_replaced():
+    """ADR 0034, restored after ADR 0036 reversed it without saying so.
+
+    "The seed is the title" is a written decision: the typed line is what the
+    article publishes under, and a person edits it in the editor afterwards.
+    The v5 assignment had been telling the writer the opposite -- "the seed is
+    a starting idea" -- and on run `f9ede79f` it duly threw away
+    "Where to base yourself in Lima: Barranco, Miraflores or San Isidro" and
+    produced "Barranco, Miraflores or San Isidro: one Lima base for three
+    nights of eating", which is worse than what the operator typed.
+
+    An escape hatch stays, because a headline the research contradicts is a
+    claim the article would have to stand behind. It costs a line in the note.
+    """
+    text = _assemble().text
+    assert "The seed is the headline" in text
+    assert "use it as given" in text
+    assert "Change it only if what you established makes it inaccurate" in text
+
+
 def test_the_research_note_heading_is_stated_exactly_once():
     """The parser matches this heading, so the prompt and the parser share a constant."""
     text = _assemble().text

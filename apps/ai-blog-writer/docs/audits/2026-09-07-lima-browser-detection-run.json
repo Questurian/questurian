@@ -1,0 +1,68 @@
+{
+  "draft_version": "external",
+  "verdict": "The spine is sound and the piece mostly honours the brief: it commits to Barranco, it judges all three districts on the same two questions, and it dispatches San Isidro without a consolation paragraph. It is also, for stretches, well-observed — the ceviche-is-lunch point and the fog-on-the-Malecón warning are exactly the kind of thing a first-timer cannot find in a listicle. But the two serious findings sit at load-bearing points. The article's only concrete argument for the Miraflores exception is a bus that does not run at the hours the exception exists for, and the penalty figure that justifies the whole framing contradicts the number in its own Barranco section. Those are not polish problems; they are the two places a reader would actually act on the advice. Underneath them runs a smaller, consistent habit — the research note's gaps arriving on the page as instructions to the reader to go and check — which makes the piece feel less finished than its prose otherwise suggests.",
+  "parse_issue": "",
+  "raw": "### FINDING\nLABEL: Justification collapses at the stated hours\nSEVERITY: serious\nQUOTE: Airport Express Lima, the official airport bus, serves only Miraflores, stopping at Larcomar, the tourist information centre on Av. Larco, Parque Kennedy and Av. José Pardo, and it runs roughly 7am to 10pm.\nPROBLEM: This bus is the article's only concrete reason for the Miraflores exceptions — but the two exceptions it is offered for are landing late and leaving before dawn, and the operator's own timetable (airport→Miraflores roughly 07:00–22:00, Miraflores→airport roughly 07:00–21:00) means the bus is not running at either moment. The third case, young children, is never argued at all. So a headline that promises \"three reasons\" delivers one reason that does not apply to two of the three situations, leaving only the 10–15 minute transfer difference the article elsewhere calls trivial.\n\n### FINDING\nLABEL: The penalty figure contradicts itself\nSEVERITY: serious\nQUOTE: Choosing wrong costs you about twenty minutes each way across town, twice a night, three nights running.\nPROBLEM: The article's own Barranco section puts the cross-town trip at \"a ten to fifteen minute app ride,\" so the opening inflates its central number by roughly double, and \"each way, twice a night\" is arithmetically incoherent — it reads as four trips per evening. Since the whole piece is built on the size of this penalty, a reader who notices the discrepancy loses confidence in the one measurement that decides the recommendation. The following sentence — \"That is the whole penalty, and it is also the whole point\" — adds nothing but cadence.\n\n### FINDING\nLABEL: Research failure passed to reader\nSEVERITY: notable\nQUOTE: Listings disagree on Isolina's current closing time, so confirm it when you book if you want a late table.\nPROBLEM: Isolina publishes its Barranco hours on its own site — Monday to Wednesday to 22:00, Thursday to Saturday to 23:00, Sunday to 19:00 — so the hedge documents the research note's failure to find them rather than a genuine uncertainty. Worse, the actual hours bear directly on the article's own eleven o'clock test: on three nights of the week Isolina, the piece's designated non-tasting-menu dinner, is shut before eleven. The reader is given homework in place of the fact that would have answered the question.\n\n### FINDING\nLABEL: Security note leaves homework\nSEVERITY: notable\nQUOTE: It puts soldiers alongside police and permits restrictions on movement, so check whether any are in force for your dates.\nPROBLEM: The decree is published and dated — DS N° 123-2026-PCM, 28 August 2026, sixty days, suspending freedom of transit and assembly among other rights — so the article could have told the reader which dates are covered and that no curfew accompanies it, which is what the reader actually wants to know. Instead the paragraph raises an alarm, names no window, and hands back the research. A traveller booking for October cannot tell from this whether it concerns them.\n\n### FINDING\nLABEL: Buried caveat undercuts the recommendation\nSEVERITY: notable\nQUOTE: Central takes months of planning and does not publish a rolling reservation window; Kjolle, upstairs in the same building, is easier and not a consolation prize.\nPROBLEM: Central leads the case for Barranco in the second paragraph of that section, and only in the closing housekeeping does the reader learn it is realistically unbookable on a trip they are planning now. A reader who books Barranco on the strength of that address discovers the catch after the decision is made; the caveat belongs beside the claim it qualifies, not four hundred words later.\n\n### FINDING\nLABEL: No booking advice for the winner\nSEVERITY: notable\nQUOTE: Hotels here run to converted mansions and small guesthouses, generally a little cheaper than Miraflores equivalents and considerably less numerous.\nPROBLEM: The article gives precise siting instructions for the district it does not recommend — inland from the Malecón, within walking distance of Parque Kennedy — and none at all for the one it does, despite having just said that Barranco is only walkable within a defined core around the Parque Municipal, Sáenz Peña and Pedro de Osma. The reader's task is one hotel booking; in the recommended district they are told the safe zone is narrow and then left to guess whether their hotel is inside it.\n\n### FINDING\nLABEL: Self-contradicting closing argument\nSEVERITY: minor\nQUOTE: The problem is that Cosme's kitchen closes at 22:45 Monday to Saturday, and the blocks around it are residential once it does, so there is nothing to walk home from and no one walking.\nPROBLEM: If Cosme serves until 22:45, then Cosme is precisely something to walk home from at eleven, so the sentence contradicts its own premise a clause later. The intended point — that one restaurant does not make a dinner district and the streets empty out around it — survives, but the reader trips on the literal claim and the paragraph's punchline about ordering a car lands weaker than it should.\n\n### VERDICT\nThe spine is sound and the piece mostly honours the brief: it commits to Barranco, it judges all three districts on the same two questions, and it dispatches San Isidro without a consolation paragraph. It is also, for stretches, well-observed — the ceviche-is-lunch point and the fog-on-the-Malecón warning are exactly the kind of thing a first-timer cannot find in a listicle. But the two serious findings sit at load-bearing points. The article's only concrete argument for the Miraflores exception is a bus that does not run at the hours the exception exists for, and the penalty figure that justifies the whole framing contradicts the number in its own Barranco section. Those are not polish problems; they are the two places a reader would actually act on the advice. Underneath them runs a smaller, consistent habit — the research note's gaps arriving on the page as instructions to the reader to go and check — which makes the piece feel less finished than its prose otherwise suggests.",
+  "served_model": "claude-opus-5",
+  "turns": 12,
+  "elapsed_seconds": 201.5,
+  "cost_usd": 0.9825889999999998,
+  "findings": [
+    {
+      "finding_id": "f1",
+      "label": "Justification collapses at the stated hours",
+      "severity": "serious",
+      "quote": "Airport Express Lima, the official airport bus, serves only Miraflores, stopping at Larcomar, the tourist information centre on Av. Larco, Parque Kennedy and Av. José Pardo, and it runs roughly 7am to 10pm.",
+      "problem": "This bus is the article's only concrete reason for the Miraflores exceptions — but the two exceptions it is offered for are landing late and leaving before dawn, and the operator's own timetable (airport→Miraflores roughly 07:00–22:00, Miraflores→airport roughly 07:00–21:00) means the bus is not running at either moment. The third case, young children, is never argued at all. So a headline that promises \"three reasons\" delivers one reason that does not apply to two of the three situations, leaving only the 10–15 minute transfer difference the article elsewhere calls trivial.",
+      "whole_article": false
+    },
+    {
+      "finding_id": "f2",
+      "label": "The penalty figure contradicts itself",
+      "severity": "serious",
+      "quote": "Choosing wrong costs you about twenty minutes each way across town, twice a night, three nights running.",
+      "problem": "The article's own Barranco section puts the cross-town trip at \"a ten to fifteen minute app ride,\" so the opening inflates its central number by roughly double, and \"each way, twice a night\" is arithmetically incoherent — it reads as four trips per evening. Since the whole piece is built on the size of this penalty, a reader who notices the discrepancy loses confidence in the one measurement that decides the recommendation. The following sentence — \"That is the whole penalty, and it is also the whole point\" — adds nothing but cadence.",
+      "whole_article": false
+    },
+    {
+      "finding_id": "f3",
+      "label": "Research failure passed to reader",
+      "severity": "notable",
+      "quote": "Listings disagree on Isolina's current closing time, so confirm it when you book if you want a late table.",
+      "problem": "Isolina publishes its Barranco hours on its own site — Monday to Wednesday to 22:00, Thursday to Saturday to 23:00, Sunday to 19:00 — so the hedge documents the research note's failure to find them rather than a genuine uncertainty. Worse, the actual hours bear directly on the article's own eleven o'clock test: on three nights of the week Isolina, the piece's designated non-tasting-menu dinner, is shut before eleven. The reader is given homework in place of the fact that would have answered the question.",
+      "whole_article": false
+    },
+    {
+      "finding_id": "f4",
+      "label": "Security note leaves homework",
+      "severity": "notable",
+      "quote": "It puts soldiers alongside police and permits restrictions on movement, so check whether any are in force for your dates.",
+      "problem": "The decree is published and dated — DS N° 123-2026-PCM, 28 August 2026, sixty days, suspending freedom of transit and assembly among other rights — so the article could have told the reader which dates are covered and that no curfew accompanies it, which is what the reader actually wants to know. Instead the paragraph raises an alarm, names no window, and hands back the research. A traveller booking for October cannot tell from this whether it concerns them.",
+      "whole_article": false
+    },
+    {
+      "finding_id": "f5",
+      "label": "Buried caveat undercuts the recommendation",
+      "severity": "notable",
+      "quote": "Central takes months of planning and does not publish a rolling reservation window; Kjolle, upstairs in the same building, is easier and not a consolation prize.",
+      "problem": "Central leads the case for Barranco in the second paragraph of that section, and only in the closing housekeeping does the reader learn it is realistically unbookable on a trip they are planning now. A reader who books Barranco on the strength of that address discovers the catch after the decision is made; the caveat belongs beside the claim it qualifies, not four hundred words later.",
+      "whole_article": false
+    },
+    {
+      "finding_id": "f6",
+      "label": "No booking advice for the winner",
+      "severity": "notable",
+      "quote": "Hotels here run to converted mansions and small guesthouses, generally a little cheaper than Miraflores equivalents and considerably less numerous.",
+      "problem": "The article gives precise siting instructions for the district it does not recommend — inland from the Malecón, within walking distance of Parque Kennedy — and none at all for the one it does, despite having just said that Barranco is only walkable within a defined core around the Parque Municipal, Sáenz Peña and Pedro de Osma. The reader's task is one hotel booking; in the recommended district they are told the safe zone is narrow and then left to guess whether their hotel is inside it.",
+      "whole_article": false
+    },
+    {
+      "finding_id": "f7",
+      "label": "Self-contradicting closing argument",
+      "severity": "minor",
+      "quote": "The problem is that Cosme's kitchen closes at 22:45 Monday to Saturday, and the blocks around it are residential once it does, so there is nothing to walk home from and no one walking.",
+      "problem": "If Cosme serves until 22:45, then Cosme is precisely something to walk home from at eleven, so the sentence contradicts its own premise a clause later. The intended point — that one restaurant does not make a dinner district and the streets empty out around it — survives, but the reader trips on the literal claim and the paragraph's punchline about ordering a car lands weaker than it should.",
+      "whole_article": false
+    }
+  ]
+}
