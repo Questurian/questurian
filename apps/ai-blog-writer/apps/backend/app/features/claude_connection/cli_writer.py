@@ -40,6 +40,7 @@ warm their own cache are worth the difference.
 
 import json
 import os
+import re
 import subprocess
 import tempfile
 import time
@@ -273,6 +274,17 @@ FAULT_INVALID_RESPONSE = "invalid_response"
 # the detection survives any rewording of the apology text.
 QUOTA_TERMINAL_REASONS = frozenset({"budget_exhausted"})
 
+# The HTTP status that means "you are being limited", read off the CLI's own
+# `api_error_status`. Structural, and the reason it is checked first: it
+# survives every rewording of the sentence underneath it, which the marker list
+# below demonstrably does not. On 2026-09-07 the account answered
+# "You've hit your session limit - resets 9:50pm" and not one marker matched:
+# the list had "usage limit" and "resets at", the refusal said "session limit"
+# and "resets 9:50pm". The call that had already spent three minutes
+# researching was therefore classified transient and the operator was told to
+# retry, which failed instantly against the same limit.
+QUOTA_HTTP_STATUS = 429
+
 # Terminal reasons that mean the call did not complete for a reason that may
 # not repeat.
 TRANSIENT_TERMINAL_REASONS = frozenset(
@@ -286,12 +298,13 @@ QUOTA_MARKERS = (
     "spend limit",
     "usage limit",
     "rate limit",
+    "session limit",
     "quota",
     "credit balance",
     "out of credit",
     "insufficient credit",
     "upgrade to",
-    "resets at",
+    "resets",
     "limit will reset",
     "manage usage credits",
 )
@@ -309,9 +322,18 @@ class ClaudeCliWriterError(RuntimeError):
     way every raise here behaved before kinds existed.
     """
 
-    def __init__(self, message: str, *, kind: str = FAULT_INVALID_RESPONSE) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        kind: str = FAULT_INVALID_RESPONSE,
+        resets_at: str = "",
+    ) -> None:
         super().__init__(message)
         self.kind = kind
+        # When the limit lifts, in the account's own words, when it said so.
+        # Empty whenever it did not, which is most failures.
+        self.resets_at = resets_at
 
 
 @contextmanager
@@ -648,6 +670,8 @@ def _failure_kind(payload: dict[str, Any]) -> str:
 
     Order is the point:
 
+    0. A 429 on the call. The most structural signal there is, and the one that
+       would have caught the failure the marker list missed.
     1. A terminal reason that names exhaustion. Structural, survives rewording.
     2. The apology's own wording.
     3. **An unidentified failure that produced nothing and cost nothing is
@@ -662,6 +686,8 @@ def _failure_kind(payload: dict[str, Any]) -> str:
     """
     reason = str(payload.get("terminal_reason") or "").strip().lower()
 
+    if payload.get("api_error_status") == QUOTA_HTTP_STATUS:
+        return FAULT_QUOTA_EXHAUSTED
     if reason in QUOTA_TERMINAL_REASONS or _quota_markers_present(payload):
         return FAULT_QUOTA_EXHAUSTED
     if _spent_nothing(payload):
@@ -700,15 +726,36 @@ def _assert_claude_actually_answered(payload: dict[str, Any]) -> None:
         )
 
 
+# The clock time in a refusal that says when the limit lifts, and nothing else
+# from that sentence. Narrow on purpose: the rest of the refusal text is never
+# surfaced, because these strings reach an API response, but "when can I run
+# this again" is the one question the refusal answers and the operator asks.
+_RESETS_AT = re.compile(
+    r"resets?\s+(?:at\s+)?"
+    r"(\d{1,2}(?::\d{2})?\s*(?:am|pm)?(?:\s*\([^)]{1,40}\))?)",
+    re.IGNORECASE,
+)
+
+
+def _resets_at(payload: dict[str, Any]) -> str:
+    result = payload.get("result")
+    if not isinstance(result, str):
+        return ""
+    found = _RESETS_AT.search(result[:REFUSAL_SCAN_CHARS])
+    return found.group(1).strip() if found else ""
+
+
 def _raise_classified(payload: dict[str, Any], message: str) -> NoReturn:
     kind = _failure_kind(payload)
+    resets_at = ""
     if kind == FAULT_QUOTA_EXHAUSTED:
         _trip_quota_breaker()
+        resets_at = _resets_at(payload)
         message = (
             "Claude's account has hit its usage or spending limit, "
             "so the call was not completed."
         )
-    raise ClaudeCliWriterError(message, kind=kind)
+    raise ClaudeCliWriterError(message, kind=kind, resets_at=resets_at)
 
 
 def invoke_text(

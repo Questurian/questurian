@@ -175,6 +175,10 @@ def run_attempt(
             finished_at=_now(),
             failure=_failure_category(error),
             error=str(error),
+            # "Trying again now will fail the same way" raises the question it
+            # does not answer. The refusal usually answers it; this carries the
+            # answer as far as the screen.
+            resets_at=_resets_at(error),
         )
         _write_attempts(recorder, run_id, _replace(attempts, current))
         recorder.fail(run_id, WRITE_STAGE, error)
@@ -242,6 +246,15 @@ def _content_hash(article: str) -> str:
     return "dv-" + hashlib.sha256(article.encode("utf-8")).hexdigest()[:32]
 
 
+def _resets_at(error: Exception) -> str:
+    """When the account's limit lifts, if the transport was told."""
+    for candidate in (error, getattr(error, "__cause__", None)):
+        value = getattr(candidate, "resets_at", None)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
 def _failure_category(error: Exception) -> str:
     """The distinction a person can act on, from the transport's own word.
 
@@ -281,6 +294,15 @@ FAILURE_MESSAGES = {
 }
 
 
+def _failure_message(attempt: dict[str, Any], failure: str) -> str:
+    """What the operator is told, with the reset time when there is one."""
+    message = FAILURE_MESSAGES.get(failure) or _safe_str(attempt.get("error"))
+    resets_at = _safe_str(attempt.get("resets_at"))
+    if message and resets_at:
+        return f"{message} It resets at {resets_at}."
+    return message
+
+
 def generation_state(run_id: str) -> dict[str, Any] | None:
     """Where the writing stands, for a page that may have been reloaded.
 
@@ -301,7 +323,7 @@ def generation_state(run_id: str) -> dict[str, Any] | None:
         "started_at": _safe_str(attempt.get("started_at")),
         "finished_at": _safe_str(attempt.get("finished_at")) or None,
         "failure": failure or None,
-        "message": FAILURE_MESSAGES.get(failure) or _safe_str(attempt.get("error")) or None,
+        "message": _failure_message(attempt, failure) or None,
         # Kept so a refusal can be read rather than guessed at.
         "raw": _safe_str(attempt.get("raw")) or None,
         "requested_model": _safe_str(attempt.get("requested_model")) or None,
