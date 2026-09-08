@@ -32,7 +32,7 @@ from .contracts_v4 import ArticleBrief
 # that tells two assignments apart.
 PROMPT_STAGE = "stage_v5_writer_prompt"
 
-TEMPLATE_VERSION = "writer-prompt-2"
+TEMPLATE_VERSION = "writer-prompt-3"
 STYLE_VERSION = "short-style-1"
 
 # The short style block, and the reason it lives in Python rather than beside
@@ -74,6 +74,8 @@ The brief records editorial intent, not verified facts. Verify its factual premi
 The reader has never seen this brief and will never see your research note. They cannot tell what you were asked for, what you went looking for, or what you failed to find, so nothing in the article should assume they can. The brief's wording is addressed to you: do not quote it, answer it or acknowledge it on the page.
 
 Where evidence contradicts the brief, preserve the reader's purpose and use the supported facts. Never invent a detail to satisfy a requested item. If a requested detail cannot be established, avoid an unsupported assertion and identify the omission in the separate research note. State a limitation in the article when the reader needs it to act safely or make the decision, and state it as a fact about the subject rather than about your research. "The operator's site lists two different closing times" is something the reader can act on. "I could not pin the hours down" is a report on your afternoon.
+
+When the brief makes one question true of every item you cover, whether each place can be reached, sat in, ordered from or afforded, answer it for every item, including the ones where you could not establish it. A reader told the answer four times and not the fifth concludes the fifth is fine: silence reads as reassurance rather than as a gap, so the item whose answer was hardest to find is the one the omission hurts most. Carry it in the prose where the reader meets that item, not as a labelled field repeated under every heading.
 
 The seed is a starting idea. Write a headline that accurately describes the finished article. Make clear what you selected versus what exists overall.
 

@@ -200,6 +200,33 @@ def test_the_research_note_decides_when_it_disagrees_with_the_article():
     assert "rather than to drop the doubt" in text
 
 
+def test_a_promise_made_to_the_reader_is_kept_for_every_item():
+    """The strongest repeat so far: three runs, three times, two cities.
+
+    Valparaiso `e001d48c` was required to say where you can sit at each of four
+    named lifts and answered for two. Its reader arrived from Vina or the bus
+    and the itinerary assumed the port. Juarez `8a8c681b` dropped the language
+    thread at 3:30pm. Juarez `37ff2bd8` dropped it at the one transaction in
+    the day that actually needed it, and its review named the mechanism: the
+    question was "answered wherever it was easy and dropped wherever it was
+    hard".
+
+    The cause is this assignment's own rule. "If a requested detail cannot be
+    established, avoid an unsupported assertion and identify the omission in
+    the separate research note" is right for a single fact and wrong for a
+    commitment the article has already made four times: the writer obeyed it,
+    moved the gap to a note the reader never sees, and left silence where the
+    reader reads reassurance. So the fix is a limit on that rule rather than a
+    new prohibition, and it carries its own guard against becoming a labelled
+    field under every heading -- which is the shape that produced
+    database-flavoured prose before.
+    """
+    text = _assemble().text
+    assert "answer it for every item, including the ones where you could not establish it" in text
+    assert "silence reads as reassurance" in text
+    assert "not as a labelled field repeated under every heading" in text
+
+
 def test_the_research_note_heading_is_stated_exactly_once():
     """The parser matches this heading, so the prompt and the parser share a constant."""
     text = _assemble().text
