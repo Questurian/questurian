@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as api from './intake.api'
-import type { IntakeArticle, IntakeState } from './intake.types'
+import type {
+  IntakeArticle,
+  IntakeDraft,
+  IntakeReviewResult,
+  IntakeState,
+} from './intake.types'
 
 /**
  * One article's intake, from a typed line to a cut research plan.
@@ -54,6 +59,23 @@ export interface UseIntake {
   answer: (text: string) => Promise<void>
   reopen: () => Promise<void>
   approveBrief: () => Promise<void>
+  /** Freeze the approved brief into the writer's assignment. Costs nothing. */
+  generatePrompt: () => Promise<void>
+  /** Send that assignment to the researching writer. This one spends. */
+  generateArticle: () => Promise<void>
+  /** File an article written elsewhere against this run. Costs nothing. */
+  pasteDraft: (markdown: string, writtenBy: string) => Promise<void>
+  /** The article the writer produced, once there is one. */
+  draft: IntakeDraft | null
+  /** Read the draft and say what is wrong with it. This one spends. */
+  reviewDraft: () => Promise<void>
+  /** What the last read found, once there is one. */
+  review: IntakeReviewResult | null
+  /** Record what the operator makes of one finding. Costs nothing. */
+  settleFinding: (
+    findingId: string,
+    verdict: 'agreed' | 'not_a_fault' | null,
+  ) => Promise<void>
   planResearch: () => Promise<void>
   research: () => Promise<void>
   cut: (struckIds: string[], added: string[]) => Promise<void>
@@ -74,6 +96,8 @@ export function useIntake(): UseIntake {
   const [error, setError] = useState<string | null>(null)
   const [cutWarnings, setCutWarnings] = useState<string[]>([])
   const [article, setArticle] = useState<IntakeArticle | null>(null)
+  const [draft, setDraft] = useState<IntakeDraft | null>(null)
+  const [review, setReview] = useState<IntakeReviewResult | null>(null)
   // Held in a ref as well as state so the poll below reads the current run
   // without restarting its own interval every time the state changes.
   const runIdRef = useRef<string | null>(null)
@@ -129,7 +153,15 @@ export function useIntake(): UseIntake {
   // exactly where it is; this asks.
   const writingRun = state?.writing?.state === 'running'
   const researching = busy && state?.step === 'work_order'
-  const shouldPoll = writingRun || researching
+  // The writer takes minutes and reports nothing while it works, so the only
+  // way to notice it finished is to ask. Polling reads state; it never starts
+  // anything, which is the property that makes it safe to do every 3 seconds.
+  const generating = state?.generation?.state === 'running'
+  // The detector takes minutes and reports nothing while it works, for the
+  // same reason the writer does: it is out searching. Same poll, same rule --
+  // it reads state and starts nothing.
+  const reviewing = state?.review?.state === 'running'
+  const shouldPoll = writingRun || researching || generating || reviewing
 
   useEffect(() => {
     if (!shouldPoll) return
@@ -145,6 +177,38 @@ export function useIntake(): UseIntake {
     }, 3_000)
     return () => window.clearInterval(timer)
   }, [shouldPoll])
+
+  // Fetched once per finished attempt, not per poll: this is the whole article
+  // plus the reply it was parsed out of, and the state above is asked for every
+  // three seconds. Keyed on the attempt so a retry replaces what is on screen.
+  const finishedAttempt = state?.generation?.has_draft
+    ? `${state.run_id}:${state.generation.attempt_id}`
+    : null
+  useEffect(() => {
+    if (!finishedAttempt) return
+    void api
+      .readDraft(finishedAttempt.split(':')[0])
+      .then(setDraft)
+      .catch(() => undefined)
+  }, [finishedAttempt])
+
+  // Fetched once per finished read, not per poll. Keyed on the review so a
+  // second read replaces what is on screen, and on the draft version so a
+  // rewrite that makes the read stale re-fetches rather than leaving findings
+  // pointing at paragraphs that are gone.
+  const finishedReview = state?.review?.has_review
+    ? `${state.run_id}:${state.review.review_id}:${state.review.reviewed_draft_version}`
+    : null
+  useEffect(() => {
+    if (!finishedReview) {
+      setReview(null)
+      return
+    }
+    void api
+      .readReview(finishedReview.split(':')[0])
+      .then(setReview)
+      .catch(() => undefined)
+  }, [finishedReview])
 
   // Fetched once, when there is something to read.
   const finishedRunId = state?.writing?.state === 'completed' ? state.run_id : null
@@ -176,6 +240,41 @@ export function useIntake(): UseIntake {
       () => run(() => api.approveBrief(requireRun())),
       [run, requireRun],
     ),
+    generatePrompt: useCallback(
+      () => run(() => api.generatePrompt(requireRun())),
+      [run, requireRun],
+    ),
+    generateArticle: useCallback(
+      () => run(() => api.generateArticle(requireRun())),
+      [run, requireRun],
+    ),
+    pasteDraft: useCallback(
+      (markdown: string, writtenBy: string) =>
+        run(() => api.pasteDraft(requireRun(), markdown, writtenBy)),
+      [run, requireRun],
+    ),
+    draft,
+    review,
+    reviewDraft: useCallback(
+      () => run(() => api.reviewDraft(requireRun())),
+      [run, requireRun],
+    ),
+    // Its own path rather than through `run`: this settles one finding and
+    // returns the review, not the whole state, and routing it through `run`
+    // would blank the screen's error and busy flags for a click that cannot
+    // fail expensively.
+    settleFinding: useCallback(
+      async (findingId: string, verdict: 'agreed' | 'not_a_fault' | null) => {
+        const reviewId = state?.review?.review_id
+        if (!reviewId) return
+        try {
+          setReview(await api.settleFinding(requireRun(), reviewId, findingId, verdict))
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : 'Could not record that.')
+        }
+      },
+      [requireRun, state],
+    ),
     planResearch: useCallback(
       () => run(() => api.planResearch(requireRun())),
       [run, requireRun],
@@ -201,6 +300,8 @@ export function useIntake(): UseIntake {
       rememberRun(restored.run_id)
       runIdRef.current = restored.run_id
       setArticle(null)
+      setDraft(null)
+      setReview(null)
       setCutWarnings([])
       setError(null)
       setState(restored)
@@ -210,6 +311,8 @@ export function useIntake(): UseIntake {
       runIdRef.current = null
       setState(null)
       setArticle(null)
+      setDraft(null)
+      setReview(null)
       setCutWarnings([])
       setError(null)
     }, []),

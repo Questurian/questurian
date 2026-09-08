@@ -333,6 +333,76 @@
   color: var(--accent);
 }
 
+/* One per line. These become the bullets the writer is held to, and a
+   comma-joined run-on hides the one that is wrong. */
+.p2b-must-name {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.p2b-must-name li {
+  margin-bottom: var(--space-1);
+}
+
+/* ---------- the prompt ---------- */
+
+/* The whole assignment, selectable, in a box that scrolls rather than one that
+   truncates. A preview that hides the end of the prompt is the thing this
+   screen exists to stop. */
+.p2b-prompt-text {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4);
+  max-height: 32rem;
+  overflow: auto;
+  background: var(--cream-dark);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+/* ---------- the draft ---------- */
+
+.p2b-draft-headline {
+  margin: 0 0 var(--space-1);
+  color: var(--ink);
+  font-size: 1.5rem;
+  line-height: 1.25;
+}
+
+/* Reading width, not container width. A 900-word article set across a full
+   desktop column is a wall, and this screen exists to be read. */
+.p2b-draft-body {
+  margin: var(--space-4) 0 var(--space-5);
+  max-width: 38rem;
+  color: var(--ink);
+  line-height: 1.7;
+}
+
+.p2b-draft-body h2,
+.p2b-draft-body h3 {
+  margin: var(--space-5) 0 var(--space-2);
+  line-height: 1.3;
+}
+
+.p2b-draft-body p,
+.p2b-draft-body ul,
+.p2b-draft-body ol {
+  margin: 0 0 var(--space-3);
+}
+
+/* Quieter than the brief above it. This is the receipt, not the article. */
+.p2b-receipt {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule, rgba(0, 0, 0, 0.12));
+  font-size: 0.875rem;
+}
+
 @media (max-width: 34rem) {
   .p2b-brief {
     grid-template-columns: 1fr;
@@ -1720,4 +1790,201 @@
   padding: var(--space-2) var(--space-3);
   border-left: 2px solid var(--accent);
   color: var(--ink-light);
+}
+
+/* ---------- the detector ---------- */
+
+/* Detection only: this whole area points at faults and proposes nothing. There
+   is no apply button here and there is not meant to be one -- fixing before
+   the faults are known is how the old pipeline got 41 prohibitions and no
+   description of what a good piece is. */
+.p2b-review-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 var(--space-5);
+  padding: var(--space-4);
+  max-width: 38rem;
+  background: var(--cream-dark);
+  border-radius: var(--radius-md);
+}
+
+.p2b-review-bar button {
+  align-self: flex-start;
+}
+
+.p2b-review-bar p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* A marked paragraph, not a marked span. The editor copies its quote by hand
+   out of an article that has bold and links in it, so a character-exact
+   highlight lands wrong often enough to matter -- and a highlight one word off
+   reads as the machine misquoting the article. */
+.p2b-marked {
+  position: relative;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-1);
+  border-left: 3px solid var(--muted);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.p2b-marked--serious {
+  border-left-color: #b91c1c;
+  background: rgba(185, 28, 28, 0.06);
+}
+
+.p2b-marked--notable {
+  border-left-color: #b45309;
+  background: rgba(180, 83, 9, 0.06);
+}
+
+.p2b-marked--minor {
+  border-left-color: #6b7280;
+  background: rgba(107, 114, 128, 0.06);
+}
+
+.p2b-marked-toggle {
+  display: block;
+  margin-bottom: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.p2b-marked-toggle:hover {
+  color: var(--ink);
+}
+
+.p2b-marked-findings {
+  margin-top: var(--space-3);
+}
+
+.p2b-finding {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  background: var(--cream, #fff);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+
+.p2b-finding-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+
+.p2b-finding-severity {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.p2b-finding-severity--serious {
+  color: #b91c1c;
+}
+
+.p2b-finding-severity--notable {
+  color: #b45309;
+}
+
+.p2b-finding-severity--minor {
+  color: var(--muted);
+}
+
+/* The model's own words. Not a value from a list in the code: a fixed
+   vocabulary would decide in advance what kinds of fault exist, which is the
+   thing this phase is investigating. */
+.p2b-finding-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* The exact text the editor quoted, shown because the mark above is only
+   paragraph-accurate. A person compares the two and sees for themselves. */
+.p2b-finding-quote {
+  margin: 0 0 var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--rule, rgba(0, 0, 0, 0.12));
+  color: var(--ink-light, var(--muted));
+  font-style: italic;
+}
+
+.p2b-finding-problem {
+  margin: 0 0 var(--space-3);
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+/* The operator's call, kept beside the model's finding and never over it.
+   Nothing in the app acts on these; they exist so the read across runs can
+   skip what has already been thrown out. */
+.p2b-finding-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.p2b-finding-verdict button {
+  padding: 0.3rem var(--space-3);
+  font-size: 0.8125rem;
+}
+
+.p2b-verdict-on {
+  padding: 0.3rem var(--space-3);
+  border: 1px solid var(--ink);
+  border-radius: var(--p2b-control-radius, 3px);
+  background: var(--ink);
+  color: var(--cream, #fff);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+/* ---------- an article written somewhere else ---------- */
+
+/* The prompt is a copy-paste artifact by design, so it can be carried to any
+   model. This is the way back in. */
+.p2b-paste-box {
+  display: block;
+  width: 100%;
+  margin: var(--space-3) 0 var(--space-3);
+  padding: var(--space-3);
+  background: var(--cream, #fff);
+  border: 1px solid var(--rule, rgba(0, 0, 0, 0.14));
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.p2b-paste-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.p2b-paste-who {
+  display: block;
+  width: 100%;
+  max-width: 26rem;
+  margin-bottom: var(--space-3);
+  padding: 0.5rem var(--space-3);
+  background: var(--cream, #fff);
+  border: 1px solid var(--rule, rgba(0, 0, 0, 0.14));
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: 0.875rem;
 }

@@ -58,12 +58,161 @@ export interface IntakeBrief {
   seed: string
   location: string
   form_id: string
+  topic_module_ids: string[]
+  primary_reader: string
+  reader_tags: string[]
+  reader_question: string
   spine: string
   outcome: string
   fails_if: string
   must_name: string[]
   /** Shown back in full so you can see what the system thinks you said. */
-  material: { kind: string; statement: string }[]
+  material: { kind: string; statement: string; note?: string }[]
+}
+
+/**
+ * Where the writing stands, or how it stopped.
+ *
+ * Deliberately without a stage name or a percentage. The writer researches and
+ * writes inside one call, and the transport reports how many turns that took
+ * only after it finishes, so any progress number here would be invented.
+ */
+export interface IntakeGeneration {
+  state: 'running' | 'succeeded' | 'failed'
+  attempt_id: string
+  /** How many times this run has been written. A retry never deletes a draft. */
+  attempts: number
+  started_at: string
+  finished_at: string | null
+  /** quota_exhausted, not_connected, provider_unavailable, unusable_response. */
+  failure: string | null
+  message: string | null
+  /** What Claude sent back when it was not an article. Paid for, so kept. */
+  raw: string | null
+  requested_model: string | null
+  /** What actually answered. A substitution shows up as a difference. */
+  served_model: string | null
+  effort: string | null
+  /** Provider round trips. "One writer" is not "one billable call". */
+  turns: number | null
+  elapsed_seconds: number | null
+  cost_usd: number | null
+  tool_denials: string[]
+  /** `written` here, or `pasted` when the article was brought in from elsewhere. */
+  source: 'written' | 'pasted'
+  /** Who the operator says wrote a pasted draft. Their word, not a reading. */
+  written_by: string | null
+  /** True while an earlier good draft survives a later failed attempt. */
+  has_draft: boolean
+  headline: string | null
+  word_count: number | null
+  /** What could not be read cleanly out of the reply. */
+  parse_issue: string | null
+}
+
+/** The article itself. Fetched once, when there is one to read. */
+export interface IntakeDraft {
+  run_id: string
+  attempt_id: string
+  headline: string
+  article_markdown: string
+  research_note: string
+  parse_issue: string
+  content_hash: string
+  word_count: number
+  /** The whole reply. Nothing derived is authoritative over it. */
+  raw: string
+}
+
+/**
+ * Where the detector stands, for a page that may have been reloaded.
+ *
+ * Asked for on the same poll as everything else, so it carries counts and a
+ * receipt rather than the findings themselves. Reading it starts nothing.
+ */
+export interface IntakeReview {
+  state: 'running' | 'succeeded' | 'failed'
+  review_id: string
+  /** How many reads this run has had. A retry never deletes a review. */
+  reviews: number
+  started_at: string
+  finished_at: string | null
+  /** quota_exhausted, not_connected, provider_unavailable, unusable_response. */
+  failure: string | null
+  message: string | null
+  /** What Claude sent back when it was not a review. Paid for, so kept. */
+  raw: string | null
+  /** True while an earlier good read survives a later failed one. */
+  has_review: boolean
+  /**
+   * True when the read that exists is about an article that has since been
+   * rewritten. Its quotes point at paragraphs that no longer exist, so it is
+   * shown as history rather than as a review of what is on screen.
+   */
+  stale: boolean
+  reviewed_draft_version: string | null
+  finding_count: number
+  served_model: string | null
+  turns: number | null
+  elapsed_seconds: number | null
+  cost_usd: number | null
+  parse_issue: string | null
+}
+
+/**
+ * One thing the editor found wrong with one draft.
+ *
+ * `label` is the model's own words, not a value from a list in the code. A
+ * fixed vocabulary would decide in advance what kinds of fault exist, which is
+ * the thing this phase is investigating; the labels that repeat on their own
+ * are the real categories.
+ */
+export interface IntakeFinding {
+  finding_id: string
+  label: string
+  severity: 'serious' | 'notable' | 'minor'
+  /** The passage this is about, copied out of the article by the editor. */
+  quote: string
+  problem: string
+  /** True when the fault is not in one passage. */
+  whole_article: boolean
+  /** The operator's own call, kept beside the finding and never over it. */
+  verdict?: 'agreed' | 'not_a_fault'
+  verdict_at?: string
+}
+
+/** One whole read, fetched once when there is one to show. */
+export interface IntakeReviewResult {
+  run_id: string
+  review_id: string
+  draft_version: string
+  findings: IntakeFinding[]
+  verdict: string
+  parse_issue: string
+  /** The whole reply. Nothing derived is authoritative over it. */
+  raw: string
+  served_model: string | null
+  turns: number | null
+  elapsed_seconds: number | null
+  cost_usd: number | null
+}
+
+/**
+ * The frozen writing assignment, exactly as the writer will receive it.
+ *
+ * `text` is the whole prompt rather than a summary. Approving a summary of an
+ * assignment nobody has read is how the old pipeline shipped a 41-prohibition
+ * instruction stack that no operator ever saw (ADR 0036).
+ */
+export interface IntakeWriterPrompt {
+  prompt_fingerprint: string
+  brief_fingerprint: string
+  template_version: string
+  style_version: string
+  target_word_count: number
+  research_date: string
+  characters: number
+  text: string
 }
 
 export interface IntakeRequirement {
@@ -411,13 +560,26 @@ export interface IntakeArticle {
   word_count: number | null
 }
 
-export type IntakeStep = 'seed' | 'grill' | 'brief' | 'work_order' | 'research'
+export type IntakeStep =
+  | 'seed'
+  | 'grill'
+  | 'brief'
+  | 'prompt'
+  | 'draft'
+  | 'work_order'
+  | 'research'
 
 export interface IntakeState {
   run_id: string
   step: IntakeStep
   grill: IntakeGrill | null
   brief: IntakeBrief | null
+  /** Null until Generate prompt is pressed, and again if the brief changes. */
+  writer_prompt: IntakeWriterPrompt | null
+  /** The ADR 0036 writer. Null on every run that never used it. */
+  generation: IntakeGeneration | null
+  /** The detector. Null until somebody asks for a read; it costs money. */
+  review: IntakeReview | null
   work_order: IntakeWorkOrder | null
   research: IntakeResearch | null
   /** Present only on the response to a cut: what that decision costs. */

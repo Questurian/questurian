@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Juárez Draft, Marked</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper:        #F1F3EE;
+    --paper-sunk:   #E7EAE3;
+    --ink:          #191C19;
+    --ink-soft:     #545B54;
+    --ink-faint:    #7C837B;
+    --rule:         rgba(25, 28, 25, 0.14);
+    --rule-soft:    rgba(25, 28, 25, 0.07);
+    --blue:         #2C4C6E;
+    --serious:      #9E2B21;
+    --notable:      #86620F;
+    --minor:        #5D6B67;
+    --serious-wash: rgba(158, 43, 33, 0.055);
+    --notable-wash: rgba(134, 98, 15, 0.055);
+    --minor-wash:   rgba(93, 107, 103, 0.05);
+
+    --serif: "Newsreader", "Iowan Old Style", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:        #141714;
+      --paper-sunk:   #1C201B;
+      --ink:          #E4E8E1;
+      --ink-soft:     #A6ADA4;
+      --ink-faint:    #7F877E;
+      --rule:         rgba(228, 232, 225, 0.16);
+      --rule-soft:    rgba(228, 232, 225, 0.08);
+      --blue:         #8FB4D9;
+      --serious:      #E8867A;
+      --notable:      #D9AE55;
+      --minor:        #9DAAA5;
+      --serious-wash: rgba(232, 134, 122, 0.08);
+      --notable-wash: rgba(217, 174, 85, 0.08);
+      --minor-wash:   rgba(157, 170, 165, 0.07);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:        #141714;
+    --paper-sunk:   #1C201B;
+    --ink:          #E4E8E1;
+    --ink-soft:     #A6ADA4;
+    --ink-faint:    #7F877E;
+    --rule:         rgba(228, 232, 225, 0.16);
+    --rule-soft:    rgba(228, 232, 225, 0.08);
+    --blue:         #8FB4D9;
+    --serious:      #E8867A;
+    --notable:      #D9AE55;
+    --minor:        #9DAAA5;
+    --serious-wash: rgba(232, 134, 122, 0.08);
+    --notable-wash: rgba(217, 174, 85, 0.08);
+    --minor-wash:   rgba(157, 170, 165, 0.07);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet {
+    max-width: 108rem;
+    margin: 0 auto;
+    padding: clamp(2rem, 5vw, 4.5rem) clamp(1.1rem, 4vw, 3.5rem) 6rem;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead { border-bottom: 2px solid var(--ink); padding-bottom: 1.6rem; }
+
+  .slug {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin: 0 0 0.9rem;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(2rem, 5.2vw, 3.15rem);
+    line-height: 1.06;
+    letter-spacing: -0.018em;
+    text-wrap: balance;
+    margin: 0 0 0.7rem;
+  }
+
+  .standfirst {
+    margin: 0;
+    max-width: 46ch;
+    font-size: 1.0625rem;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- receipt ---------- */
+
+  .receipt {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2.4rem;
+    margin: 1.5rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--mono);
+  }
+
+  .receipt div { padding: 0.75rem 0 0; }
+
+  .receipt dt {
+    font-size: 0.625rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 0.2rem;
+  }
+
+  .receipt dd {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- section headers ---------- */
+
+  .band {
+    display: flex;
+    align-items: baseline;
+    gap: 0.9rem;
+    margin: 4.5rem 0 1.7rem;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .band h2 {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .band span {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.05em;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- the galley ---------- */
+
+  .galley {
+    display: grid;
+    grid-template-columns: minmax(0, 63ch) minmax(0, 27rem);
+    column-gap: clamp(1.5rem, 3.5vw, 3.25rem);
+    align-items: start;
+  }
+
+  .para { grid-column: 1; margin: 0 0 1.25rem; }
+
+  .headline {
+    grid-column: 1;
+    font-size: clamp(1.4rem, 3vw, 1.85rem);
+    font-weight: 600;
+    line-height: 1.16;
+    letter-spacing: -0.014em;
+    text-wrap: balance;
+    margin: 0 0 1.6rem;
+  }
+
+  .para strong {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .para em { font-style: italic; }
+
+  /* a flagged paragraph carries the mark on its own edge */
+  .para.flagged {
+    padding: 0.35rem 0 0.35rem 1.05rem;
+    margin-left: -1.05rem;
+    border-left: 3px solid var(--minor);
+    background: var(--minor-wash);
+  }
+
+  .para.flagged.s-serious { border-left-color: var(--serious); background: var(--serious-wash); }
+  .para.flagged.s-notable { border-left-color: var(--notable); background: var(--notable-wash); }
+
+  /* ---------- the editor's marks ---------- */
+
+  .mark {
+    grid-column: 2;
+    margin: 0 0 1.25rem;
+    padding-left: 1.05rem;
+    border-left: 1px solid var(--rule);
+  }
+
+  .mark-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    margin: 0 0 0.4rem;
+  }
+
+  .sev {
+    flex: none;
+    font-family: var(--mono);
+    font-size: 0.5625rem;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    padding: 0.18rem 0.4rem;
+    border: 1px solid currentColor;
+    color: var(--minor);
+  }
+
+  .s-serious .sev, .sev.s-serious { color: var(--serious); }
+  .s-notable .sev, .sev.s-notable { color: var(--notable); }
+
+  .mark-label {
+    font-family: var(--mono);
+    font-size: 0.78125rem;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--ink);
+  }
+
+  .mark p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- verdict ---------- */
+
+  .verdict {
+    max-width: 63ch;
+    margin: 0;
+    padding: 1.5rem 1.7rem;
+    background: var(--paper-sunk);
+    border-top: 2px solid var(--blue);
+  }
+
+  .verdict p { margin: 0; font-size: 1rem; }
+
+  /* ---------- research note ---------- */
+
+  .note {
+    max-width: 78ch;
+    font-family: var(--mono);
+    font-size: 0.78125rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+  }
+
+  .note p { margin: 0 0 0.9rem; }
+  .note ul { margin: 0 0 1.2rem; padding-left: 1.1rem; }
+  .note li { margin-bottom: 0.45rem; overflow-wrap: anywhere; }
+  .note strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- the three-run table ---------- */
+
+  .scroller { overflow-x: auto; max-width: 100%; }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 44rem;
+    font-size: 0.875rem;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 0.7rem 1rem 0.7rem 0;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+  }
+
+  thead th {
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  tbody th {
+    font-family: var(--mono);
+    font-size: 0.78125rem;
+    font-weight: 500;
+    color: var(--ink);
+    width: 14rem;
+  }
+
+  td em { font-style: italic; color: var(--ink-faint); }
+
+  .tick { color: var(--blue); font-family: var(--mono); font-weight: 600; }
+
+  /* ---------- changes list ---------- */
+
+  .changes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+    gap: 0;
+    max-width: 78rem;
+  }
+
+  .change {
+    padding: 1.15rem 1.6rem 1.35rem 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .change h3 {
+    margin: 0 0 0.4rem;
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .change p { margin: 0; font-size: 0.9375rem; color: var(--ink-soft); }
+
+  .change code {
+    font-family: var(--mono);
+    font-size: 0.8125em;
+    color: var(--blue);
+  }
+
+  blockquote.pulled {
+    margin: 1.4rem 0 0;
+    padding-left: 1.1rem;
+    border-left: 2px solid var(--rule);
+    font-style: italic;
+    color: var(--ink-soft);
+    max-width: 58ch;
+  }
+
+  blockquote.pulled p { margin: 0; }
+
+  footer {
+    margin-top: 5rem;
+    padding-top: 1.3rem;
+    border-top: 2px solid var(--ink);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--ink-faint);
+    max-width: 70ch;
+  }
+
+  @media (max-width: 62rem) {
+    .galley { grid-template-columns: minmax(0, 1fr); }
+    .para, .mark, .headline { grid-column: 1; }
+    .mark {
+      margin: -0.35rem 0 1.5rem;
+      padding: 0.9rem 0 0 1.05rem;
+      border-left: 3px solid var(--rule);
+    }
+    .mark.s-serious { border-left-color: var(--serious); }
+    .mark.s-notable { border-left-color: var(--notable); }
+    .mark.s-minor { border-left-color: var(--minor); }
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="slug">Prompt2Blog · run 37ff2bd8 · read by run 005ec6ca</p>
+    <h1>Juárez Draft, Marked</h1>
+    <p class="standfirst">
+      The third article the new writer produced, and all seven faults the detector
+      found in it, set against the paragraphs they belong to. Nothing here was
+      corrected. That is the whole design.
+    </p>
+
+    <dl class="receipt">
+      <div><dt>Written by</dt><dd>claude-opus-5</dd></div>
+      <div><dt>Length</dt><dd>923 words</dd></div>
+      <div><dt>Writing</dt><dd>6m 55s · $1.91</dd></div>
+      <div><dt>Reading</dt><dd>4m 24s · $0.97</dd></div>
+      <div><dt>Round trips</dt><dd>37 + 12</dd></div>
+      <div><dt>Assignment</dt><dd>writer-prompt-2</dd></div>
+    </dl>
+  </header>
+
+  <div class="band">
+    <h2>The article</h2>
+    <span>4 serious · 2 notable · 1 minor</span>
+  </div>
+
+  <div class="galley">
+
+    <p class="headline">One Day of Eating in Colonia Juárez, Ordered by When the Doors Open</p>
+
+    <p class="para flagged s-serious">
+      Juárez is not a secret. It sits between Paseo de la Reforma and Avenida
+      Chapultepec, it has been written up steadily for a decade, and if you have a
+      Roma Norte list you have probably already been walked through part of it.
+      What Juárez has that Roma Norte and Condesa do not is layering inside a very
+      small grid: a working public market, a Korean quarter of several thousand
+      residents, and the newer restaurants, all inside about twenty minutes of
+      walking end to end. That is what makes a single day here hold together
+      rather than becoming a series of separate trips.
+    </p>
+
+    <aside class="mark s-serious">
+      <div class="mark-head">
+        <span class="sev s-serious">Serious</span>
+        <span class="mark-label">Differentiator that isn&rsquo;t true</span>
+      </div>
+      <p>
+        This sentence carries the whole premise, the one comparison the piece
+        makes, and a third of it is wrong. Condesa has Mercado Michoacán, a working
+        public market since 1946 with cooked-food stalls, sitting inside the
+        neighbourhood; Roma has Mercado Medellín and Mercado Roma. Only the Korean
+        quarter is genuinely exclusive to Juárez, so the reader who knows the city
+        will discount the claim, and the compression argument the day rests on is
+        left resting on one fact rather than three.
+      </p>
+    </aside>
+
+    <p class="para flagged s-serious">
+      Below is one day, in order. The order is set by opening hours, not by mood.
+      Build it on a Tuesday through Saturday. Sunday changes three of the six
+      stops, and Monday puts one of them in doubt.
+    </p>
+
+    <aside class="mark s-serious">
+      <div class="mark-head">
+        <span class="sev s-serious">Serious</span>
+        <span class="mark-label">Promise made, never redeemed</span>
+      </div>
+      <p>
+        The article never says which three stops Sunday changes or what a Sunday
+        visitor should do instead, and by the hours the article itself prints, the
+        count does not hold: at a 12:15pm arrival the market&rsquo;s Sunday close
+        (5pm) is irrelevant, Café Nin&rsquo;s Sunday close (6pm) is irrelevant at
+        10am, Nadefo and La Chula are unaffected, leaving Cana&rsquo;s 11am&ndash;6pm
+        and Niddo&rsquo;s brunch format, two at most. It also rules Monday out in
+        the opening and then hands out Monday advice at Cana
+        (&ldquo;If your day is a Monday, book ahead or call&rdquo;), so the one rule
+        the reader is asked to plan around contradicts itself. A visitor whose free
+        day is Sunday closes the piece with no plan, which is exactly what the piece
+        exists to give.
+      </p>
+    </aside>
+
+    <p class="para flagged s-notable">
+      <strong>8:00am. Niddo, Dresde 2.</strong>
+      This stop earns the early hour because its breakfast window is the tightest
+      of the day: the restaurant&rsquo;s own site lists breakfast Monday to Friday
+      8am to 1pm, Saturday 8am to 2pm, and an all-day Sunday brunch service from
+      8am. The room is small and reservations go through Meitre. If you cannot get
+      one, Niddo runs two other Juárez addresses that take walk-ins: Oxford 12,
+      daily 8am to 5:30pm with breakfast served all day, and Niddo Café at Praga
+      24, daily 7:30am to 8pm. All three are a few minutes apart. Menus are
+      printed; you order sitting down.
+    </p>
+
+    <aside class="mark s-notable">
+      <div class="mark-head">
+        <span class="sev s-notable">Notable</span>
+        <span class="mark-label">Justification undercut immediately</span>
+      </div>
+      <p>
+        Two sentences later the article says two other Niddo addresses a few
+        minutes away take walk-ins and serve breakfast all day, to 5:30pm and 8pm
+        (both confirmed on niddo.mx). So breakfast is not the constraint, and the
+        stated reason for starting at eight dissolves inside its own paragraph. The
+        real argument for 8am, a small room, reservations, and a day that has to
+        start somewhere, is available but never made, so the piece&rsquo;s first
+        move looks arbitrary just where it most needs to look inevitable.
+      </p>
+    </aside>
+
+    <p class="para flagged s-serious">
+      <strong>10:00am. Café Nin, Havre 73.</strong>
+      Not a second breakfast. This is a bakery counter, open from 7am every day,
+      carrying Panadería Rosetta bread and pastries throughout the day. Buy
+      something to eat later. Closing times vary by day (7am to 9pm Monday to
+      Wednesday, to 10pm Thursday to Saturday, to 6pm Sunday), which matters only
+      if you try to come back at night. If you wake at six and cannot wait, this is
+      also where you start instead of Niddo.
+    </p>
+
+    <aside class="mark s-serious">
+      <div class="mark-head">
+        <span class="sev s-serious">Serious</span>
+        <span class="mark-label">The stop that does nothing</span>
+      </div>
+      <p>
+        Café Nin is open 7am to 9 or 10pm every day, the article concedes its hours
+        &ldquo;matter only if you try to come back at night,&rdquo; and the pastry
+        bought at 10am is never eaten anywhere later in the day. No stop refers back
+        to it. Cut this stop and the day is identical, which is precisely the
+        failure the piece is built to avoid: the 10am slot is filler between
+        breakfast and lunch, dressed as a fixed point. The line offered as its
+        justification, &ldquo;If you wake at six and cannot wait, this is also where
+        you start instead of Niddo,&rdquo; sends a reader who is up at six to a
+        counter that opens at seven.
+      </p>
+    </aside>
+
+    <p class="para">
+      <strong>12:15pm. Mercado Juárez, Turín 8, on Avenida Chapultepec near Metro Cuauhtémoc.</strong>
+      A neighbourhood market that supplies the restaurants around it, with
+      cooked-food stalls doing <em>comida corrida</em>, a set lunch of soup, rice, a
+      main and agua fresca. Bring cash. This is the one stop on the day where
+      Spanish is genuinely load-bearing: the day&rsquo;s menu is usually recited
+      aloud rather than printed, so the workable move is to ask what there is, then
+      point at a plate already going out. The city&rsquo;s own venue listing
+      publishes no hours for the market; third-party listings show roughly 8am to
+      7pm Monday to Saturday and 8am to 5pm Sunday. Treat it as a lunchtime place
+      and do not save it for late afternoon.
+    </p>
+
+    <p class="para flagged s-serious">
+      <strong>2:00pm. Cana, Liverpool 9.</strong>
+      The long sit goes here, and it goes at exactly two o&rsquo;clock because that
+      is when the doors open and when a solo diner can take a counter or bar seat
+      without negotiating for it. Cana is a small contemporary bistro on the eastern
+      edge of Juárez, in the Michelin Guide, with a natural-leaning wine list and a
+      menu that changes with what is available. Its own website lists Monday to
+      Saturday 2pm to 11pm and Sunday 11am to 6pm; OpenTable and Michelin both show
+      it closed Mondays. If your day is a Monday, book ahead or call, because those
+      two listings disagree. Reservations run through OpenTable, which works in
+      English.
+    </p>
+
+    <aside class="mark s-serious">
+      <div class="mark-head">
+        <span class="sev s-serious">Serious</span>
+        <span class="mark-label">No food in the food article</span>
+      </div>
+      <p>
+        The day&rsquo;s biggest commitment, four hours from 2pm to 6pm, is sold
+        entirely on opening times and a sentence of generic restaurant vocabulary
+        that would fit two hundred places; nothing here says what is worth eating or
+        why this room earns a whole afternoon. The same absence runs through the
+        piece: every stop is justified by when it opens, none by what it puts in
+        front of you, apart from three words at the taquería. Avoiding invented
+        plates does not require going silent. Nadefo&rsquo;s cuts and two-hour
+        limit, La Chula&rsquo;s costra and tableside pastor are all published in the
+        sources the note lists, and without them the reader has a timetable to obey
+        rather than a day they want.
+      </p>
+    </aside>
+
+    <p class="para">
+      <strong>6:00pm. Walk Pequeño Seúl.</strong>
+      From Cana, head west along Liverpool. The blocks around Hamburgo, Praga,
+      Berna and Biarritz are Mexico City&rsquo;s Korean quarter, home to several
+      thousand Korean residents, with Biarritz almost entirely Korean-owned
+      businesses. Some of these places serve the local Korean community rather than
+      visitors, with signage and menus in Korean only. That is a filter, not a
+      barrier: if you cannot read the window, walk on.
+    </p>
+
+    <p class="para flagged s-notable">
+      <strong>7:30pm. Nadefo, Liverpool 183.</strong>
+      Korean barbecue on the same street you have been walking all day, cooked at
+      your table, built around an all-you-can-eat format with a fixed set of cuts,
+      rice and soup. Listings show it open daily from 10:30am to 11pm, which is not
+      confirmed by the restaurant itself. Whether the all-you-can-eat price is sold
+      to a single diner is not published anywhere I could find, so ask at the door
+      before you sit. If the answer is no, you have lost nothing: your last stop is
+      six minutes away.
+    </p>
+
+    <aside class="mark s-notable">
+      <div class="mark-head">
+        <span class="sev s-notable">Notable</span>
+        <span class="mark-label">Language help stops where needed</span>
+      </div>
+      <p>
+        The reader&rsquo;s stated fear is the moment their Spanish runs out, and this
+        is the one transaction in the day that requires an actual unscripted
+        negotiation, asked at a restaurant in a quarter the article has just
+        described as signed in Korean only, with no phrase, no fallback, and no
+        indication of what language the door speaks. Cana gets the same treatment in
+        reverse: the piece solves the booking and says nothing about ordering from a
+        menu that changes daily. The pattern is that the language question is
+        answered wherever it was easy and dropped wherever it was hard.
+        &ldquo;Anywhere I could find&rdquo; also puts the writer&rsquo;s research
+        process into the reader&rsquo;s day; the uncertainty needed flagging, the
+        search for it did not.
+      </p>
+    </aside>
+
+    <p class="para">
+      <strong>10:00pm. Tacos La Chula, Liverpool 102.</strong>
+      This is last because it is the only stop with no closing time. The
+      taquería&rsquo;s own social accounts state it runs 24 hours, every day. You
+      order tacos one at a time at an open grill, standing, and the transaction is a
+      number and a word: <em>pastor</em>, <em>chuleta</em>, <em>arrachera</em>.
+      Evening queues are long and fast. A full counter here is a timing problem
+      rather than a failed plan, which is precisely why it sits at the end of the
+      day instead of the middle.
+    </p>
+
+    <p class="para">
+      If you want a bar afterwards, Handshake Speakeasy at Amberes 65, named the
+      world&rsquo;s best bar in 2024, is four blocks away and is not a walk-in
+      proposition; seatings are timed and booked through OpenTable, often well in
+      advance. Decide about it before you leave your hotel in the morning, not at
+      eleven at night.
+    </p>
+
+    <p class="para flagged s-minor">
+      Two things to check the week you go. Hours in Juárez move, and closures are
+      real: Amaya, for years the neighbourhood&rsquo;s default wine bar on General
+      Prim, shut in August 2024, and Masala y Maíz, still listed in some Juárez
+      guides, now operates on Artículo 123 in the Centro. Confirm the market and
+      Nadefo directly, since neither publishes hours itself.
+    </p>
+
+    <aside class="mark s-minor">
+      <div class="mark-head">
+        <span class="sev">Minor</span>
+        <span class="mark-label">Ending goes slack</span>
+      </div>
+      <p>
+        The piece closes on housekeeping about two places the reader was never sent
+        to, one of which shut two years ago: corrections to other people&rsquo;s
+        guides rather than anything the reader does tomorrow. The paragraph also
+        announces &ldquo;Two things to check&rdquo; and then issues three
+        instructions. After a day that ends at a 24-hour grill at ten at night, this
+        is a filing cabinet where the last beat should be.
+      </p>
+    </aside>
+
+  </div>
+
+  <div class="band">
+    <h2>The editor&rsquo;s overall read</h2>
+    <span>unprompted, written after the findings</span>
+  </div>
+
+  <div class="verdict">
+    <p>
+      The bones are right and the discipline is real: it refuses the
+      hidden-neighbourhood framing in its first line, it flags every contested hour
+      instead of bluffing, it drops the comparative claim it couldn&rsquo;t support
+      rather than hedging it, and the La Chula stop, last because it never closes,
+      ordered in a number and a word, is exactly the kind of reasoning the piece
+      promised throughout. But the discipline has eaten the writing. Sourcing has
+      become the prose style, so the day is argued entirely in opening hours and
+      never once in appetite, and the reader is asked to give four hours to a
+      restaurant described in nothing but stock phrases. Underneath that, three
+      structural faults bite: a day-of-week rule that contradicts itself and
+      abandons the Sunday reader, a 10am stop that could be deleted without
+      consequence, and a premise sentence whose central distinction is factually
+      wrong. These are not polish problems.
+    </p>
+  </div>
+
+  <div class="band">
+    <h2>Three runs, side by side</h2>
+    <span>what recurred, and what the prompt fix moved</span>
+  </div>
+
+  <div class="scroller">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Fault</th>
+          <th scope="col">Valparaíso · e001d48c</th>
+          <th scope="col">Juárez A · 8a8c681b</th>
+          <th scope="col">Juárez B · 37ff2bd8 <em>(fixed prompt)</em></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Article outruns its own research note</th>
+          <td>Asserts the fare it just hedged <em>· serious</em></td>
+          <td>Ranking claim outruns research <em>· serious</em></td>
+          <td class="tick">gone</td>
+        </tr>
+        <tr>
+          <th scope="row">Writer talks to the editor on the page</th>
+          <td>Article narrates its own sourcing <em>· notable</em></td>
+          <td>Arguing with the brief on the page <em>· notable</em></td>
+          <td>one clause left, inside another finding</td>
+        </tr>
+        <tr>
+          <th scope="row">A reader constraint is honoured early, dropped later</th>
+          <td>Seating unanswered for two of four lifts; half the readership stranded in an aside</td>
+          <td>Language thread abandoned halfway</td>
+          <td>Language help stops where needed</td>
+        </tr>
+        <tr>
+          <th scope="row">The places starve while logistics fill the space</th>
+          <td><em>not flagged</em></td>
+          <td>Rooms starved by logistics</td>
+          <td>No food in the food article <em>· serious</em></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <blockquote class="pulled">
+    <p>
+      Row three is now three for three, across two cities and three different
+      briefs. It is the strongest signal we have and nothing has been done about it
+      yet. Row four got worse, and the cause is the operator rather than the
+      prompt: three of six grill answers pressed on opening hours, so the brief made
+      hours the dominant constraint and the writer argued the whole day in them.
+    </p>
+  </blockquote>
+
+  <div class="band">
+    <h2>What was built</h2>
+    <span>detector wiring, then one prompt fix</span>
+  </div>
+
+  <div class="changes">
+    <div class="change">
+      <h3>Its own gateway job</h3>
+      <p>
+        <code>p2b.review</code>, on Claude rather than filed with the other
+        checkers on Gemini, because the detector has to open pages. Borrowing the
+        writer&rsquo;s job would have put every review&rsquo;s cost on the
+        writer&rsquo;s line.
+      </p>
+    </div>
+    <div class="change">
+      <h3>A read is not the run</h3>
+      <p>
+        The run&rsquo;s status is captured before a review and restored after,
+        either way. A failed read must not mark a finished article&rsquo;s run as
+        failed.
+      </p>
+    </div>
+    <div class="change">
+      <h3>Claim before spend</h3>
+      <p>
+        Written to storage before the call, so a double click cannot buy a second
+        read. Reviews accumulate; a retry never deletes the last good one.
+      </p>
+    </div>
+    <div class="change">
+      <h3>Marks on paragraphs, not spans</h3>
+      <p>
+        The editor retypes its quote by hand out of markdown carrying bold and
+        links, so exact matching fails silently. Unmatched quotes are listed rather
+        than dropped.
+      </p>
+    </div>
+    <div class="change">
+      <h3>A verdict per finding</h3>
+      <p>
+        Real problem, or not a fault. Kept beside the model&rsquo;s words and never
+        over them. Nothing in the app acts on it.
+      </p>
+    </div>
+    <div class="change">
+      <h3>Refusals stop looking clean</h3>
+      <p>
+        A reply with no findings and no verdict is now refused. That shape is what
+        a Claude refusal looks like, and read as a review it would have reported
+        &ldquo;nothing wrong.&rdquo;
+      </p>
+    </div>
+    <div class="change">
+      <h3>The reader cannot see the brief</h3>
+      <p>
+        Said plainly in the assignment, with the distinction that was missing:
+        &ldquo;the site lists two different closing times&rdquo; is usable;
+        &ldquo;I could not pin the hours down&rdquo; is a report on your afternoon.
+      </p>
+    </div>
+    <div class="change">
+      <h3>The note decides</h3>
+      <p>
+        &ldquo;Resolve contradictions&rdquo; failed twice because dropping the doubt
+        satisfies it as well as dropping the claim. Now one-directional: the claim
+        gives way.
+      </p>
+    </div>
+  </div>
+
+  <div class="band">
+    <h2>The research note</h2>
+    <span>stored beside the article, never published as body text</span>
+  </div>
+
+  <div class="note">
+    <p><strong>Requested details the writer could not establish, and how the article handles them.</strong></p>
+    <ul>
+      <li>
+        <strong>No quantitative comparison of Juárez against Roma Norte or Condesa
+        exists in any source I could reach.</strong> Per the brief&rsquo;s own
+        instruction, the claim that Juárez is now the city&rsquo;s best eating
+        neighbourhood is dropped rather than hedged.
+      </li>
+      <li>
+        <strong>Nadefo&rsquo;s hours and its solo-diner policy are unverified.</strong>
+        The restaurant publishes no site I could find; the 10:30am&ndash;11pm figure
+        comes from aggregators only. The article says so and tells the reader to ask
+        at the door.
+      </li>
+      <li>
+        <strong>Mercado Juárez hours are not published by the city.</strong> Article
+        states this and gives the third-party figures as third-party figures.
+      </li>
+      <li>
+        <strong>Cana&rsquo;s Monday opening is contested</strong> between its own site
+        and two booking listings. Article flags the conflict rather than picking a
+        side.
+      </li>
+      <li>
+        <strong>English-language capability of staff is not documented anywhere.</strong>
+        The article never claims English is spoken; language guidance is built only
+        on structural facts.
+      </li>
+      <li>
+        <strong>No first-hand visit is described anywhere.</strong> No dish is
+        described as eaten, no staff interaction is invented.
+      </li>
+      <li>
+        <strong>El Huequito&rsquo;s General Prim branch hours</strong> could not be
+        confirmed by the company, so that stop was cut from the route rather than
+        listed with unverified hours.
+      </li>
+    </ul>
+    <p>
+      Sources accessed: the businesses&rsquo; own sites for Café Nin, Niddo, Cana and
+      El Huequito; the city&rsquo;s venue listing for Mercado Juárez; Michelin and
+      OpenTable for the contested Cana hours; The Infatuation for Nadefo, Tacos La
+      Chula, Amaya and Masala y Maíz; Wikipedia for Pequeño Seúl and Handshake.
+    </p>
+  </div>
+
+  <footer>
+    Detection only. Nothing on this page was corrected, and no code exists that
+    would correct it. The findings are input to fixing the writer, not edits
+    waiting for a button. Three articles read so far; the faults that keep coming
+    back are the to-do list.
+  </footer>
+
+</div>
+
+</body>
+</html>

@@ -16,6 +16,8 @@ vi.mock('./intake.api', async importOriginal => ({
   undoSectionEdit: (...args: unknown[]) => undoSectionEdit(...args),
 }))
 import { BriefScreen } from './components/BriefScreen'
+import { PromptScreen } from './components/PromptScreen'
+import { DraftScreen } from './components/DraftScreen'
 import { ArticleScreen } from './components/ArticleScreen'
 import { GrillScreen } from './components/GrillScreen'
 import { WorkingScreen } from './components/WorkingScreen'
@@ -28,6 +30,12 @@ import type {
   IntakeRunSummary,
   IntakeGrill,
   IntakeWorkOrder,
+  IntakeDraft,
+  IntakeFinding,
+  IntakeGeneration,
+  IntakeReview,
+  IntakeReviewResult,
+  IntakeWriterPrompt,
   IntakeWriting,
 } from './intake.types'
 
@@ -239,6 +247,10 @@ const BRIEF: IntakeBrief = {
   seed: 'Lima is no longer simply the stopover',
   location: 'Lima, Peru',
   form_id: 'destination-guide',
+  topic_module_ids: ['food-drink'],
+  primary_reader: 'a layover traveller with two spare nights',
+  reader_tags: ['first-time-visitor'],
+  reader_question: 'Is Lima worth two extra nights?',
   spine: 'food, cheap beats famous',
   outcome: 'book two extra nights',
   fails_if: 'reads like a tourist board',
@@ -250,23 +262,561 @@ describe('the brief screen', () => {
   it('shows your own words back, exactly', () => {
     // First-hand material skips fact-checking by design, so this screen is the
     // only place a wrong version of what you said can still be caught.
-    render(<BriefScreen brief={BRIEF} busy={false} onPlanResearch={vi.fn()} onReopen={vi.fn()} />)
+    render(
+      <BriefScreen brief={BRIEF} busy={false} onGeneratePrompt={vi.fn()} onReopen={vi.fn()} />,
+    )
 
     expect(screen.getByText('I was there 4 days. mostly ate.')).toBeInTheDocument()
   })
 
   it('shows what would make the article a failure', () => {
-    render(<BriefScreen brief={BRIEF} busy={false} onPlanResearch={vi.fn()} onReopen={vi.fn()} />)
+    render(
+      <BriefScreen brief={BRIEF} busy={false} onGeneratePrompt={vi.fn()} onReopen={vi.fn()} />,
+    )
 
     expect(screen.getByText('reads like a tourist board')).toBeInTheDocument()
   })
 
+  it('shows every field that reaches the writer', () => {
+    // The brief is now the whole assignment (ADR 0036). Approving it while the
+    // reader and the reader's question sit off screen is approving something
+    // unread -- and those two travel verbatim into the prompt.
+    render(
+      <BriefScreen brief={BRIEF} busy={false} onGeneratePrompt={vi.fn()} onReopen={vi.fn()} />,
+    )
+
+    expect(
+      screen.getByText('a layover traveller with two spare nights'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Is Lima worth two extra nights?')).toBeInTheDocument()
+  })
+
   it('cannot be edited in place', () => {
     // Changing it means talking to the grill again: a typed brief is untracked
-    // instruction injected into every stage after it.
-    render(<BriefScreen brief={BRIEF} busy={false} onPlanResearch={vi.fn()} onReopen={vi.fn()} />)
+    // instruction injected straight into the writing assignment.
+    render(
+      <BriefScreen brief={BRIEF} busy={false} onGeneratePrompt={vi.fn()} onReopen={vi.fn()} />,
+    )
 
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  })
+
+  it('says that generating the prompt costs nothing', () => {
+    // The button before this one bought a research plan. This one buys nothing,
+    // and a person who does not know that will not press it to look.
+    render(
+      <BriefScreen brief={BRIEF} busy={false} onGeneratePrompt={vi.fn()} onReopen={vi.fn()} />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Generate prompt' })).toBeInTheDocument()
+    expect(screen.getByText(/costs nothing/)).toBeInTheDocument()
+  })
+})
+
+const WRITER_PROMPT: IntakeWriterPrompt = {
+  prompt_fingerprint: 'wp-1',
+  brief_fingerprint: 'bf-1',
+  template_version: 'writer-prompt-1',
+  style_version: 'short-style-1',
+  target_word_count: 900,
+  research_date: '2026-09-07',
+  characters: 42,
+  text: 'Write an approximately 900-word article from the approved Article Brief below.',
+}
+
+describe('the prompt screen', () => {
+  it('shows the whole assignment, not a summary of it', () => {
+    // The old pipeline assembled its instruction from a form rulebook, a work
+    // order, a packet, an SEO block and forty-one prohibitions, and no operator
+    // ever saw a line of it.
+    render(<PromptScreen
+        prompt={WRITER_PROMPT}
+        busy={false}
+        onGenerate={vi.fn()}
+        onReopen={vi.fn()}
+        onPaste={vi.fn()}
+      />)
+
+    expect(screen.getByText(WRITER_PROMPT.text)).toBeInTheDocument()
+  })
+
+  it('cannot be edited in place', () => {
+    // A textarea invites an edit that would be silently discarded: the stored
+    // assignment is the one that gets sent.
+    render(<PromptScreen
+        prompt={WRITER_PROMPT}
+        busy={false}
+        onGenerate={vi.fn()}
+        onReopen={vi.fn()}
+        onPaste={vi.fn()}
+      />)
+
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  })
+
+  it('says which writer and which length', () => {
+    render(<PromptScreen
+        prompt={WRITER_PROMPT}
+        busy={false}
+        onGenerate={vi.fn()}
+        onReopen={vi.fn()}
+        onPaste={vi.fn()}
+      />)
+
+    expect(screen.getByText(/about 900 words/)).toBeInTheDocument()
+    expect(screen.getByText(/Claude Opus, high effort/)).toBeInTheDocument()
+  })
+
+  it('says that generating spends, before it is pressed', () => {
+    // The button before this one bought nothing. This one buys an article, and
+    // saying so afterwards is not saying it.
+    render(
+      <PromptScreen
+        prompt={WRITER_PROMPT}
+        busy={false}
+        onGenerate={vi.fn()}
+        onReopen={vi.fn()}
+        onPaste={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Generate article' })).toBeInTheDocument()
+    expect(screen.getByText(/spends Claude allowance/)).toBeInTheDocument()
+  })
+
+  it('leads back to the grill rather than offering a text box', () => {
+    const onReopen = vi.fn()
+    render(<PromptScreen
+      prompt={WRITER_PROMPT}
+      busy={false}
+      onGenerate={vi.fn()}
+      onReopen={onReopen}
+      onPaste={vi.fn()}
+    />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change something' }))
+
+    expect(onReopen).toHaveBeenCalled()
+  })
+})
+
+const GENERATION: IntakeGeneration = {
+  state: 'succeeded',
+  attempt_id: 'a-1',
+  attempts: 1,
+  started_at: '2026-09-07T10:00:00Z',
+  finished_at: '2026-09-07T10:08:32Z',
+  failure: null,
+  message: null,
+  raw: null,
+  requested_model: 'claude-opus-5-high',
+  served_model: 'claude-opus-5-20260101',
+  effort: 'high',
+  turns: 14,
+  elapsed_seconds: 512.4,
+  cost_usd: 0.42,
+  tool_denials: [],
+  source: 'written',
+  written_by: null,
+  has_draft: true,
+  headline: 'Two nights in Lima',
+  word_count: 912,
+  parse_issue: null,
+}
+
+describe('bringing in an article written somewhere else', () => {
+  function renderPrompt(onPaste = vi.fn()) {
+    render(
+      <PromptScreen
+        prompt={WRITER_PROMPT}
+        busy={false}
+        onGenerate={vi.fn()}
+        onReopen={vi.fn()}
+        onPaste={onPaste}
+      />,
+    )
+    return onPaste
+  }
+
+  it('offers the way back in without pushing it', () => {
+    // The prompt is a copy-paste artifact by design. This is the return path,
+    // and it stays folded away so it does not compete with the button that
+    // writes the article here.
+    renderPrompt()
+
+    expect(
+      screen.getByRole('button', { name: /paste an article instead/i }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).toBeNull()
+  })
+
+  it('says plainly that it costs nothing and destroys nothing', () => {
+    renderPrompt()
+
+    expect(screen.getByText(/Costs nothing/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/does not replace a draft this run already has/),
+    ).toBeInTheDocument()
+  })
+
+  it('files the pasted text against the run', () => {
+    const onPaste = renderPrompt()
+    fireEvent.click(screen.getByRole('button', { name: /paste an article instead/i }))
+
+    fireEvent.change(screen.getByLabelText('The article'), {
+      target: { value: '# A headline\n\nThe article.' },
+    })
+    fireEvent.change(screen.getByLabelText(/Who wrote it/), {
+      target: { value: 'a browser, some other model' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /use this as the draft/i }))
+
+    expect(onPaste).toHaveBeenCalledWith(
+      '# A headline\n\nThe article.',
+      'a browser, some other model',
+    )
+  })
+
+  it('will not file an empty paste', () => {
+    renderPrompt()
+    fireEvent.click(screen.getByRole('button', { name: /paste an article instead/i }))
+
+    expect(screen.getByRole('button', { name: /use this as the draft/i })).toBeDisabled()
+  })
+
+  it('asks who wrote it and says the answer is not checked', () => {
+    // Recorded as the operator's word. Nothing here resolves a model, so
+    // nothing here may look like it did.
+    renderPrompt()
+    fireEvent.click(screen.getByRole('button', { name: /paste an article instead/i }))
+
+    expect(screen.getByText(/Recorded as your word/)).toBeInTheDocument()
+  })
+})
+
+const DRAFT: IntakeDraft = {
+  run_id: 'r-1',
+  attempt_id: 'a-1',
+  headline: 'Two nights in Lima',
+  article_markdown: 'Surquillo market opens at six.',
+  research_note: '- https://example.pe -- stall prices, checked 7 September 2026',
+  parse_issue: '',
+  content_hash: 'dv-1',
+  word_count: 912,
+  raw: 'everything that came back',
+}
+
+const REVIEW_STATE: IntakeReview = {
+  state: 'succeeded',
+  review_id: 'rv-1',
+  reviews: 1,
+  started_at: '2026-09-07T10:00:00+00:00',
+  finished_at: '2026-09-07T10:03:00+00:00',
+  failure: null,
+  message: null,
+  raw: null,
+  has_review: true,
+  stale: false,
+  reviewed_draft_version: 'dv-1',
+  finding_count: 1,
+  served_model: 'claude-opus-5-20260101',
+  turns: 8,
+  elapsed_seconds: 190,
+  cost_usd: 0.66,
+  parse_issue: null,
+}
+
+const FINDING: IntakeFinding = {
+  finding_id: 'f1',
+  label: 'Museum price wrong by threefold',
+  severity: 'serious',
+  quote: 'Surquillo market opens at six.',
+  problem: 'It opens at five. The whole plan rests on the wrong hour.',
+  whole_article: false,
+}
+
+const REVIEW_RESULT: IntakeReviewResult = {
+  run_id: 'r-1',
+  review_id: 'rv-1',
+  draft_version: 'dv-1',
+  findings: [FINDING],
+  verdict: 'Good on the food, wrong on the times.',
+  parse_issue: '',
+  raw: 'everything the editor said',
+  served_model: 'claude-opus-5-20260101',
+  turns: 8,
+  elapsed_seconds: 190,
+  cost_usd: 0.66,
+}
+
+function renderDraft(
+  generation: Partial<IntakeGeneration> = {},
+  draft: IntakeDraft | null = DRAFT,
+  review: { state: Partial<IntakeReview> | null; result: IntakeReviewResult | null } = {
+    state: null,
+    result: null,
+  },
+  handlers: {
+    onReview?: () => void
+    onSettleFinding?: (
+      findingId: string,
+      verdict: 'agreed' | 'not_a_fault' | null,
+    ) => void
+  } = {},
+) {
+  return render(
+    <MemoryRouter>
+      <DraftScreen
+        runId="r-1"
+        generation={{ ...GENERATION, ...generation }}
+        draft={draft}
+        reviewState={review.state ? { ...REVIEW_STATE, ...review.state } : null}
+        review={review.result}
+        busy={false}
+        onRetry={vi.fn()}
+        onReopen={vi.fn()}
+        onReview={handlers.onReview ?? vi.fn()}
+        onSettleFinding={handlers.onSettleFinding ?? vi.fn()}
+      />
+    </MemoryRouter>,
+  )
+}
+
+describe('the draft screen', () => {
+  it('shows the article', () => {
+    renderDraft()
+
+    expect(screen.getByText('Two nights in Lima')).toBeInTheDocument()
+    expect(screen.getByText('Surquillo market opens at six.')).toBeInTheDocument()
+  })
+
+  it('keeps the research note beside the article, not inside it', () => {
+    // Published as body text the note is a list of URLs and admissions, and it
+    // reads as prose to anything that only counts words.
+    renderDraft()
+
+    expect(screen.getByText('Research note')).toBeInTheDocument()
+    expect(screen.getByText(/example\.pe/)).toBeInTheDocument()
+  })
+
+  it('says plainly when nothing was sourced', () => {
+    renderDraft({}, { ...DRAFT, research_note: '' })
+
+    expect(screen.getByText(/Nothing here has been checked/)).toBeInTheDocument()
+  })
+
+  it('names the model that actually answered', () => {
+    // Every v4 receipt said Opus while Flash wrote the article.
+    renderDraft()
+
+    expect(screen.getByText(/claude-opus-5-20260101/)).toBeInTheDocument()
+  })
+
+  it('shows a substitution as a difference between two names', () => {
+    renderDraft({ served_model: 'gemini-2.5-flash' })
+
+    expect(screen.getByText(/you asked for claude-opus-5-high/)).toBeInTheDocument()
+  })
+
+  it('does not claim the article was one call', () => {
+    renderDraft()
+
+    expect(screen.getByText(/14 exchanges with the model/)).toBeInTheDocument()
+  })
+
+  it('offers staging without any check having passed', () => {
+    // ADR 0036 removed the readiness verdict. A draft is savable because it
+    // exists, not because a score allowed it.
+    renderDraft()
+
+    expect(
+      screen.getByRole('link', { name: /Stage in Payload Editor/ }),
+    ).toBeInTheDocument()
+  })
+
+  it('carries no score, badge or readiness verdict', () => {
+    renderDraft()
+
+    expect(screen.queryByText(/verified/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/needs_revision/i)).not.toBeInTheDocument()
+  })
+
+  it('shows what came back when it was not an article', () => {
+    // Those words were paid for.
+    renderDraft(
+      {
+        state: 'failed',
+        failure: 'unusable_response',
+        message: 'Claude answered, but the answer was not an article.',
+        raw: 'I cannot help with that.',
+        has_draft: false,
+      },
+      null,
+    )
+
+    expect(screen.getByText('I cannot help with that.')).toBeInTheDocument()
+  })
+
+  it('keeps an earlier draft readable after a failed retry', () => {
+    // The reason attempts accumulate instead of overwriting.
+    renderDraft({ state: 'failed', message: 'Claude did not finish.', attempts: 2 })
+
+    expect(screen.getByText('Surquillo market opens at six.')).toBeInTheDocument()
+    expect(screen.getByText('Claude did not finish.')).toBeInTheDocument()
+  })
+
+  it('names what could not be read out of the reply', () => {
+    renderDraft({ parse_issue: 'The writer returned no headline.' })
+
+    expect(screen.getByText('The writer returned no headline.')).toBeInTheDocument()
+  })
+})
+
+describe('the detector on the draft screen', () => {
+  it('does not claim a draft is clean before anybody has read it', () => {
+    // The dangerous version of this screen is one that looks reviewed by
+    // default. An absent review and a review that found nothing are different
+    // answers and must not look alike.
+    renderDraft()
+
+    expect(screen.getByRole('button', { name: /read this draft/i })).toBeInTheDocument()
+    expect(screen.getByText(/Nobody has read this yet/)).toBeInTheDocument()
+  })
+
+  it('says a clean read found nothing, rather than saying nothing', () => {
+    renderDraft({}, DRAFT, {
+      state: { finding_count: 0 },
+      result: { ...REVIEW_RESULT, findings: [] },
+    })
+
+    expect(screen.getByText(/found nothing wrong with it/)).toBeInTheDocument()
+  })
+
+  it('marks the paragraph the finding is about', () => {
+    renderDraft({}, DRAFT, { state: {}, result: REVIEW_RESULT })
+
+    expect(
+      screen.getByRole('button', { name: /Museum price wrong by threefold/ }),
+    ).toBeInTheDocument()
+  })
+
+  it('shows the exact quote and the problem once the mark is opened', () => {
+    // The mark is only paragraph-accurate, so the quote it was made from has
+    // to be readable beside it.
+    renderDraft({}, DRAFT, { state: {}, result: REVIEW_RESULT })
+
+    fireEvent.click(screen.getByRole('button', { name: /Museum price wrong/ }))
+
+    expect(screen.getByText(/It opens at five/)).toBeInTheDocument()
+  })
+
+  it('offers a verdict on a finding and nothing that applies a fix', () => {
+    // Detection only. An apply button here would be fixing before anybody
+    // knows what is actually wrong with these articles.
+    const onSettleFinding = vi.fn()
+    renderDraft({}, DRAFT, { state: {}, result: REVIEW_RESULT }, { onSettleFinding })
+
+    fireEvent.click(screen.getByRole('button', { name: /Museum price wrong/ }))
+    fireEvent.click(screen.getByRole('button', { name: /real problem/i }))
+
+    expect(onSettleFinding).toHaveBeenCalledWith('f1', 'agreed')
+    expect(screen.queryByRole('button', { name: /apply|fix|rewrite/i })).toBeNull()
+  })
+
+  it('lets a verdict be taken back', () => {
+    const onSettleFinding = vi.fn()
+    renderDraft(
+      {},
+      DRAFT,
+      {
+        state: {},
+        result: { ...REVIEW_RESULT, findings: [{ ...FINDING, verdict: 'agreed' }] },
+      },
+      { onSettleFinding },
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Museum price wrong/ }))
+    fireEvent.click(screen.getByRole('button', { name: /real problem/i }))
+
+    expect(onSettleFinding).toHaveBeenCalledWith('f1', null)
+  })
+
+  it('keeps a finding whose quote is nowhere in the article', () => {
+    // The failure this guards against is silent: an unmatched quote used to
+    // mean the finding appeared nowhere at all, in a review whose whole value
+    // is that every finding gets read.
+    renderDraft({}, DRAFT, {
+      state: {},
+      result: {
+        ...REVIEW_RESULT,
+        findings: [{ ...FINDING, quote: 'a sentence that is not in the article' }],
+      },
+    })
+
+    expect(screen.getByText('About the whole piece')).toBeInTheDocument()
+    expect(screen.getByText(/It opens at five/)).toBeInTheDocument()
+  })
+
+  it('does not hang a read of an earlier draft on the article now on screen', () => {
+    // Its quotes point at paragraphs that no longer exist. It is not wrong; it
+    // is simply not about this article, and it stays readable as history.
+    renderDraft({}, DRAFT, { state: { stale: true }, result: REVIEW_RESULT })
+
+    expect(screen.getByText(/read of an earlier draft/)).toBeInTheDocument()
+    expect(screen.getByText('Findings from the earlier draft')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Museum price wrong by threefold/ })).toBeNull()
+  })
+
+  it('reports no model, no time and no cost for an article it did not write', () => {
+    // The v4 receipts named Opus while Flash wrote the article. This app made
+    // no call for a pasted draft, so it claims none.
+    renderDraft({
+      source: 'pasted',
+      written_by: 'a browser, some other model',
+      served_model: null,
+      requested_model: null,
+      cost_usd: null,
+      turns: null,
+      elapsed_seconds: null,
+    })
+
+    expect(screen.getByText(/Written outside this app and pasted in/)).toBeInTheDocument()
+    expect(screen.getByText(/as told to us, not checked/)).toBeInTheDocument()
+    expect(screen.getByText('Nothing was spent here')).toBeInTheDocument()
+    expect(screen.queryByText(/at API rates/)).toBeNull()
+    expect(screen.queryByText(/exchanges with the model/)).toBeNull()
+  })
+
+  it('says what a read cost', () => {
+    renderDraft({}, DRAFT, { state: {}, result: REVIEW_RESULT })
+
+    expect(screen.getByText(/\$0\.66/)).toBeInTheDocument()
+  })
+
+  it('says what it is doing while it reads, instead of going silent', () => {
+    renderDraft({}, DRAFT, {
+      state: { state: 'running', has_review: false },
+      result: null,
+    })
+
+    expect(screen.getByRole('button', { name: /reading it/i })).toBeDisabled()
+    expect(screen.getByText(/checking the facts it rests on/)).toBeInTheDocument()
+  })
+
+  it('explains a failed read without touching the article', () => {
+    renderDraft({}, DRAFT, {
+      state: {
+        state: 'failed',
+        has_review: false,
+        finding_count: 0,
+        failure: 'quota_exhausted',
+        message: 'The Claude account has no allowance left.',
+      },
+      result: null,
+    })
+
+    expect(screen.getByText(/no allowance left/)).toBeInTheDocument()
+    expect(screen.getByText('Surquillo market opens at six.')).toBeInTheDocument()
   })
 })
 

@@ -29,6 +29,7 @@ Every route is staff-guarded because every one of them spends money.
 from __future__ import annotations
 
 import logging
+from contextlib import nullcontext
 from dataclasses import asdict
 from typing import Any
 
@@ -37,6 +38,10 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 
 from app.core.staff_auth import require_staff, staff_user_id
+from app.features.claude_connection.cli_writer import (
+    prompt2blog_credential_scope,
+    quota_breaker_scope,
+)
 
 from ..intake_lock import exclusive_run
 from ..brief_v4 import BriefIncomplete, BriefUnusable
@@ -61,7 +66,11 @@ from ..intake_v4 import (
     polish_prompt,
     punch_list,
     intake_state,
+    generate_prompt,
     plan_research,
+    paste_draft,
+    start_generation,
+    start_review,
     reask_question,
     recent_runs,
     reopen_intake,
@@ -73,6 +82,23 @@ from ..intake_v4 import (
 from ..intake_v3 import RUN_INPUT_STAGE, prepare_v3_runtime_request, v3_run_input_artifact
 from ..research_v4 import GATHER_MAX_TOKENS, ResearchDependencies, ResearchUnusable
 from ..work_order_v4 import WorkOrderUnusable
+from ..writer_prompt import PromptCannotBeAssembled
+from ..writer_v5 import research_writer
+from ..generation_v5 import (
+    GenerationAlreadyRunning,
+    NothingToPaste,
+    NothingToWriteFrom,
+    finished_draft,
+    run_attempt,
+)
+from ..editor_v5 import review_writer
+from ..review_v5 import (
+    NothingToReview,
+    ReviewAlreadyRunning,
+    finished_review,
+    mark_finding,
+    run_review,
+)
 from .runs import (
     _prompt2blog_credential_for_run,
     _run_pipeline_v3_background as _run_pipeline_v4_background,
@@ -80,6 +106,7 @@ from .runs import (
 from ..run_budget import RunTokenCeilingReached
 from ..selection_v4 import SelectionRefused
 from ..work_order_v4 import PlanHasNothingWorthReading, PlanTooLargeToFinish
+from ..support import _safe_str
 
 logger = logging.getLogger(__name__)
 
@@ -249,6 +276,48 @@ def _handle(action, *args, **kwargs) -> Any:
                 "raw": error.reason,
             },
         ) from error
+    except GenerationAlreadyRunning as error:
+        # 409, not 500. Nothing went wrong and nothing was spent: a second
+        # request arrived while the first was still in the model, and the
+        # honest answer is that the article is already being written.
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "already_writing", "message": str(error)},
+        ) from error
+    except NothingToWriteFrom as error:
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "no_current_prompt", "message": str(error)},
+        ) from error
+    except ReviewAlreadyRunning as error:
+        # 409 for the reason `already_writing` is one: nothing went wrong and
+        # nothing was spent twice. A second request arrived while the first
+        # read was still in the model.
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "already_reviewing", "message": str(error)},
+        ) from error
+    except NothingToPaste as error:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "nothing_to_paste", "message": str(error)},
+        ) from error
+    except NothingToReview as error:
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "nothing_to_review", "message": str(error)},
+        ) from error
+    except PromptCannotBeAssembled as error:
+        # 400 and the field name. This is the one failure here the operator can
+        # actually fix, and they fix it in the grill.
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "prompt_cannot_be_assembled",
+                "message": str(error),
+                "raw": error.field,
+            },
+        ) from error
     except ResearchUnusable as error:
         logger.error("Dossier did not fit its contract: %s | %s", error.reason, error.raw[:2000])
         raise HTTPException(
@@ -410,6 +479,20 @@ def reopen(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
 def build_the_brief(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Turn an agreed grill into the brief the run answers to."""
     _handle(approve_brief, run_id, _services(run_id))
+    return JSONResponse(intake_state(run_id))
+
+
+@router.post("/{run_id}/prompt")
+@exclusive_run
+def generate_the_prompt(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """Freeze the approved brief into the assignment the writer will receive.
+
+    The one route here that spends nothing. It calls no model and fetches no
+    page, so it carries no budget check and pressing it twice costs the same as
+    pressing it once. What it produces is the exact text the writer is sent,
+    shown before anything is bought.
+    """
+    _handle(generate_prompt, run_id, _services(run_id))
     return JSONResponse(intake_state(run_id))
 
 
@@ -661,6 +744,221 @@ def read_writing_request(
     """
     handoff = _handle(writing_request, run_id)
     return JSONResponse(handoff.request.model_dump(mode="json"))
+
+
+def _write_the_article_background(
+    run_id: str,
+    attempt_id: str,
+    prompt,
+    services,
+    credential,
+) -> None:
+    """The writing itself, off the request.
+
+    Failures are contained here because `run_attempt` has already recorded
+    them. An exception escaping a background task writes nothing anybody can
+    read and leaves the run reporting "writing" forever.
+    """
+    try:
+        scope = (
+            prompt2blog_credential_scope(credential.token)
+            if credential is not None
+            else nullcontext()
+        )
+        with quota_breaker_scope(), scope:
+            run_attempt(
+                run_id,
+                attempt_id,
+                prompt,
+                research_writer(),
+                services.recorder,
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception("Prompt2Blog writing attempt crashed", extra={"run_id": run_id})
+
+
+@router.post("/{run_id}/generate", status_code=202)
+@exclusive_run
+def generate_the_article(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+    _staff=Depends(require_staff),
+) -> JSONResponse:
+    """Send the frozen prompt to the researching writer.
+
+    The claim on the run is written synchronously, before this returns, so a
+    double click or a resubmitted POST finds it already there. The writing
+    itself is minutes of work and runs in the background; the page polls
+    `GET /intake/{run_id}`, which starts nothing.
+    """
+    attempt_id, prompt = _handle(start_generation, run_id, _services(run_id))
+    credential = _prompt2blog_credential_for_run()
+    background_tasks.add_task(
+        _write_the_article_background,
+        run_id,
+        attempt_id,
+        prompt,
+        _services(run_id),
+        credential,
+    )
+    return JSONResponse(intake_state(run_id), status_code=202)
+
+
+@router.get("/{run_id}/draft")
+def read_draft(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """The article this run produced, for reading.
+
+    Its own call rather than part of the polled state: the state is asked for
+    every few seconds while an article is being written, and this is the whole
+    article plus the reply it was parsed out of.
+    """
+    return JSONResponse(_handle(finished_draft, run_id))
+
+
+class PastedDraftRequest(BaseModel):
+    """An article written somewhere else, brought back to this run."""
+
+    markdown: str = Field(min_length=1)
+    # Whatever the operator says wrote it. Recorded as their word and shown as
+    # their word; nothing here resolves a model.
+    written_by: str = ""
+
+
+@router.post("/{run_id}/draft", status_code=201)
+@exclusive_run
+def paste_the_draft(
+    run_id: str,
+    request: PastedDraftRequest,
+    _staff=Depends(require_staff),
+) -> JSONResponse:
+    """File an article written outside this app as this run's draft.
+
+    The frozen prompt is a copy-paste artifact, so an operator can take it to
+    any model they like. This is the way back: once the article is on the run,
+    the detector, Saved Articles and staging into Payload all work on it
+    unchanged, because every one of those reads the draft rather than the call
+    that made it.
+
+    Costs nothing and calls nothing. It also never overwrites: the draft lands
+    as another attempt beside whatever the run already had.
+    """
+    _handle(paste_draft, run_id, request.markdown, _services(run_id),
+            written_by=request.written_by)
+    return JSONResponse(intake_state(run_id), status_code=201)
+
+
+class VerdictRequest(BaseModel):
+    """What the operator makes of one finding.
+
+    `None` clears a verdict rather than recording a third opinion: undecided is
+    the absence of an answer, and storing it as one would make "I have not
+    looked at this yet" indistinguishable from "I looked and could not say".
+    """
+
+    verdict: str | None = None
+
+
+def _read_the_draft_background(
+    run_id: str,
+    review_id: str,
+    brief,
+    draft: dict,
+    services,
+    credential,
+) -> None:
+    """The read itself, off the request.
+
+    Failures are contained here because `run_review` has already recorded them.
+    An exception escaping a background task writes nothing anybody can read and
+    leaves the page saying "reading" forever.
+    """
+    try:
+        scope = (
+            prompt2blog_credential_scope(credential.token)
+            if credential is not None
+            else nullcontext()
+        )
+        with quota_breaker_scope(), scope:
+            run_review(
+                run_id,
+                review_id,
+                brief,
+                _safe_str(draft.get("article_markdown")),
+                _safe_str(draft.get("research_note")),
+                _safe_str(draft.get("content_hash")),
+                review_writer(),
+                services.recorder,
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception("Prompt2Blog review crashed", extra={"run_id": run_id})
+
+
+@router.post("/{run_id}/review", status_code=202)
+@exclusive_run
+def review_the_draft(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+    _staff=Depends(require_staff),
+) -> JSONResponse:
+    """Read the finished draft and say what is wrong with it.
+
+    Detection only. Nothing here proposes replacement text and nothing applies
+    a change; the findings are input to fixing the writer, not edits waiting
+    for a button.
+
+    The claim on the run is written synchronously, before this returns, so a
+    double click finds it already there. The read is minutes of work and runs
+    in the background; the page polls `GET /intake/{run_id}`, which starts
+    nothing.
+    """
+    review_id, brief, draft = _handle(start_review, run_id, _services(run_id))
+    credential = _prompt2blog_credential_for_run()
+    background_tasks.add_task(
+        _read_the_draft_background,
+        run_id,
+        review_id,
+        brief,
+        draft,
+        _services(run_id),
+        credential,
+    )
+    return JSONResponse(intake_state(run_id), status_code=202)
+
+
+@router.get("/{run_id}/review")
+def read_review(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """The findings, for reading.
+
+    Its own call rather than part of the polled state, for the reason the draft
+    is: this is every finding with its quote and its problem, plus the reply it
+    was parsed out of.
+    """
+    return JSONResponse(_handle(finished_review, run_id))
+
+
+@router.post("/{run_id}/review/{review_id}/finding/{finding_id}")
+def settle_a_finding(
+    run_id: str,
+    review_id: str,
+    finding_id: str,
+    request: VerdictRequest,
+    _staff=Depends(require_staff),
+) -> JSONResponse:
+    """Record what the operator makes of one finding.
+
+    Costs nothing and changes nothing about the article. The verdict is kept
+    beside the model's finding, never over it, so the cross-run read can skip
+    what has already been thrown out without losing what was said.
+    """
+    _handle(
+        mark_finding,
+        run_id,
+        review_id,
+        finding_id,
+        request.verdict,
+        _services(run_id).recorder,
+    )
+    return JSONResponse(_handle(finished_review, run_id))
 
 
 @router.post("/{run_id}/write", status_code=202)

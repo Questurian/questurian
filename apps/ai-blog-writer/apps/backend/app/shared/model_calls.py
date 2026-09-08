@@ -44,6 +44,7 @@ from app.shared.writer_invocation import (
     StructuredWriterResult,
     WriterResult,
     invoke_anthropic_structured,
+    invoke_research_writer,
     invoke_writer_model,
 )
 
@@ -88,6 +89,44 @@ def writer_text(
         observed.set_provider(_provider_for(result.model_name))
         observed.record_usage(result.usage)
     return result
+
+
+def research_text(
+    job_id: str,
+    *,
+    prompt: str,
+    model: Optional[str] = None,
+    endpoint: str = "research_text",
+) -> dict[str, Any]:
+    """A research-and-writing call, reported under its job.
+
+    Goes through the same seam as every other call so the dashboard and the
+    run's ledger see it, and so the model it ran on is decided by the registry
+    rather than by a call site.
+
+    One difference is worth knowing about: this is many provider round trips
+    inside one job, not one. The usage that comes back is the whole
+    assignment's -- searches, fetches and writing together -- because that is
+    what the transport reports and splitting it would be a guess.
+    """
+    resolved = resolve(job_id, model)
+    with observe_job_call(
+        job_id,
+        provider=PROVIDER_GOOGLE_VERTEX,
+        model=resolved,
+        endpoint=endpoint,
+    ) as observed:
+        reply = invoke_research_writer(prompt=prompt, model_name=resolved)
+        served = reply.get("modelName")
+        if isinstance(served, str) and served:
+            observed.set_model(served)
+            observed.set_provider(_provider_for(served))
+        usage = reply.get("usage")
+        if isinstance(usage, dict):
+            observed.record_usage(usage)
+    # What was asked for, beside what answered. A substitution has to be
+    # visible as a difference between two recorded names, not an absence.
+    return {**reply, "askedFor": resolved}
 
 
 def structured(
