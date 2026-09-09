@@ -137,6 +137,16 @@ returned place is real, currently open, independently sourced or worth writing
 about, and repeated discovery is reported as repeated discovery rather than as
 a verdict on quality. The evidence step is not built.
 
+**Nor is a returned place checked against the cut.** The exclusions are
+composed into every search prompt, and that is necessary and not sufficient:
+run 33fca394 returned eight Nikkei and Japanese restaurants against an explicit
+"no places where ceviche is not the primary offering". `gate.assess` does not
+catch this and was never going to -- it weighs whether enough is published
+about a place, and all eight are written about constantly. Checking the cut is
+a separate per-place judgement, it needs evidence about the place rather than
+its name, and it does not exist. The screen says so rather than presenting the
+candidates as though something had checked them.
+
 Nor has the revised angle strategy been shown to find better places. The eight
 evaluation cases are in `app/features/listicle_pipeline/evaluation.py` with
 their criteria written down in advance; the paid comparison is

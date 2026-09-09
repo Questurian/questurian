@@ -370,6 +370,33 @@ describe('the agreed order on screen', () => {
     ).toBeInTheDocument()
   })
 
+  it('says the candidates were never checked against the cut', async () => {
+    // Run 33fca394 returned eight Nikkei and Japanese restaurants against an
+    // explicit "no places where ceviche is not the primary offering". A list
+    // presented without saying so reads as though something checked it.
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(order())
+    loadSearch.mockResolvedValue(
+      results({
+        order: {
+          kind: 'cevicherias',
+          place: 'Lima, Peru',
+          target_count: 20,
+          standard: '',
+          exclusions: 'no places where ceviche is not the primary offering',
+          count_source: 'answered',
+          count_ambiguous: false,
+          count_note: '',
+        },
+      }),
+    )
+    renderAt('/listicle-pipeline/abc123')
+
+    expect(
+      await screen.findByText(/has been checked against what you left out/),
+    ).toBeInTheDocument()
+  })
+
   it('says when the order cannot fill the list, without adding a search', async () => {
     loadGrill.mockResolvedValue(AGREED)
     loadOrder.mockResolvedValue(

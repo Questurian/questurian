@@ -205,12 +205,28 @@ interview is worse than a repeat.
    poor value but is not nothing — so the screen counts zero, and leaves "ten
    rows for one place" to the operator's judgement.
 
-3. **The `cut` reaches every search prompt and the model ignores it.** Run 2
-   returned Maido, Osaka Nikkei, Hanzo (twice), Toshi, Nikko, Tomo and Shizen
-   against an explicit "no places where ceviche is not the primary offering".
-   Composing the rule in is necessary and not sufficient. Catching it is the
-   unbuilt evidence/gate step's job — do not try to solve it with more prompt
-   text.
+3. **The `cut` reaches every search prompt and the model ignores it.**
+   Confirmed on the stored run, 2026-09-09: 8 of `33fca394`'s 43 candidates —
+   Hanzo (twice), Maido, Nikko, Osaka Nikkei, Shizen, Tomo, Toshi — are places
+   the cut explicitly barred.
+
+   **Correction to what this note used to say.** It said catching this was the
+   unbuilt evidence/gate step's job. That is wrong, and acting on it would have
+   wasted the work: `gate.assess` **is** built and tested, and it answers a
+   different question — is enough published about this place to write about it.
+   Every one of those eight is written about constantly, so a fully wired gate
+   would have passed all eight.
+
+   Checking the cut is a separate per-place judgement that does not exist
+   anywhere. It cannot be done from a name; it needs evidence about the place,
+   which means `build_profile` running for every candidate — around forty paid
+   calls per run — plus a new verdict the gate does not currently have. That is
+   a real feature and a spending decision, so it was **not** built here.
+
+   What was done instead, because it costs nothing and the screen was lying by
+   omission: the results now say plainly that nothing below has been checked
+   against the cut. The rule still goes to every search. Do not reach for more
+   prompt text — that is what produced the eight.
 
 4. **The model still over-tightens its own wording, and it costs measurably.**
    Run 1's market angle was "ceviche counters inside the city's markets or

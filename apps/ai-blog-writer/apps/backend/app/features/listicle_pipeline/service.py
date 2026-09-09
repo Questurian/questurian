@@ -402,10 +402,18 @@ def build_profile(
     """Open this place's profile, anchor it, and gather what has been said.
 
     Deliberately not called by the search step. A profile is worth building for
-    a candidate that survives, and which candidates survive is what the gate --
-    not yet built -- decides. Wiring this into the pipeline before that gate
-    exists would research every row returned, including the ones the gate is
-    there to throw away.
+    a candidate that survives, and wiring this in would research every row
+    returned -- around forty on a real run -- including the ones that are there
+    to be thrown away.
+
+    `gate.assess` exists and is tested, but it answers one question: is enough
+    published about this place to write about it. It does not answer whether
+    the place breaks the cut, and the two are not the same question. Run
+    33fca394 returned eight Nikkei and Japanese restaurants against an explicit
+    "no places where ceviche is not the primary offering", and every one of
+    them is written about constantly -- so a wired gate would have passed all
+    eight. Checking the cut is a separate judgement about each place, and it is
+    not built.
 
     Running it twice on the same place is safe and is the normal case: the
     profile is found rather than created, claims already held are not added

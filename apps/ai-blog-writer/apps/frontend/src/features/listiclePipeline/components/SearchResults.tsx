@@ -179,6 +179,25 @@ export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
         </tbody>
       </table>
 
+      {/* The cut is composed into every search prompt and the model does not
+          reliably obey it. Run 33fca394 returned eight Nikkei and Japanese
+          restaurants against an explicit "no places where ceviche is not the
+          primary offering". Nothing here checks them, and a list presented
+          without saying so reads as though something did.
+
+          Not solved with more prompt text -- that was already tried and is
+          what produced the eight. Checking a place against the cut is a
+          judgement about that place, and it is not built. `gate.assess` does
+          not do it either: it weighs whether enough is published about a
+          place, and every one of those eight is written about constantly. */}
+      {results.order.exclusions && results.candidates.length > 0 && (
+        <p className="lp-results-unchecked" role="status">
+          Nothing below has been checked against what you left out. The rule
+          went to every search; whether a place breaks it is not something this
+          step decides.
+        </p>
+      )}
+
       <ol className="lp-candidates">
         {results.candidates.map(candidate => (
           <li key={`${candidate.name}-${candidate.district}`} className="lp-candidate">

@@ -527,6 +527,16 @@
 
 /* What this search bought last time. Quiet: it is a fact offered, not a
    recommendation, and it must not outweigh the angle it sits under. */
+/* What was asked for and not verified. Reads as a caveat, not an alarm: the
+   candidates are real findings, they are simply not checked. */
+.lp-results-unchecked {
+  margin: var(--space-3) 0 var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--muted);
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
 .lp-order-angle-history {
   display: block;
   margin-top: 0.15rem;
