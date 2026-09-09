@@ -19,6 +19,7 @@ interface OrderPanelProps {
   order: ListicleOrder
   busy: boolean
   onCorrectCount: (target: number) => void
+  onCorrectRequirements: (patch: { standard?: string; exclusions?: string }) => void
 }
 
 const SOURCE_NOTE: Record<string, string> = {
@@ -30,14 +31,28 @@ const SOURCE_NOTE: Record<string, string> = {
   default: 'nothing said how many, so this is a default',
 }
 
-export function OrderPanel({ order, busy, onCorrectCount }: OrderPanelProps) {
+export function OrderPanel({
+  order,
+  busy,
+  onCorrectCount,
+  onCorrectRequirements,
+}: OrderPanelProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(String(order.target_count))
+  const [editingRequirements, setEditingRequirements] = useState(false)
+  const [standard, setStandard] = useState(order.standard)
+  const [exclusions, setExclusions] = useState(order.exclusions)
 
   useEffect(() => {
     setDraft(String(order.target_count))
     setEditing(false)
   }, [order.target_count, order.revision])
+
+  useEffect(() => {
+    setStandard(order.standard)
+    setExclusions(order.exclusions)
+    setEditingRequirements(false)
+  }, [order.standard, order.exclusions, order.revision])
 
   const parsed = Number.parseInt(draft, 10)
   const valid = Number.isFinite(parsed) && parsed >= 1 && parsed <= 200
@@ -110,24 +125,83 @@ export function OrderPanel({ order, busy, onCorrectCount }: OrderPanelProps) {
         </button>
       )}
 
-      <dl className="lp-order-requirements">
-        {order.standard && (
-          <>
-            <dt>Earns a place</dt>
-            <dd>{order.standard}</dd>
-          </>
-        )}
-        {order.exclusions && (
-          <>
-            <dt>Left out</dt>
-            <dd>{order.exclusions}</dd>
-          </>
-        )}
-      </dl>
-      {(order.standard || order.exclusions) && (
-        <p className="lp-muted lp-order-note">
-          Attached to every search, whichever angle finds the place.
+      {/* A marker the interview answered twice. The value was resolved from
+          the answers rather than by taking the last one, and the resolution is
+          said out loud: keeping both is the safe reading, not the certain one,
+          and the operator is the only one who knows which they meant. */}
+      {order.answer_notes.map(note => (
+        <p key={note} className="lp-order-warning" role="status">
+          {note}
         </p>
+      ))}
+
+      {editingRequirements ? (
+        <div className="lp-order-edit lp-order-edit-requirements">
+          <label htmlFor="lp-standard">What earns a place</label>
+          <textarea
+            id="lp-standard"
+            rows={3}
+            value={standard}
+            disabled={busy}
+            onChange={event => setStandard(event.target.value)}
+          />
+          <label htmlFor="lp-exclusions">What is left out</label>
+          <textarea
+            id="lp-exclusions"
+            rows={3}
+            value={exclusions}
+            disabled={busy}
+            onChange={event => setExclusions(event.target.value)}
+          />
+          <button
+            type="button"
+            disabled={
+              busy ||
+              (standard === order.standard && exclusions === order.exclusions)
+            }
+            onClick={() => onCorrectRequirements({ standard, exclusions })}
+          >
+            Use these
+          </button>
+          <button
+            type="button"
+            className="lp-secondary"
+            disabled={busy}
+            onClick={() => setEditingRequirements(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <>
+          <dl className="lp-order-requirements">
+            {order.standard && (
+              <>
+                <dt>Earns a place</dt>
+                <dd>{order.standard}</dd>
+              </>
+            )}
+            {order.exclusions && (
+              <>
+                <dt>Left out</dt>
+                <dd>{order.exclusions}</dd>
+              </>
+            )}
+          </dl>
+          {(order.standard || order.exclusions) && (
+            <p className="lp-muted lp-order-note">
+              Attached to every search, whichever angle finds the place.
+            </p>
+          )}
+          <button
+            type="button"
+            className="lp-secondary lp-order-correct"
+            disabled={busy}
+            onClick={() => setEditingRequirements(true)}
+          >
+            Correct what earns a place, or what is left out
+          </button>
+        </>
       )}
 
       <ol className="lp-order-angles">

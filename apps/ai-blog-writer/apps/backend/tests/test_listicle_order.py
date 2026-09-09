@@ -274,3 +274,116 @@ def test_the_summary_reads_as_a_sentence_rather_than_a_doubled_headline():
     )
     summary = spec.summary_of(spec.build_search_order(state))
     assert summary.startswith("40 cevicherias in Lima.")
+
+
+# A marker answered twice
+#
+# Until 2026-09-08 a marker's value was read from the LAST turn that settled
+# it. Correct for a correction, silently destructive for the additive
+# follow-up the grill actually asks: run 292e71e3 settled the cut, then asked
+# "are there any other types of establishments ... you would like to exclude?"
+# and recommended "No hotel restaurants." Answering that plainly would have
+# left one rule out of four and searched under a quarter of the exclusions,
+# on a run that looked entirely normal.
+
+
+def _twice_about(marker: str, first: str, second: str):
+    turns = [t for t in default_turns() if t.question.asks_about != marker]
+    turns.append(turn(marker, first))
+    turns.append(turn(marker, second))
+    return agreed_state(turns=turns)
+
+
+def test_an_additive_follow_up_keeps_the_first_answer():
+    """The real failure, in the shape it really had."""
+    state = _twice_about(
+        "cut",
+        "No chains, no delivery-only kitchens, and no places where ceviche is "
+        "not the primary offering.",
+        "No hotel restaurants.",
+    )
+    decision = spec.resolve_answer(state, "cut")
+    assert decision.source == "combined"
+    for rule in ("chains", "delivery-only", "primary offering", "hotel restaurants"):
+        assert rule in decision.text
+
+
+def test_retyping_the_whole_list_does_not_store_it_twice():
+    """What the operator on 2026-09-08 actually did, having read the code.
+    The later answer says everything the earlier one said, so it stands
+    alone."""
+    state = _twice_about(
+        "cut",
+        "No chains, no delivery-only kitchens, and no places where ceviche is "
+        "not the primary offering.",
+        "No chains, no delivery-only kitchens, no places where ceviche is not "
+        "the primary offering, and no hotel restaurants.",
+    )
+    decision = spec.resolve_answer(state, "cut")
+    assert decision.source == "restated"
+    assert decision.text.count("chains") == 1
+    assert "hotel restaurants" in decision.text
+
+
+def test_a_partly_restated_answer_keeps_both_rather_than_guessing():
+    """Three rules restated and a fourth gone is ambiguous: dropped on
+    purpose, or forgotten. Both are kept, because over-restricting a search is
+    visible on the results and under-restricting it is not."""
+    state = _twice_about(
+        "cut", "no chains, no delivery-only kitchens", "no chains, no hotel bars"
+    )
+    decision = spec.resolve_answer(state, "cut")
+    assert decision.source == "combined"
+    assert "delivery-only" in decision.text
+
+
+def test_a_second_answer_about_the_bar_is_added_not_swapped_in():
+    state = _twice_about(
+        "bar", "written up by someone other than the place itself", "open on Sundays"
+    )
+    decision = spec.resolve_answer(state, "bar")
+    assert decision.source == "combined"
+    assert "written up" in decision.text and "Sundays" in decision.text
+
+
+def test_the_angles_are_replaced_because_the_picker_sends_the_whole_selection():
+    """Un-ticking a box is already an explicit replace. Accumulating here
+    would put back the angle the operator just dropped, and every angle is a
+    paid search."""
+    state = _twice_about("angles", "cevicherias open for decades", "nikkei cevicherias")
+    decision = spec.resolve_answer(state, "angles")
+    assert decision.source == "replaced"
+    assert decision.text == "nikkei cevicherias"
+    assert spec.angle_lines(state) == ["nikkei cevicherias"]
+
+
+def test_a_second_noun_replaces_the_first():
+    state = _twice_about("kind", "cevicherias", "seafood restaurants")
+    assert spec.kind_from(state) == "seafood restaurants"
+
+
+def test_a_marker_answered_once_says_nothing_about_being_answered_twice():
+    """The normal interview. Both real runs of 2026-09-08 produce no notes,
+    which is how this fix stays invisible when nothing repeated."""
+    order = spec.build_search_order(agreed_state())
+    assert order.answer_notes == []
+
+
+def test_a_combined_answer_reaches_the_order_and_says_so():
+    state = _twice_about(
+        "cut", "no chains, no delivery-only kitchens", "no hotel restaurants"
+    )
+    order = spec.build_search_order(state)
+    assert "chains" in order.exclusions and "hotel restaurants" in order.exclusions
+    assert any(note.startswith("What is left out:") for note in order.answer_notes)
+    # The operator reads this on a headless run, where there is no screen.
+    assert "What is left out:" in spec.summary_of(order)
+
+
+def test_correcting_a_combined_answer_clears_the_question_it_asked():
+    notes = [
+        "What is left out: This was answered twice and every answer is being used.",
+        "What earns a place: This was answered twice and every answer is being used.",
+    ]
+    remaining = spec.drop_note_for(notes, "cut")
+    assert remaining == [notes[1]]

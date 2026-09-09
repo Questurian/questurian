@@ -54,6 +54,10 @@ interface UseListicleGrill {
   answer: (text: string, selections?: ListicleAngleSelection[]) => void
   search: (options?: { angleIds?: string[]; reuse?: boolean }) => void
   correctCount: (target: number) => void
+  /** The bar or the cut, typed out. Needed because either can have been
+   *  assembled from more than one answer, and an assembled value has to be
+   *  arguable. */
+  correctRequirements: (patch: { standard?: string; exclusions?: string }) => void
   reset: () => void
 }
 
@@ -203,14 +207,18 @@ export function useListicleGrill(runId: string | null): UseListicleGrill {
     [searching, state?.run_id],
   )
 
-  const correctCount = useCallback(
-    (target: number) => {
+  // One correction path, whatever is being corrected. The count, the bar and
+  // the cut all make a new revision and all invalidate stored results the same
+  // way, and a second copy of that sequence is a second place for the re-read
+  // to be forgotten.
+  const correctOrder = useCallback(
+    (patch: { target_count?: number; standard?: string; exclusions?: string }) => {
       const id = state?.run_id
       if (!id) return
       setError(null)
       void (async () => {
         try {
-          const revised = await reviseOrder(id, { target_count: target })
+          const revised = await reviseOrder(id, patch)
           if (showing.current !== id) return
           setOrder(revised)
           // The results on screen answered the previous request. Re-read
@@ -227,6 +235,11 @@ export function useListicleGrill(runId: string | null): UseListicleGrill {
       })()
     },
     [state?.run_id],
+  )
+
+  const correctCount = useCallback(
+    (target: number) => correctOrder({ target_count: target }),
+    [correctOrder],
   )
 
   const reset = useCallback(() => {
@@ -250,6 +263,7 @@ export function useListicleGrill(runId: string | null): UseListicleGrill {
     answer,
     search,
     correctCount,
+    correctRequirements: correctOrder,
     reset,
   }
 }

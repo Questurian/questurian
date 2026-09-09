@@ -15,8 +15,9 @@ Vocabulary: the "Listicle Pipeline (search order)" section of `CONTEXT.md`.
 
 ## State right now
 
-**Committed and pushed.** Branch `listicle/search-order-rework`, one commit,
-39 files. Open as **PR #557** against `main`.
+**Committed and pushed.** Branch `listicle/search-order-rework`. Open as
+**PR #557** against `main`. First commit: 39 files, the rework itself. Second:
+the repeated-marker fix below.
 
 **This file only exists on that branch.** If you are reading a checkout of
 `main` you cannot see it, and you cannot see the code either:
@@ -28,9 +29,10 @@ The owner's unrelated Prompt2Blog work is committed separately on
 staging CSS extraction. Nothing of it is mixed into this branch. Do not merge
 the two.
 
-Working tree is clean. Verification **on this branch alone**: 2249 backend
-tests, 871 frontend, tsc and eslint clean, flake8 clean apart from two
-pre-existing F401s in `listicle_pipeline/api.py` and `profiles.py`.
+Working tree is clean. Verification **on this branch alone**: 2258 backend
+tests, 873 frontend, tsc and eslint clean, flake8 clean apart from two
+pre-existing F401s in `listicle_pipeline/api.py` and `profiles.py`. (2249 / 871
+before the repeated-marker fix added its tests.)
 
 Those counts are lower than the 2263 / 876 quoted while the two branches shared
 a working tree, and the difference is not a regression: the owner's
@@ -96,58 +98,78 @@ one order is the obvious untried lever.
 Everything runs on `gemini-2.5-flash` (`listicle.grill`,
 `listicle.grill_lookup`, `listicle.search` — all registered, all resolve).
 
-## THE ONE THING THAT MUST BE FIXED FIRST
+## The one thing that had to be fixed first -- fixed 2026-09-09
 
-**A marker's value is read from the LAST turn that settled it, and a repeated
-question silently replaces the earlier answer.**
+**A marker's value was read from the LAST turn that settled it, and a repeated
+question silently replaced the earlier answer.**
 
-`spec._answer_for` walks `reversed(state.turns)` and takes the first match.
-That is correct when a marker is genuinely corrected. It is wrong when the
-grill asks an *additive* follow-up, which run `292e71e3` did: after exclusions
-were settled it asked "anything else you would like to exclude?", recommending
-"No hotel restaurants."
+That was correct for a genuine correction and wrong for the *additive*
+follow-up the grill actually asks. Run `292e71e3` asked, after exclusions were
+settled, "are there any other types of establishments ... that you would like
+to exclude?", recommending "No hotel restaurants." Answering it naturally would
+have made that the entire cut and thrown away chains, delivery-only and
+ceviche-not-primary. The run would have looked completely normal. It did not
+happen only because the operator that day had read the code and retyped the
+full list.
 
-Answering that naturally would have made "No hotel restaurants" the entire cut
-and thrown away chains, delivery-only and ceviche-not-primary. The run would
-have looked completely normal and searched under one quarter of the operator's
-exclusions. It did not happen only because the operator that day had read the
-code and retyped the full list.
+`spec.resolve_answer` now reads every turn that answered a marker and decides
+between them, and the decision is written on the order rather than taken
+silently:
 
-`grill_v4._WastedTurn` now retries a repeated-marker question once, which makes
-the repeat much rarer — but on the second failure it **shows the question
-anyway** (deliberately: a dead interview is worse). So the path is still open.
+- A later answer that says everything the earlier one said **replaces** it
+  (`restated`). That is the retype, and it does not store the list twice.
+- A later answer that says something different is **added** to it (`combined`)
+  for the `bar` and the `cut`, which are the two markers a follow-up asks an
+  increment about.
+- `kind`, `place` and `angles` still take the last answer (`replaced`), on
+  purpose: the first two are single nouns, and the angle picker sends the whole
+  current selection, so un-ticking a box already is the explicit replace.
+  Accumulating there would put back an angle the operator just dropped, and
+  every angle is a paid search.
+- A *partial* restatement -- three rules repeated and a fourth gone -- is read
+  as an addition and both are kept. Over-restricting a search is visible on the
+  results; under-restricting it is not.
 
-The fix is at the `spec` layer, not the engine: a marker answered twice needs
-either explicit accumulation or an explicit replace, not last-write-wins. Do
-not "fix" it by making the engine refuse — that trades silent data loss for a
-stuck interview.
+Because keeping both can hold a rule they meant to drop, the combination is
+said on screen (`SearchOrder.answer_notes`) and the bar and the cut are now
+correctable there, the way the count already was. `service.revise_order` takes
+`standard` and `exclusions`; correcting one clears its note.
+
+Checked against both stored runs: neither changes (`292e71e3`'s cut resolves
+`restated`, `33fca394`'s is `single`), and neither produces a note. Replaying
+`292e71e3` with turn 2 answered naturally now keeps all four rules.
+
+The engine was deliberately left alone. `grill_v4._WastedTurn` still retries a
+repeated-marker question once and then shows it anyway, because a dead
+interview is worse than a repeat.
 
 ## Other open items, in order
 
-2. **The UI has never seen a live run.** Both runs were driven headlessly.
-   `AnglePicker` sending selections, `OrderPanel`'s count correction, the
-   per-angle retry buttons — all unit-tested, none exercised end to end in a
-   browser. Do this before trusting the screen.
+1. **The UI has never seen a live run.** Both runs were driven headlessly.
+   `AnglePicker` sending selections, `OrderPanel`'s count correction and its
+   new bar/cut correction, the per-angle retry buttons — all unit-tested, none
+   exercised end to end in a browser. Do this before trusting the screen. It is
+   now the top item, and the fix above added a control to that same panel.
 
-3. **Angles that contribute nothing still cost a search.** In `33fca394`,
+2. **Angles that contribute nothing still cost a search.** In `33fca394`,
    `purist` returned 10 rows for 1 unique place and `hours` returned 6 rows for
    0. Roughly two of seven searches bought nothing. There is no mechanism that
    notices this, and contribution is only visible after the money is spent.
 
-4. **The `cut` reaches every search prompt and the model ignores it.** Run 2
+3. **The `cut` reaches every search prompt and the model ignores it.** Run 2
    returned Maido, Osaka Nikkei, Hanzo (twice), Toshi, Nikko, Tomo and Shizen
    against an explicit "no places where ceviche is not the primary offering".
    Composing the rule in is necessary and not sufficient. Catching it is the
    unbuilt evidence/gate step's job — do not try to solve it with more prompt
    text.
 
-5. **The model still over-tightens its own wording, and it costs measurably.**
+4. **The model still over-tightens its own wording, and it costs measurably.**
    Run 1's market angle was "ceviche counters inside the city's markets or
    street stalls" → 11 rows, 11 unique. Run 2's was the same plus "not
    traditional sit-down restaurants" → 6 rows, 4 unique. One comparison is not
    proof, but it is the predicted direction and a large drop.
 
-6. **No paid angle comparison has been run.** `evaluation.py` holds the eight
+5. **No paid angle comparison has been run.** `evaluation.py` holds the eight
    cases and their criteria, fixed in advance on purpose.
    `scripts/listicle_angle_comparison.py` runs one arm. Agree thresholds before
    spending, not after.

@@ -140,6 +140,8 @@ def revise_order(
     *,
     target_count: int | None = None,
     angles: list[dict] | None = None,
+    standard: str | None = None,
+    exclusions: str | None = None,
 ) -> SearchOrder:
     """Correct the agreement, at a new revision.
 
@@ -162,6 +164,18 @@ def revise_order(
         updated.count_source = "corrected by operator"
         updated.count_ambiguous = False
         updated.count_note = ""
+    # The bar and the cut can be typed out here because they may have been
+    # assembled from two answers rather than given once. A combined value is
+    # the safe reading and not necessarily the right one -- it keeps a rule the
+    # operator may have meant to drop -- so the only honest way to combine is
+    # to leave a way to disagree. Correcting one clears its note: it was a
+    # question about an inference, and there is no longer an inference.
+    if standard is not None:
+        updated.standard = standard.strip()
+        updated.answer_notes = spec.drop_note_for(updated.answer_notes, "bar")
+    if exclusions is not None:
+        updated.exclusions = exclusions.strip()
+        updated.answer_notes = spec.drop_note_for(updated.answer_notes, "cut")
     if angles is not None:
         if not angles:
             raise ValueError("An order with no searches in it cannot be run.")
@@ -359,6 +373,7 @@ def _upgrade_legacy(stored: dict, current: "SearchOrder") -> dict:
             "count_source": current.count_source,
             "count_ambiguous": current.count_ambiguous,
             "count_note": current.count_note,
+            "answer_notes": list(current.answer_notes),
         },
         "angles": angles,
         "candidates": candidates,

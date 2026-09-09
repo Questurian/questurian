@@ -132,6 +132,7 @@ export function ListiclePipelinePage() {
                 order={order}
                 busy={busy || searching}
                 onCorrectCount={grill.correctCount}
+                onCorrectRequirements={grill.correctRequirements}
               />
             )}
 

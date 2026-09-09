@@ -99,6 +99,13 @@ class SearchOrder(ListicleModel):
     count_source: str = "default"
     count_ambiguous: bool = False
     count_note: str = ""
+    # Markers the interview answered more than once, and what was done about
+    # it. A repeat used to be resolved by taking the last answer and saying
+    # nothing, which is how an additive follow-up about the cut could delete
+    # three quarters of it and leave a run that looked entirely normal. The
+    # resolution is now a decision, and a decision has to be visible or it is
+    # just the old silence with more code behind it.
+    answer_notes: list[str] = Field(default_factory=list)
 
     def fingerprint(self) -> str:
         """What has to match for a stored result to still be this order's.

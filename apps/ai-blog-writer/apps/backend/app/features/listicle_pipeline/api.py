@@ -70,12 +70,19 @@ class AngleEdit(BaseModel):
 class ReviseOrderRequest(BaseModel):
     """A correction to the agreement, which becomes a new revision.
 
-    Both fields optional: correcting the count is by far the most common
+    Every field optional: correcting the count is by far the most common
     correction and should not require restating the angles.
+
+    `standard` and `exclusions` are here because either can have been assembled
+    from more than one answer, and an assembled value has to be arguable. An
+    empty string is a real correction -- it means there is no bar, or nothing
+    is barred -- so absent and empty are not the same thing.
     """
 
     target_count: int | None = Field(default=None, ge=1, le=200)
     angles: list[AngleEdit] | None = None
+    standard: str | None = Field(default=None, max_length=2000)
+    exclusions: str | None = Field(default=None, max_length=2000)
 
 
 class SearchRequest(BaseModel):
@@ -324,6 +331,8 @@ def revise_listicle_order(
         run_id,
         target_count=req.target_count,
         angles=None if req.angles is None else [a.model_dump() for a in req.angles],
+        standard=req.standard,
+        exclusions=req.exclusions,
     )
     return _order_view(revised)
 
@@ -413,6 +422,10 @@ def _order_view(order) -> dict[str, Any]:
         "count_source": order.count_source,
         "count_ambiguous": order.count_ambiguous,
         "count_note": order.count_note,
+        # Every marker the interview answered twice, and what was done about
+        # it. The screen shows these next to the value they are about, because
+        # a combined cut is the safe reading rather than the certain one.
+        "answer_notes": list(order.answer_notes),
         "capacity": capacity,
         "capacity_warning": (
             f"These {len(order.angles)} searches ask for {capacity} places in "

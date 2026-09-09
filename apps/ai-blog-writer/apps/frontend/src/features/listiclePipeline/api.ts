@@ -95,7 +95,12 @@ export async function loadOrder(runId: string): Promise<ListicleOrder | null> {
  *  gathered under the old one cannot be shown as answers to the new one. */
 export async function reviseOrder(
   runId: string,
-  patch: { target_count?: number; angles?: ListicleOrder['angles'] },
+  patch: {
+    target_count?: number
+    angles?: ListicleOrder['angles']
+    standard?: string
+    exclusions?: string
+  },
 ): Promise<ListicleOrder> {
   const response = await apiFetch(`${BASE}/order/${runId}`, {
     method: 'POST',

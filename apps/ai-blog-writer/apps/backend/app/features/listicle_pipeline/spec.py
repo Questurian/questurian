@@ -62,8 +62,10 @@ class CountDecision:
 def _turn_for(state: GrillState, marker: str):
     """The last exchange about one marker.
 
-    Last rather than first: a marker asked about twice was asked again because
-    something was wrong with the first answer.
+    Last rather than first for the things a repeat is *about* -- the question
+    that was asked, the menu it offered -- which is what `selected_angles` and
+    `resolve_count` read it for. What the marker is *worth* does not come from
+    here; see `resolve_answer`.
     """
     for turn in reversed(state.turns):
         if turn.question.asks_about == marker:
@@ -71,9 +73,179 @@ def _turn_for(state: GrillState, marker: str):
     return None
 
 
+def _turns_for(state: GrillState, marker: str) -> list:
+    """Every exchange about one marker, in the order they were asked."""
+    return [turn for turn in state.turns if turn.question.asks_about == marker]
+
+
+# Markers whose second answer adds to the first instead of replacing it.
+#
+# `bar` and `cut` are prose criteria, and the grill's repeat about them is an
+# additive follow-up: run 292e71e3 settled the cut, then asked "are there any
+# other types of establishments ... you would like to exclude?" and
+# recommended "No hotel restaurants." Taking the last answer there throws away
+# chains, delivery-only and ceviche-not-primary, and the run looks entirely
+# normal while searching under a quarter of the operator's exclusions.
+#
+# Everything else replaces, deliberately. `kind` and `place` are single nouns
+# and a second one is a correction. `angles` arrives from the picker as the
+# complete current selection, so un-ticking a box already IS the explicit
+# replace -- accumulating there would put back the angle the operator just
+# dropped, and each angle is a paid search. `count` is resolved on its own in
+# `resolve_count`, against the number that was proposed.
+_ACCUMULATING_MARKERS = frozenset({"bar", "cut"})
+
+# Where one criterion ends and the next begins. Deliberately generous: this
+# only ever decides whether a later answer already SAYS what an earlier one
+# said, and splitting too finely makes that test stricter, which errs towards
+# keeping both.
+_CLAUSE = re.compile(r"[\n;,.]+|\band\b|\bor\b|\balso\b|\bplus\b", re.IGNORECASE)
+# Words that carry no criterion. "no chains" and "chains" have to match, or a
+# restated exclusion list reads as a new one and every rule is stored twice.
+_NOT_CONTENT = frozenset(
+    {
+        "the", "a", "an", "any", "all", "no", "not", "none", "nor", "but",
+        "and", "or", "also", "plus", "with", "without", "for", "from", "of",
+        "in", "on", "at", "to", "by", "as", "is", "are", "was", "were", "be",
+        "been", "it", "its", "that", "this", "these", "those", "where",
+        "which", "who", "what", "when", "than", "then", "there", "they",
+        "them", "would", "should", "like", "want", "wants", "other", "others",
+        "else", "more", "only", "just", "very", "really", "sure", "yes",
+    }
+)
+
+
+def _content_words(text: str) -> set[str]:
+    """The words in a phrase that say something about the world."""
+    return {
+        word
+        for word in _words(text)
+        if len(word) > 2 and word not in _NOT_CONTENT
+    }
+
+
+def _restates(earlier: str, later: str) -> bool:
+    """Does `later` already say everything `earlier` said?
+
+    This is the whole difference between a correction and an addition, and it
+    is decided from the two answers rather than from the question's wording,
+    because the wording is the model's and the answers are the operator's.
+
+    The test is deliberately strict: every clause of the earlier answer has to
+    survive whole in the later one. A partial overlap -- three rules restated
+    and a fourth quietly gone -- reads as an addition and both are kept, which
+    over-restricts a search rather than silently widening it. Of the two ways
+    to be wrong, only one is invisible.
+    """
+    later_words = _words(later)
+    clauses = [
+        content
+        for content in (_content_words(part) for part in _CLAUSE.split(earlier))
+        if content
+    ]
+    if not clauses:
+        # The earlier answer had nothing checkable in it -- "yes, that" and
+        # friends. Nothing to lose by taking the later one.
+        return True
+    return all(clause <= later_words for clause in clauses)
+
+
+@dataclass
+class AnswerDecision:
+    """What a marker is worth, and how more than one answer got there.
+
+    `source` is one of: `missing`, `single`, `restated` (a later answer said
+    everything the earlier one said, so the later one stands), `combined` (two
+    answers said different things and both are used) or `replaced` (a marker
+    that only ever takes one value was answered twice).
+    """
+
+    text: str
+    source: str
+    note: str = ""
+
+    @property
+    def revisited(self) -> bool:
+        """Was this marker answered more than once in a way worth showing?"""
+        return self.source in ("combined", "replaced")
+
+
+def _times(count: int) -> str:
+    return "twice" if count == 2 else f"{count} times"
+
+
+def _joined(parts: list[str]) -> str:
+    """Several answers read as one instruction.
+
+    Terminated, because these are pasted straight into a search prompt as one
+    line and "no chains no hotel restaurants" is a different sentence from
+    "no chains. No hotel restaurants."
+    """
+    return " ".join(
+        part if part.endswith((".", "!", "?")) else part + "."
+        for part in parts
+    )
+
+
+def resolve_answer(state: GrillState, marker: str) -> AnswerDecision:
+    """What one marker is worth, across every turn that answered it.
+
+    The bug this replaces: the value was read from the LAST turn that settled
+    a marker, so an additive follow-up silently deleted the earlier answer.
+    The run that hit it looked entirely normal.
+
+    Neither engine nor prompt can fix that. Refusing to show the repeated
+    question trades silent data loss for a stuck interview, and the engine
+    already retries once and then shows it anyway on purpose. So the decision
+    is made here, from the answers themselves, and it is written down.
+    """
+    answers = [
+        turn.answer.strip()
+        for turn in _turns_for(state, marker)
+        if turn.answer.strip()
+    ]
+    if not answers:
+        return AnswerDecision("", "missing")
+    if len(answers) == 1:
+        return AnswerDecision(answers[0], "single")
+
+    if marker not in _ACCUMULATING_MARKERS:
+        latest = answers[-1]
+        lost = [earlier for earlier in answers[:-1] if not _restates(earlier, latest)]
+        if not lost:
+            return AnswerDecision(latest, "restated")
+        return AnswerDecision(
+            latest,
+            "replaced",
+            note=(
+                f"This was answered {_times(len(answers))} and the last answer "
+                "is the one being used. The earlier one said: " + _joined(lost)
+            ),
+        )
+
+    kept: list[str] = []
+    for answer in answers:
+        if kept and _restates(_joined(kept), answer):
+            # They retyped the whole thing. Keeping both would say every rule
+            # twice; the later wording is theirs and is the one to keep.
+            kept = [answer]
+        else:
+            kept.append(answer)
+    if len(kept) == 1:
+        return AnswerDecision(kept[0], "restated")
+    return AnswerDecision(
+        _joined(kept),
+        "combined",
+        note=(
+            f"This was answered {_times(len(kept))} and every answer is being "
+            "used. Correct it here if one of them was meant to replace the "
+            "others."
+        ),
+    )
+
+
 def _answer_for(state: GrillState, marker: str) -> str:
-    turn = _turn_for(state, marker)
-    return turn.answer.strip() if turn else ""
+    return resolve_answer(state, marker).text
 
 
 def _counts_in(text: str) -> list[int]:
@@ -258,6 +430,47 @@ def exclusions_from(state: GrillState) -> str:
     return _answer_for(state, "cut")
 
 
+# How a revisited marker is said to a person. The marker keys are the
+# pipeline's; nobody wants to read "cut" on a screen.
+_MARKER_NAMES = {
+    "kind": "what kind of place",
+    "place": "where",
+    "count": "how many",
+    "bar": "what earns a place",
+    "cut": "what is left out",
+    "angles": "the angles",
+}
+
+
+def answer_notes(state: GrillState) -> list[str]:
+    """What to say about every marker the interview answered twice.
+
+    Empty for an interview that asked each thing once, which is the normal
+    case and the one worth staying quiet about.
+    """
+    notes: list[str] = []
+    for marker in _MARKER_NAMES:
+        if marker == "count":
+            # The count carries its own note, resolved against the number that
+            # was proposed rather than against the earlier answer's words.
+            continue
+        decision = resolve_answer(state, marker)
+        if decision.revisited and decision.note:
+            notes.append(f"{_MARKER_NAMES[marker].capitalize()}: {decision.note}")
+    return notes
+
+
+def drop_note_for(notes: list[str], marker: str) -> list[str]:
+    """The notes that still apply once the operator has corrected one marker.
+
+    A note about the cut is a question -- "both answers are being used, is that
+    what you meant?" -- and typing the cut out by hand answers it. Leaving it
+    on screen afterwards would ask again about a value nobody inferred.
+    """
+    prefix = f"{_MARKER_NAMES.get(marker, marker).capitalize()}:"
+    return [note for note in notes if not note.startswith(prefix)]
+
+
 def _fold(text: str) -> str:
     folded = unicodedata.normalize("NFKD", text.lower())
     folded = "".join(c for c in folded if not unicodedata.combining(c))
@@ -422,6 +635,7 @@ def build_search_order(
         count_source="corrected by operator" if target_count is not None else decision.source,
         count_ambiguous=False if target_count is not None else decision.ambiguous,
         count_note="" if target_count is not None else decision.note,
+        answer_notes=answer_notes(state),
     )
 
 
@@ -446,6 +660,11 @@ def summary_of(order: SearchOrder) -> str:
     lines = [
         f"{order.target_count} {order.kind or 'places'} in {order.place or 'the location'}.",
     ]
+    # First, because a run driven from the command line has no screen and this
+    # is the one thing on the order that is asking a question rather than
+    # stating a fact.
+    for note in order.answer_notes:
+        lines.append(f"! {note}")
     if order.standard:
         lines.append(f"Earns a place: {order.standard}")
     if order.exclusions:

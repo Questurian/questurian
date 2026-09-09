@@ -345,6 +345,7 @@ def assemble(order: SearchOrder) -> dict:
             "count_source": order.count_source,
             "count_ambiguous": order.count_ambiguous,
             "count_note": order.count_note,
+            "answer_notes": list(order.answer_notes),
         },
         "angles": angle_rows,
         "candidates": [

@@ -84,6 +84,7 @@ function order(overrides: Partial<ListicleOrder> = {}): ListicleOrder {
     count_source: 'answered',
     count_ambiguous: false,
     count_note: '',
+    answer_notes: [],
     capacity: 30,
     capacity_warning: '',
     summary: '20 cevicherias in Lima, Peru.',
@@ -289,6 +290,52 @@ describe('the agreed order on screen', () => {
 
     await waitFor(() =>
       expect(reviseOrder).toHaveBeenCalledWith('abc123', { target_count: 12 }),
+    )
+    expect(await screen.findByText(/revision 2/)).toBeInTheDocument()
+  })
+
+  it('says when a marker was answered twice and both answers are being used', async () => {
+    // The fault of 2026-09-08: the cut was settled, then asked again
+    // additively, and the later answer silently replaced the earlier one. Both
+    // are kept now, and keeping both is a reading rather than a certainty, so
+    // it is on screen next to the value it produced.
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(
+      order({
+        exclusions: 'no chains, no delivery-only kitchens. No hotel restaurants.',
+        answer_notes: [
+          'What is left out: This was answered twice and every answer is being used. Correct it here if one of them was meant to replace the others.',
+        ],
+      }),
+    )
+    renderAt('/listicle-pipeline/abc123')
+
+    expect(
+      await screen.findByText(/every answer is being used/),
+    ).toBeInTheDocument()
+  })
+
+  it('lets the cut be typed out, because a combined one may keep a rule they dropped', async () => {
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(order({ answer_notes: ['What is left out: ...'] }))
+    reviseOrder.mockResolvedValue(
+      order({ exclusions: 'no chains', revision: 2, answer_notes: [] }),
+    )
+    renderAt('/listicle-pipeline/abc123')
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /what is left out/i }),
+    )
+    const box = screen.getByLabelText(/what is left out/i)
+    await userEvent.clear(box)
+    await userEvent.type(box, 'no chains only')
+    await userEvent.click(screen.getByRole('button', { name: /use these/i }))
+
+    await waitFor(() =>
+      expect(reviseOrder).toHaveBeenCalledWith('abc123', {
+        standard: 'written up by someone other than the place',
+        exclusions: 'no chains only',
+      }),
     )
     expect(await screen.findByText(/revision 2/)).toBeInTheDocument()
   })

@@ -508,6 +508,23 @@
   width: 6rem;
 }
 
+/* The bar and the cut are sentences, not a number, so they wrap onto their own
+   full-width rows rather than sitting on the count's one line. */
+.lp-order-edit-requirements {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.lp-order-edit-requirements textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+}
+
+.lp-order-edit-requirements button {
+  align-self: flex-start;
+}
+
 .lp-order-correct {
   margin-bottom: var(--space-2);
 }

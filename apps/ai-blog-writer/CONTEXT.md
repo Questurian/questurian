@@ -449,6 +449,18 @@ evidence. Every sighting survives a merge.
 Boundary rule: a merge that conflicts on district or on a bracketed qualifier
 does not happen; the rows stand side by side as possible duplicates.
 
+### Marker Resolution
+Definition: what one interview marker is worth once every turn that answered
+it has been read. `restated` (a later answer said everything the earlier one
+said), `combined` (two answers said different things and both are used) or
+`replaced` (a marker that only ever takes one value was answered twice).
+Mechanism: `spec.resolve_answer`. The bar and the cut accumulate; the kind,
+the place and the angles replace, because the picker sends the whole selection
+and un-ticking a box is already the explicit replace.
+Boundary rule: last-write-wins is not a resolution. A marker answered twice is
+resolved from the answers, and the resolution reaches the order as an
+`answer_note` the operator can act on.
+
 ### Search Attempt
 Definition: one angle's search as it stands — `not_started`, `running`,
 `completed`, `failed` or `interrupted` — with the request fingerprint it was

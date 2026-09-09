@@ -111,6 +111,10 @@ export interface ListicleOrder {
   count_source: string
   count_ambiguous: boolean
   count_note: string
+  /** One line per marker the interview answered more than once, saying what
+   *  was done about it. Empty for an interview that asked each thing once,
+   *  which is the normal case. */
+  answer_notes: string[]
   capacity: number
   capacity_warning: string
   summary: string
@@ -210,6 +214,7 @@ export interface ListicleSearchResults {
     count_source: string
     count_ambiguous: boolean
     count_note: string
+    answer_notes?: string[]
   }
   angles: ListicleAngleResult[]
   candidates: ListicleCandidate[]

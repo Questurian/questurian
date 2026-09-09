@@ -82,6 +82,34 @@ and labelled as possible duplicates. Every original sighting survives, so the
 merge can be checked. The distinct count is reported as provisional whenever
 any pair is unresolved.
 
+**A marker answered twice is resolved, not overwritten.** The value used to be
+read from the last turn that settled a marker. That is right for a correction
+and silently destructive for the additive follow-up the grill actually asks:
+run `292e71e3` settled the cut, then asked "are there any other types of
+establishments ... you would like to exclude?" and recommended "No hotel
+restaurants." Answering that plainly would have left one rule out of four and
+searched under a quarter of the operator's exclusions, on a run that looked
+entirely normal from every screen.
+
+The engine is the wrong place to fix it. Refusing to show a repeated question
+trades silent data loss for a stuck interview, which is worse; the grill
+already retries once and then shows the question anyway, on purpose. So the
+resolution happens where the value is read. A later answer that says
+everything the earlier one said replaces it; one that says something different
+is added to it. The bar and the cut accumulate, because a follow-up about them
+is an increment. The kind, the place and the angles replace: the first two are
+single nouns, and the angle picker sends the operator's whole current
+selection, so un-ticking a box is already the explicit replace -- accumulating
+there would put back an angle they just dropped, and every angle is a paid
+search.
+
+Keeping both is the safe reading and not the certain one: it can hold on to a
+rule the operator meant to drop, which over-restricts a search visibly rather
+than widening it invisibly. Of the two ways to be wrong, only one leaves
+nothing to see. So the combination is said out loud on the order, and the bar
+and the cut became correctable there for the same reason the count already
+was: an inferred value has to be arguable.
+
 ## What this deliberately does not claim
 
 Receiving a search result is not verification. Nothing here establishes that a
