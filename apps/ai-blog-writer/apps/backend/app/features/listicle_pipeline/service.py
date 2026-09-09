@@ -25,19 +25,28 @@ from ..prompt2blog.grill_v4 import (
     reopen_grill,
     start_grill,
 )
-from . import spec, store
-from .contracts import LISTICLE_MARKER_KEYS
+from . import cut_review, runner, spec, store
+from .contracts import LISTICLE_MARKER_KEYS, SearchOrder
 from .prompts import build_listicle_turn_prompt
-from .search import run_search_order
 
 logger = logging.getLogger(__name__)
 
 
 def _dependencies(base: GrillDependencies) -> GrillDependencies:
-    """The article grill's dependencies, pointed at the listicle prompt."""
+    """The article grill's dependencies, pointed at the listicle prompt.
+
+    `job_id` is carried through, and that is the entire fix for a real bug:
+    this function used to build a fresh `GrillDependencies` and take the
+    default, so every listicle interview reported itself as `p2b.grill`. The
+    caller was already setting `listicle.grill` and it was being dropped one
+    line later -- which meant the usage dashboard attributed listicle spend to
+    Prompt2Blog, and the model gateway answered for the wrong job when someone
+    changed the listicle grill's model.
+    """
     return GrillDependencies(
         llm=base.llm,
         research=base.research,
+        job_id=base.job_id,
         model_name=base.model_name,
         build_prompt=build_listicle_turn_prompt,
     )
@@ -55,12 +64,34 @@ def start(seed: str, base: GrillDependencies) -> GrillState:
     return state
 
 
-def answer(run_id: str, text: str, base: GrillDependencies) -> GrillState:
+def answer(
+    run_id: str,
+    text: str,
+    base: GrillDependencies,
+    selections: list[dict] | None = None,
+    review=None,
+) -> GrillState:
+    """One turn, plus whatever structure the screen knew about the answer.
+
+    `selections` is the angle picker's own record of what was ticked, edited or
+    written. The transcript still stores the operator's text verbatim, because
+    that is what the interview agreed to; the records are stored beside it so
+    the order does not have to reconstruct a shape from a sentence.
+    """
     state = store.load(run_id)
     if state is None:
         raise LookupError(f"No listicle interview with id {run_id}")
+    if selections:
+        store.save_selections(run_id, selections)
     state = answer_grill(state, text, _dependencies(base))
     store.save(state)
+    if state.status == "agreed":
+        # Written down at the moment of agreement, so what the screen shows
+        # next and what the searches run from are one object rather than two
+        # readings of a paragraph. This is also the one moment the cut check
+        # may run: the turn is already a paid call, and every later read of the
+        # order is a GET that must stay free.
+        _ensure_order(state, review)
     return state
 
 
@@ -78,13 +109,175 @@ def get(run_id: str) -> GrillState | None:
     return store.load(run_id)
 
 
-def search(run_id: str, research) -> dict:
+def _ensure_order(state: GrillState, review=None) -> SearchOrder:
+    """The agreed order, built once and kept.
+
+    Rebuilt only when there is none. An order that already exists may have been
+    corrected by the operator, and regenerating it from the transcript would
+    silently undo that correction -- which is the same class of bug as reading
+    the count out of prose, one layer up.
+
+    `review` is the cut check, and it is a parameter rather than an import
+    because this function is reached from two kinds of caller. Answering a turn
+    is a POST that is already spending on the model, and that is where the check
+    belongs. Opening the order screen is a GET, and a GET must not spend --
+    reopening a run without buying anything is the whole point of addressing
+    runs by id. Called without it, the order is built unchecked and says so.
+    """
+    existing = store.load_order(state.run_id)
+    if existing is not None:
+        return existing
+    order = spec.build_search_order(
+        state, revision=1, selections=store.load_selections(state.run_id)
+    )
+    _apply_conflicts(order, review)
+    store.save_order(order)
+    return order
+
+
+def _apply_conflicts(order: SearchOrder, review) -> None:
+    """Ask whether any approved search fights the cut, if anyone may ask.
+
+    A check that fails is not a finding. `conflicts_checked` stays false and
+    the screen says nobody looked, which is true -- the alternative is an order
+    that reads as cleared because a model call timed out.
+    """
+    if review is None:
+        return
+    try:
+        order.angle_conflicts = cut_review.review_order(order, review)
+        order.conflicts_checked = True
+    except Exception:
+        logger.warning(
+            "The cut check did not run for %s; the order says so", order.run_id
+        )
+
+
+def order(run_id: str) -> SearchOrder | None:
+    """The order as it stands, built from the interview if it has agreed."""
+    existing = store.load_order(run_id)
+    if existing is not None:
+        return existing
+    state = store.load(run_id)
+    if state is None or state.status != "agreed":
+        return None
+    return _ensure_order(state)
+
+
+def revise_order(
+    run_id: str,
+    *,
+    target_count: int | None = None,
+    angles: list[dict] | None = None,
+    standard: str | None = None,
+    exclusions: str | None = None,
+    review=None,
+) -> SearchOrder:
+    """Correct the agreement, at a new revision.
+
+    A correction is not an edit in place. Results already gathered answered the
+    previous request, and the only way to say so honestly is for the previous
+    request to still exist -- so a revision is added rather than the old one
+    overwritten, and every stored result is re-checked against the new request
+    before it is shown as current.
+    """
+    current = order(run_id)
+    if current is None:
+        raise LookupError(f"No agreed search order for run {run_id}")
+
+    updated = current.model_copy(deep=True)
+    updated.revision = store.next_revision(run_id)
+    if target_count is not None:
+        if not 1 <= target_count <= 200:
+            raise ValueError("A list length has to be between 1 and 200.")
+        updated.target_count = target_count
+        updated.count_source = "corrected by operator"
+        updated.count_ambiguous = False
+        updated.count_note = ""
+    # The bar and the cut can be typed out here because they may have been
+    # assembled from two answers rather than given once. A combined value is
+    # the safe reading and not necessarily the right one -- it keeps a rule the
+    # operator may have meant to drop -- so the only honest way to combine is
+    # to leave a way to disagree. Correcting one clears its note: it was a
+    # question about an inference, and there is no longer an inference.
+    if standard is not None:
+        updated.standard = standard.strip()
+        updated.answer_notes = spec.drop_note_for(updated.answer_notes, "bar")
+    if exclusions is not None:
+        updated.exclusions = exclusions.strip()
+        updated.answer_notes = spec.drop_note_for(updated.answer_notes, "cut")
+    if angles is not None:
+        if not angles:
+            raise ValueError("An order with no searches in it cannot be run.")
+        from .contracts import SelectedAngle
+
+        rebuilt: list[SelectedAngle] = []
+        for index, entry in enumerate(angles):
+            text = str(entry.get("text", "")).strip()
+            if not text:
+                continue
+            previous = next(
+                (a for a in current.angles if a.angle_id == entry.get("angle_id")),
+                None,
+            )
+            shape_key = str(entry.get("shape_key", "") or (previous.shape_key if previous else ""))
+            rebuilt.append(
+                SelectedAngle(
+                    angle_id=str(entry.get("angle_id") or f"a{index + 1}"),
+                    text=text,
+                    shape_key=shape_key,
+                    group=str(entry.get("group", "") or (previous.group if previous else "")),
+                    role=str(entry.get("role") or (previous.role if previous else "broad")),
+                    # An angle whose wording changed is an angle whose stored
+                    # result no longer answers it. Marked here so the
+                    # fingerprint changes and the reuse check refuses it.
+                    edited=bool(entry.get("edited"))
+                    or (previous is not None and previous.text != text),
+                    custom=bool(entry.get("custom")) or not shape_key,
+                )
+            )
+        if not rebuilt:
+            raise ValueError("An order with no searches in it cannot be run.")
+        updated.angles = rebuilt
+
+    from .search import role_allowances
+
+    allowances = role_allowances(
+        updated.target_count, [a.role for a in updated.angles]
+    )
+    for angle, allowance in zip(updated.angles, allowances):
+        angle.wanted = allowance
+
+    # Changing the angles or the cut is exactly the moment the two can start
+    # disagreeing, so the old verdict is not an answer about the new order.
+    # Cleared either way; re-asked only when the caller is a path allowed to
+    # spend, and left honestly unchecked when it is not.
+    if angles is not None or exclusions is not None:
+        updated.angle_conflicts = []
+        updated.conflicts_checked = False
+        _apply_conflicts(updated, review)
+
+    store.save_order(updated)
+    return updated
+
+
+def search(
+    run_id: str,
+    research,
+    *,
+    only: list[str] | None = None,
+    reuse: bool = True,
+    review=None,
+) -> dict:
     """Run the agreed search order and pool what comes back.
 
     Refuses to run before the interview has agreed. A half-settled order is
     missing the angles, and searching without them is six searches for whatever
     the seed happened to say -- which is the single-search failure the split
     exists to avoid, at six times the cost.
+
+    `only` runs a named subset, which is how a retry costs one search rather
+    than six. `reuse=False` is the deliberate full refresh.
     """
     state = store.load(run_id)
     if state is None:
@@ -95,56 +288,173 @@ def search(run_id: str, research) -> dict:
             "nothing to search for."
         )
 
-    angles = spec.angles_from(state)
-    if not angles:
+    current = _ensure_order(state)
+    if not current.angles:
         raise ValueError("The agreed interview carries no angles to search.")
 
-    target = spec.count_from(state)
-    candidates, results = run_search_order(
-        angles,
-        kind=spec.kind_from(state),
-        place=spec.place_from(state),
-        target_items=target,
-        exclusions=spec.exclusions_from(state),
-        standard=spec.standard_from(state),
-        research=research,
-    )
-    payload = {
-        "run_id": run_id,
-        "target": target,
-        # Said plainly rather than left to be worked out from the list length.
-        # Whether the order filled the list is the only question this step was
-        # built to answer.
-        "found": len(candidates),
-        "shortfall": max(0, target - len(candidates)),
-        "rows_returned": sum(result.rows for result in results),
-        "angles": [
-            {
-                "angle": r.angle,
-                "rows": r.rows,
-                "sources": r.sources,
-                "failed": r.failed,
-                "reason": r.reason,
-            }
-            for r in results
-        ],
-        "candidates": [
-            {
-                "name": c.name,
-                "district": c.district,
-                "evidence": c.evidence,
-                "found_by": list(c.found_by),
-                "overlap": c.overlap,
-            }
-            for c in candidates
-        ],
-    }
+    if not store.claim_batch(run_id, current.revision):
+        raise ValueError(
+            "These searches are already running for this order. Wait for them "
+            "rather than starting a second set."
+        )
+    try:
+        payload = runner.run_order(current, research, only=only, reuse=reuse)
+    finally:
+        # Released whatever happened, so a failed batch does not lock the run
+        # out of the retry that is the point of storing attempts separately.
+        store.release_batch(run_id)
     store.save_results(run_id, payload)
-    return payload
+    _review_candidates(current, payload, review)
+    return runner.assemble(current)
+
+
+def _review_candidates(order: SearchOrder, payload: dict, review) -> None:
+    """Judge what came back against the cut, once, on the batch that bought it.
+
+    One call for the whole list, reading evidence the searches already wrote.
+    Nothing is looked up: that is the difference between this and researching
+    forty places to rediscover what the first search said.
+
+    Like the order check, a failure is not a finding -- nothing is stored, and
+    a run with no stored review says nobody looked rather than nothing was
+    barred.
+    """
+    if review is None:
+        return
+    try:
+        flags = cut_review.review_candidates(
+            order, payload.get("candidates", []), review
+        )
+    except Exception:
+        logger.warning(
+            "The cut check did not run over %s's candidates", order.run_id
+        )
+        return
+    store.save_cut_review(order.run_id, order.revision, flags)
+
+
+def progress(run_id: str) -> dict | None:
+    """What the run knows, without running anything.
+
+    This is what a reopened page reads. It never searches: opening a screen is
+    not a decision to spend, and the version this replaced had no way to tell
+    "nothing stored" from "not read yet", so a reload looked like a run that
+    had never happened.
+    """
+    current = order(run_id)
+    if current is None:
+        # No agreed order, which for a run with stored results means one from
+        # before orders were recorded. Read through the same upgrade so the
+        # screen never receives a payload with fields missing.
+        stored = store.load_results(run_id)
+        if stored is None:
+            return None
+        return _upgrade_legacy(
+            stored,
+            SearchOrder(
+                run_id=run_id,
+                revision=0,
+                target_count=max(1, int(stored.get("target") or 20)),
+            ),
+        )
+    assembled = runner.assemble(current)
+    if assembled["rows_returned"] == 0 and not any(
+        row["state"] != "not_started" for row in assembled["angles"]
+    ):
+        # Nothing has been run under this order. An older blob may still exist
+        # from before attempts were stored per angle, and it is a real result.
+        legacy = store.load_results(run_id)
+        if legacy is not None and legacy.get("candidates"):
+            return _upgrade_legacy(legacy, current)
+        return None
+    return assembled
+
+
+def _upgrade_legacy(stored: dict, current: "SearchOrder") -> dict:
+    """An old stored result, read into the shape the screen now expects.
+
+    Runs from before work was recorded per angle are real results and they open.
+    What they cannot do is name their searches -- there are no attempts behind
+    them -- so every field the new screen reads is filled with the honest
+    default rather than left missing. A missing field is not a smaller version
+    of a result; it is a crash on a page the operator opened expecting their
+    research.
+    """
+    candidates = [
+        {
+            "name": row.get("name", ""),
+            "district": row.get("district", ""),
+            "evidence": row.get("evidence", ""),
+            "found_by": list(row.get("found_by", [])),
+            "overlap": row.get("overlap", len(row.get("found_by", []))),
+            # Neither was recorded at the time. Empty is the truthful answer:
+            # nothing was checked, rather than nothing was found.
+            "possible_duplicates": [],
+            "sightings": [],
+        }
+        for row in stored.get("candidates", [])
+    ]
+    angles = [
+        {
+            "angle_id": row.get("angle_id", ""),
+            "angle": row.get("angle", ""),
+            "shape": "",
+            "group": "",
+            "role": "broad",
+            "wanted": 0,
+            "edited": False,
+            "custom": False,
+            "state": "failed" if row.get("failed") else "completed",
+            "failed": bool(row.get("failed")),
+            "rows": row.get("rows", 0),
+            "sources": row.get("sources", 0),
+            "reason": row.get("reason", ""),
+            "found": 0,
+            "shared": 0,
+            "exclusive": 0,
+            "gathered_at": "",
+            "reused": False,
+        }
+        for row in stored.get("angles", [])
+    ]
+    target = stored.get("target", current.target_count)
+    return {
+        "run_id": current.run_id,
+        "revision": stored.get("revision", 0),
+        "target": target,
+        "found": stored.get("found", len(candidates)),
+        "shortfall": stored.get("shortfall", max(0, target - len(candidates))),
+        "rows_returned": stored.get("rows_returned", 0),
+        "running": False,
+        "complete": not any(row["failed"] for row in angles),
+        "uncertain_identity": 0,
+        "capacity": 0,
+        "cut_checked": False,
+        "barred_count": 0,
+        "empty_handed": [],
+        "capacity_warning": "",
+        "order": {
+            "kind": current.kind,
+            "place": current.place,
+            "target_count": target,
+            "standard": current.standard,
+            "exclusions": current.exclusions,
+            "count_source": current.count_source,
+            "count_ambiguous": current.count_ambiguous,
+            "count_note": current.count_note,
+            "answer_notes": list(current.answer_notes),
+        },
+        "angles": angles,
+        "candidates": candidates,
+        # Read by the screen, which then says individual searches cannot be
+        # re-run from here rather than offering a button that would do nothing.
+        "legacy": True,
+    }
 
 
 def results(run_id: str) -> dict | None:
-    return store.load_results(run_id)
+    """What a previous run found, assembled fresh from the stored attempts."""
+    return progress(run_id)
 
 
 def build_profile(
@@ -160,10 +470,18 @@ def build_profile(
     """Open this place's profile, anchor it, and gather what has been said.
 
     Deliberately not called by the search step. A profile is worth building for
-    a candidate that survives, and which candidates survive is what the gate --
-    not yet built -- decides. Wiring this into the pipeline before that gate
-    exists would research every row returned, including the ones the gate is
-    there to throw away.
+    a candidate that survives, and wiring this in would research every row
+    returned -- around forty on a real run -- including the ones that are there
+    to be thrown away.
+
+    `gate.assess` exists and is tested, but it answers one question: is enough
+    published about this place to write about it. It does not answer whether
+    the place breaks the cut, and the two are not the same question. Run
+    33fca394 returned eight Nikkei and Japanese restaurants against an explicit
+    "no places where ceviche is not the primary offering", and every one of
+    them is written about constantly -- so a wired gate would have passed all
+    eight. Checking the cut is a separate judgement about each place, and it is
+    not built.
 
     Running it twice on the same place is safe and is the normal case: the
     profile is found rather than created, claims already held are not added

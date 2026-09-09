@@ -409,6 +409,94 @@ Do not confuse with: the v3 `questurian-default` brand-voice file, which was a r
 - **SQLite for run storage** because runs are local-only and replayable; not a multi-tenant store.
 - → **Suggest ADR**: the LexicalJSON ↔ Payload sync protocol has no formal spec; this is hard-to-reverse and crosses a context boundary.
 
+## Listicle Pipeline (search order)
+
+The newer pipeline under `app/features/listicle_pipeline`, distinct from the
+`editor_assist` listicle blurb pipeline whose vocabulary is above. It runs an
+interview, executes the searches it settles on, and pools candidate places.
+Decisions in [ADR 0037](./docs/adr/0037-the-search-order-is-the-source-of-truth.md).
+
+### Search Order
+Definition: the agreement in the form the searches run from — kind, place,
+target count, standard, exclusions, and the selected angles. Built once at
+agreement, versioned, stored. The displayed summary is generated from it.
+Boundary rule: nothing downstream re-reads the interview transcript. The count
+that is shown and the count that is executed are one field.
+
+### Angle
+Definition: one reason a place is on the list, and one literal web search.
+Carries a stable id, the shape it was written from, its role, the wording the
+operator approved, and whether they edited it.
+Boundary rule: an angle is a route into the pool, never a requirement. What
+every place must satisfy lives on the order and is composed into every search.
+
+### Shape
+Definition: the pattern an angle is written from, with the topic left blank.
+Declares its `core` meaning separately from the `instruction` given to the
+model, the subjects it applies to, its discovery role, and the shapes it tends
+to return the same places as.
+Boundary rule: overlap is explained, never enforced.
+
+### Discovery Role
+Definition: what an angle is for — `broad`, `distinctive` or `specific` — and
+therefore how many places it may be asked for.
+Mechanism: `search.role_allowances` spreads the overshoot across the roles. A
+`specific` angle may succeed with one result and is never asked to fill a quota.
+
+### Sighting
+Definition: one row exactly as one search returned it — angle, name, district,
+evidence. Every sighting survives a merge.
+Boundary rule: a merge that conflicts on district or on a bracketed qualifier
+does not happen; the rows stand side by side as possible duplicates.
+
+### Marker Resolution
+Definition: what one interview marker is worth once every turn that answered
+it has been read. `restated` (a later answer said everything the earlier one
+said), `combined` (two answers said different things and both are used) or
+`replaced` (a marker that only ever takes one value was answered twice).
+Mechanism: `spec.resolve_answer`. The bar and the cut accumulate; the kind,
+the place and the angles replace, because the picker sends the whole selection
+and un-ticking a box is already the explicit replace.
+Boundary rule: last-write-wins is not a resolution. A marker answered twice is
+resolved from the answers, and the resolution reaches the order as an
+`answer_note` the operator can act on.
+
+### Contribution
+Definition: what one search bought — how many places it returned, how many of
+those the other searches also returned, and how many nothing else found.
+Mechanism: computed against the finished pool (never accumulated as searches
+land, so ordering cannot change it), written onto the attempt after every
+batch, and rewritten after a retry because a retry changes the pool.
+Boundary rule: reported, never acted on. A search with nothing exclusive may be
+the coverage everything else is being checked against; no angle is dropped,
+reordered or discouraged by its history.
+
+### Subject
+Definition: kind and place, folded — what two runs must share before one run's
+contribution says anything about the other's. The count, the bar and the cut
+change what a search asks for; none of them changes whether a shape finds
+places nobody else finds.
+Boundary rule: an angle is identified across runs by its SHAPE, not its
+wording. The model rewrites the sentence every run. An operator's own angle has
+no shape, so it matches on exact wording or not at all.
+
+### Cut Check
+Definition: the two moments something asks "does this break what the operator
+barred" -- once over the approved angles, before the searches run, and once
+over the returned places, after.
+Mechanism: `cut_review`, one JSON call each, on a request that is already
+spending. Rows are identified to the model by NUMBER, never by name.
+Boundary rule: both only FLAG. Nothing is removed, reworded or reordered.
+Unchecked is not clean: `conflicts_checked` and `cut_checked` say whether
+anything looked, separately from what it found.
+
+### Search Attempt
+Definition: one angle's search as it stands — `not_started`, `running`,
+`completed`, `failed` or `interrupted` — with the request fingerprint it was
+made under.
+Boundary rule: `interrupted` is not `failed`. Nobody knows whether the provider
+answered, and retrying may be charged again.
+
 ## AI Guidance
 
 When working in this context:

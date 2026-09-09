@@ -281,3 +281,197 @@ def test_two_places_that_merely_share_a_word_stay_apart(first, second):
 
 def test_a_parenthetical_is_the_rows_reason_not_part_of_the_name():
     assert name_tokens("Hotel B (Rooftop bar)") == name_tokens("Hotel B")
+
+
+# --- what the plan of 2026-09-08 changed ----------------------------------
+
+
+from app.features.listicle_pipeline.search import (  # noqa: E402
+    SPECIFIC,
+    AngleRequest,
+    Sighting,
+    build_search_prompt,
+    contribution_of,
+    pool_sightings,
+    role_allowances,
+    strip_list_marker,
+)
+
+
+@pytest.mark.parametrize(
+    "line, expected",
+    [
+        # The failure. Stripping every leading digit turned a real hotel into
+        # a common noun, and nothing downstream could tell it had happened.
+        ("1900 Hotel", "1900 Hotel"),
+        ("1. Bodega 1884", "Bodega 1884"),
+        ("2) Bar Piselli 1915", "Bar Piselli 1915"),
+        ("- Al Toke Pez", "Al Toke Pez"),
+        ("**La Mar**", "La Mar"),
+        ("400 Grados", "400 Grados"),
+        ("10. 1900 Hotel", "1900 Hotel"),
+    ],
+)
+def test_a_list_marker_goes_and_the_name_stays(line, expected):
+    assert strip_list_marker(line) == expected
+
+
+def test_a_numbered_row_keeps_the_year_in_the_name():
+    rows = parse_rows("1. Bodega 1900 | Barranco | open since 1900\n")
+    assert rows[0][0] == "Bodega 1900"
+
+
+def test_two_branches_of_one_business_stay_two_businesses():
+    """Merging them keeps one and loses the other, and the loss is invisible --
+    the surviving row looks like an ordinary candidate.
+
+    The rows are identical apart from the district, which is exactly the shape
+    a chain's two branches arrive in.
+    """
+    merged = pool_sightings(
+        [
+            Sighting(angle="a", angle_id="a1", name="Tanta", district="Centro", evidence=""),
+            Sighting(angle="b", angle_id="a2", name="Tanta", district="Miraflores", evidence=""),
+        ]
+    )
+    assert len(merged) == 2
+    # Not silently dropped either: the screen is told these might be one place.
+    assert all(c.possible_duplicates for c in merged)
+
+
+def test_a_branch_named_in_the_title_is_not_folded_into_the_shorter_name():
+    merged = merge_contained(
+        [
+            Candidate(name="Tanta Larcomar", district="Miraflores", evidence="", found_by=["a"]),
+            Candidate(name="Tanta Larcomar Centro", district="Centro", evidence="", found_by=["b"]),
+        ]
+    )
+    assert len(merged) == 2
+    assert all(c.possible_duplicates for c in merged)
+
+
+def test_two_bars_inside_one_hotel_stay_two_bars():
+    merged = merge_contained(
+        [
+            Candidate(
+                name="Gran Hotel Bolívar (Bar Catedral)",
+                district="",
+                evidence="",
+                found_by=["a"],
+            ),
+            Candidate(
+                name="Gran Hotel Bolívar (Bar Maury)",
+                district="",
+                evidence="",
+                found_by=["b"],
+            ),
+        ]
+    )
+    assert len(merged) == 2
+
+
+def test_a_hotel_and_its_only_named_bar_still_merge():
+    """One row qualified and one not, in a search for bars, is the same bar
+    written two ways -- and refusing that merge splits the overlap of a place
+    two angles agreed on."""
+    merged = merge_contained(
+        [
+            Candidate(name="Hotel B", district="", evidence="", found_by=["a"]),
+            Candidate(
+                name="Hotel B (Rooftop bar)", district="", evidence="", found_by=["b"]
+            ),
+        ]
+    )
+    assert len(merged) == 1
+
+
+def test_an_accent_variant_in_the_same_district_still_merges():
+    merged = pool_sightings(
+        [
+            Sighting(angle="a", angle_id="a1", name="Cevichería Nancy", district="Callao", evidence="x"),
+            Sighting(angle="b", angle_id="a2", name="Cevicheria Nancy", district="Callao", evidence="y"),
+        ]
+    )
+    assert len(merged) == 1
+    assert merged[0].overlap == 2
+
+
+def test_every_original_sighting_survives_a_merge():
+    """Keeping one evidence sentence and throwing the rest away is too thin to
+    check a merge with: two angles found this place for two different reasons
+    and the reasons are the only way to see whether it is one place."""
+    merged = pool_sightings(
+        [
+            Sighting(angle="awards", angle_id="a1", name="El Mercado", district="", evidence="on best-of lists"),
+            Sighting(angle="nikkei", angle_id="a2", name="El Mercado", district="Miraflores", evidence="Japanese-Peruvian"),
+        ]
+    )
+    assert len(merged) == 1
+    assert sorted(s.evidence for s in merged[0].sightings) == [
+        "Japanese-Peruvian",
+        "on best-of lists",
+    ]
+
+
+def test_contribution_does_not_depend_on_which_search_ran_first():
+    """The first angle to return a place used to collect it, so reordering the
+    searches changed the table."""
+    shared = [
+        Sighting(angle="a", angle_id="a1", name="El Mercado", district="", evidence=""),
+        Sighting(angle="b", angle_id="a2", name="El Mercado", district="", evidence=""),
+        Sighting(angle="b", angle_id="a2", name="Canta Rana", district="", evidence=""),
+    ]
+    forward = pool_sightings(shared)
+    backward = pool_sightings(list(reversed(shared)))
+    assert contribution_of(forward, "a") == contribution_of(backward, "a") == (1, 1, 0)
+    assert contribution_of(forward, "b") == contribution_of(backward, "b") == (2, 1, 1)
+
+
+def test_a_narrow_search_is_told_that_one_result_is_a_good_result():
+    prompt = build_search_prompt(
+        "the cevicheria credited with starting the boom",
+        kind="cevicherias",
+        place="Lima",
+        exclusions="",
+        standard="",
+        wanted=2,
+        role=SPECIFIC,
+    )
+    assert "do not pad" in prompt.lower()
+    assert "keep going until" not in prompt.lower()
+
+
+def test_the_requirements_are_composed_in_rather_than_written_into_the_angle():
+    prompt = build_search_prompt(
+        "rooftop bars with a view of the sea",
+        kind="bars",
+        place="Lima",
+        exclusions="no hotel chains",
+        standard="independently owned",
+        wanted=8,
+    )
+    assert "independently owned" in prompt
+    assert "no hotel chains" in prompt
+    assert "no matter which description found it" in prompt
+
+
+def test_allowances_are_bounded_and_add_up_to_more_than_the_target():
+    allowances = role_allowances(40, ["broad", "broad", "distinctive", SPECIFIC])
+    assert sum(allowances) >= 40
+    assert allowances[3] < allowances[0]
+
+
+def test_an_angle_request_carries_its_identity_through_the_result():
+    def research(prompt: str):
+        return "Al Toke Pez | Surquillo | counter", ["https://example.test"], 5
+
+    _, results = run_search_order(
+        [AngleRequest(angle_id="a7", text="counter ceviche", role="distinctive", wanted=6)],
+        kind="cevicherias",
+        place="Lima",
+        target_items=20,
+        research=research,
+    )
+    assert results[0].angle_id == "a7"
+    assert results[0].role == "distinctive"
+    assert results[0].wanted == 6

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 import os
 import re
@@ -32,6 +32,11 @@ class GroundedGenerationResult:
     text: str
     source_urls: list[str]
     model_name: str
+    # Where the answer actually came from, by name. Every `source_urls` entry
+    # is a Google redirect that identifies nothing; the publication is in the
+    # grounding chunk's `title` beside it. Default empty so a caller built
+    # before this existed still constructs.
+    source_titles: list[str] = field(default_factory=list)
     # What the call cost, straight off the response. Without this a grounded
     # call is invisible to any caller that meters spend: this path is raw REST,
     # so it never passes through the LangChain adapters the token ledger
@@ -165,6 +170,55 @@ def _extract_urls_from_nested(value: Any) -> list[str]:
             if cleaned:
                 collected.append(cleaned)
     return collected
+
+
+def extract_grounded_source_titles(response: Any, max_titles: int = 24) -> list[str]:
+    """The publications behind a grounded answer, as their own names.
+
+    Google returns every citation as a `vertexaisearch.cloud.google.com`
+    redirect, so the URLs a caller stores say nothing about where the answer
+    came from. The domain lives in a sibling `title` on the same grounding
+    chunk, and it was being discarded.
+
+    That mattered the first time someone asked whether a search written to run
+    in the local language actually reached local sources. Nothing stored could
+    answer it: seventy-seven redirect URLs and no publication named among them.
+    """
+    if response is None:
+        return []
+
+    titles: list[str] = []
+    seen: set[str] = set()
+
+    def walk(value: Any) -> None:
+        if len(titles) >= max_titles:
+            return
+        if isinstance(value, dict):
+            # A grounding chunk is `{"web": {"uri": ..., "title": ...}}`, and
+            # `retrievedContext` carries the same pair. Matched on the shape
+            # rather than on a fixed path, because the REST and SDK responses
+            # nest them differently.
+            for key in ("web", "retrievedContext"):
+                nested = value.get(key)
+                if isinstance(nested, dict):
+                    title = nested.get("title")
+                    if isinstance(title, str) and title.strip():
+                        cleaned = title.strip()
+                        if cleaned not in seen:
+                            seen.add(cleaned)
+                            titles.append(cleaned)
+            for nested in value.values():
+                walk(nested)
+            return
+        if isinstance(value, list):
+            for nested in value:
+                walk(nested)
+
+    try:
+        walk(response if isinstance(response, dict) else response.to_dict())
+    except Exception:
+        pass
+    return titles[:max_titles]
 
 
 def extract_grounded_urls_from_response(response: Any, max_urls: int = 12) -> list[str]:
@@ -325,6 +379,7 @@ def invoke_google_grounded_text(
     return GroundedGenerationResult(
         text=_safe_text(response),
         source_urls=extract_grounded_urls_from_response(response),
+        source_titles=extract_grounded_source_titles(response),
         model_name=response.get("modelVersion", effective_model_name),
         input_tokens=input_tokens,
         output_tokens=output_tokens,
