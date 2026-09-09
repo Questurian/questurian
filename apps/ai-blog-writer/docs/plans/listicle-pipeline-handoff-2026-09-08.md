@@ -62,6 +62,15 @@ call, with no server, auth or browser. Both runs below were driven with it.
 `report` reads a finished run and spends nothing. `search` is the expensive
 command: one grounded web search per angle.
 
+Two more that spend nothing, both reading what is already stored:
+
+    .venv/bin/python apps/backend/scripts/listicle_angle_variance.py
+    .venv/bin/python apps/backend/scripts/backfill_listicle_contribution.py --dry-run
+
+`listicle_angle_variance.py` prints the wording-versus-noise table behind open
+item 4. `backfill_listicle_contribution.py` recomputes contribution for runs
+stored before it was recorded; both stored runs have already been done.
+
 Two rules when answering, both learned the hard way:
 
 - **Answer as a statement, never as a reply.** The text is stored verbatim and
@@ -228,16 +237,61 @@ interview is worse than a repeat.
    against the cut. The rule still goes to every search. Do not reach for more
    prompt text — that is what produced the eight.
 
-4. **The model still over-tightens its own wording, and it costs measurably.**
-   Run 1's market angle was "ceviche counters inside the city's markets or
-   street stalls" → 11 rows, 11 unique. Run 2's was the same plus "not
-   traditional sit-down restaurants" → 6 rows, 4 unique. One comparison is not
-   proof, but it is the predicted direction and a large drop.
+4. **The over-tightening claim is NOT established, and the stored runs say
+   why.** Checked 2026-09-09 with `scripts/listicle_angle_variance.py`
+   (spends nothing; reads the contribution now recorded on each attempt).
 
-5. **No paid angle comparison has been run.** `evaluation.py` holds the eight
-   cases and their criteria, fixed in advance on purpose.
-   `scripts/listicle_angle_comparison.py` runs one arm. Agree thresholds before
-   spending, not after.
+   The claim was that the model narrows its own wording and it costs
+   measurably, evidenced by the `informal` angle: 9 words returning 11 places
+   in run 1, 12 words returning 4 in run 2. That is a real drop. But the same
+   two runs contain the control it needs:
+
+   | | shapes | widest swing |
+   |---|---:|---|
+   | wording UNCHANGED between runs | 1 (`institution`) | 5 rows, 5 exclusive |
+   | wording REWORDED between runs | 5 | 5 rows, 7 exclusive |
+
+   `institution` ran with **identical wording** in both runs and moved 7 rows
+   to 12, one exclusive place to six. Unchanged wording swings almost as far as
+   the widest reworded pair, so nothing here separates wording from chance.
+
+   Of the five reworded pairs: three moved the predicted way, `lesser-known`
+   moved the opposite way (longer wording did *better*, 7 exclusive to 10), and
+   `producer-links` did not move at all.
+
+   **The noise floor has to be bought before the comparison is.** One case's
+   order re-run three times with wording held identical is about 21 grounded
+   searches. Until that number exists, the 8-case comparison in item 5 cannot
+   be read — it would measure noise and call it wording. This is also the
+   "pooling repeat runs" lever already flagged as obvious and untried, so it
+   buys two answers at once.
+
+5. **No paid angle comparison has been run, and it should not be the first
+   purchase.** `evaluation.py` holds the eight cases and their criteria, fixed
+   in advance on purpose. `scripts/listicle_angle_comparison.py` runs one arm
+   and refuses without `--i-know-this-costs-money`.
+
+   Cost, in the only unit that is certain — grounded searches, all on
+   `gemini-2.5-flash` (see `listicle.search` in the model gateway's
+   `jobs.json`); the per-search grounding rate is whatever the account's is:
+
+   - noise floor, 1 case × 7 angles × 3 repeats — **~21 searches**
+   - full comparison, 8 cases × 2 arms × ~7 angles — **~112 searches**, plus an
+     interview per arm
+
+   Thresholds have to be agreed before either, not after. Suggested, and not
+   yet approved by the owner:
+
+   - **Read the noise floor first.** Take the widest exclusive-place swing
+     across the three identical repeats. Call that N.
+   - A comparison arm counts as better only if it beats the other by **more
+     than N** exclusive places on the same case. On today's single data point
+     N would be 5, which is most of a seven-angle run — that is the honest
+     reading, and it is the argument for buying the repeats first.
+   - Report per case, never pooled. Eight cases with one run each is eight
+     anecdotes, and averaging them hides that.
+   - Discovery only. A returned place being real, open or worth writing about
+     is not what this measures and must not be claimed from it.
 
 ## Things that will bite you
 
