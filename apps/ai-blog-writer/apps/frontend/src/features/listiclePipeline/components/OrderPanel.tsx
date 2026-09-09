@@ -1,0 +1,158 @@
+import { useEffect, useState } from 'react'
+import type { ListicleOrder } from '../types'
+
+/**
+ * The agreement, as the searches will actually run it.
+ *
+ * On screen because the alternative was believing a paragraph. The only real
+ * run of this pipeline displayed a search order for twenty items and searched
+ * for forty: the number had been read back out of a sentence, and there was
+ * nowhere in the interface that would have shown the disagreement.
+ *
+ * So the count is shown as a number, it says where it came from, and it can be
+ * corrected here. A correction makes a new revision rather than an edit in
+ * place, which is what lets the results screen say which stored searches still
+ * answer the question being asked.
+ */
+
+interface OrderPanelProps {
+  order: ListicleOrder
+  busy: boolean
+  onCorrectCount: (target: number) => void
+}
+
+const SOURCE_NOTE: Record<string, string> = {
+  answered: 'you said this',
+  corrected: 'you corrected this',
+  'corrected by operator': 'you corrected this',
+  accepted: 'you agreed to the number suggested',
+  seed: 'read off the title; the interview never settled it',
+  default: 'nothing said how many, so this is a default',
+}
+
+export function OrderPanel({ order, busy, onCorrectCount }: OrderPanelProps) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(String(order.target_count))
+
+  useEffect(() => {
+    setDraft(String(order.target_count))
+    setEditing(false)
+  }, [order.target_count, order.revision])
+
+  const parsed = Number.parseInt(draft, 10)
+  const valid = Number.isFinite(parsed) && parsed >= 1 && parsed <= 200
+
+  return (
+    <section className="lp-order" aria-label="The agreed search order">
+      <header className="lp-order-head">
+        <p className="lp-order-title">
+          The search order
+          {order.revision > 1 && (
+            <span className="lp-muted"> &middot; revision {order.revision}</span>
+          )}
+        </p>
+        <p className="lp-order-line">
+          <strong>{order.target_count}</strong> {order.kind || 'places'} in{' '}
+          {order.place || 'the location'}
+          <span className="lp-muted">
+            {' '}
+            &mdash; {SOURCE_NOTE[order.count_source] ?? order.count_source}
+          </span>
+        </p>
+      </header>
+
+      {/* An ambiguous answer is used so the run is not stuck, and never
+          presented as settled. The number is on screen and one click away from
+          being corrected, which is the difference between a guess and a guess
+          you can see. */}
+      {order.count_ambiguous && order.count_note && (
+        <p className="lp-order-warning" role="status">
+          {order.count_note}
+        </p>
+      )}
+
+      {editing ? (
+        <div className="lp-order-edit">
+          <label htmlFor="lp-target-count">How many items?</label>
+          <input
+            id="lp-target-count"
+            type="number"
+            min={1}
+            max={200}
+            value={draft}
+            disabled={busy}
+            onChange={event => setDraft(event.target.value)}
+          />
+          <button
+            type="button"
+            disabled={busy || !valid || parsed === order.target_count}
+            onClick={() => onCorrectCount(parsed)}
+          >
+            Use this number
+          </button>
+          <button
+            type="button"
+            className="lp-secondary"
+            disabled={busy}
+            onClick={() => setEditing(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="lp-secondary lp-order-correct"
+          disabled={busy}
+          onClick={() => setEditing(true)}
+        >
+          Correct the number
+        </button>
+      )}
+
+      <dl className="lp-order-requirements">
+        {order.standard && (
+          <>
+            <dt>Earns a place</dt>
+            <dd>{order.standard}</dd>
+          </>
+        )}
+        {order.exclusions && (
+          <>
+            <dt>Left out</dt>
+            <dd>{order.exclusions}</dd>
+          </>
+        )}
+      </dl>
+      {(order.standard || order.exclusions) && (
+        <p className="lp-muted lp-order-note">
+          Attached to every search, whichever angle finds the place.
+        </p>
+      )}
+
+      <ol className="lp-order-angles">
+        {order.angles.map(angle => (
+          <li key={angle.angle_id} className="lp-order-angle">
+            <span className="lp-order-angle-text">{angle.text}</span>
+            <span className="lp-order-angle-tags">
+              <span className="lp-picker-role">{angle.role}</span>
+              <span className="lp-muted">asks for {angle.wanted}</span>
+              {angle.edited && <span className="lp-order-edited">your wording</span>}
+              {angle.custom && !angle.edited && (
+                <span className="lp-order-edited">your angle</span>
+              )}
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      {/* Said, and not fixed. Adding a search nobody approved is the behaviour
+          this whole record exists to prevent. */}
+      {order.capacity_warning && (
+        <p className="lp-order-warning" role="status">
+          {order.capacity_warning} Add an angle, or take the shorter list.
+        </p>
+      )}
+    </section>
+  )
+}

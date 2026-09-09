@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnglePicker } from './AnglePicker'
+import type { ListicleAngleSelection } from '../types'
 import type { ListicleGrillState } from '../types'
 
 /**
@@ -32,7 +33,10 @@ const MARKER_LABELS: Record<string, string> = {
 interface GrillScreenProps {
   state: ListicleGrillState
   busy: boolean
-  onAnswer: (text: string) => void
+  /** The second argument is the picker's own record of what was chosen: which
+   *  menu entry each line came from and whether it was edited. Empty for every
+   *  question answered by typing, which is all of them but one. */
+  onAnswer: (text: string, selections?: ListicleAngleSelection[]) => void
   onReset: () => void
 }
 

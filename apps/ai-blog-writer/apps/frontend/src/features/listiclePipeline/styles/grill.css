@@ -380,8 +380,28 @@
   color: var(--muted);
 }
 
-/* The collision group, sitting quietly at the end of the row. It only matters
-   when two of them are ticked, and then the warning below says so. */
+/* The theme label and the role, sitting quietly at the end of the row.
+   Descriptive, not a rule: two angles sharing a theme may both be worth
+   searching, and the warning below explains rather than forbids. */
+.lp-picker-tags {
+  align-self: center;
+  flex: none;
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.lp-picker-role {
+  flex: none;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lp-accent);
+  border: 1px solid var(--lp-accent);
+  border-radius: var(--radius-sm, 4px);
+  padding: 0.1rem 0.4rem;
+}
+
 .lp-picker-group {
   align-self: center;
   flex: none;
@@ -394,6 +414,26 @@
   padding: 0.1rem 0.4rem;
 }
 
+/* A label describing wording the line no longer has. Shown faded and with a
+   question mark rather than removed: where the angle came from is worth
+   knowing, and asserting it as still true is not. */
+.lp-picker-group-stale {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.lp-picker-theme {
+  margin-top: var(--space-2);
+}
+
+.lp-picker-theme-name {
+  margin: 0 0 0.2rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .lp-picker-warning {
   margin: 0;
   padding: var(--space-2) var(--space-3);
@@ -401,6 +441,132 @@
   background: var(--lp-accent-soft);
   color: var(--ink);
   font-size: 0.875rem;
+}
+
+.lp-picker-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+/* ---------- the agreed order ---------- */
+
+/* On screen because the alternative was believing a paragraph. The one real
+   run of this pipeline displayed twenty and searched for forty. */
+.lp-order {
+  max-width: 46rem;
+  margin: var(--space-4) auto 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) clamp(var(--space-4), 4vw, var(--space-5));
+  box-shadow: 0 2px 16px var(--shadow-soft);
+}
+
+.lp-order-head {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.lp-order-title {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.lp-order-line {
+  margin: var(--space-1) 0 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.lp-order-line strong {
+  font-size: 1.4rem;
+}
+
+.lp-order-warning {
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--lp-accent);
+  background: var(--lp-accent-soft);
+  font-size: 0.875rem;
+}
+
+.lp-order-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-2);
+  font-size: 0.875rem;
+}
+
+.lp-order-edit input {
+  width: 6rem;
+}
+
+.lp-order-correct {
+  margin-bottom: var(--space-2);
+}
+
+.lp-order-requirements {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(6rem, auto) 1fr;
+  gap: 0.2rem var(--space-3);
+  font-size: 0.875rem;
+}
+
+.lp-order-requirements dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lp-order-requirements dd {
+  margin: 0;
+  color: var(--ink);
+}
+
+.lp-order-note {
+  margin: var(--space-1) 0 var(--space-3);
+  font-size: 0.75rem;
+}
+
+.lp-order-angles {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.lp-order-angle {
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.lp-order-angle-tags {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+}
+
+.lp-order-edited {
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  padding: 0.05rem 0.4rem;
 }
 
 /* ---------- what the searches found ---------- */
@@ -545,4 +711,88 @@
   color: var(--muted);
   font-size: 0.8125rem;
   line-height: 1.4;
+}
+
+
+/* ---------- retrying one search ---------- */
+
+/* A per-row action, because a retry costs one search and a full refresh costs
+   the whole order. Rendered as a link so it does not compete with the two
+   buttons at the foot of the table. */
+.lp-link-button {
+  background: none;
+  border: none;
+  padding: 0 0 0 0.4rem;
+  color: var(--lp-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.lp-link-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.lp-angle-table th {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.lp-angle-tags {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+}
+
+/* Every row as a search returned it. Two angles found this place for two
+   different reasons, and the reasons are what a person needs to check whether
+   the merge was right. */
+.lp-candidate-sightings {
+  margin: 0.3rem 0 0;
+  padding-left: 1rem;
+  list-style: none;
+  border-left: 2px solid var(--border);
+  color: var(--muted);
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+/* Shown rather than resolved. This step cannot tell a second branch from a
+   second spelling, and folding them together loses a venue silently. */
+.lp-candidate-duplicate {
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
+  color: var(--lp-accent);
+}
+
+/* Where the searches actually looked. Collapsed by default: it is forty
+   domains and the answer it gives -- local press, or only visitor guides --
+   is a question people ask once and then stop asking. */
+.lp-sources {
+  margin-bottom: var(--space-4);
+  font-size: 0.8125rem;
+}
+
+.lp-sources summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.lp-sources-list {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+  word-break: break-word;
 }

@@ -409,6 +409,53 @@ Do not confuse with: the v3 `questurian-default` brand-voice file, which was a r
 - **SQLite for run storage** because runs are local-only and replayable; not a multi-tenant store.
 - → **Suggest ADR**: the LexicalJSON ↔ Payload sync protocol has no formal spec; this is hard-to-reverse and crosses a context boundary.
 
+## Listicle Pipeline (search order)
+
+The newer pipeline under `app/features/listicle_pipeline`, distinct from the
+`editor_assist` listicle blurb pipeline whose vocabulary is above. It runs an
+interview, executes the searches it settles on, and pools candidate places.
+Decisions in [ADR 0037](./docs/adr/0037-the-search-order-is-the-source-of-truth.md).
+
+### Search Order
+Definition: the agreement in the form the searches run from — kind, place,
+target count, standard, exclusions, and the selected angles. Built once at
+agreement, versioned, stored. The displayed summary is generated from it.
+Boundary rule: nothing downstream re-reads the interview transcript. The count
+that is shown and the count that is executed are one field.
+
+### Angle
+Definition: one reason a place is on the list, and one literal web search.
+Carries a stable id, the shape it was written from, its role, the wording the
+operator approved, and whether they edited it.
+Boundary rule: an angle is a route into the pool, never a requirement. What
+every place must satisfy lives on the order and is composed into every search.
+
+### Shape
+Definition: the pattern an angle is written from, with the topic left blank.
+Declares its `core` meaning separately from the `instruction` given to the
+model, the subjects it applies to, its discovery role, and the shapes it tends
+to return the same places as.
+Boundary rule: overlap is explained, never enforced.
+
+### Discovery Role
+Definition: what an angle is for — `broad`, `distinctive` or `specific` — and
+therefore how many places it may be asked for.
+Mechanism: `search.role_allowances` spreads the overshoot across the roles. A
+`specific` angle may succeed with one result and is never asked to fill a quota.
+
+### Sighting
+Definition: one row exactly as one search returned it — angle, name, district,
+evidence. Every sighting survives a merge.
+Boundary rule: a merge that conflicts on district or on a bracketed qualifier
+does not happen; the rows stand side by side as possible duplicates.
+
+### Search Attempt
+Definition: one angle's search as it stands — `not_started`, `running`,
+`completed`, `failed` or `interrupted` — with the request fingerprint it was
+made under.
+Boundary rule: `interrupted` is not `failed`. Nobody knows whether the provider
+answered, and retrying may be charged again.
+
 ## AI Guidance
 
 When working in this context:

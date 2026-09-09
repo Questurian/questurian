@@ -20,7 +20,7 @@ from ..prompt2blog.contracts_v4 import GrillState
 from ..prompt2blog.dependencies import DefaultPrompt2BlogLLM
 from ..prompt2blog.grill_v4 import GrillDependencies, GrillUnusableResponse
 from . import service
-from .shapes import SHAPES
+from .shapes import SHAPES, SHAPES_BY_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +31,65 @@ class StartRequest(BaseModel):
     seed: str = Field(min_length=1, max_length=400)
 
 
+class AngleSelection(BaseModel):
+    """One line of the answer, as the screen knows it.
+
+    Sent beside the text rather than instead of it. The transcript keeps what
+    the operator wrote, because that is what the interview agreed to; this is
+    what the screen knows and the text cannot carry -- which menu entry the
+    line came from, whether it was changed, whether they wrote it themselves.
+    """
+
+    text: str = Field(min_length=1, max_length=600)
+    angle_id: str = Field(default="", max_length=64)
+    shape_key: str = Field(default="", max_length=64)
+    group: str = Field(default="", max_length=64)
+    role: str = Field(default="", max_length=32)
+    edited: bool = False
+    custom: bool = False
+
+
 class AnswerRequest(BaseModel):
     run_id: str = Field(min_length=1)
     answer: str = Field(min_length=1, max_length=4000)
+    # Empty for every question but the angle one, which is answered by
+    # choosing.
+    selections: list[AngleSelection] = Field(default_factory=list, max_length=60)
 
 
-def _search_call(prompt: str) -> tuple[str, list[str], int | None]:
+class AngleEdit(BaseModel):
+    angle_id: str = Field(default="", max_length=64)
+    text: str = Field(min_length=1, max_length=600)
+    shape_key: str = Field(default="", max_length=64)
+    group: str = Field(default="", max_length=64)
+    role: str = Field(default="", max_length=32)
+    edited: bool = False
+    custom: bool = False
+
+
+class ReviseOrderRequest(BaseModel):
+    """A correction to the agreement, which becomes a new revision.
+
+    Both fields optional: correcting the count is by far the most common
+    correction and should not require restating the angles.
+    """
+
+    target_count: int | None = Field(default=None, ge=1, le=200)
+    angles: list[AngleEdit] | None = None
+
+
+class SearchRequest(BaseModel):
+    """Which searches to run, and whether stored work may be reused.
+
+    `angle_ids` empty means the whole order. `reuse` false is the deliberate
+    full refresh: the operator wants new research and knows it costs.
+    """
+
+    angle_ids: list[str] = Field(default_factory=list, max_length=40)
+    reuse: bool = True
+
+
+def _search_call(prompt: str) -> tuple[str, list[str], int | None, list[str]]:
     """The web, asked exactly what the search runner wrote.
 
     Deliberately NOT the grill's `research`: that one wraps whatever it is
@@ -68,7 +121,17 @@ def _search_call(prompt: str) -> tuple[str, list[str], int | None]:
         # recorded as "nothing published for this angle", which is a different
         # and much more misleading finding.
         raise RuntimeError("The grounded search returned nothing.")
-    return result.text, list(result.source_urls), result.total_tokens
+    # Four elements, not three. The fourth is the publications behind the
+    # answer: every URL above is a Google redirect that names nothing, so
+    # without this the run cannot say whether a search told to work in the
+    # local language actually reached local press. Callers that send three are
+    # still read correctly -- see `search._search_once`.
+    return (
+        result.text,
+        list(result.source_urls),
+        result.total_tokens,
+        list(getattr(result, "source_titles", []) or []),
+    )
 
 
 def _base_dependencies() -> GrillDependencies:
@@ -139,16 +202,43 @@ def _view(state: GrillState) -> dict[str, Any]:
             # when it does not, so this single field is what decides the input
             # control.
             "options": [
-                {"text": o.text, "recommended": o.recommended, "group": o.group}
+                {
+                    "text": o.text,
+                    "recommended": o.recommended,
+                    # From the catalogue whenever the shape is known, never
+                    # from the model. A live run sent the shape's LABEL on one
+                    # turn and its KEY on the next, and since the screen groups
+                    # by this field, every option landed in a group of one and
+                    # the "these two overlap" warning could never fire.
+                    "group": (
+                        SHAPES_BY_KEY[o.shape].theme
+                        if o.shape in SHAPES_BY_KEY
+                        else o.group
+                    ),
+                    # The catalogue entry this was written from, and the job it
+                    # is for. Sent so the picker can hand them back with the
+                    # answer -- an edited line that loses its shape key is a
+                    # line the order has to guess about.
+                    "shape": o.shape,
+                    "role": o.role,
+                }
                 for o in state.pending.options
             ],
         },
     }
 
 
-def _handle(action, *args):
+def _handle(action, *args, **kwargs):
+    """Run one interview action and render the interview.
+
+    Interview actions only. A search is not an interview turn and its result is
+    not a `GrillState`, and passing one through here is what made every
+    successful search raise on the way out: `_view` read `.run_id` off a dict
+    and the operator was told the search had failed when it had worked and been
+    stored. `_report` is the search side of the same boundary.
+    """
     try:
-        return _view(action(*args))
+        return _view(action(*args, **kwargs))
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except GrillUnusableResponse as error:
@@ -168,7 +258,13 @@ def start_listicle_grill(req: StartRequest, _staff=Depends(require_staff)):
 
 @router.post("/grill/answer")
 def answer_listicle_grill(req: AnswerRequest, _staff=Depends(require_staff)):
-    return _handle(service.answer, req.run_id, req.answer, _base_dependencies())
+    return _handle(
+        service.answer,
+        req.run_id,
+        req.answer,
+        _base_dependencies(),
+        [selection.model_dump() for selection in req.selections],
+    )
 
 
 @router.post("/grill/reopen")
@@ -184,20 +280,84 @@ def get_listicle_grill(run_id: str, _staff=Depends(require_staff)):
     return _view(state)
 
 
+def _report(action, *args, **kwargs) -> dict[str, Any]:
+    """Run one search action and return its own payload.
+
+    Separate from `_handle` on purpose, and this separation is the whole fix
+    for the first of the six confirmed faults. A search result is not an
+    interview and must not be rendered as one; the error handling is shared
+    because a missing run and an unagreed order mean the same thing on either
+    side of the boundary.
+    """
+    try:
+        return action(*args, **kwargs)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/order/{run_id}")
+def get_listicle_order(run_id: str, _staff=Depends(require_staff)):
+    """The agreement in the form the searches actually run from.
+
+    Read by the screen so the operator sees the count that will be used rather
+    than the count a sentence appeared to say. The two disagreed on the only
+    real run there has been.
+    """
+    found = service.order(run_id)
+    if found is None:
+        raise HTTPException(
+            status_code=404,
+            detail="This interview has not agreed a search order yet.",
+        )
+    return _order_view(found)
+
+
+@router.post("/order/{run_id}")
+def revise_listicle_order(
+    run_id: str, req: ReviseOrderRequest, _staff=Depends(require_staff)
+):
+    """Correct the agreement. The correction becomes a new revision."""
+    revised = _report(
+        service.revise_order,
+        run_id,
+        target_count=req.target_count,
+        angles=None if req.angles is None else [a.model_dump() for a in req.angles],
+    )
+    return _order_view(revised)
+
+
 @router.post("/search/{run_id}")
-def run_listicle_search(run_id: str, _staff=Depends(require_staff)):
-    """Run the agreed search order.
+def run_listicle_search(
+    run_id: str,
+    req: SearchRequest | None = None,
+    _staff=Depends(require_staff),
+):
+    """Run the agreed search order, or the part of it that was asked for.
 
     Minutes of work and real tokens, so it is a POST the operator asks for and
     never something a screen does on its own when it loads.
     """
-    return _handle(service.search, run_id, _search_call)
+    body = req or SearchRequest()
+    return _report(
+        service.search,
+        run_id,
+        _search_call,
+        only=body.angle_ids or None,
+        reuse=body.reuse,
+    )
 
 
 @router.get("/search/{run_id}")
 def get_listicle_search(run_id: str, _staff=Depends(require_staff)):
-    """What a previous run of the search order found, if it has been run."""
-    found = service.results(run_id)
+    """What this run knows, without running anything.
+
+    A read, never a search. It reports progress as well as results, so a page
+    reopened while a batch is still going shows what has finished rather than
+    offering to start the batch again.
+    """
+    found = service.progress(run_id)
     if found is None:
         raise HTTPException(
             status_code=404, detail="This search order has not been run yet."
@@ -216,11 +376,62 @@ def list_shapes(_staff=Depends(require_staff)):
     return {
         "shapes": [
             {
-                "key": s.key,
-                "label": s.label,
-                "instruction": s.instruction,
-                "collides_with": s.collides_with,
+                "key": shape.key,
+                "label": shape.label,
+                "core": shape.core,
+                "instruction": shape.instruction,
+                "theme": shape.theme,
+                # Which shapes tend to return the same places. A note the
+                # screen explains, never a rule it enforces -- award-listed and
+                # expensive are the same places in some cities and not others,
+                # and the operator is the one who knows which.
+                "overlaps_with": list(shape.overlaps_with),
+                "applies_to": list(shape.applies_to),
+                "role": shape.role,
             }
-            for s in SHAPES
+            for shape in SHAPES
         ]
+    }
+
+
+def _order_view(order) -> dict[str, Any]:
+    """The order as the screen reads it."""
+    from .spec import planned_capacity, summary_of
+
+    capacity = planned_capacity(order)
+    return {
+        "run_id": order.run_id,
+        "revision": order.revision,
+        "kind": order.kind,
+        "place": order.place,
+        "target_count": order.target_count,
+        "standard": order.standard,
+        "exclusions": order.exclusions,
+        # Where the number came from, and whether anyone should look at it
+        # again. A count read out of an ambiguous answer is still used -- the
+        # run is not stuck -- and it is never presented as settled.
+        "count_source": order.count_source,
+        "count_ambiguous": order.count_ambiguous,
+        "count_note": order.count_note,
+        "capacity": capacity,
+        "capacity_warning": (
+            f"These {len(order.angles)} searches ask for {capacity} places in "
+            f"total, which may not fill a list of {order.target_count}."
+            if capacity < order.target_count
+            else ""
+        ),
+        "summary": summary_of(order),
+        "angles": [
+            {
+                "angle_id": angle.angle_id,
+                "text": angle.text,
+                "shape_key": angle.shape_key,
+                "group": angle.group,
+                "role": angle.role,
+                "wanted": angle.wanted,
+                "edited": angle.edited,
+                "custom": angle.custom,
+            }
+            for angle in order.angles
+        ],
     }
