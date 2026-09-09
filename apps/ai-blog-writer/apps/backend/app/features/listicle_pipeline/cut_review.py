@@ -315,8 +315,25 @@ def review_candidates(
                 number, entry.get("name"), number, actual,
             )
             continue
+        confidence = _confidence(entry.get("confidence", ""))
+        # The same name can appear on more than one row: a pair the merge
+        # refused to join because their districts disagreed is two candidates
+        # with one name, and the model judges each row separately. Run
+        # 33fca394 has three such pairs, and one of them came back barred for
+        # two different reasons -- Nikkei on one row, chain on the other.
+        # Last-write-wins threw one of those away without saying so, so both
+        # are kept, at the stronger of the two readings.
+        existing = flags.get(actual)
+        if existing is None:
+            flags[actual] = {"why": why, "confidence": confidence}
+            continue
+        reasons = existing["why"]
+        if _fold(why) not in _fold(reasons):
+            reasons = f"{reasons} {why}"
         flags[actual] = {
-            "why": why,
-            "confidence": _confidence(entry.get("confidence", "")),
+            "why": reasons,
+            "confidence": "clear"
+            if "clear" in (existing["confidence"], confidence)
+            else "arguable",
         }
     return flags

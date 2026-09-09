@@ -282,3 +282,69 @@ def test_nobody_checked_and_nothing_was_barred_are_different(isolated_db):
     assert store.load_cut_review(order.run_id, order.revision) is None
     store.save_cut_review(order.run_id, order.revision, {})
     assert store.load_cut_review(order.run_id, order.revision) == {}
+
+
+def _two_rows_one_name():
+    """A pair the merge refused to join, because their districts disagreed."""
+    return [
+        {
+            "name": "Hanzo",
+            "district": "Miraflores",
+            "sightings": [{"evidence": "Nikkei restaurant"}],
+        },
+        {
+            "name": "Hanzo",
+            "district": "San Isidro",
+            "sightings": [{"evidence": "second location"}],
+        },
+    ]
+
+
+def test_two_verdicts_about_one_name_are_both_kept():
+    """Last-write-wins threw one away silently. Run 33fca394 has three such
+    pairs, and one came back barred for two different reasons."""
+    flags = cut_review.review_candidates(
+        _order(exclusions="no chains, and no places where ceviche is not primary"),
+        _two_rows_one_name(),
+        _reviewer(
+            {
+                "barred": [
+                    {
+                        "number": 1,
+                        "name": "Hanzo",
+                        "why": "A Nikkei restaurant.",
+                        "confidence": "arguable",
+                    },
+                    {
+                        "number": 2,
+                        "name": "Hanzo",
+                        "why": "It has a second location.",
+                        "confidence": "clear",
+                    },
+                ]
+            }
+        ),
+    )
+    assert "Nikkei" in flags["Hanzo"]["why"]
+    assert "second location" in flags["Hanzo"]["why"]
+    # The stronger of the two readings, so a `clear` is not softened by an
+    # `arguable` that happened to arrive after it.
+    assert flags["Hanzo"]["confidence"] == "clear"
+
+
+def test_the_same_reason_twice_is_not_said_twice():
+    flags = cut_review.review_candidates(
+        _order(),
+        _two_rows_one_name(),
+        _reviewer(
+            {
+                "barred": [
+                    {"number": 1, "name": "Hanzo", "why": "A Nikkei restaurant.",
+                     "confidence": "arguable"},
+                    {"number": 2, "name": "Hanzo", "why": "A Nikkei restaurant.",
+                     "confidence": "arguable"},
+                ]
+            }
+        ),
+    )
+    assert flags["Hanzo"]["why"] == "A Nikkei restaurant."
