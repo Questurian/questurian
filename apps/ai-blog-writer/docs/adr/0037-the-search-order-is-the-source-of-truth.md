@@ -110,6 +110,26 @@ nothing to see. So the combination is said out loud on the order, and the bar
 and the cut became correctable there for the same reason the count already
 was: an inferred value has to be arguable.
 
+**What a search bought is recorded, and said before it is bought again.**
+Contribution was computed when the results screen was drawn and thrown away
+with it, so the only place an angle's worth ever existed was a table rendered
+after the money was spent. It is now written onto the attempt, which lets the
+order screen say what each search returned the last time it ran about the same
+subject.
+
+An angle is identified across runs by its shape rather than its wording,
+because the model rewrites the sentence every run, and only within the same
+subject -- kind and place. Contribution is recomputed and rewritten after every
+batch, since retrying one angle changes the pool and therefore changes what the
+others turn out to have contributed.
+
+It is said and nothing more. No angle is dropped, reordered or discouraged by
+its history: a search with nothing exclusive may be the coverage everything
+else is being checked against, and two runs is a fact about two runs. The
+results screen counts only searches with *zero* exclusive places, which is the
+defensible line -- "this one returned ten rows for one place" is a judgement,
+and the operator is the one who should make it.
+
 ## What this deliberately does not claim
 
 Receiving a search result is not verification. Nothing here establishes that a

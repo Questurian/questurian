@@ -6,6 +6,8 @@ building one inline is thirty lines of contract before the test says anything.
 
 from __future__ import annotations
 
+import itertools
+
 from app.features.prompt2blog.contracts_v4 import (
     GrillOption,
     GrillQuestion,
@@ -13,6 +15,15 @@ from app.features.prompt2blog.contracts_v4 import (
     GrillTurn,
 )
 from app.features.listicle_pipeline.contracts import LISTICLE_MARKER_KEYS
+
+# `question_id` used to be `abs(hash(answer)) % 10_000`. Unique enough while
+# every test had at most one turn per marker, and a 1-in-10,000 flake the
+# moment one had two -- which the repeated-marker tests deliberately do.
+# `GrillState` requires question ids to be unique, so the collision surfaced as
+# a ValidationError in an unrelated test, once, on a hash seed that never came
+# back. Counted rather than hashed: nothing asserts on the value, and a test
+# helper has no business being probabilistic.
+_ISSUED = itertools.count(1)
 
 
 def turn(
@@ -25,7 +36,7 @@ def turn(
 ) -> GrillTurn:
     return GrillTurn(
         question=GrillQuestion(
-            question_id=f"q-{marker}-{abs(hash(answer)) % 10_000}",
+            question_id=f"q-{marker}-{next(_ISSUED)}",
             topic=marker,
             ask=ask or f"About {marker}?",
             recommendation=recommendation,

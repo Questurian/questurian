@@ -363,6 +363,7 @@ def _upgrade_legacy(stored: dict, current: "SearchOrder") -> dict:
         "complete": not any(row["failed"] for row in angles),
         "uncertain_identity": 0,
         "capacity": 0,
+        "empty_handed": [],
         "capacity_warning": "",
         "order": {
             "kind": current.kind,

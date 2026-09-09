@@ -340,6 +340,36 @@ describe('the agreed order on screen', () => {
     expect(await screen.findByText(/revision 2/)).toBeInTheDocument()
   })
 
+  it('says what a search bought last time, before this time is paid for', async () => {
+    // Run 33fca394 spent two of seven searches on angles that returned no
+    // place the others missed. The numbers existed only on a table drawn after
+    // the money was gone.
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(
+      order({
+        angles: [
+          {
+            angle_id: 'a1',
+            text: 'cevicherias open for decades',
+            shape_key: 'institution',
+            group: 'heritage',
+            role: 'broad',
+            wanted: 15,
+            edited: false,
+            custom: false,
+            last_time:
+              'The last time this search ran here it returned 6 rows and no place the other searches missed.',
+          },
+        ],
+      }),
+    )
+    renderAt('/listicle-pipeline/abc123')
+
+    expect(
+      await screen.findByText(/no place the other searches missed/),
+    ).toBeInTheDocument()
+  })
+
   it('says when the order cannot fill the list, without adding a search', async () => {
     loadGrill.mockResolvedValue(AGREED)
     loadOrder.mockResolvedValue(

@@ -405,9 +405,13 @@ def list_shapes(_staff=Depends(require_staff)):
 
 def _order_view(order) -> dict[str, Any]:
     """The order as the screen reads it."""
+    from .runner import prior_contribution
     from .spec import planned_capacity, summary_of
 
     capacity = planned_capacity(order)
+    # What each of these searches bought last time, before this time is paid
+    # for. Empty on the first run about a subject, which is most of them.
+    history = prior_contribution(order)
     return {
         "run_id": order.run_id,
         "revision": order.revision,
@@ -444,6 +448,10 @@ def _order_view(order) -> dict[str, Any]:
                 "wanted": angle.wanted,
                 "edited": angle.edited,
                 "custom": angle.custom,
+                # Said before the search runs, and never acted on: no angle is
+                # dropped or reordered because of it. Two runs is a fact about
+                # two runs.
+                "last_time": history.get(angle.angle_id, ""),
             }
             for angle in order.angles
         ],

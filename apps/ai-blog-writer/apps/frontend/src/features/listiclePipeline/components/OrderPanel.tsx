@@ -216,6 +216,17 @@ export function OrderPanel({
                 <span className="lp-order-edited">your angle</span>
               )}
             </span>
+            {/* What this search bought last time, before this time is paid
+                for. In run 33fca394 two of the seven searches returned no
+                place the others missed, and the only place that was visible
+                was a table drawn after the money was gone. Nothing acts on
+                this: the operator knows the city, and two runs is a fact
+                about two runs. */}
+            {angle.last_time && (
+              <span className="lp-muted lp-order-angle-history">
+                {angle.last_time}
+              </span>
+            )}
           </li>
         ))}
       </ol>

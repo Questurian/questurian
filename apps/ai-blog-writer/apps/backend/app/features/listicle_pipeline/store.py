@@ -283,6 +283,33 @@ def load_attempts(run_id: str, revision: int | None = None) -> list[SearchAttemp
     return [SearchAttempt.model_validate(json.loads(row[0])) for row in rows]
 
 
+def completed_attempts_for(subject: str, *, exclude_run: str = "") -> list[SearchAttempt]:
+    """Every finished search recorded for one subject, from any run.
+
+    The point of the whole record: what an angle bought last time is the only
+    thing anyone can know about what it will buy this time, and it has to be
+    readable before the search is paid for rather than after.
+
+    Scanned in Python rather than queried, because the fields live inside the
+    stored payload. That is fine at this size and would not be at a hundred
+    times it -- the fix then is a column, not a different answer.
+    """
+    ensure_tables()
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT payload FROM listicle_search_attempts"
+        ).fetchall()
+    attempts = [SearchAttempt.model_validate(json.loads(row[0])) for row in rows]
+    return [
+        attempt
+        for attempt in attempts
+        if attempt.subject == subject
+        and attempt.state == "completed"
+        and attempt.contribution_recorded
+        and attempt.run_id != exclude_run
+    ]
+
+
 # --- not starting the same batch twice -------------------------------------
 
 

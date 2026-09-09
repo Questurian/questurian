@@ -44,6 +44,13 @@ export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
     angle => angle.state === 'failed' || angle.state === 'interrupted',
   )
   const unrun = results.angles.filter(angle => angle.state === 'not_started')
+  // A finished search that returned no place the others missed. Every one of
+  // these was paid for. In run 33fca394 two of seven were like this and
+  // nothing anywhere said so — the numbers were in the table and the sentence
+  // was not.
+  const emptyHanded = results.angles.filter(
+    angle => angle.state === 'completed' && angle.exclusive === 0,
+  )
   // Deduplicated across every angle: the same paper cited by three searches is
   // one publication, not three.
   const sourcesNamed = [
@@ -71,6 +78,14 @@ export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
             {results.uncertain_identity === 1 ? 'entry has' : 'entries have'} a
             possible duplicate beside {results.uncertain_identity === 1 ? 'it' : 'them'},
             so this count is provisional.
+          </p>
+        )}
+        {emptyHanded.length > 0 && (
+          <p className="lp-muted lp-results-sub">
+            {emptyHanded.length} of {results.angles.length} searches returned no
+            place the others missed. Not wasted by definition — a search with
+            nothing exclusive may be the coverage the rest are being checked
+            against — but each one was paid for.
           </p>
         )}
         {short && (

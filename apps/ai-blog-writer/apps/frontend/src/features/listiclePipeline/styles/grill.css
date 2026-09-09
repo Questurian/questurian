@@ -525,6 +525,14 @@
   align-self: flex-start;
 }
 
+/* What this search bought last time. Quiet: it is a fact offered, not a
+   recommendation, and it must not outweigh the angle it sits under. */
+.lp-order-angle-history {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+}
+
 .lp-order-correct {
   margin-bottom: var(--space-2);
 }

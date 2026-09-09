@@ -161,6 +161,13 @@ class SearchAttempt(ListicleModel):
     role: str = "broad"
     wanted: int = 0
     request_fingerprint: str = ""
+    # Which catalogue shape ran, and what it ran about. The wording is rewritten
+    # by the model on every run, so the text cannot identify "this search" from
+    # one run to the next and the shape can. `subject` scopes that identity:
+    # what the `hours` shape does for cevicherias in Lima says nothing about
+    # what it does for bookshops in Buenos Aires.
+    shape_key: str = ""
+    subject: str = ""
     state: str = "not_started"
     rows: int = 0
     sources: int = 0
@@ -170,6 +177,16 @@ class SearchAttempt(ListicleModel):
     # "did this search reach Spanish-language sources" is a question about one
     # search, and the run-level answer is the union of these.
     source_titles: list[str] = Field(default_factory=list)
+    # What this search contributed, against the pool as it stood when the batch
+    # finished. Recorded rather than only computed, because the whole point is
+    # to be able to say what an angle did LAST time before paying for it again
+    # -- and a number that only exists while a run is on screen cannot do that.
+    # Rewritten after every batch: retrying one angle changes the pool, and so
+    # changes what every other angle turns out to have contributed.
+    found: int = 0
+    shared: int = 0
+    exclusive: int = 0
+    contribution_recorded: bool = False
     sightings: list[dict] = Field(default_factory=list)
     started_at: str = ""
     finished_at: str = ""

@@ -142,6 +142,8 @@ def run_order(
             role=angle.role,
             wanted=angle.wanted,
             request_fingerprint=fingerprint,
+            shape_key=angle.shape_key,
+            subject=subject_of(order),
             state="running",
             started_at=_now(),
         )
@@ -183,7 +185,117 @@ def run_order(
         store.save_attempt(finished)
         stored[angle.angle_id] = finished
 
+    # The pool is only final once the batch is. Contribution is written back
+    # here rather than at the moment each search lands, because what a search
+    # contributed depends on what every other search returned.
+    record_contribution(order)
     return assemble(order)
+
+
+def prior_contribution(order: SearchOrder) -> dict[str, str]:
+    """What each angle bought the last time it ran, said before it runs again.
+
+    The open item this answers: in run 33fca394 the `purist` angle returned ten
+    rows for one place nothing else found, and `hours` returned six rows for
+    none. Roughly two of seven searches bought nothing, nothing noticed, and
+    the numbers only existed after the money was spent.
+
+    An angle is identified across runs by its SHAPE, not its wording -- the
+    model rewrites the sentence every run -- and only within the same subject.
+    An angle the operator wrote themselves has no shape to look up, so it is
+    matched on its exact wording or not at all.
+
+    Said, and nothing more. No angle is dropped, reordered or discouraged: two
+    runs is a fact about two runs, and this pipeline has two.
+    """
+    subject = subject_of(order)
+    history = store.completed_attempts_for(subject, exclude_run=order.run_id)
+    if not history:
+        return {}
+
+    by_shape: dict[str, list[SearchAttempt]] = {}
+    by_text: dict[str, list[SearchAttempt]] = {}
+    for attempt in history:
+        if attempt.shape_key:
+            by_shape.setdefault(attempt.shape_key, []).append(attempt)
+        if attempt.angle_text:
+            by_text.setdefault(attempt.angle_text.strip().lower(), []).append(attempt)
+
+    notes: dict[str, str] = {}
+    for angle in order.angles:
+        earlier = (
+            by_shape.get(angle.shape_key)
+            if angle.shape_key
+            else by_text.get(angle.text.strip().lower())
+        )
+        if not earlier:
+            continue
+        runs = len({attempt.run_id for attempt in earlier})
+        rows = sum(attempt.rows for attempt in earlier)
+        exclusive = sum(attempt.exclusive for attempt in earlier)
+        when = "the last time this search ran here" if runs == 1 else (
+            f"across the {runs} times this search has run here"
+        )
+        earned = (
+            "no place the other searches missed"
+            if exclusive == 0
+            else f"{exclusive} place{'' if exclusive == 1 else 's'} nothing else found"
+        )
+        notes[angle.angle_id] = (
+            f"{when.capitalize()} it returned {rows} "
+            f"row{'' if rows == 1 else 's'} and {earned}."
+        )
+    return notes
+
+
+def subject_of(order: SearchOrder) -> str:
+    """What a run is about, in the form two runs can be compared on.
+
+    Kind and place only. The count, the bar and the cut all change what a
+    search is asked for, and none of them changes whether "the `hours` shape
+    finds cevicherias in Lima nobody else finds".
+    """
+    return f"{order.kind.strip().lower()}|{order.place.strip().lower()}"
+
+
+def record_contribution(order: SearchOrder) -> None:
+    """Write each angle's contribution onto its stored attempt.
+
+    Contribution is computed against the finished pool, so it cannot be written
+    when a search lands -- the searches after it will change it. It is written
+    once the batch is done, and rewritten after every later batch: retrying one
+    angle changes the pool and therefore changes what the other six turn out to
+    have contributed.
+
+    This is what makes the number outlive the run. Until it was stored, an
+    angle that bought nothing was visible on one screen, for one run, after the
+    money was already spent.
+    """
+    by_angle = _current_attempts(order)
+    sightings: list[Sighting] = []
+    for angle in order.angles:
+        attempt = by_angle.get(angle.angle_id)
+        if attempt is not None and attempt.state == "completed":
+            sightings.extend(_sightings_of(attempt))
+    candidates = pool_sightings(sightings)
+
+    for angle in order.angles:
+        attempt = by_angle.get(angle.angle_id)
+        if attempt is None or attempt.state != "completed":
+            continue
+        found, shared, exclusive = contribution_of(candidates, angle.text)
+        store.save_attempt(
+            attempt.model_copy(
+                update={
+                    "found": found,
+                    "shared": shared,
+                    "exclusive": exclusive,
+                    "contribution_recorded": True,
+                    "shape_key": attempt.shape_key or angle.shape_key,
+                    "subject": attempt.subject or subject_of(order),
+                }
+            )
+        )
 
 
 def _latest_by_angle(attempts: list[SearchAttempt]) -> list[SearchAttempt]:
@@ -329,6 +441,14 @@ def assemble(order: SearchOrder) -> dict:
         # prints one number implies a certainty this step has not got.
         "uncertain_identity": uncertain,
         "capacity": capacity,
+        # Said rather than left to be worked out from a table. Roughly two of
+        # seven searches in run 33fca394 returned no place the others missed,
+        # and nothing anywhere said so.
+        "empty_handed": [
+            row["angle_id"]
+            for row in angle_rows
+            if row["state"] == "completed" and row["exclusive"] == 0
+        ],
         "capacity_warning": (
             f"These {len(order.angles)} searches ask for {capacity} places in "
             f"total, which may not fill a list of {order.target_count}. Add an "

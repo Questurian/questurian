@@ -461,6 +461,25 @@ Boundary rule: last-write-wins is not a resolution. A marker answered twice is
 resolved from the answers, and the resolution reaches the order as an
 `answer_note` the operator can act on.
 
+### Contribution
+Definition: what one search bought — how many places it returned, how many of
+those the other searches also returned, and how many nothing else found.
+Mechanism: computed against the finished pool (never accumulated as searches
+land, so ordering cannot change it), written onto the attempt after every
+batch, and rewritten after a retry because a retry changes the pool.
+Boundary rule: reported, never acted on. A search with nothing exclusive may be
+the coverage everything else is being checked against; no angle is dropped,
+reordered or discouraged by its history.
+
+### Subject
+Definition: kind and place, folded — what two runs must share before one run's
+contribution says anything about the other's. The count, the bar and the cut
+change what a search asks for; none of them changes whether a shape finds
+places nobody else finds.
+Boundary rule: an angle is identified across runs by its SHAPE, not its
+wording. The model rewrites the sentence every run. An operator's own angle has
+no shape, so it matches on exact wording or not at all.
+
 ### Search Attempt
 Definition: one angle's search as it stands — `not_started`, `running`,
 `completed`, `failed` or `interrupted` — with the request fingerprint it was

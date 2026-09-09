@@ -96,6 +96,10 @@ export interface ListicleOrderAngle {
    *  angle is no longer known to be true of it. */
   edited: boolean
   custom: boolean
+  /** What this search bought the last time it ran about the same subject —
+   *  before this time is paid for. Empty on a first run, which is most of
+   *  them. Said and never acted on: no angle is dropped because of it. */
+  last_time?: string
 }
 
 export interface ListicleOrder {
@@ -205,6 +209,10 @@ export interface ListicleSearchResults {
   uncertain_identity: number
   capacity: number
   capacity_warning: string
+  /** The searches that finished and returned no place the others missed. A
+   *  fact about this run, not a verdict: a search with nothing exclusive may
+   *  be the coverage everything else is being checked against. */
+  empty_handed?: string[]
   order: {
     kind: string
     place: string

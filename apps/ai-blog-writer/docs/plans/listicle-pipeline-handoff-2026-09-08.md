@@ -29,10 +29,16 @@ The owner's unrelated Prompt2Blog work is committed separately on
 staging CSS extraction. Nothing of it is mixed into this branch. Do not merge
 the two.
 
-Working tree is clean. Verification **on this branch alone**: 2258 backend
-tests, 873 frontend, tsc and eslint clean, flake8 clean apart from two
-pre-existing F401s in `listicle_pipeline/api.py` and `profiles.py`. (2249 / 871
-before the repeated-marker fix added its tests.)
+Working tree is clean. Verification **on this branch alone**: 2264 backend
+tests, 874 frontend, tsc clean, flake8 clean apart from two pre-existing F401s
+in `listicle_pipeline/api.py` and `profiles.py`. (2249 / 871 at the first
+commit; the repeated-marker fix and the contribution record added the rest.)
+
+eslint is clean **over `src/features/listiclePipeline`**. Over the whole
+frontend there is one error — a literal U+00A0 inside a regex in
+`prompt2blog/intake/components/findings.ts`, which arrived on `main` with
+commit 4bd7e813 and is nothing to do with this branch. Left alone here rather
+than folded in.
 
 Those counts are lower than the 2263 / 876 quoted while the two branches shared
 a working tree, and the difference is not a regression: the owner's
@@ -169,10 +175,35 @@ interview is worse than a repeat.
    temporary local edit to `RequireAuth` that was reverted immediately. Anyone
    repeating it has to do the same.
 
-2. **Angles that contribute nothing still cost a search.** In `33fca394`,
-   `purist` returned 10 rows for 1 unique place and `hours` returned 6 rows for
-   0. Roughly two of seven searches bought nothing. There is no mechanism that
-   notices this, and contribution is only visible after the money is spent.
+2. ~~**Angles that contribute nothing still cost a search.**~~ **Done
+   2026-09-09.** Contribution used to be computed when the results screen was
+   drawn and thrown away with it, so an angle's worth only ever existed after
+   the money was spent.
+
+   It is now recorded on the attempt (`found` / `shared` / `exclusive`), and
+   the order screen says what each search returned the last time it ran about
+   the same subject — *before* this time is paid for. An angle is matched
+   across runs by its SHAPE, not its wording: the model rewrites the sentence
+   every run. The results screen also names how many searches finished having
+   found no place the others missed, which nothing said before.
+
+   Recomputed after every batch, because retrying one angle changes the pool
+   and so changes what the other six turn out to have contributed.
+
+   Nothing acts on it. No angle is dropped, reordered or discouraged: two runs
+   is a fact about two runs.
+
+   Both stored runs were backfilled with
+   `scripts/backfill_listicle_contribution.py` (recomputes from sightings
+   already on disk; spends nothing; safe to re-run). Checked on the real data:
+   opening `33fca394` now shows six history lines on the order and "1 of 7
+   searches returned no place the others missed" on the results.
+
+   One correction to the note this replaces: it said "roughly two of seven"
+   bought nothing. Exactly one of the seven returned zero exclusive places
+   (`hours`). `purist` returned ten rows for one exclusive place, which is
+   poor value but is not nothing — so the screen counts zero, and leaves "ten
+   rows for one place" to the operator's judgement.
 
 3. **The `cut` reaches every search prompt and the model ignores it.** Run 2
    returned Maido, Osaka Nikkei, Hanzo (twice), Toshi, Nikko, Tomo and Shizen
