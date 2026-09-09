@@ -145,11 +145,29 @@ interview is worse than a repeat.
 
 ## Other open items, in order
 
-1. **The UI has never seen a live run.** Both runs were driven headlessly.
-   `AnglePicker` sending selections, `OrderPanel`'s count correction and its
-   new bar/cut correction, the per-angle retry buttons — all unit-tested, none
-   exercised end to end in a browser. Do this before trusting the screen. It is
-   now the top item, and the fix above added a control to that same panel.
+1. **The screen has now been opened on stored runs; the interview has not.**
+   Done 2026-09-09 against both stored runs, at `/listicle-pipeline/<run>` with
+   the dev servers up (`pnpm run dev:local`, ports 4003/3003; `.claude/launch.json`
+   starts them). What was exercised for real:
+
+   - The order panel renders from a stored run. Every listicle call returned
+     200; the console's `ERR_CONNECTION_REFUSED` noise is Payload on :3000,
+     which does not run on this machine, and is unrelated.
+   - The repeated-marker note appears, and correcting the cut posted, made
+     revision 2, replaced the value and cleared the note.
+   - The results table draws, and its shared/only-this columns are where open
+     item 2 below is visible on screen: `purist` 10 rows for 1 unique, `hours`
+     6 rows for 0.
+   - The per-angle "run this one" and "Retry 1 failed search" controls render
+     for an interrupted angle, with the honest wording about being charged
+     again. **Not clicked** — clicking spends.
+
+   Two things the browser still has not seen, both because they need a live
+   interview and money: `AnglePicker` sending selections on a real turn, and a
+   retry actually running. The frontend requires a Payload staff session and
+   Payload does not run on this machine, so the check above was made with a
+   temporary local edit to `RequireAuth` that was reverted immediately. Anyone
+   repeating it has to do the same.
 
 2. **Angles that contribute nothing still cost a search.** In `33fca394`,
    `purist` returned 10 rows for 1 unique place and `hours` returned 6 rows for
