@@ -348,3 +348,39 @@ def test_the_same_reason_twice_is_not_said_twice():
         ),
     )
     assert flags["Hanzo"]["why"] == "A Nikkei restaurant."
+
+
+def test_an_unmerged_twin_is_marked_so_it_does_not_read_as_a_chain():
+    """A real run flagged Chez Wong and El Verídico de Fidel as chains because
+    each appeared as two unmerged rows in different districts. Neither is a
+    chain: it is one place whose district two searches recorded differently."""
+    seen: list = []
+    cut_review.review_candidates(
+        _order(exclusions="no chains"),
+        [
+            {
+                "name": "Chez Wong",
+                "district": "Lince",
+                "possible_duplicates": ["Chez Wong"],
+                "sightings": [{"evidence": "best ceviche in the world"}],
+            },
+            {
+                "name": "Chez Wong",
+                "district": "La Victoria",
+                "possible_duplicates": ["Chez Wong"],
+                "sightings": [{"evidence": "awarded on numerous occasions"}],
+            },
+        ],
+        _reviewer({}, seen=seen),
+    )
+    prompt = seen[0][1]
+    assert prompt.count("may be the same place as another row here") == 2
+    # Phrases chosen to sit inside one line: the prompt is wrapped.
+    assert "record-keeping artefact" in prompt
+    assert "Do not call something a chain because it appears twice" in prompt
+
+
+def test_a_row_with_no_twin_is_not_marked():
+    seen: list = []
+    cut_review.review_candidates(_order(), _candidates(), _reviewer({}, seen=seen))
+    assert "may be the same place" not in seen[0][1]

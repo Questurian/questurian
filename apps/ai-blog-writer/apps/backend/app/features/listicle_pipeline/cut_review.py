@@ -153,8 +153,19 @@ def build_candidate_prompt(order: SearchOrder, candidates: list[dict]) -> str:
         )
         district = str(candidate.get("district", "")).strip()
         where = f" -- {district}" if district else ""
+        # Rows this pipeline could not prove are separate places. Said out
+        # loud, because without it the model reads two rows of one restaurant
+        # as two branches: a real run flagged Chez Wong and El Verídico de
+        # Fidel as chains on exactly that reasoning, and neither is a chain --
+        # each is one famous place whose district two searches recorded
+        # differently.
+        twin = (
+            " [may be the same place as another row here]"
+            if candidate.get("possible_duplicates")
+            else ""
+        )
         lines.append(
-            f"{index}. {candidate.get('name', '')}{where} -- "
+            f"{index}. {candidate.get('name', '')}{where}{twin} -- "
             f"{evidence or 'no evidence recorded'}"
         )
     listing = "\n".join(lines)
@@ -187,6 +198,11 @@ What does NOT count, and has caused wrong flags before:
 - Evidence about the DISH itself, or about how the place sources or prepares
   it. "Buys daily from artisanal fishermen" is a reason it belongs on the
   list, not a reason to bar it.
+- Two rows with the same name in different districts. This list is pooled from
+  several searches and often holds one place twice, which is why some rows are
+  marked as possibly the same place. That is a record-keeping artefact, NOT
+  evidence of a chain. Do not call something a chain because it appears twice
+  here; say so only if you know it genuinely has many branches.
 - Being a restaurant rather than a stall, being expensive, or being
   well-regarded. None of those is an exclusion unless the operator said so.
 - A place widely known for the thing this list is about. A famous specialist

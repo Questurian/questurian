@@ -65,6 +65,19 @@ def _deps():
     return api._base_dependencies()
 
 
+def _review():
+    """The cut check, as the routes pass it.
+
+    Without this the driver silently skips both halves of it and a run driven
+    here would look like a run whose order and candidates were clean, when in
+    fact nothing had looked. This script's whole claim is that it is the same
+    code the HTTP routes call.
+    """
+    import app.features.listicle_pipeline.api as api
+
+    return api._review_call
+
+
 def _wrap(text: str, indent: str = "    ") -> str:
     out: list[str] = []
     for para in str(text).split("\n"):
@@ -123,7 +136,7 @@ def main() -> int:
     elif command == "answer":
         run_id, text = sys.argv[2], sys.argv[3]
         selections = json.loads(sys.argv[4]) if len(sys.argv) > 4 else None
-        show(service.answer(run_id, text, _deps(), selections))
+        show(service.answer(run_id, text, _deps(), selections, _review()))
     elif command == "show":
         show(service.get(sys.argv[2]))
     elif command == "digest":
@@ -143,11 +156,24 @@ def main() -> int:
                 f"  {angle.shape_key or '(custom)':<20} {angle.group or '-':<12} "
                 f"{angle.role:<12} asks {angle.wanted}"
             )
+        # Whether anything looked, said separately from what it found: an
+        # unchecked order must not read as a cleared one.
+        if not order.conflicts_checked:
+            print("\nNOT CHECKED against the cut.")
+        elif order.angle_conflicts:
+            print(f"\n{len(order.angle_conflicts)} SEARCH(ES) FIGHT THE CUT:")
+            for conflict in order.angle_conflicts:
+                print(f"  {conflict.angle_text}")
+                print(_wrap(conflict.why, "      "))
+        else:
+            print("\nChecked against the cut; no search looks like it fights it.")
     elif command == "search":
         import app.features.listicle_pipeline.api as api
 
         only = sys.argv[3].split(",") if len(sys.argv) > 3 and sys.argv[3] else None
-        payload = service.search(sys.argv[2], api._search_call, only=only)
+        payload = service.search(
+            sys.argv[2], api._search_call, only=only, review=api._review_call
+        )
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     elif command == "report":
         # The three numbers worth reading, without the whole payload.
@@ -169,16 +195,26 @@ def main() -> int:
         named = sorted({t for a in found["angles"] for t in a.get("sources_named", [])})
         print(f"\n{len(named)} publications: {', '.join(named)}")
         print()
+        if not found.get("cut_checked"):
+            print("The places below have NOT been checked against the cut.\n")
+        else:
+            print(
+                f"{found.get('barred_count', 0)} of {len(found['candidates'])} "
+                "look like places the cut barred (marked !).\n"
+            )
         for index, candidate in enumerate(found["candidates"], 1):
             duplicate = (
                 "  [dup? " + ", ".join(candidate["possible_duplicates"]) + "]"
                 if candidate["possible_duplicates"]
                 else ""
             )
+            barred = "!" if candidate.get("barred") else " "
             print(
-                f"{index:>3}. x{candidate['overlap']}  {candidate['name']} "
+                f"{barred}{index:>3}. x{candidate['overlap']}  {candidate['name']} "
                 f"({candidate['district'] or '-'}){duplicate}"
             )
+            if candidate.get("barred"):
+                print(_wrap(candidate["barred"], "        "))
     else:
         print(f"unknown command {command!r}")
         return 2
