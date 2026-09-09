@@ -153,6 +153,25 @@ export function pasteDraft(
   })
 }
 
+/**
+ * Take in an article this app never briefed, and get a run for it.
+ *
+ * `pasteDraft` above is the way back for an article written from this app's
+ * own frozen prompt. This is for work that never passed through here at all:
+ * it makes the run the article needs in order to be listed, staged and edited,
+ * because everything downstream is keyed to one. Costs nothing and calls
+ * nothing.
+ */
+export function pasteArticle(
+  markdown: string,
+  writtenBy: string,
+): Promise<IntakeState> {
+  return post(`${INTAKE}/pasted`, {
+    markdown,
+    written_by: writtenBy,
+  })
+}
+
 /** The article, once there is one. Its own call: this is the whole text. */
 export async function readDraft(runId: string): Promise<IntakeDraft> {
   const response = await apiFetch(`${INTAKE}/${runId}/draft`)

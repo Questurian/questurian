@@ -65,6 +65,14 @@ export interface UseIntake {
   generateArticle: () => Promise<void>
   /** File an article written elsewhere against this run. Costs nothing. */
   pasteDraft: (markdown: string, writtenBy: string) => Promise<void>
+  /**
+   * Take in a finished article that had no run at all, and answer with the run
+   * it now has. `null` when it was refused; the error says why.
+   */
+  pasteArticle: (
+    markdown: string,
+    writtenBy: string,
+  ) => Promise<IntakeState | null>
   /** The article the writer produced, once there is one. */
   draft: IntakeDraft | null
   /** Read the draft and say what is wrong with it. This one spends. */
@@ -102,21 +110,38 @@ export function useIntake(): UseIntake {
   // without restarting its own interval every time the state changes.
   const runIdRef = useRef<string | null>(null)
 
-  const run = useCallback(async (action: () => Promise<IntakeState>) => {
-    setBusy(true)
-    setError(null)
-    try {
-      const next = await action()
-      setState(next)
-      runIdRef.current = next.run_id
-      rememberRun(next.run_id)
-      setCutWarnings(next.cut_warnings ?? [])
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Something went wrong.')
-    } finally {
-      setBusy(false)
-    }
-  }, [])
+  // One turn, handing back what the server said. Almost every caller ignores
+  // the return and reads the screen instead, which is what `run` below is for.
+  // Pasting a whole article is the exception: it makes a run this page has
+  // nowhere to show, and the operator is going straight to the staging editor
+  // for it, so that one caller has to be told which run it just made.
+  const turn = useCallback(
+    async (action: () => Promise<IntakeState>): Promise<IntakeState | null> => {
+      setBusy(true)
+      setError(null)
+      try {
+        const next = await action()
+        setState(next)
+        runIdRef.current = next.run_id
+        rememberRun(next.run_id)
+        setCutWarnings(next.cut_warnings ?? [])
+        return next
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Something went wrong.')
+        return null
+      } finally {
+        setBusy(false)
+      }
+    },
+    [],
+  )
+
+  const run = useCallback(
+    async (action: () => Promise<IntakeState>) => {
+      await turn(action)
+    },
+    [turn],
+  )
 
   useEffect(() => {
     const runId = rememberedRun()
@@ -252,6 +277,11 @@ export function useIntake(): UseIntake {
       (markdown: string, writtenBy: string) =>
         run(() => api.pasteDraft(requireRun(), markdown, writtenBy)),
       [run, requireRun],
+    ),
+    pasteArticle: useCallback(
+      (markdown: string, writtenBy: string) =>
+        turn(() => api.pasteArticle(markdown, writtenBy)),
+      [turn],
     ),
     draft,
     review,

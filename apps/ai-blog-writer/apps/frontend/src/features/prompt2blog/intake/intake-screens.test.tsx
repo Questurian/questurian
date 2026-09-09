@@ -23,6 +23,7 @@ import { GrillScreen } from './components/GrillScreen'
 import { WorkingScreen } from './components/WorkingScreen'
 import { ResearchScreen } from './components/ResearchScreen'
 import { RunList } from './components/RunList'
+import { SeedScreen } from './components/SeedScreen'
 import { WorkOrderScreen } from './components/WorkOrderScreen'
 import type {
   IntakeBrief,
@@ -489,6 +490,70 @@ describe('bringing in an article written somewhere else', () => {
     // nothing here may look like it did.
     renderPrompt()
     fireEvent.click(screen.getByRole('button', { name: /paste an article instead/i }))
+
+    expect(screen.getByText(/Recorded as your word/)).toBeInTheDocument()
+  })
+})
+
+describe('bringing in an article that had no run at all', () => {
+  function renderSeed(onPasteArticle = vi.fn()) {
+    render(
+      <SeedScreen busy={false} onStart={vi.fn()} onPasteArticle={onPasteArticle} />,
+    )
+    return onPasteArticle
+  }
+
+  it('offers the second way in without crowding the first', () => {
+    // Starting from a line is still the main move. This sits under it, folded
+    // away, for work that is already written.
+    renderSeed()
+
+    expect(screen.getByRole('button', { name: /^start$/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /^paste an article$/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText(/One line is enough/)).toBeInTheDocument()
+  })
+
+  it('hands over the article and who wrote it', () => {
+    const onPasteArticle = renderSeed()
+    fireEvent.click(screen.getByRole('button', { name: /^paste an article$/i }))
+
+    fireEvent.change(screen.getByLabelText('The article'), {
+      target: { value: '# A headline\n\nThe article.' },
+    })
+    fireEvent.change(screen.getByLabelText(/Who wrote it/), {
+      target: { value: 'Claude, in the browser' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /stage this article/i }))
+
+    expect(onPasteArticle).toHaveBeenCalledWith(
+      '# A headline\n\nThe article.',
+      'Claude, in the browser',
+    )
+  })
+
+  it('will not file an empty paste', () => {
+    renderSeed()
+    fireEvent.click(screen.getByRole('button', { name: /^paste an article$/i }))
+
+    expect(screen.getByRole('button', { name: /stage this article/i })).toBeDisabled()
+  })
+
+  it('says what a run with no brief cannot do, before the paste not after', () => {
+    // The detector reads an article against its brief. An article that never
+    // passed through the grill has none, and that has to be visible while the
+    // operator is deciding, not discovered on the next screen.
+    renderSeed()
+    fireEvent.click(screen.getByRole('button', { name: /^paste an article$/i }))
+
+    expect(screen.getByText(/will not be reviewed by the/i)).toBeInTheDocument()
+    expect(screen.getByText(/nothing spent/i)).toBeInTheDocument()
+  })
+
+  it('asks who wrote it and says the answer is not checked', () => {
+    renderSeed()
+    fireEvent.click(screen.getByRole('button', { name: /^paste an article$/i }))
 
     expect(screen.getByText(/Recorded as your word/)).toBeInTheDocument()
   })

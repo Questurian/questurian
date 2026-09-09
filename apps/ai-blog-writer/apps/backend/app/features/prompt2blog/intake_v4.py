@@ -91,6 +91,8 @@ from .generation_v5 import (
     generation_state,
     latest_attempt,
     latest_draft,
+    parse_pasted_article,
+    record_pasted_article,
     record_pasted_draft,
 )
 from .review_v5 import (
@@ -481,6 +483,48 @@ def paste_draft(
         extra={"run_id": run_id, "feature": FEATURE_NAME},
     )
     return attempt_id
+
+
+def paste_article(
+    markdown: str,
+    services: IntakeServices,
+    *,
+    written_by: str = "",
+    owner_staff_id: str | None = None,
+) -> str:
+    """Take in an article this app never briefed, and give it a run to live on.
+
+    `paste_draft` above is the return path for an article written from this
+    app's own frozen prompt. This is the other half of the same need, and the
+    more common one: articles written somewhere else entirely, which no grill
+    here ever asked about.
+
+    A run is created for it because a run is the only thing the rest of the
+    app can address. Saved Articles lists runs, the Payload staging editor
+    opens `?runId=`, and every article read is keyed to one -- so an article
+    without a run could not be staged at all, and the only way to publish one
+    was to retype it into the editor by hand.
+
+    The run is honest about being empty. It has no grill, no brief and no
+    prompt, nothing was spent to make it, and both fingerprints on the draft
+    stay blank because there was no assignment to match it against. The one
+    thing that emptiness costs is the detector, which reads an article against
+    its brief and so has nothing to read this one against.
+
+    Returns the new run id, because the caller has to send the operator to it.
+    """
+    # Read before anything is written. A run created and then abandoned because
+    # the box held no article would sit in "Pick up where you left off" for
+    # good, with nothing in it and no way to tell why it is there.
+    draft = parse_pasted_article(markdown)
+    run_id = str(uuid4())
+    services.recorder.queue(run_id, owner_staff_id)
+    record_pasted_article(run_id, draft, services.recorder, written_by=written_by)
+    logger.info(
+        "Prompt2Blog article pasted in with no run behind it",
+        extra={"run_id": run_id, "feature": FEATURE_NAME},
+    )
+    return run_id
 
 
 def start_review(
@@ -1447,10 +1491,16 @@ def recent_runs(limit: int = 15) -> list[dict[str, Any]]:
             continue
         stage = _safe_str(row.get("stage"))
         grill = _stage_data(run_id, GRILL_STAGE)
+        # A pasted article never had a seed typed at it, so its headline is
+        # what it is called everywhere else and what it should be called here.
+        # Read only when there is no seed, which is the only case it can help.
+        seed = _safe_str(grill.get("seed")) or _safe_str(
+            (latest_draft(run_id) or {}).get("headline")
+        )
         runs.append(
             {
                 "run_id": run_id,
-                "seed": _safe_str(grill.get("seed")),
+                "seed": seed,
                 "status": _safe_str(row.get("status")),
                 "stage": stage,
                 "stage_label": RUN_STAGE_LABELS.get(stage, stage),
