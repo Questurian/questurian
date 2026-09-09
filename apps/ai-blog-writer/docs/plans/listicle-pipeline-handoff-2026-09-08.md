@@ -15,19 +15,52 @@ Vocabulary: the "Listicle Pipeline (search order)" section of `CONTEXT.md`.
 
 ## State right now
 
-**Everything below is uncommitted**, in a working tree that also holds
-unrelated Prompt2Blog edits belonging to the owner. Committing is the first
-thing to do, and only the listicle paths:
+**Committed and pushed.** Branch `listicle/search-order-rework`, one commit,
+39 files. Open as **PR #557** against `main`.
 
-    app/features/listicle_pipeline/    features/listiclePipeline/
-    app/features/prompt2blog/grill_v4.py      (repeat-marker guard)
-    app/features/prompt2blog/contracts_v4.py  (GrillOption.shape/role)
-    packages/utils/src/utils/google_grounding.py  (source titles)
-    apps/frontend/src/App.tsx  CONTEXT.md  docs/adr/0037-*.md
-    apps/backend/tests/test_listicle_*.py  tests/listicle_test_support.py
+**This file only exists on that branch.** If you are reading a checkout of
+`main` you cannot see it, and you cannot see the code either:
 
-Verification: 2263 backend tests, 876 frontend, tsc and eslint clean,
-flake8 clean apart from two pre-existing F401s in `api.py` and `profiles.py`.
+    git switch listicle/search-order-rework
+
+The owner's unrelated Prompt2Blog work is committed separately on
+`p2b/paste-an-article` (PR #558) — two commits, a paste-an-article path and a
+staging CSS extraction. Nothing of it is mixed into this branch. Do not merge
+the two.
+
+Working tree is clean. Verification **on this branch alone**: 2249 backend
+tests, 871 frontend, tsc and eslint clean, flake8 clean apart from two
+pre-existing F401s in `listicle_pipeline/api.py` and `profiles.py`.
+
+Those counts are lower than the 2263 / 876 quoted while the two branches shared
+a working tree, and the difference is not a regression: the owner's
+`test_prompt2blog_pasted_article.py` and its frontend tests live on
+`p2b/paste-an-article` and are not on this branch. `main` alone is 2084 / 855.
+
+## Driving a real run
+
+`apps/backend/scripts/drive_listicle_run.py` — the same code the HTTP routes
+call, with no server, auth or browser. Both runs below were driven with it.
+
+    cd apps/ai-blog-writer
+    set -a && . ./apps/backend/.env && set +a
+    export PYTHONPATH=apps/backend:packages/shared/src:packages/utils/src
+    .venv/bin/python apps/backend/scripts/drive_listicle_run.py start "<title>"
+    .venv/bin/python apps/backend/scripts/drive_listicle_run.py answer <run> "<answer>"
+    .venv/bin/python apps/backend/scripts/drive_listicle_run.py order <run>
+    .venv/bin/python apps/backend/scripts/drive_listicle_run.py search <run>
+    .venv/bin/python apps/backend/scripts/drive_listicle_run.py report <run>
+
+`report` reads a finished run and spends nothing. `search` is the expensive
+command: one grounded web search per angle.
+
+Two rules when answering, both learned the hard way:
+
+- **Answer as a statement, never as a reply.** The text is stored verbatim and
+  reaches the searches as the operator's own words. "Yes, that" says nothing.
+- **The recommendation is a proposed answer, not part of the question.** Read
+  the question, decide what is true, write that. Accept the proposal when it is
+  good; reword it when it is not, without referring to it.
 
 ## What was built (plan phases 1-4, plus half of 5)
 
@@ -49,11 +82,7 @@ From the improvement plan at
 
 ## Two real runs, both stored
 
-Driven headlessly through `service` + `api._base_dependencies()`; no server or
-auth needed. The driver is in the session scratchpad and is trivial to rewrite:
-`start` / `answer <run_id> <text> [selections_json]` / `order` / `search`.
-Source `apps/backend/.env` and set
-`PYTHONPATH=apps/backend:packages/shared/src:packages/utils/src`.
+Both stored in the dev database and readable with `report` above.
 
 | run | questions | searches | rows | places | notes |
 |---|---:|---:|---:|---:|---|
