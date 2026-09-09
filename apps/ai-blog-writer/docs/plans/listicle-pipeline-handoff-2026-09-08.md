@@ -15,9 +15,15 @@ Vocabulary: the "Listicle Pipeline (search order)" section of `CONTEXT.md`.
 
 ## State right now
 
-**Committed and pushed.** Branch `listicle/search-order-rework`. Open as
-**PR #557** against `main`. First commit: 39 files, the rework itself. Second:
-the repeated-marker fix below.
+**Committed. Not yet pushed past the first commit.** Branch
+`listicle/search-order-rework`, open as **PR #557** against `main`.
+
+    fdfbcf73  the rework itself, 39 files          (pushed, on the PR)
+    1250ca61  a marker answered twice is resolved  (local)
+    580dad5f  the screen opened on a stored run    (local)
+    575b7f65  what a search bought is recorded     (local)
+    c3af7c3d  the screen stops implying the cut    (local)
+    3c538775  the over-tightening claim's control  (local)
 
 **This file only exists on that branch.** If you are reading a checkout of
 `main` you cannot see it, and you cannot see the code either:
@@ -30,7 +36,7 @@ staging CSS extraction. Nothing of it is mixed into this branch. Do not merge
 the two.
 
 Working tree is clean. Verification **on this branch alone**: 2264 backend
-tests, 874 frontend, tsc clean, flake8 clean apart from two pre-existing F401s
+tests, 875 frontend, tsc clean, flake8 clean apart from two pre-existing F401s
 in `listicle_pipeline/api.py` and `profiles.py`. (2249 / 871 at the first
 commit; the repeated-marker fix and the contribution record added the rest.)
 
