@@ -35,16 +35,16 @@ The owner's unrelated Prompt2Blog work is committed separately on
 staging CSS extraction. Nothing of it is mixed into this branch. Do not merge
 the two.
 
-Working tree is clean. Verification **on this branch alone**: 2264 backend
-tests, 875 frontend, tsc clean, flake8 clean apart from two pre-existing F401s
+Working tree is clean and **CI is green on all five checks**. Verification on
+this branch: 2264 backend tests, 880 frontend, tsc clean, flake8 clean apart from two pre-existing F401s
 in `listicle_pipeline/api.py` and `profiles.py`. (2249 / 871 at the first
 commit; the repeated-marker fix and the contribution record added the rest.)
 
-eslint is clean **over `src/features/listiclePipeline`**. Over the whole
-frontend there is one error — a literal U+00A0 inside a regex in
-`prompt2blog/intake/components/findings.ts`, which arrived on `main` with
-commit 4bd7e813 and is nothing to do with this branch. Left alone here rather
-than folded in.
+eslint is clean over the whole frontend: 0 errors, 2 pre-existing warnings.
+The one error — a literal U+00A0 inside a regex in
+`prompt2blog/intake/components/findings.ts` — arrived on `main` with commit
+4bd7e813 and had nothing to do with this branch, but it was why every CI run
+here was red, so it is fixed (written as the escape instead).
 
 Those counts are lower than the 2263 / 876 quoted while the two branches shared
 a working tree, and the difference is not a regression: the owner's
@@ -165,6 +165,15 @@ repeated-marker question once and then shows it anyway, because a dead
 interview is worse than a repeat.
 
 ## Other open items, in order
+
+0. **Anyone can open the screen now.** `docs/plans/listicle-how-to-test.md` is
+   the plain-language version. `pnpm run dev:local`, then
+   `http://localhost:3003/listicle-pipeline/33fca394`. No login: the Payload
+   sign-in is stood in for by a dev-only session
+   (`VITE_DEV_OFFLINE_LOGIN=true`, already in `apps/frontend/.env`), fenced on
+   Vite's `DEV` literal and off under vitest. A production build made with the
+   flag deliberately ON was checked to contain no trace of it. Do not
+   hand-edit `RequireAuth` any more.
 
 1. **The screen has now been opened on stored runs; the interview has not.**
    Done 2026-09-09 against both stored runs, at `/listicle-pipeline/<run>` with
