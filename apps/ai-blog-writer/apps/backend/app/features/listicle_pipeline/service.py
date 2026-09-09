@@ -25,7 +25,7 @@ from ..prompt2blog.grill_v4 import (
     reopen_grill,
     start_grill,
 )
-from . import runner, spec, store
+from . import cut_review, runner, spec, store
 from .contracts import LISTICLE_MARKER_KEYS, SearchOrder
 from .prompts import build_listicle_turn_prompt
 
@@ -69,6 +69,7 @@ def answer(
     text: str,
     base: GrillDependencies,
     selections: list[dict] | None = None,
+    review=None,
 ) -> GrillState:
     """One turn, plus whatever structure the screen knew about the answer.
 
@@ -87,8 +88,10 @@ def answer(
     if state.status == "agreed":
         # Written down at the moment of agreement, so what the screen shows
         # next and what the searches run from are one object rather than two
-        # readings of a paragraph.
-        _ensure_order(state)
+        # readings of a paragraph. This is also the one moment the cut check
+        # may run: the turn is already a paid call, and every later read of the
+        # order is a GET that must stay free.
+        _ensure_order(state, review)
     return state
 
 
@@ -106,13 +109,20 @@ def get(run_id: str) -> GrillState | None:
     return store.load(run_id)
 
 
-def _ensure_order(state: GrillState) -> SearchOrder:
+def _ensure_order(state: GrillState, review=None) -> SearchOrder:
     """The agreed order, built once and kept.
 
     Rebuilt only when there is none. An order that already exists may have been
     corrected by the operator, and regenerating it from the transcript would
     silently undo that correction -- which is the same class of bug as reading
     the count out of prose, one layer up.
+
+    `review` is the cut check, and it is a parameter rather than an import
+    because this function is reached from two kinds of caller. Answering a turn
+    is a POST that is already spending on the model, and that is where the check
+    belongs. Opening the order screen is a GET, and a GET must not spend --
+    reopening a run without buying anything is the whole point of addressing
+    runs by id. Called without it, the order is built unchecked and says so.
     """
     existing = store.load_order(state.run_id)
     if existing is not None:
@@ -120,8 +130,27 @@ def _ensure_order(state: GrillState) -> SearchOrder:
     order = spec.build_search_order(
         state, revision=1, selections=store.load_selections(state.run_id)
     )
+    _apply_conflicts(order, review)
     store.save_order(order)
     return order
+
+
+def _apply_conflicts(order: SearchOrder, review) -> None:
+    """Ask whether any approved search fights the cut, if anyone may ask.
+
+    A check that fails is not a finding. `conflicts_checked` stays false and
+    the screen says nobody looked, which is true -- the alternative is an order
+    that reads as cleared because a model call timed out.
+    """
+    if review is None:
+        return
+    try:
+        order.angle_conflicts = cut_review.review_order(order, review)
+        order.conflicts_checked = True
+    except Exception:
+        logger.warning(
+            "The cut check did not run for %s; the order says so", order.run_id
+        )
 
 
 def order(run_id: str) -> SearchOrder | None:
@@ -142,6 +171,7 @@ def revise_order(
     angles: list[dict] | None = None,
     standard: str | None = None,
     exclusions: str | None = None,
+    review=None,
 ) -> SearchOrder:
     """Correct the agreement, at a new revision.
 
@@ -218,6 +248,15 @@ def revise_order(
     for angle, allowance in zip(updated.angles, allowances):
         angle.wanted = allowance
 
+    # Changing the angles or the cut is exactly the moment the two can start
+    # disagreeing, so the old verdict is not an answer about the new order.
+    # Cleared either way; re-asked only when the caller is a path allowed to
+    # spend, and left honestly unchecked when it is not.
+    if angles is not None or exclusions is not None:
+        updated.angle_conflicts = []
+        updated.conflicts_checked = False
+        _apply_conflicts(updated, review)
+
     store.save_order(updated)
     return updated
 
@@ -228,6 +267,7 @@ def search(
     *,
     only: list[str] | None = None,
     reuse: bool = True,
+    review=None,
 ) -> dict:
     """Run the agreed search order and pool what comes back.
 
@@ -264,7 +304,33 @@ def search(
         # out of the retry that is the point of storing attempts separately.
         store.release_batch(run_id)
     store.save_results(run_id, payload)
-    return payload
+    _review_candidates(current, payload, review)
+    return runner.assemble(current)
+
+
+def _review_candidates(order: SearchOrder, payload: dict, review) -> None:
+    """Judge what came back against the cut, once, on the batch that bought it.
+
+    One call for the whole list, reading evidence the searches already wrote.
+    Nothing is looked up: that is the difference between this and researching
+    forty places to rediscover what the first search said.
+
+    Like the order check, a failure is not a finding -- nothing is stored, and
+    a run with no stored review says nobody looked rather than nothing was
+    barred.
+    """
+    if review is None:
+        return
+    try:
+        flags = cut_review.review_candidates(
+            order, payload.get("candidates", []), review
+        )
+    except Exception:
+        logger.warning(
+            "The cut check did not run over %s's candidates", order.run_id
+        )
+        return
+    store.save_cut_review(order.run_id, order.revision, flags)
 
 
 def progress(run_id: str) -> dict | None:
@@ -363,6 +429,8 @@ def _upgrade_legacy(stored: dict, current: "SearchOrder") -> dict:
         "complete": not any(row["failed"] for row in angles),
         "uncertain_identity": 0,
         "capacity": 0,
+        "cut_checked": False,
+        "barred_count": 0,
         "empty_handed": [],
         "capacity_warning": "",
         "order": {

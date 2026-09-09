@@ -397,6 +397,81 @@ describe('the agreed order on screen', () => {
     ).toBeInTheDocument()
   })
 
+  it('warns that an approved search fights the cut, before it is paid for', async () => {
+    // Run 33fca394 approved "Nikkei cevicherias" alongside "no places where
+    // ceviche is not the primary offering". 8 of that search's 10 results were
+    // barred by the order that bought it.
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(
+      order({
+        conflicts_checked: true,
+        angle_conflicts: [
+          {
+            angle_id: 'a1',
+            angle_text: 'cevicherias open for decades',
+            why: 'Most Nikkei restaurants serve ceviche among many dishes.',
+          },
+        ],
+      }),
+    )
+    renderAt('/listicle-pipeline/abc123')
+
+    expect(await screen.findByText(/Fights what you left out/)).toBeInTheDocument()
+  })
+
+  it('does not let an unchecked order read as a cleared one', async () => {
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(
+      order({ conflicts_checked: false, exclusions: 'no chains' }),
+    )
+    renderAt('/listicle-pipeline/abc123')
+
+    expect(
+      await screen.findByText(/have not been checked against what you left out/),
+    ).toBeInTheDocument()
+  })
+
+  it('marks a returned place that breaks the cut, without removing it', async () => {
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(order())
+    loadSearch.mockResolvedValue(
+      results({
+        cut_checked: true,
+        barred_count: 1,
+        order: {
+          kind: 'cevicherias',
+          place: 'Lima, Peru',
+          target_count: 20,
+          standard: '',
+          exclusions: 'no places where ceviche is not the primary offering',
+          count_source: 'answered',
+          count_ambiguous: false,
+          count_note: '',
+        },
+        candidates: [
+          {
+            name: 'Maido',
+            district: 'Miraflores',
+            evidence: 'top Nikkei restaurant, offers ceviche',
+            found_by: ['nikkei'],
+            overlap: 1,
+            possible_duplicates: [],
+            sightings: [],
+            barred: 'Ceviche is one dish of many here.',
+            barred_confidence: 'clear',
+          },
+        ],
+      }),
+    )
+    renderAt('/listicle-pipeline/abc123')
+
+    expect(
+      await screen.findByText(/Looks like something you left out/),
+    ).toBeInTheDocument()
+    // Flagged, never removed.
+    expect(screen.getByText('Maido')).toBeInTheDocument()
+  })
+
   it('says when the order cannot fill the list, without adding a search', async () => {
     loadGrill.mockResolvedValue(AGREED)
     loadOrder.mockResolvedValue(

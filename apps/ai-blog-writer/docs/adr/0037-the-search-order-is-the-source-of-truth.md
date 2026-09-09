@@ -137,7 +137,48 @@ returned place is real, currently open, independently sourced or worth writing
 about, and repeated discovery is reported as repeated discovery rather than as
 a verdict on quality. The evidence step is not built.
 
-**Nor is a returned place checked against the cut.** The exclusions are
+**The cut is checked, twice, and both checks only flag.** Added 2026-09-09
+after the failure below was traced. An angle can contradict the cut, and that
+is visible in the order before anything is bought: run 33fca394 approved
+"Nikkei cevicherias doing Japanese-Peruvian preparations" against a cut reading
+"no places where ceviche is not the primary offering", and 8 of that search's
+10 places were barred by the same order that paid for it -- one of seven paid
+searches, spent on results already ruled out. So the order is checked at
+agreement, and the candidates are checked once the pool is final.
+
+The second check costs one call, not forty, because nothing is looked up: the
+searches already recorded why they returned each place, and "offers ceviche"
+is the cut stated. Both run only on a request that is already spending. Opening
+a screen never triggers either, and an order or a run that has not been checked
+says so -- `conflicts_checked` and `cut_checked` are false by default, because
+"nobody looked" and "looked and found nothing" are different claims.
+
+Measured against the real stored run rather than asserted:
+
+- The angle check flagged exactly the Nikkei angle, and only it, out of seven.
+- The candidate check caught all seven known violations on every attempt.
+- Which places get flagged is stable. Whether one comes back `clear` or
+  `arguable` is **not**: three calls over the same 43 candidates returned
+  13/13/11 flags with the split moving each time. So the screen words both
+  levels as "look at this" rather than as a verdict, and the reason underneath
+  is the substance.
+- One consistent false positive: Costanera 700, a well-known cevicheria, is
+  flagged because the evidence a search stored for it reads "shaped modern
+  Nikkei cuisine, offers ceviche". That is a faithful reading of a misleading
+  line, which is the honest limit of a check that reads what the searches
+  reported instead of looking the place up again.
+
+Forced tool calling was built first and abandoned: it failed on two of four
+real attempts with `MALFORMED_FUNCTION_CALL`, Gemini emitting
+`print(default_api.record_barred_places(...))` as source text. The JSON inside
+was correct every time and `candidates_token_count` was 0, so it was never a
+length problem and raising the cap did not help. The JSON path succeeded three
+times out of three. Rows are identified to the model by NUMBER, not by name --
+a real call answered "Chez Wong (La Victoria)", copying back the district the
+prompt had printed, which matched nothing and would have dropped every finding
+silently.
+
+**A returned place is still not verified against the cut.** The exclusions are
 composed into every search prompt, and that is necessary and not sufficient:
 run 33fca394 returned eight Nikkei and Japanese restaurants against an explicit
 "no places where ceviche is not the primary offering". `gate.assess` does not

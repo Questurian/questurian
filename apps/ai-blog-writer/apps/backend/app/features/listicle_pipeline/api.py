@@ -141,6 +141,41 @@ def _search_call(prompt: str) -> tuple[str, list[str], int | None, list[str]]:
     )
 
 
+def _review_call(job_id: str, prompt: str, tool_name: str, schema: dict) -> Any:
+    """One schema-shaped judgement about text already written down.
+
+    JSON rather than a forced tool call, and that is not a style preference.
+    The forced-tool version was built first and failed against real data on two
+    of four attempts with `finish_reason: MALFORMED_FUNCTION_CALL` -- Gemini
+    emitting `print(default_api.record_barred_places(...))` as source text
+    instead of calling the tool. The JSON inside was complete and correct every
+    time; only the transport was wrong. `candidates_token_count: 0` in the
+    failures rules out a length problem, so raising the cap does not fix it.
+
+    `tool_name` is still taken so the two callers read the same, and because a
+    provider that does enforce tools can use it later without changing them.
+
+    Not grounded: neither question needs the web. The angle check reads the
+    order, and the candidate check reads evidence the searches already brought
+    back -- which is the whole reason it costs one call instead of forty.
+    """
+    from ..prompt2blog.llm import _invoke_json_llm
+
+    from .cut_review import REVIEW_MAX_TOKENS
+
+    parsed, _raw = _invoke_json_llm(
+        prompt=prompt,
+        max_tokens=REVIEW_MAX_TOKENS,
+        # A judgement, not a composition. Nothing here should vary run to run
+        # more than the question already makes it.
+        temperature=0.0,
+        model_name=None,
+        schema=schema,
+        job_id=job_id,
+    )
+    return parsed or {}
+
+
 def _base_dependencies() -> GrillDependencies:
     """The live model and the one path in this app that reaches the web."""
     from ..prompt2blog.api.intake import _grounded_call
@@ -271,6 +306,9 @@ def answer_listicle_grill(req: AnswerRequest, _staff=Depends(require_staff)):
         req.answer,
         _base_dependencies(),
         [selection.model_dump() for selection in req.selections],
+        # Runs only on the turn that agrees, which is already a paid call.
+        # Every later read of the order is a GET and stays free.
+        _review_call,
     )
 
 
@@ -333,6 +371,9 @@ def revise_listicle_order(
         angles=None if req.angles is None else [a.model_dump() for a in req.angles],
         standard=req.standard,
         exclusions=req.exclusions,
+        # Changing the angles or the cut is when the two can start disagreeing,
+        # so the question is asked again on the correction that caused it.
+        review=_review_call,
     )
     return _order_view(revised)
 
@@ -355,6 +396,8 @@ def run_listicle_search(
         _search_call,
         only=body.angle_ids or None,
         reuse=body.reuse,
+        # One call over the finished pool, on the batch that paid for it.
+        review=_review_call,
     )
 
 
@@ -430,6 +473,19 @@ def _order_view(order) -> dict[str, Any]:
         # it. The screen shows these next to the value they are about, because
         # a combined cut is the safe reading rather than the certain one.
         "answer_notes": list(order.answer_notes),
+        # Approved searches that look like they will return places the same
+        # order bars. Said before the money is spent; nothing is removed.
+        # `conflicts_checked` false means nobody looked, which is not the same
+        # as looked and found nothing.
+        "conflicts_checked": order.conflicts_checked,
+        "angle_conflicts": [
+            {
+                "angle_id": conflict.angle_id,
+                "angle_text": conflict.angle_text,
+                "why": conflict.why,
+            }
+            for conflict in order.angle_conflicts
+        ],
         "capacity": capacity,
         "capacity_warning": (
             f"These {len(order.angles)} searches ask for {capacity} places in "

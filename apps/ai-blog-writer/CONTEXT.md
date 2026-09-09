@@ -480,6 +480,16 @@ Boundary rule: an angle is identified across runs by its SHAPE, not its
 wording. The model rewrites the sentence every run. An operator's own angle has
 no shape, so it matches on exact wording or not at all.
 
+### Cut Check
+Definition: the two moments something asks "does this break what the operator
+barred" -- once over the approved angles, before the searches run, and once
+over the returned places, after.
+Mechanism: `cut_review`, one JSON call each, on a request that is already
+spending. Rows are identified to the model by NUMBER, never by name.
+Boundary rule: both only FLAG. Nothing is removed, reworded or reordered.
+Unchecked is not clean: `conflicts_checked` and `cut_checked` say whether
+anything looked, separately from what it found.
+
 ### Search Attempt
 Definition: one angle's search as it stands — `not_started`, `running`,
 `completed`, `failed` or `interrupted` — with the request fingerprint it was

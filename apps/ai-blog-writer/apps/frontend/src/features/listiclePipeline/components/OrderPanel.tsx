@@ -54,6 +54,10 @@ export function OrderPanel({
     setEditingRequirements(false)
   }, [order.standard, order.exclusions, order.revision])
 
+  const conflictsByAngle = new Map(
+    (order.angle_conflicts ?? []).map(conflict => [conflict.angle_id, conflict.why]),
+  )
+
   const parsed = Number.parseInt(draft, 10)
   const valid = Number.isFinite(parsed) && parsed >= 1 && parsed <= 200
 
@@ -204,6 +208,14 @@ export function OrderPanel({
         </>
       )}
 
+      {/* Nobody looked is not the same as nothing found, and an order that
+          stays quiet about the difference reads as cleared. */}
+      {order.conflicts_checked === false && order.exclusions && (
+        <p className="lp-muted lp-order-note">
+          These searches have not been checked against what you left out.
+        </p>
+      )}
+
       <ol className="lp-order-angles">
         {order.angles.map(angle => (
           <li key={angle.angle_id} className="lp-order-angle">
@@ -225,6 +237,19 @@ export function OrderPanel({
             {angle.last_time && (
               <span className="lp-muted lp-order-angle-history">
                 {angle.last_time}
+              </span>
+            )}
+            {/* This search looks like it will return places the same order
+                bars. Run 33fca394 approved "Nikkei cevicherias" alongside a
+                cut reading "no places where ceviche is not the primary
+                offering"; 8 of that search's 10 results were barred by the
+                order that bought it. The disagreement was visible here,
+                before the money went. Said, not enforced: an operator who
+                wants Nikkei places that genuinely lead with ceviche is asking
+                for something coherent, and only they know that. */}
+            {conflictsByAngle.get(angle.angle_id) && (
+              <span className="lp-order-angle-conflict">
+                Fights what you left out: {conflictsByAngle.get(angle.angle_id)}
               </span>
             )}
           </li>

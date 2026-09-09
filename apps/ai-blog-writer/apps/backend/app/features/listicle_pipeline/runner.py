@@ -425,6 +425,11 @@ def assemble(order: SearchOrder) -> dict:
 
     uncertain = sum(1 for c in candidates if c.possible_duplicates)
     capacity = planned_capacity(order)
+    # None means nobody has checked this revision against the cut; `{}` means
+    # something checked and barred nothing. The screen says which, because
+    # "we looked and it is fine" and "we never looked" are different claims.
+    stored_review = store.load_cut_review(order.run_id, order.revision)
+    barred = stored_review or {}
     payload = {
         "run_id": order.run_id,
         "revision": order.revision,
@@ -444,6 +449,13 @@ def assemble(order: SearchOrder) -> dict:
         # Said rather than left to be worked out from a table. Roughly two of
         # seven searches in run 33fca394 returned no place the others missed,
         # and nothing anywhere said so.
+        # Whether anything has judged this revision's places against the cut,
+        # and what it said. Separate from the flags themselves so an unchecked
+        # run does not read as a clean one.
+        "cut_checked": stored_review is not None,
+        "barred_count": sum(
+            1 for c in candidates if barred.get(c.name, {}).get("why")
+        ),
         "empty_handed": [
             row["angle_id"]
             for row in angle_rows
@@ -476,6 +488,11 @@ def assemble(order: SearchOrder) -> dict:
                 "found_by": list(c.found_by),
                 "overlap": c.overlap,
                 "possible_duplicates": list(c.possible_duplicates),
+                # What the cut check said about this place, if anything has
+                # looked. Read from storage rather than recomputed: judging
+                # costs a model call, and drawing a screen must not.
+                "barred": barred.get(c.name, {}).get("why", ""),
+                "barred_confidence": barred.get(c.name, {}).get("confidence", ""),
                 "sightings": [
                     {
                         "angle": s.angle,

@@ -43,10 +43,23 @@ other search did. On `33fca394` the lunch-hours angle shows 0 — it was paid fo
 and bought nothing. There is a sentence above saying how many searches ended up
 like that.
 
-**The line above the list of places**: nothing has been checked against what
-you left out. That is true and it is the biggest gap in the pipeline — the
-searches returned eight Nikkei and Japanese restaurants on a list that said "no
-places where ceviche is not the primary offering". Nothing catches that yet.
+**Under the Nikkei search**, a line saying it fights what you left out. That
+search asked for Nikkei restaurants while the cut said "no places where ceviche
+is not the primary offering" — and 8 of its 10 results were barred by the same
+order that paid for it. You now see that before you spend.
+
+**The flagged places** in the list below, marked "Looks like something you left
+out" or "Might be". Nothing is removed; they are marked for you to judge.
+
+Two honest warnings about those flags:
+
+- The wording of the *level* is rough. Which places get flagged is stable
+  across runs; whether one says "Looks like" or "Might be" is not.
+- **Costanera 700 is a false positive.** It is a well-known cevicheria. It gets
+  flagged because the search stored "shaped modern Nikkei cuisine, offers
+  ceviche" against it. The check reads what the searches reported — it does not
+  look the place up again — so a misleading line becomes a wrong flag. Read the
+  reason, not just the flag.
 
 ## Start a new one — this spends money
 

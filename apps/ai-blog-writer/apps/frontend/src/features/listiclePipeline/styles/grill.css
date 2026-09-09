@@ -537,6 +537,27 @@
   color: var(--muted);
 }
 
+/* An approved search that fights the cut. Louder than the history line under
+   it, because this one is about money not yet spent. */
+.lp-order-angle-conflict {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--lp-accent);
+}
+
+/* A returned place that looks barred. `arguable` reads quieter than `clear`:
+   the operator is being asked to look, not told to delete. */
+.lp-candidate-barred {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--lp-accent);
+}
+
+.lp-candidate-barred-arguable {
+  color: var(--muted);
+}
+
 .lp-order-angle-history {
   display: block;
   margin-top: 0.15rem;

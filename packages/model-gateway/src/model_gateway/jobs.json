@@ -181,6 +181,14 @@
       "defaultModel": "gemini-2.5-flash"
     },
     {
+      "id": "listicle.cut_review",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Judge angles and returned places against what the operator barred.",
+      "site": "features/listicle_pipeline/cut_review.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
       "id": "listicle.grill",
       "app": "ai-blog-writer",
       "call": "json",

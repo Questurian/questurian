@@ -81,6 +81,17 @@ CREATE TABLE IF NOT EXISTS listicle_angle_selections (
 )
 """
 
+_CUT_REVIEWS_TABLE = """
+CREATE TABLE IF NOT EXISTS listicle_cut_reviews (
+    run_id     TEXT NOT NULL,
+    revision   INTEGER NOT NULL,
+    payload    TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (run_id, revision)
+)
+"""
+
+
 _LOCKS_TABLE = """
 CREATE TABLE IF NOT EXISTS listicle_search_locks (
     run_id     TEXT PRIMARY KEY,
@@ -107,6 +118,7 @@ def ensure_tables() -> None:
         conn.execute(_ATTEMPTS_TABLE)
         conn.execute(_SELECTIONS_TABLE)
         conn.execute(_LOCKS_TABLE)
+        conn.execute(_CUT_REVIEWS_TABLE)
 
 
 def save(state: GrillState) -> None:
@@ -281,6 +293,39 @@ def load_attempts(run_id: str, revision: int | None = None) -> list[SearchAttemp
                 (run_id, revision),
             ).fetchall()
     return [SearchAttempt.model_validate(json.loads(row[0])) for row in rows]
+
+
+def save_cut_review(run_id: str, revision: int, flags: dict) -> None:
+    """What the cut check said about one revision's candidates.
+
+    Per revision, because a revised cut is a different question and the old
+    answer is not an answer to it. Stored rather than recomputed on read, for
+    the same reason every other result here is: opening a screen must not spend.
+    """
+    ensure_tables()
+    with get_db_connection() as conn:
+        conn.execute(
+            "INSERT INTO listicle_cut_reviews (run_id, revision, payload) "
+            "VALUES (?, ?, ?) ON CONFLICT(run_id, revision) DO UPDATE SET "
+            "payload=excluded.payload, updated_at=datetime('now')",
+            (run_id, revision, json.dumps(flags)),
+        )
+
+
+def load_cut_review(run_id: str, revision: int) -> dict | None:
+    """The stored verdicts, or None when nothing has looked at this revision.
+
+    None and `{}` are different findings: nobody checked, versus checked and
+    nothing was barred. The screen says which.
+    """
+    ensure_tables()
+    with get_db_connection() as conn:
+        row = conn.execute(
+            "SELECT payload FROM listicle_cut_reviews "
+            "WHERE run_id = ? AND revision = ?",
+            (run_id, revision),
+        ).fetchone()
+    return None if row is None else json.loads(row[0])
 
 
 def completed_attempts_for(subject: str, *, exclude_run: str = "") -> list[SearchAttempt]:

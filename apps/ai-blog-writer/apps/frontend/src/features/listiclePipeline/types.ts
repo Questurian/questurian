@@ -102,6 +102,13 @@ export interface ListicleOrderAngle {
   last_time?: string
 }
 
+export interface ListicleAngleConflict {
+  angle_id: string
+  angle_text: string
+  /** One plain sentence saying why this search and the cut disagree. */
+  why: string
+}
+
 export interface ListicleOrder {
   run_id: string
   revision: number
@@ -119,6 +126,12 @@ export interface ListicleOrder {
    *  was done about it. Empty for an interview that asked each thing once,
    *  which is the normal case. */
   answer_notes: string[]
+  /** Approved searches that look like they will return places this same order
+   *  bars. Found before anything is spent; nothing is removed. */
+  angle_conflicts?: ListicleAngleConflict[]
+  /** False means nobody looked — which is not the same as looked and found
+   *  nothing. Every order stored before this check existed is in that state. */
+  conflicts_checked?: boolean
   capacity: number
   capacity_warning: string
   summary: string
@@ -151,6 +164,11 @@ export interface ListicleCandidate {
   /** Rows that look like this place and were not merged into it, because a
    *  district or a bracketed qualifier said they might be somewhere else. */
   possible_duplicates: string[]
+  /** Why this place appears to break what the operator left out. Empty when it
+   *  does not, or when nothing has checked. */
+  barred?: string
+  /** 'clear' or 'arguable'. Anything unrecognised is read as 'arguable'. */
+  barred_confidence?: string
   /** Every row exactly as a search returned it. Kept so a merge can be
    *  checked: two angles found this place for two different reasons. */
   sightings: ListicleSighting[]
@@ -213,6 +231,10 @@ export interface ListicleSearchResults {
    *  fact about this run, not a verdict: a search with nothing exclusive may
    *  be the coverage everything else is being checked against. */
   empty_handed?: string[]
+  /** Whether anything judged this revision's places against the cut. False is
+   *  "nobody looked", not "nothing was barred". */
+  cut_checked?: boolean
+  barred_count?: number
   order: {
     kind: string
     place: string

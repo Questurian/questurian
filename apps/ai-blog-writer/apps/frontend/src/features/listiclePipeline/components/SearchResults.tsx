@@ -191,11 +191,19 @@ export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
           not do it either: it weighs whether enough is published about a
           place, and every one of those eight is written about constantly. */}
       {results.order.exclusions && results.candidates.length > 0 && (
-        <p className="lp-results-unchecked" role="status">
-          Nothing below has been checked against what you left out. The rule
-          went to every search; whether a place breaks it is not something this
-          step decides.
-        </p>
+        results.cut_checked ? (
+          <p className="lp-results-unchecked" role="status">
+            {results.barred_count
+              ? `${results.barred_count} of these look like places you left out — marked below. Judged from what the searches themselves reported, not from a fresh look at each place, so check before dropping any.`
+              : 'Checked against what you left out; none of these looked barred. That is a reading of what the searches reported, not a verification of the places.'}
+          </p>
+        ) : (
+          <p className="lp-results-unchecked" role="status">
+            Nothing below has been checked against what you left out. The rule
+            went to every search; whether a place breaks it is not something
+            this step decides.
+          </p>
+        )
       )}
 
       <ol className="lp-candidates">
@@ -231,6 +239,28 @@ export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
             {/* Shown rather than resolved. This step cannot tell a second
                 branch from a second spelling, and folding them together loses
                 a venue with nothing on screen to notice. */}
+            {/* Flagged, never removed.
+
+                Both levels read as "look at this", not as a verdict. Measured
+                on real data: which places get flagged is stable across runs,
+                but whether one comes back `clear` or `arguable` is not -- the
+                same 43 candidates produced 13/13/11 flags over three calls
+                with the split moving each time. The reason underneath is the
+                substance; the level is only a rough ordering. */}
+            {candidate.barred && (
+              <p
+                className={
+                  candidate.barred_confidence === 'clear'
+                    ? 'lp-candidate-barred'
+                    : 'lp-candidate-barred lp-candidate-barred-arguable'
+                }
+              >
+                {candidate.barred_confidence === 'clear'
+                  ? 'Looks like something you left out'
+                  : 'Might be something you left out'}
+                : {candidate.barred}
+              </p>
+            )}
             {candidate.possible_duplicates.length > 0 && (
               <p className="lp-candidate-duplicate">
                 Might be the same place as {candidate.possible_duplicates.join(', ')}.

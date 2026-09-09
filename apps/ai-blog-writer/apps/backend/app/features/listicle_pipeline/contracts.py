@@ -75,6 +75,28 @@ class SelectedAngle(ListicleModel):
     custom: bool = False
 
 
+class AngleConflict(ListicleModel):
+    """One approved search that looks like it will return barred places.
+
+    Run 33fca394 approved "Nikkei cevicherias doing Japanese-Peruvian
+    preparations" alongside a cut reading "no places where ceviche is not the
+    primary offering". Those two disagree, and the disagreement was visible in
+    the order before a penny was spent. Nobody looked, so the search ran: 8 of
+    its 10 places were barred by the same order that bought it -- one of seven
+    paid searches, spent almost entirely on results the operator had already
+    said they did not want.
+
+    A warning and nothing else. The angle is not removed, reworded or
+    reordered: an operator who wants Nikkei places that genuinely lead with
+    ceviche is asking for something coherent, and only they know that.
+    """
+
+    angle_id: str = Field(min_length=1)
+    angle_text: str = ""
+    # Why these two read as fighting, in a sentence a person can disagree with.
+    why: str = Field(min_length=1)
+
+
 class SearchOrder(ListicleModel):
     """The agreement, in the form the searches run from.
 
@@ -106,6 +128,14 @@ class SearchOrder(ListicleModel):
     # resolution is now a decision, and a decision has to be visible or it is
     # just the old silence with more code behind it.
     answer_notes: list[str] = Field(default_factory=list)
+    # Angles that read as fighting the cut, found before the searches run.
+    angle_conflicts: list[AngleConflict] = Field(default_factory=list)
+    # Whether anything has actually looked. False is not "no conflicts found" --
+    # it is "nobody checked", which is the state every order stored before this
+    # existed is in, and the state of any order built on a path that is not
+    # allowed to spend. The screen has to be able to tell those apart, because
+    # "we looked and it is fine" and "we never looked" are different claims.
+    conflicts_checked: bool = False
 
     def fingerprint(self) -> str:
         """What has to match for a stored result to still be this order's.

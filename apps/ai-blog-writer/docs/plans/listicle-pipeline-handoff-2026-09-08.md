@@ -36,7 +36,7 @@ staging CSS extraction. Nothing of it is mixed into this branch. Do not merge
 the two.
 
 Working tree is clean and **CI is green on all five checks**. Verification on
-this branch: 2264 backend tests, 880 frontend, tsc clean, flake8 clean apart from two pre-existing F401s
+this branch: 2264 backend tests, 883 frontend, tsc clean, flake8 clean apart from two pre-existing F401s
 in `listicle_pipeline/api.py` and `profiles.py`. (2249 / 871 at the first
 commit; the repeated-marker fix and the contribution record added the rest.)
 
@@ -229,28 +229,43 @@ interview is worse than a repeat.
    poor value but is not nothing — so the screen counts zero, and leaves "ten
    rows for one place" to the operator's judgement.
 
-3. **The `cut` reaches every search prompt and the model ignores it.**
-   Confirmed on the stored run, 2026-09-09: 8 of `33fca394`'s 43 candidates —
-   Hanzo (twice), Maido, Nikko, Osaka Nikkei, Shizen, Tomo, Toshi — are places
-   the cut explicitly barred.
+3. ~~**The `cut` reaches every search prompt and the model ignores it.**~~
+   **Done 2026-09-09.** Two checks, both flag-only, both on requests that were
+   already spending. Opening a screen still never spends.
 
-   **Correction to what this note used to say.** It said catching this was the
-   unbuilt evidence/gate step's job. That is wrong, and acting on it would have
-   wasted the work: `gate.assess` **is** built and tested, and it answers a
-   different question — is enough published about this place to write about it.
-   Every one of those eight is written about constantly, so a fully wired gate
-   would have passed all eight.
+   **Before the searches run**, the order is checked for angles that fight the
+   cut. This was the bigger finding: all 8 barred places in `33fca394` came
+   from ONE angle, "Nikkei cevicherias doing Japanese-Peruvian preparations",
+   approved alongside "no places where ceviche is not the primary offering".
+   8 of that angle's 10 places were barred by the order that bought it. Against
+   the real order the check flagged exactly that angle and only it, of seven.
 
-   Checking the cut is a separate per-place judgement that does not exist
-   anywhere. It cannot be done from a name; it needs evidence about the place,
-   which means `build_profile` running for every candidate — around forty paid
-   calls per run — plus a new verdict the gate does not currently have. That is
-   a real feature and a spending decision, so it was **not** built here.
+   **After they return**, the candidates are checked. One call, not forty:
+   nothing is looked up, because the searches already wrote why they returned
+   each place and "offers ceviche" is the cut stated.
 
-   What was done instead, because it costs nothing and the screen was lying by
-   omission: the results now say plainly that nothing below has been checked
-   against the cut. The rule still goes to every search. Do not reach for more
-   prompt text — that is what produced the eight.
+   The earlier note in this file said this was the gate's job. It was not, and
+   following it would have wasted the work -- see the ADR.
+
+   What the real runs showed, which the tests could not:
+
+   - Forced tool calling fails. Two of four attempts died with
+     `MALFORMED_FUNCTION_CALL` (Gemini writing `print(default_api...)` as
+     text). `candidates_token_count` was 0, so it was never length. The JSON
+     path went 3 for 3. **Do not "fix" this by raising max_tokens.**
+   - Rows are identified by NUMBER. A real call answered "Chez Wong (La
+     Victoria)" -- copying back the district the prompt printed -- which
+     matched no candidate and would have dropped every finding silently.
+   - All 7 known violations caught on every attempt.
+   - **The `clear`/`arguable` label is not stable.** Three calls over the same
+     43 candidates gave 13/13/11 flags with the split moving. Which places get
+     flagged is stable; how confidently is not. The screen words both as "look
+     at this" for that reason.
+   - One standing false positive: **Costanera 700**, a well-known cevicheria,
+     flagged because its stored evidence reads "shaped modern Nikkei cuisine,
+     offers ceviche". The check faithfully read a misleading line. That is the
+     honest limit of reading what the searches said instead of looking a place
+     up.
 
 4. **The over-tightening claim is NOT established, and the stored runs say
    why.** Checked 2026-09-09 with `scripts/listicle_angle_variance.py`

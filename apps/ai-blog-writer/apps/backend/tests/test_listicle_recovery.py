@@ -510,3 +510,108 @@ def test_a_first_run_about_a_subject_is_told_nothing(isolated_db):
     state = agreed_state()
     store.save(state)
     assert runner.prior_contribution(service.order(state.run_id)) == {}
+
+
+# The cut, checked over what came back
+
+
+def _names_in(prompt: str) -> list[str]:
+    """The candidate names as the review prompt numbered them.
+
+    Read back out of the prompt rather than assumed, because the pool's order
+    is the runner's business and a test that hard-codes it would pass while
+    pointing at the wrong row.
+    """
+    names = []
+    for line in prompt.splitlines():
+        stripped = line.strip()
+        if stripped[:1].isdigit() and ". " in stripped:
+            names.append(stripped.split(". ", 1)[1].split(" -- ")[0].strip())
+    return names
+
+
+def test_the_cut_check_runs_on_the_batch_that_paid_for_it(run):
+    seen: list = []
+
+    def review(job_id, prompt, tool_name, schema):
+        seen.append(tool_name)
+        return {
+            "barred": [
+                {
+                    "number": next(
+                        i for i, c in enumerate(_names_in(prompt), start=1)
+                        if c == "Maido"
+                    ),
+                    "name": "Maido",
+                    "why": "Nikkei restaurant; ceviche is one dish of many.",
+                    "confidence": "clear",
+                }
+            ]
+        }
+
+    payload = service.search(
+        run.run_id,
+        _replies(
+            decades="Canta Rana | Barranco | open since the 1980s",
+            cheap="Maido | Miraflores | top Nikkei restaurant, offers ceviche",
+        ),
+        review=review,
+    )
+
+    assert seen, "the cut check should run once the pool is final"
+    assert payload["cut_checked"] is True
+    assert payload["barred_count"] == 1
+    flagged = {c["name"]: c["barred"] for c in payload["candidates"] if c["barred"]}
+    assert "Maido" in flagged
+    assert "Canta Rana" not in flagged
+
+
+def test_a_run_nobody_checked_does_not_read_as_a_clean_one(run):
+    payload = service.search(
+        run.run_id,
+        _replies(
+            decades="Canta Rana | Barranco | open since the 1980s",
+            cheap="Maido | Miraflores | offers ceviche",
+        ),
+    )
+    # No reviewer, so nothing looked. That is not the same as nothing barred.
+    assert payload["cut_checked"] is False
+    assert payload["barred_count"] == 0
+    assert all(c["barred"] == "" for c in payload["candidates"])
+
+
+def test_the_verdict_survives_a_reload_without_spending_again(run):
+    calls: list = []
+
+    def review(job_id, prompt, tool_name, schema):
+        calls.append(tool_name)
+        return {
+            "barred": [
+                {
+                    "number": next(
+                        i for i, c in enumerate(_names_in(prompt), start=1)
+                        if c == "Maido"
+                    ),
+                    "name": "Maido",
+                    "why": "ceviche is not primary",
+                    "confidence": "clear",
+                }
+            ]
+        }
+
+    service.search(
+        run.run_id,
+        _replies(
+            decades="Canta Rana | Barranco | open since the 1980s",
+            cheap="Maido | Miraflores | offers ceviche",
+        ),
+        review=review,
+    )
+    assert len(calls) == 1
+
+    # Opening the results again is a read. It must show the verdict and buy
+    # nothing.
+    reopened = service.progress(run.run_id)
+    assert len(calls) == 1, "reading a stored run must not re-judge it"
+    assert reopened["cut_checked"] is True
+    assert reopened["barred_count"] == 1
