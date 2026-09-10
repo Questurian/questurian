@@ -280,10 +280,18 @@ export interface ListicleSearchResults {
   cut_missing_chunks?: number[]
   /** How many reviewer calls this pool takes. Said before they are bought. */
   cut_chunks_planned?: number
+  /** A cut check exists for this run from before verdicts were filed against
+   *  candidates. It cannot be applied to these rows — it was keyed by name,
+   *  under different pooling rules — and it is not lost either. */
+  cut_historical?: boolean
   barred_count?: number
   /** Searches whose latest attempt failed over a result that still stands. The
    *  list is complete and something still went wrong. */
   failed_refreshes?: string[]
+  /** Completed searches this run holds that no longer answer the order as it
+   *  stands — a correction changed what they ask for. Not lost: filed under
+   *  the revision they were bought for. */
+  superseded_results?: number
   order: {
     kind: string
     place: string

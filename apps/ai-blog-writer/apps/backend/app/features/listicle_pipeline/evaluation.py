@@ -49,6 +49,11 @@ class Case:
     kind: str
     subject: str
     target_count: int
+    # The location, stated. Never parsed off the end of the seed: "The 20 best
+    # cevicherias in Lima" and "The 20 best cevicherias in Lima's old centre"
+    # split differently on " in ", and a place read wrong is every search in
+    # the case run against the wrong city.
+    place: str = ""
     standard: str = ""
     exclusions: str = ""
     must_offer: tuple[str, ...] = ()
@@ -62,6 +67,7 @@ CASES: tuple[Case, ...] = (
     Case(
         key="broad-restaurants",
         seed="The 30 best restaurants in Lima",
+        place="Lima, Peru",
         kind="restaurants",
         subject="restaurants",
         target_count=30,
@@ -76,6 +82,7 @@ CASES: tuple[Case, ...] = (
     Case(
         key="specialist-restaurants",
         seed="The 20 best cevicherias in Lima",
+        place="Lima, Peru",
         kind="cevicherias",
         subject="restaurants",
         target_count=20,
@@ -96,6 +103,7 @@ CASES: tuple[Case, ...] = (
     Case(
         key="broad-bars",
         seed="The 25 best bars in Lima",
+        place="Lima, Peru",
         kind="bars",
         subject="bars",
         target_count=25,
@@ -109,6 +117,7 @@ CASES: tuple[Case, ...] = (
     Case(
         key="narrow-bars",
         seed="The 15 best rooftop bars in Lima",
+        place="Lima, Peru",
         kind="rooftop bars",
         subject="bars",
         target_count=15,
@@ -123,6 +132,7 @@ CASES: tuple[Case, ...] = (
     Case(
         key="broad-hotels",
         seed="The 30 best hotels in Lima",
+        place="Lima, Peru",
         kind="hotels",
         subject="hotels",
         target_count=30,
@@ -136,6 +146,7 @@ CASES: tuple[Case, ...] = (
     Case(
         key="narrow-hotels",
         seed="20 independent hotels in Lima suitable for longer stays",
+        place="Lima, Peru",
         kind="independent hotels",
         subject="hotels",
         target_count=20,
@@ -155,6 +166,7 @@ CASES: tuple[Case, ...] = (
     Case(
         key="sparse-location",
         seed="The 20 best cevicherias in Huaraz",
+        place="Huaraz, Peru",
         kind="cevicherias",
         subject="restaurants",
         target_count=20,
@@ -171,6 +183,7 @@ CASES: tuple[Case, ...] = (
     Case(
         key="operator-edited",
         seed="The 20 best cevicherias in Lima",
+        place="Lima, Peru",
         kind="cevicherias",
         subject="restaurants",
         target_count=20,

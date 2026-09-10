@@ -1,4 +1,8 @@
-import type { ListicleAngleResult, ListicleSearchResults } from '../types'
+import type {
+  ListicleAngleResult,
+  ListicleCandidate,
+  ListicleSearchResults,
+} from '../types'
 
 /**
  * What the searches found.
@@ -77,6 +81,19 @@ export function SearchResults({
   const emptyHanded = results.angles.filter(
     angle => angle.state === 'completed' && angle.exclusive === 0,
   )
+  // How to name a row when pointing at it from another row. Two candidates
+  // are allowed to share a name -- that is exactly the pair worth pointing at
+  // -- so "might be the same place as Casa Republicana" printed on a row
+  // called Casa Republicana says nothing. The district is what separates them,
+  // and where it does not, its absence is the difference.
+  const labelOf = new Map(
+    results.candidates.map(candidate => [
+      candidate.candidate_id,
+      candidate.district
+        ? `${candidate.name} (${candidate.district})`
+        : `${candidate.name} (no district given)`,
+    ]),
+  )
   // Deduplicated across every angle: the same paper cited by three searches is
   // one publication, not three.
   const sourcesNamed = [
@@ -119,6 +136,20 @@ export function SearchResults({
             {failedRefreshes.length === 1
               ? 'One search failed to refresh. Its earlier result is still shown below, with the time it was gathered.'
               : `${failedRefreshes.length} searches failed to refresh. Their earlier results are still shown below, with the time each was gathered.`}
+          </p>
+        )}
+        {/* A correction changed what the searches ask for, so the research
+            that exists answered the previous request. Saying so is the
+            difference between "your research is gone" and "your research
+            answered a different question". */}
+        {(results.superseded_results ?? 0) > 0 && (
+          <p className="lp-muted lp-results-sub">
+            {results.superseded_results} earlier{' '}
+            {results.superseded_results === 1 ? 'search is' : 'searches are'}{' '}
+            still stored for this run and no longer{' '}
+            {results.superseded_results === 1 ? 'answers' : 'answer'} the order
+            as it stands — a correction changed what they ask for. They are
+            kept under the revision they were bought for.
           </p>
         )}
         {short && (
@@ -301,7 +332,8 @@ export function SearchResults({
               )}
             {candidate.possible_duplicates.length > 0 && (
               <p className="lp-candidate-duplicate">
-                Might be the same place as {candidate.possible_duplicates.join(', ')}.
+                Might be the same place as{' '}
+                {namesOfDuplicates(candidate, labelOf).join(', ')}.
               </p>
             )}
           </li>
@@ -351,6 +383,21 @@ export function SearchResults({
   )
 }
 
+
+/** The rows this one might be a duplicate of, named so they can be told apart.
+ *
+ *  By id where there is one, because two candidates may carry the same name and
+ *  the whole point of the label is to send the reader to the OTHER row. The
+ *  names are the fallback for a stored result from before candidates had ids. */
+function namesOfDuplicates(
+  candidate: ListicleCandidate,
+  labelOf: Map<string, string>,
+): string[] {
+  const byId = (candidate.possible_duplicate_ids ?? [])
+    .map(id => labelOf.get(id))
+    .filter((label): label is string => Boolean(label))
+  return byId.length > 0 ? byId : candidate.possible_duplicates
+}
 
 /** What the cut check did, said as one of the several things it can be.
  *
@@ -423,6 +470,14 @@ function CutReviewNote({
       Nothing below has been checked against what you left out. The rule went
       to every search; whether a place breaks it is not something this step
       decides.
+      {results.cut_historical && (
+        <>
+          {' '}
+          An earlier check of this run is still stored. It was filed by name,
+          under different pooling rules, so it cannot be applied to these rows
+          — it is kept as a record rather than shown as a verdict.
+        </>
+      )}
       {onRecheck && (
         <>
           {' '}

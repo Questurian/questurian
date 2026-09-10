@@ -826,12 +826,25 @@ def progress(run_id: str) -> dict | None:
     if assembled["rows_returned"] == 0 and not any(
         row["state"] != "not_started" for row in assembled["angles"]
     ):
-        # Nothing has been run under this order. An older blob may still exist
-        # from before attempts were stored per angle, and it is a real result.
-        legacy = store.load_results(run_id)
-        if legacy is not None and legacy.get("candidates"):
-            return _upgrade_legacy(legacy, current)
-        return None
+        # Nothing answers this order. Two very different reasons, and the
+        # version this replaced gave the same answer to both.
+        #
+        # A run with NO attempts at all is a run from before work was recorded
+        # per angle. Its stored blob is a real result and it opens.
+        #
+        # A run WITH attempts that no longer answer is a CORRECTED order:
+        # changing the count changes what every search asks for, so every
+        # stored result answered the previous request. Handing back the
+        # previous revision's blob labelled `legacy` says two false things at
+        # once -- that these are results for this order, and that this run
+        # predates per-angle recording. The honest answer is the empty view,
+        # which says every search is unrun and offers to run them, with the
+        # earlier work still stored and still readable at its own revision.
+        if not store.load_attempts(run_id):
+            legacy = store.load_results(run_id)
+            if legacy is not None and legacy.get("candidates"):
+                return _upgrade_legacy(legacy, current)
+            return None
     return assembled
 
 

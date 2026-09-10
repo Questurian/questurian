@@ -691,6 +691,18 @@ def assemble(order: SearchOrder) -> dict:
 
     uncertain = sum(1 for c in candidates if c.possible_duplicates)
     capacity = planned_capacity(order)
+    # Work this run has that no longer answers the order as it stands. A
+    # correction changes what the searches ask for, so their results answered
+    # the previous request -- they are not lost, they are filed under the
+    # revision they were bought for, and saying so is the difference between
+    # "your research is gone" and "your research answered a different
+    # question".
+    shown = {attempt.attempt_id for attempt in by_angle.values()}
+    superseded = sum(
+        1
+        for attempt in store.load_attempts(order.run_id)
+        if attempt.state == "completed" and attempt.attempt_id not in shown
+    )
     # The review of exactly THIS pool, or nothing. Looked up by the fingerprint
     # of the material a reviewer would be sent, so a pool whose candidates
     # changed cannot be answered by the verdict on the pool they replaced --
@@ -698,6 +710,15 @@ def assemble(order: SearchOrder) -> dict:
     # venues reading as checked and clean.
     review = _review_for(order, candidates)
     barred = review.by_candidate() if review else {}
+    # A verdict filed under the old rules -- keyed by revision, and by NAME
+    # within it. It is real work somebody paid for and it cannot be applied to
+    # these rows: a name is not a candidate, and this pool was built by
+    # different pooling rules. Said rather than silently dropped, so an
+    # operator who remembers checking this run is not left thinking the record
+    # lost it.
+    historical = review is None and store.load_cut_review(
+        order.run_id, order.revision
+    ) is not None
     payload = {
         "run_id": order.run_id,
         "revision": order.revision,
@@ -715,6 +736,7 @@ def assemble(order: SearchOrder) -> dict:
         "failed_refreshes": [
             row["angle_id"] for row in angle_rows if row["showing_earlier"]
         ],
+        "superseded_results": superseded,
         # Said plainly rather than left to be worked out. A distinct count is
         # provisional while any two rows might be one venue, and a screen that
         # prints one number implies a certainty this step has not got.
@@ -730,6 +752,7 @@ def assemble(order: SearchOrder) -> dict:
         # review, a failed one and a pool nobody looked at are three different
         # states and used to be one.
         "cut_checked": bool(review and review.status == "complete"),
+        "cut_historical": historical,
         "cut_review_status": review.status if review else "not_checked",
         "cut_reviewed_count": len(review.reviewed_candidate_ids) if review else 0,
         "cut_expected_count": len(review.expected_candidate_ids) if review else 0,

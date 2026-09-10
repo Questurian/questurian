@@ -90,3 +90,102 @@ def test_no_comparison_has_been_run():
         "A comparison has been recorded. Replace this test with one that reads "
         "it, rather than leaving a test that asserts nothing was measured."
     )
+
+
+# Before anything is bought
+#
+# The verified plan of 2026-09-09 asks for the harness work to land BEFORE the
+# comparison is authorised: a manifest naming the exact prompts and the worst
+# number of calls, receipts per request, and a cap that sits at the dispatch.
+# A budget agreed against a guess is not a budget agreed against the run.
+
+
+def test_every_case_states_where_it_searches():
+    """Never parsed off the end of the seed. "in Lima" and "in Lima's old
+    centre" split differently on " in ", and a place read wrong is every search
+    in the case run against the wrong city."""
+    from app.features.listicle_pipeline.evaluation import CASES
+
+    for case in CASES:
+        assert case.place, case.key
+        city = case.place.split(",")[0]
+        assert city in case.seed, case.key
+    # And the case that proves why it is stated rather than read: the city is
+    # in the middle of this seed, and splitting on " in " would search a
+    # suitability clause.
+    narrow = next(case for case in CASES if case.key == "narrow-hotels")
+    assert narrow.seed.split(" in ")[-1] != narrow.place
+
+
+def _harness():
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "scripts"
+        / "listicle_angle_comparison.py"
+    )
+    spec = importlib.util.spec_from_file_location("listicle_angle_comparison", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_manifest_names_the_worst_case_rather_than_the_angle_count():
+    """One invocation is up to three requests. A cap on angles is a cap on the
+    wrong thing, and so is a budget."""
+    from app.features.listicle_pipeline.evaluation import CASES_BY_KEY
+    from app.features.listicle_pipeline.search import SEARCH_ATTEMPTS
+
+    harness = _harness()
+    case = CASES_BY_KEY["narrow-hotels"]
+    requests = harness._requests_for(case, ["one angle", "another angle"], ["broad", "broad"])
+    manifest = harness._manifest(case, requests, max_calls=6)
+
+    assert manifest["provider_calls_at_best"] == 2
+    assert manifest["provider_calls_at_worst"] == 2 * SEARCH_ATTEMPTS
+    assert manifest["place"] == case.place
+    assert manifest["search_prompt_version"]
+    assert manifest["pooling_version"]
+    # The prompts themselves, so the authorisation is against what will be sent.
+    assert all(entry["prompt"] for entry in manifest["angles"])
+    assert case.exclusions in manifest["angles"][0]["prompt"] or not case.exclusions
+
+
+def test_the_cap_stops_the_run_at_the_dispatch():
+    harness = _harness()
+    dispatcher = harness.Dispatcher(max_calls=0)
+    import pytest as _pytest
+
+    with _pytest.raises(harness.BudgetExhausted):
+        dispatcher("a prompt")
+    assert dispatcher.calls == [], "nothing was sent, so nothing is receipted"
+
+
+def test_a_request_is_receipted_before_it_is_sent():
+    """A request whose answer never arrives may still have been charged for. A
+    receipt written only on success omits exactly the calls nobody can account
+    for."""
+    harness = _harness()
+    dispatcher = harness.Dispatcher(max_calls=2)
+
+    import app.shared.model_calls as model_calls
+
+    original = model_calls.grounded_text
+    model_calls.grounded_text = lambda *a, **k: (_ for _ in ()).throw(
+        TimeoutError("read timed out")
+    )
+    try:
+        try:
+            dispatcher("a prompt")
+        except TimeoutError:
+            pass
+    finally:
+        model_calls.grounded_text = original
+
+    assert len(dispatcher.calls) == 1
+    assert dispatcher.calls[0]["outcome"].startswith("failed")
+    assert dispatcher.calls[0]["prompt"] == "a prompt"
