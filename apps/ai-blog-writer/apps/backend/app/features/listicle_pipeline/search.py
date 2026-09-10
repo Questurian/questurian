@@ -255,9 +255,28 @@ def _district_key(district: str) -> str:
 # How many distinguishing words a shorter name needs before a longer one that
 # contains it is even worth mentioning as a possible duplicate.
 #
-# Two is the whole safety margin. One would link "Museo del Pisco" to "Pisco
-# Bar" on the single word they share, which is two different bars.
-_CONTAINMENT_MIN_TOKENS = 2
+# One, plus a condition. This was two, justified by "Museo del Pisco" linking
+# to "Pisco Bar" on the single word they share -- but that justification went
+# stale when `_full_words` stopped discarding noise. Containment is a subset
+# test over EVERY word now, and {pisco, bar} is not a subset of {museo, del,
+# pisco} at any threshold. The two-token floor was no longer buying the safety
+# it was written for.
+#
+# What it was still doing was silencing exactly the pairs that need the hint
+# most. A model that writes a place out in full under one angle and abbreviates
+# it under another abbreviates it to ONE word: the bars run returned "Saha" and
+# "SAHA Rooftop" as two venues, the cevicherias run returned "Sonia" and
+# "Cevichería Sonia" in the SAME district, and neither pair was flagged.
+#
+# The condition is what keeps one token from linking a bare "Casa" or "Bar" to
+# every longer name in the pool: a lone token links only when it is not a word
+# that is generic across the subject. That is the question `_NOISE_WORDS`
+# already answers, and it is the right one -- "Saha" identifies a bar and
+# "Rooftop" does not.
+#
+# Measured on all three live runs of 2026-09-10: two new links, both correct,
+# no false ones.
+_CONTAINMENT_MIN_TOKENS = 1
 
 
 def observation_key(name: str, district: str) -> tuple[str, str, tuple[str, ...]]:
@@ -587,6 +606,8 @@ def link_possible_duplicates(candidates: list[Candidate]) -> list[Candidate]:
         words = _full_words(candidate.name)
         if len(words) < _CONTAINMENT_MIN_TOKENS:
             continue
+        if not _identifies_on_its_own(words):
+            continue
         for other in ordered[:index]:
             if not words <= _full_words(other.name):
                 continue
@@ -594,6 +615,20 @@ def link_possible_duplicates(candidates: list[Candidate]) -> list[Candidate]:
                 continue
             _link(candidate, other)
     return candidates
+
+
+def _identifies_on_its_own(words: set[str]) -> bool:
+    """Whether a name this short is specific enough to point at one business.
+
+    Only asked of the SHORTER name in a containment pair, and only bites at one
+    word. "Saha" is a bar's name; "Rooftop" is what kind of bar it is, and a row
+    that says only "Rooftop" is contained in half the pool. Longer names carry
+    their own specificity and are not second-guessed here -- a two-word name is
+    allowed to be two generic words, because "El Mercado" is a real restaurant.
+    """
+    if len(words) > 1:
+        return True
+    return not (words <= _NOISE_WORDS)
 
 
 def _full_words(name: str) -> set[str]:

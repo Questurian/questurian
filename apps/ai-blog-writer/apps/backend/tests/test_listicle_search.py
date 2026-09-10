@@ -293,6 +293,54 @@ def test_two_places_that_merely_share_a_word_stay_apart(first, second):
     assert len(pooled) == 2
 
 
+def test_a_one_word_abbreviation_is_raised_against_its_full_name():
+    """Read off the live runs of 2026-09-10, both unflagged at the time.
+
+    A model that writes a place out in full under one angle and shortens it
+    under another shortens it to one word. The two-token floor silenced exactly
+    that pair, and "Sonia" sat beside "Cevichería Sonia" in the same district
+    with nothing on screen to connect them.
+    """
+    for short, full, district in (
+        ("Saha", "SAHA Rooftop", "Miraflores"),
+        ("Sonia", "Cevichería Sonia", "Chorrillos"),
+    ):
+        pooled = _pooled((short, district, "a"), (full, district, "b"))
+        assert len(pooled) == 2, f"{short} must not be merged into {full}"
+        assert all(c.possible_duplicates for c in pooled), f"{short} ~ {full}"
+
+
+@pytest.mark.parametrize(
+    "generic", ["Rooftop", "Bar", "Casa", "Hotel", "Terraza", "Restaurante"]
+)
+def test_a_lone_generic_word_is_not_a_name_and_links_to_nothing(generic):
+    """The cost of accepting one-word containment, and the guard that pays it.
+
+    A row that says only what kind of thing it is, is contained in half the
+    pool. Linking on it would put a duplicate label on rows that share nothing
+    but a category -- and a label that fires everywhere is one the operator
+    learns to scroll past.
+    """
+    pooled = _pooled(
+        (generic, "Miraflores", "a"),
+        (f"{generic} Barranco", "Miraflores", "b"),
+        ("Hotel B Rooftop", "Barranco", "c"),
+        ("Casa Republica Barranco", "Barranco", "d"),
+    )
+    lone = next(c for c in pooled if c.name == generic)
+    assert not lone.possible_duplicates, f"{generic!r} is a category, not a name"
+
+
+def test_two_generic_words_together_can_still_be_a_name():
+    """"El Mercado" is a real restaurant in Miraflores. The one-word guard must
+    not grow into a rule that a name made of ordinary words is not a name."""
+    pooled = _pooled(
+        ("El Mercado", "Miraflores", "a"), ("El Mercado Miraflores", "Miraflores", "b")
+    )
+    assert len(pooled) == 2
+    assert all(c.possible_duplicates for c in pooled)
+
+
 def test_an_unknown_district_cannot_bridge_two_known_branches():
     """The failure this guards: a row with no district joining a Centro branch
     to a Barranco one, and three rows becoming one venue."""
