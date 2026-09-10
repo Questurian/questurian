@@ -93,3 +93,63 @@ gone.
 refresh over work that stands, two branches with one name, a hotel bar and its
 lobby bar kept apart, a partial cut review with rows nobody judged. Nothing is
 bought. `--remove` deletes it.
+
+## The first live run (2026-09-10)
+
+Three cases, one arm, once each. 18 grounded searches, 66,294 tokens, no
+retries and no failures. **~$0.80** — grounding is ~$0.035 a request and
+dominates; tokens are ~$0.01. That measured price is what the full comparison
+should be costed against: 8 cases x 2 arms x 3 repetitions is ~288 searches,
+so ~$13.
+
+| case | rows | places | target | publications |
+|---|---|---|---|---|
+| narrow-hotels | 36 | 34 | 20 | 33 |
+| narrow-bars | 28 | 24 | 15 | 28 |
+| specialist-restaurants | 36 | 32 | 20 | 22 |
+
+**This is a smoke run, not the comparison.** It proves the rebuilt pipeline
+executes against real searches and records what it spent. It says nothing about
+whether the revised angles find better places: one arm, one repetition, and
+nobody has judged a single returned venue against a source page.
+
+### What it found that 2,382 tests could not
+
+Both faults were invisible to fixtures because both need real model output.
+
+**Square-bracketed qualifiers were not read.** `27 Tapas`, `27 Tapas (Iberostar
+Selection Miraflores)` and `27 Tapas [Iberostar Selection Miraflores]` came
+back from three searches and became THREE candidates: the square-bracketed one
+kept the hotel's name as part of its own. One bar counted three times, its
+overlap split three ways. The prompt asks for "brackets" and does not say which
+kind, and the model uses all of them.
+
+**The noise-word list was written for restaurants.** The same fault the shape
+catalogue had, one layer down. `hotel` and `apart` counted as distinguishing
+words, so nine unrelated aparthotels -- Inkari, El Doral, San Martín, La Paz,
+Caminos del Inca -- were all linked to each other as possible duplicates.
+Seventeen of thirty-four hotels came back flagged, and a label that fires on
+half the list is a label the operator learns to scroll past.
+
+Fixed and re-measured against the stored raw replies, at no further cost --
+which is what recording them was for:
+
+| case | places before → after | flagged before → after |
+|---|---|---|
+| narrow-hotels | 34 → 34 | 17 → 12 |
+| narrow-bars | 26 → 24 | 15 → 13 |
+| specialist-restaurants | 32 → 32 | 2 → 4 |
+
+Bars lost two candidates because two genuine three-way splits collapsed to one
+venue each. Cevicherias gained two flags because `La Mar [Miraflores]` is now
+readable as possibly `La Mar Cebichería`, which it is. Every input row still
+appears in exactly one candidate.
+
+### And a regression the suite caught mid-fix
+
+Adding `rooftop`, `bar` and `terrace` to the noise list made
+`qualifier_tokens` return nothing for `(Rooftop bar)`, which merged `Hotel B`
+into `Hotel B (Rooftop bar)` and would next have merged a hotel's lobby bar
+into its rooftop bar. The two lists answer opposite questions: a word that is
+generic in a business's NAME is often the whole distinction inside its
+BRACKETS. They are separate lists now.

@@ -1,0 +1,1166 @@
+{
+  "case": "specialist-restaurants",
+  "label": "live",
+  "ran_at": "2026-09-10T134840Z",
+  "manifest": {
+    "case": "specialist-restaurants",
+    "place": "Lima, Peru",
+    "kind": "cevicherias",
+    "subject": "restaurants",
+    "target": 20,
+    "standard": "",
+    "exclusions": "general restaurants where ceviche is one line on the menu",
+    "angles": [
+      {
+        "angle_id": "a1",
+        "text": "cevicherias in Lima that have been open for decades",
+        "role": "broad",
+        "wanted": 8,
+        "prompt": "List real, currently open cevicherias in Lima, Peru that match this description:\ncevicherias in Lima that have been open for decades\n\nFind 8. Keep going until you have 8 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal food reporting, local restaurant critics and local food blogs are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\n\n\nLeave out, no matter how good: general restaurants where ceviche is one line on the menu\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      },
+      {
+        "angle_id": "a2",
+        "text": "huariques Lima residents recommend that visitor guides miss",
+        "role": "broad",
+        "wanted": 8,
+        "prompt": "List real, currently open cevicherias in Lima, Peru that match this description:\nhuariques Lima residents recommend that visitor guides miss\n\nFind 8. Keep going until you have 8 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal food reporting, local restaurant critics and local food blogs are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\n\n\nLeave out, no matter how good: general restaurants where ceviche is one line on the menu\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      },
+      {
+        "angle_id": "a3",
+        "text": "cevicherias in Lima cooking the northern Piuran style",
+        "role": "distinctive",
+        "wanted": 6,
+        "prompt": "List real, currently open cevicherias in Lima, Peru that match this description:\ncevicherias in Lima cooking the northern Piuran style\n\nFind 6. Keep going until you have 6 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal food reporting, local restaurant critics and local food blogs are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\n\n\nLeave out, no matter how good: general restaurants where ceviche is one line on the menu\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      },
+      {
+        "angle_id": "a4",
+        "text": "cevicherias in Lima that buy direct from named local fishermen",
+        "role": "specific",
+        "wanted": 2,
+        "prompt": "List real, currently open cevicherias in Lima, Peru that match this description:\ncevicherias in Lima that buy direct from named local fishermen\n\nFind up to 2. This is a narrow angle and there may only be one or two. Returning one real place is a good answer; do not pad the list with places that only loosely fit.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal food reporting, local restaurant critics and local food blogs are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\n\n\nLeave out, no matter how good: general restaurants where ceviche is one line on the menu\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      },
+      {
+        "angle_id": "a5",
+        "text": "lunch-only cevicherias in Lima",
+        "role": "distinctive",
+        "wanted": 6,
+        "prompt": "List real, currently open cevicherias in Lima, Peru that match this description:\nlunch-only cevicherias in Lima\n\nFind 6. Keep going until you have 6 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal food reporting, local restaurant critics and local food blogs are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\n\n\nLeave out, no matter how good: general restaurants where ceviche is one line on the menu\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      },
+      {
+        "angle_id": "a6",
+        "text": "ceviche counters inside Lima's markets",
+        "role": "distinctive",
+        "wanted": 6,
+        "prompt": "List real, currently open cevicherias in Lima, Peru that match this description:\nceviche counters inside Lima's markets\n\nFind 6. Keep going until you have 6 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal food reporting, local restaurant critics and local food blogs are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\n\n\nLeave out, no matter how good: general restaurants where ceviche is one line on the menu\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      }
+    ],
+    "provider_calls_at_best": 6,
+    "provider_calls_at_worst": 18,
+    "cap_enforced_at_dispatch": 18,
+    "resolved_model": "gemini-2.5-flash",
+    "pooling_version": "2",
+    "search_prompt_version": "2026-09-09",
+    "judged_by": [
+      "Do the angles add variety without drifting off the specialty?",
+      "Does the exclusion hold in every search, or only in the one that mentions it?"
+    ],
+    "outcomes_still_to_be_judged": {
+      "eligibility": "how many checked candidates fit the requirements and the angle",
+      "coverage": "how many suitable distinct venues the whole pool holds, and what is missing",
+      "identity_errors": "false merges and unresolved duplicates, counted separately",
+      "wording_drift": "unrequested restrictions added, and requirements silently broadened",
+      "operator_effort": "edits, confusing choices, repeated questions, recovery actions"
+    }
+  },
+  "stopped_at_cap": "",
+  "target": 20,
+  "found": 32,
+  "shortfall": 0,
+  "uncertain_identity": 2,
+  "provider_calls": [
+    {
+      "at": "2026-09-10T13:48:40+00:00",
+      "prompt": "List real, currently open cevicherias in Lima, Peru that match this description:\ncevicherias in Lima that have been open for decades\n\nFind 8. Keep going until you have 8 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\n\n\nLeave out, no matter how good: general restaurants where ceviche is one line on the menu\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 8536,
+      "rows_text": "La Red | Miraflores | Two decades in\nCanta Rana | Barranco | Classic cevicheria\nMi Barrunto | La Victoria | Ceviche institution\nRestaurant “El Pacífico” | Lima (Centro) | Más antiguas e icónicas\nEl Ceviche de Pedro Solari | La Molina | Una de las cevicheras más antiguas\nSonia | Chorrillos | This Lima institution\nLa Mar Cebichería | Miraflores | Pioneering cevicheria\nChez Wong | La Victoria | Famous since before 2005",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFMN4KgFjdpx93g7Pbq9EyWxydPP7TmWZ2Y-e3HEs8Le2XxO_oI6JU3ZNtj-LIe6QO4H9uivTGREU30szZcWfrVEF6Q405YSy2fkgokGV6-XvDWGJaC6CUGSTTKGDaK_JZPI6IIPVnHhEYax-YDO20BQuSJS22gFQ_piom9-t4SuU4KdmOu91f8AsSEPMeu59nZzsPaCEutQ4SighwnFYFL9WsV67Dk3Qhlwv6F",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEtvKJ7PqiCS5N8-Ndo915r_vphGP1sR81DvUWWyIlbHVgYt9lF_9X2nYcuMksRm4ZylD5zWtoz3w4o9rbVBXvFoqC8GNTbCjNRRp5HRgm2sjGSppXnfueFAb0U0SPHkVEh9hw33ZgRZBTDSMbqL5m3e-lL4hd_oATEygrdCil7HdQ0LVRz3mQnDfEIft1Fik0WsihAYK6E_wrRVYpRwNjv84Ho5sb1oVSkdjybrOIJ7X-ltSs5Kr0=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFj1fAMzEOn7QA4T8s_grUPgN5kwulsZ89U2703Zzc_Y5wBAbPeqYyhhfIL_NFqXAG3U2_RYrXEHIdA4xoFRswSZey77DZX7TZCW-2_x552jhep63Ud3IZyfdXfHPNUbvlAfsbUH7yS2D3WwqI8iw9A9-t8ErsNtYAQa6BIOTy0wU1K5EkUZow2BijWd8NpUyRan1D5j5VsK_OeQogxfA1DW8Q=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEI7m4x_SA9Gcdo_q25MrkcmM9veG4rBNqKCvOp_m-AeQOJwPulNL-qamDR1Nq8YdbTImMVF1hB2GsqB02mmii0p6m7y-c6lc-dRY6DKHGMS9TI77wVUJYmcFFDZpTuYSkA-uf-3nyHBf4Qh1MdXB-9Mf8GBELD5NvF1uQZpqacRlg5yucO6cK78ZvnqFZyPONs0NXJweTKozvmW4p-2AQSdbUo75bxoVqj4vltpneIA4GatjGZ5-LK",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFWadCZaX3Ji8lAaGWS1VY0sBpnGogkOXSAxhBE4vxL2NLEy7jcxrp-Bt8rLIYWONDj2Vp2M4xf9996voYpCDy4gPPI84ovxrHoP1r2SWh4CEyMuJgCpPpINu6yjSfPcyHi2QrWFLg=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHd4z8XqlwCeXzSP5RVNK4TeFer5S8KYe1pvan6c4g68H-TjhHxUQDZsVhFqI-BuekX6uvLs7nvvQqMr287FJrDzHS0WgHrNfaUxWAftgJR0kKoRLWU1HIgrY8lvUZM982CsOLMXtxE1i9Qs6xUycjY60On5tUt6lqJBqd0zk_6VU-X",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF0Uqo2Fhct-YLOm16CaSx465Gc_HKEW2LywYbbRgy6elCwj8qvpm7ZL9LBftIB_8WoA9JBGyoy-PET5pur4JktXQNRiRBxgYl-WJKuzUin_rafybd9VUDexFuDZU5CikM=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGhasIG6SOvT0qELDbmfyDMCqophm47739ji71kIVoPSOeg5A4kiUmN3PcsJmKRONsJINGCpXVr8Pf400C6DgM6Yc7je9hzMDqLTJBI51D3bpfIbjCo01rmS0ZnyMIefg72tA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGCX_SfazMbANXYgRRv5jCciBAhdRJ94nl91RTTMTgwn7EnRDS13bdZ7t9yim2XCdN4HcG99e_xUqAr1OcTX8liqtiqXcOmUfpeEHbobX6U-9i_wEndHy4QwAf6_IF6Z7AQzc5DNrJbr7JERiQVXR4odiQ4AmrHXmJynjmctIIe8udpGCRP7sY=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFRwLv23AamkS3YpfzzmvLHtPd1AorGuZvB4FlWKD0A2bs_0IELsZ6oDGDVsi9DFH2fjRFpRXVnmQLfcGItzq7v8vBMl8D3d9q-xS2AkNhXT1FdFSwSwCK-9zgePxfxZYhJlVUIrd9fkS4POQHjfIB-aXBFIbgcrkj71Zs4wd08XKVV9g==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEvaRX7naY09jHROpng_Ruy_Us1pHn1HSFd3-_64EzwbTBymVUghXFhi23pRrfpCh1c2zVS12RiaJVnHpHbc6mlmyZj8uVlv1ZudelRMnZ-B85ZKfDCh7U2xgKzEBvoPejv4Wp_Q0O4xxuwUf1WDsmyZSKDIUmfiUU1H5tkvbGPK6pYa2FA3NGj"
+      ],
+      "source_titles": [
+        "ohlalima.com",
+        "newworldreview.com",
+        "cevicheriaslima.top",
+        "donperutours.com",
+        "theworlds50best.com",
+        "youtube.com"
+      ]
+    },
+    {
+      "at": "2026-09-10T13:49:17+00:00",
+      "prompt": "List real, currently open cevicherias in Lima, Peru that match this description:\nhuariques Lima residents recommend that visitor guides miss\n\nFind 8. Keep going until you have 8 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\n\n\nLeave out, no matter how good: general restaurants where ceviche is one line on the menu\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 4445,
+      "rows_text": "El Verídico de Fidel | La Victoria | Famoso entre limeños\nCevichería Sonia | Chorrillos | Tradición familiar, pescado del muelle\nChez Wong | Cercado de Lima | Chef decide, sin carta\nEl Warique de Karlonchito | Cercado de Lima | Recomendado por youtubers locales\nCaleta 23-Huarique Limeño | La Victoria | Recomendado por youtubers locales\nEl Maratí | Chorrillos | Ceviche ultra delicioso\nMi Rico Norte | La Victoria | Carretilla de ceviche\nMi Barrunto | La Victoria | Institución local, ambiente futbolero",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEK3DElCLwW6G9B5rfwWEUO3WF9XfzTDp-jxwn39MuGvLPDldSNxjiuKbA4x81SyYGxmkFms90buZLzhgTpTlYdGqJm1hu3i_4yuauHJrjTncSqhcrVpm9wnKxZW3MLes4OTPcaHgNjwLcGyALaXLhW6Elq3xK_cRYne5E_FHYdoHx8MJzBHfZ2bQyRvKC_HZwiT47up7xa-id-tTiO6JvzvCIYsTBo4mhIWEeisNLjXqXIwwmP9JFWLlaHI9tI_4o=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFwaYWSQA8qZiRa6oEUahb_dkSocUVp0DOh5FrUGA1X0dcrRT0qTs4R8OuQgNm5KucOD0vrt6DWRdTJysNnfKFhvrHSdVxJj9yexZ-AxcVK63H33jStlIgkkohZYF3UR5Bld6WekxeOfhLyoGOMvuFMF_e1JetoK-1XNcoLCoqc4LJEaBisW7n1JpXzFXBfpBi1q5A7eYnN5J-9OhRsnppB9pnGnQG5oi2VPYCT31zFlGczwzpsncm_",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGBSHThfsjNuVo8vTwXqLBIqpksuTtR2-GQx_YAbTlbuy454RLkmoErLrBuwwxty1K5cyDXlLJZZM975dMUUIhIv62PDGxMB-Dc7hfUn8-tJWJE6g_TGbADnh1G8W02pJO-6cRzQK1J5QKdTd0hxywFDZ5bQAmrXZYOU935CgvAVXsTkZMeHC0N3Oo-C2yPW1Gy890f62dG5pAimYw7YAVNDhM=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG52MYQ9rkhH3TgR3NX8uEAxGVZWAeV48D1Gab0wzuBuRhP9PAMhbiVdM6i1PL_FhQyEu1bgf0tf5H9yIwSuZDRt73vobkXdoptjfD7Lmpo1XDf9YtOD6iHUBFwAHDjBc-FoV-uPhXCuEHiOrLbyIum2VzBXijkxnR6uy90Qpa_Z0l0hmHI7ooTg3KsRlPdVBWrf4HdvoWUtHyd8j0rlcbI8shI9b0B7pVyhKpzgJQHIA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFlE_3L5onbir0R_p_NaKV_NrP2tDP3q9SHvBC_sKyyCLx_J9d40KumQQIxrkHHXD15Ok_8mezxwZQFb-iaeKb_AoLpcpNQ9wNHawk7QkWT66HQSB8HbJIzHYYAF_pnZB_fv2vaVkqeTRLXjcSXKRhtBYJAeZqpeUEP9nuyajC5hWNmNd92BIs5kSuQSlz4wyM2pzNlky0RPSGnWNOP-j2ma3uD",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGRKiymMcGS3AolFN8_4YNJzxncuO6knbU-EOZnKbaFZ1oG0K60e0JFk9OWL9fZOJYReL1mtqesqvizKPr4J5QBXjoaTgWFthUPEkjTm2jmfR0qNInx1YuM3QPT8mgPL_s4XyDTACGmo_uMN94N_k5WG3IHg6JZ2CZJnde8XTD1B7s7wEh1SMwmz-5G66LWI7bax6YMTLQBLg3Ew6n311fTtZVO3KUDCxq_ivcn1GH_8Q==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGPHjlJWRNgdkZ055DbyTCGba3Wo2BC4nlbGTKUfpxeIMxHNdc_GoWg1VNPNmi_f84saixkTpDDLD3-jdhPJP6GKsXSV1yTeOhdTXIGe3_yxs3K6v5XNYzRVVAfaFS8L_5Lw1ZkX7LdxY_Jwaf8HXVrOybqDvlD1aOHOqONGoVePgoFcg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEuGpetUYBKKXwjnUdiySoO1dN9pX_2Utp890cHTMGe1-As2V8HN6W4HXddPL4QX85m982hmRcOoqu9eTTso57pjoxHXVCx5fyZw43DPiGSHRr8GtGwCPHJMm4Hoks3UypEafzHT1Y0pyu95n1AtJHrt7g=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGJkl6nv3RlaqBTRVK6Jd0-pH2MTUy1lO5N5djKi9itrv3SPfYGbM-yhFbt5PmacFS3ZOgtjs1FNoMJenPjtrOU9hUQ8r69Xsgh0dKGwIe3lnEMiaNZCYM7O9uOnYYZtuuoLY3MQ-JjLplAYVmSapmHMoFCqlRGpOJLjmNyGAnJ-_ORVq4r9cfWp03xpRNX0b_HUfD4eqgvwNoYNbodR_eWGOhwmywtoyMZX74ibw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHZSSaN-VA0AUXIOZk79-CncYnah-wAHNYQL9PbP_GSm3ztsK6T_qjsnFK0egMlo16NW5Th6ezxLmJy1uTilBfyg9ALtx79UV5DO3dNmlj6Gf_tgtB06l8FL9i_1r2XsQO59kt5_SE=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFXk64CBWnqDeJeMwCbOJi9L61HXD5iWkcov-dOl_djdCMIcSmNBYVmZAB6X0lb5mnW24upsYLrDX_UhkTgBPCeNFn9h0qIjAatNn92zn3vQkWDSROV05jvSmAPwejgm0md2Z4bef62l_4QcsPgsUOWohjqqf__rSsW0lXVv7FemVXFkNMhul7-1YC0qRmahLfWhVCpIyjsT6kMGgo="
+      ],
+      "source_titles": [
+        "escapadaviajera.com",
+        "perusites.com",
+        "elcomercio.pe",
+        "youtube.com",
+        "joinnus.com",
+        "reddit.com",
+        "ohlalima.com",
+        "emilyeatseverywhere.com"
+      ]
+    },
+    {
+      "at": "2026-09-10T13:49:49+00:00",
+      "prompt": "List real, currently open cevicherias in Lima, Peru that match this description:\ncevicherias in Lima cooking the northern Piuran style\n\nFind 6. Keep going until you have 6 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\n\n\nLeave out, no matter how good: general restaurants where ceviche is one line on the menu\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 2586,
+      "rows_text": "El Fayke Piurano | Centro de Lima | puro sabor del norte\nRestaurante Cevicheria Sabor Norteño | San Martín de Porres | Combos Norteños, cabrito a la norteña\nCevicheria Purito Norte | Centro de Lima | Lo Mejor de la Comida Norteña\nEl Cataquense Piurano | San Borja | sazón de la gastronomía del norte\nLos Tres Pescados de Piura | Los Olivos | platos norteños, ceviche de caballa\nCevicheria \"El Piurano\" | Santa Anita | Name \"El Piurano\"",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE0X3rML0x2mytuC4GCo8cDiSDThR-rvWRvpqPW-5y7_ylp-D63PlS12Ta72nwOgj7owhTAd8funRrNtIBFN8no4UugiX0F4WbhQ2UfPJ1C3dQNY7wR63LUdpK0vJqBeDUHigaKNFPYI2IGLb0c-GXa_EPcoLS4AyP0WUtcnkpdZ_zHn-QdUQycfREFqwm4geEwD9yQED7QNU7OaA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFxefBhs4bJaFv80RUJwSxWO73fphKK8_-rU4S_LKKwqPEITxkEO4kjhlP7AuIAoNHIQQye9Oc3vSn_c6xsY9T5FiHYs7UrsoNpnj0K2uLH1g5l-Dzc4jQi4Y4ZCfS49xJAOUJxtMlyqEpBHzSkpGHTlMo1Sj8pQxUnaKN1a9shQskOsxyjtHCokqNWw6zEVByDjGe5gusbxJxoEYPQSwAtvvj23g==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHtzplxQC9h76JArLgOQAA-e9kfXze2-ZSJHOblmt_-6gRwuGxORL581ZbmIB2tL7pkNyr0Ev6Dbh5N3o7_McckzyrG5Irly29mx8Ei2eF5i5IrukXdONNB17BGrkTUY1dcjHTkQIkFskAnzaSpet83U0ci6SLd2VDYBYOquQEHVjqUqANDRerUr5Ivrj_57f2Fs2OpSdzzl1bKZKHMxaKwrD8=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHUig4uBdFLLIraysTLnBo69SeuF3_VMsvAIejQvYwQLJUzcakvk-E6aHMtcJkaGqCuIgpsLRi_ukbCQKQosyC4zmFraLjsZ-ZBCGcDCjC1ZfsSjHvsT_i1LUOSOeJ4cGnyUACDW-Sp1Ml6NB2sv4s568_Yo4qszFS-nWnqPH2_CPkwnO7J8YrAXxsS2Df-yobqY4hhoMuhP5JP",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHbNcY8rs6MwxSwuwwIQ246pXj6mC-phGcZXHbgYlgdUgOqzEKbTDiHLKT2zoEqs07RljbMdAZ5JOcDcCG9CLCGR21LCOynwKRXy9mbhkFYbRBVADmTWPiwlvG7_y25HeiLa3x69eAy12_ER7QAD5q7QMd_ubxTwn0xNxt1OrYjoddaJo6TP0J2HL_MeozaeXkvCluC8FM3MBGa0F0=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGj6J9ECdrXM9fY0f287O1JSjVix-urVEwcUzuVHhWINTSSLHQ9u-JG8lpVsyw13CrNaPk-59aFDdhGD2ZiIe-FSPBfIQ0mk1dPmmPG7Hj8vcvDzlSnt9I9GAIVqu1olJQZb0Yp9OfLz-1bCdVkCEtReFLKl_lp_Hwev_aJH_tIVe0q7OmPmQUxjAjno7CX_qfaRWCTp8hWz6NaFs8M01qSRWK_lSgRtYcP",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG0qqTzF55oTn8UnhQ2kRvnB_-FsSKXeR4AQbqvD6Kbf5w3NAmggPsZT1FYV4ipFMN4OoM5tyl7O2RRYJafQaTC9jyeUK-vZOlZlURL0KjQ1kzPJ49rt00jxUh-Yw0SfDjiCBhIaGM=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGeoIebNizqbwhG9TPSb3GOjxekONivRroN7hs6T9WB1WY53LwB_yYekXhvioe_GNdm8lqfq_GaLh-LwyXPtxDpp00h3PuP80PqW-nafmFp7RJr9YWqxTlptnfAVaUWFJr2be55alo6_vN5-9MKj9vwqk44b_LFE4gEaJJKDHs9BYKBLcGA-AsHIAg=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH2i504CwZy8XVZBvLUV5fpQPt1aP_red_ztBDUloW23_D7g5e8d69FzkNTCKsSRN7KIqjN3L1gI1bDesviN6_QzkVyDxHikjYc-4H9Z9mR6qvGWvcKWeEqtll4XRl9Vh-F",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGEejqD35irdlsTP4S0HqAVq_QYbZL7lY92KDvWQsGF5dj9H6lgLXh7EpmfVxty3sw5rBAVnaR9Nn3mXY-YkFG5wrWylASHE3Vmldn4fl3MzDtSVEs3rcqw-w==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGZQsqs8qMBm0ZkS_Hb_6v-Gbsd5EzRZmjnU8uwaiIkyDjSU6Izx8XjTExd4ow9TiyLbyMkHle5arQCzR236gO3iW2G1tk0nhdCMU7qADA2aD9HZ2JYluLfrzKsueESru9Cci3nGGv_WbfFXJfiTyyUvF7Ra9ZkRktPNkvvOzfk-4Nr_QHiTdF2FfapIC8YPb60JuisHp7XqIgjfhdqmsV1QhVkWGtaT5iqeOQVWUON8Jqrkz-nY1aFAF8QlGf6Yxc1M2788kfLOw__AXVKx3rLyVguuaWa"
+      ],
+      "source_titles": [
+        "youtube.com",
+        "rappi.com.pe",
+        "cevicheriapuritonorte.com",
+        "elcataquensepiurano.pe",
+        "facebook.com"
+      ]
+    },
+    {
+      "at": "2026-09-10T13:50:02+00:00",
+      "prompt": "List real, currently open cevicherias in Lima, Peru that match this description:\ncevicherias in Lima that buy direct from named local fishermen\n\nFind up to 2. This is a narrow angle and there may only be one or two. Returning one real place is a good answer; do not pad the list with places that only loosely fit.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\n\n\nLeave out, no matter how good: general restaurants where ceviche is one line on the menu\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 2696,
+      "rows_text": "El Muelle | Chorrillos | family of fishermen, fish direct from pier\nLa Mar [Miraflores] | Miraflores | buys direct from artisanal fishermen",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEliZNlklY4TRcJkszfBnnMmZhuafG7gJ4IRy_163Ajy-tOUxMjTqyGKg_CjVyZlC_-pegA3r2Ig1AT0HzswaTtdG6X6b_sUC6Te85yChpcUmadGS0qy62oRZDDknAuDE4aU0TTBKcEmki-hAoePBEojPv_UPi2mgsO_PKfnMQW9zsMP6Go9uvbsumvhlYFTJvPyCpdlRu4WRi6hR2REvRK4ZNWnyKVVpCGjEuH8rKS8IVh",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGQ6HJ61KACKXS-CbtP2F2LEcUT5zCdBXFVw6t55RZrjlZaQ9PHdUzSCl8atoOqLrA79VJ9Dxo9ejAnlPzOy0mYHiLKSJXAKvhVvSJ5abIywoGQNPvXwRRbyu8rDqbGmPTKV5A47ineNNenw30trS0lA3iA9eNQTQXbeAEImhRMpJGF2DNcedSai1_LH6UdBNezlDzhfEfe_Pl12fdC7FiO42nOGAFijVrx",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHhSkuzgfd4ZvNtzbQoWbJx1ytGeMNvfTfpD378YiOPrrXo_ZC4M8Btjsq45e6hzehltBPC0VpEjsNmr471I-lK64YW297oR06kKw3cS2mgazwC5LcgHd55zVl6SwPd6B41wgb3dZe3w5mMqpu7fa0xrY1PL2BXb35dTx6L0WWS84cVw4fBjdnl0TkDxj6IPDY0j9mLxT1x6T9nVGhu07KSy-rmmlkz4J83OlVIBT-HdHt0weAFdg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQENdLVmaRR_MAqmxaVKHDwDF300AFkOx6pibJmhGO3KxjewOMJBda7izpZL4kZKosxfLn4-32utkEooc5ehbTnoH86k32UUcsZJa7A0nM_qEwDBUwKk_6XV0fKPUaPUNVqWgJzubKDr9irHPrKDXfde3NedQJTAYM-kEFrIX5kASFUNSB9UPbO7NH_OC2NQcx2xCJ4dXdWx58t6ljWXUsHhyWkY04i8-wwUknJNPKzShxU=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFVKVqFna2qHbPVpSBOHSMRz-Wd4b4oYu6b9l4ve7zWqSu3_IP5CEXLQBs00IEZOxdOo6VbxO3RG5t6mjnJdCfKhfizxPE4yY_HTrNDGhfAWk5Fgdq11jBNtDs3EpwrXZ_ygVTyOHt6meYMpRth8fxO8B-6XY2pCGoXegdz4wYiGoGD_nof3ceWIXgKP-KTAYZAXBL1SODiZPP_i2v2bWnSXYSP8e0vxm5LjeY8vps=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHIoiuMVs6GpSpJC_JZ_EoluU_6eVyFzW9va8A6ZIjzZH3lIG3zhUz5i85HDkuhf7PGrLklJmbCn_UjCBtq9I6b-ThUs8BbVEIFGHFOCPiJMDVNTmcCZggMCcquMd9Qg6i565MWXY5YhZ9IHX5HF_vOklIcwSjPtMDLDskBOU-qkfRePHG8G58QBrLQlWpTc7kdG6huDhUSu7fe7vaUYP8bIC-07CeNCbxptawEnZE599-nh6MJqOfU1fw=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGjtoHs74YWg2qpyNNah-kdVWya7kk4k-s4511qwYVCWbIzy7dtsf1N0cEVw23Q6Ms9u2a98RzLeugCP1_InN2pYJ7G-VW1xkbKrqIIcfZ8n4Qk5Kcb2q59oolPJpBCm37SW91eFkGrY3aHNcXQpd4oJjBBeuvnSwwRvkZPXHSGe0HGGgRy5p3oh5TS5RPqEqGdtumnDYs5vvDOz7h9WhTFTw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHL67geAMe9JOxkQEXQZ-P1ZD2c_fXJzrwWNvgW6fuGU6yvq2v0Z4PYH4smnHTtfsvddUzPGDoLPkcDB_z1J-9HGIMRAOqmI3vRi8USoE4ZQngdVCRyqjgTja4t0yWIA58cCU2BJGx7NRmqhrbH0-HrS2D_HQm9XLJPeBhyjtx8UAri",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGyXFgT8VV8-9B-T_IgTO2_Sdx6boMhw1tfFSq15cqZ1XXLNy27HkU9czkO7GSVgzqFReI7sRPwrpibtPWs-IoPbh7ezpObTNAOz1EJ07wB3QXwy5tEBTInnvaWj8ejIwGPdsMnPmI51q-7yDljN6nxvkyLTbvMmlhu0-rZfBjAygf-_PjPxjk23Y_qN7i5FZyKYWAizARtEzIfPd9B-eXmREmrYKCmN2Fi3DL9E0UubT4U"
+      ],
+      "source_titles": [
+        "escapadaviajera.com",
+        "andina.pe"
+      ]
+    },
+    {
+      "at": "2026-09-10T13:50:16+00:00",
+      "prompt": "List real, currently open cevicherias in Lima, Peru that match this description:\nlunch-only cevicherias in Lima\n\nFind 6. Keep going until you have 6 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\n\n\nLeave out, no matter how good: general restaurants where ceviche is one line on the menu\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 2275,
+      "rows_text": "La Mar Cebichería | Miraflores | only open for lunch\nEl Mercado | Miraflores | refined, lunch-only\nPunto Azul | Miraflores | expect a line at lunchtime\nCanta Rana | Barranco | pair a ceviche lunch here\nAl Toke Pez | Surquillo | solo abre al mediodía\nChez Wong | La Victoria | restaurante abre solo al mediodía",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF5dsw3_zwU5f8UnC4Qfk_39pyzySmte3OyMnc7zT_FRMDmmvblVU7ZXe4plky9AJcB8aUSYvL9HF_BAiZAZz3erzu7cp91mfo6lOYEC_iSLFUbnMwbOlzWagRnvXw5yaVvKq6T_DFu2OHoW-bAL_h_0zmdIv_klTMPxE2cxquEDpg15AXsiMi1Ixvco0YEpsYgHlF_-I5VYfl1HOJJwg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHGdRNmWSEymGpckqgu0Uk7-i5A3H8GgL26NndxmTD8UEvQV9idjd9svH_bNOSzRbTFVrGPPsczt0pwO0XTJAWRycQb6DYD2RxxQPmLD91nliLFMvgbgUTqBc41G2kZtvrg5RLoaRUCss-n9yxK_-7z8o6kfmqtprmvbNIQqBfU_wCG-noIu0nXSwMcq8HY_XtmqPQtgHEMelXIAIKJk6MZAm7Tyi3r6k3N2ET0Xpo=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFvsIJZMkkrb-T5HHeOy41ztYuf1tAfth1wsl6SzBDusMPD9Z1cYjnr69n5qTE3yIBZ0V4sntrQ2WXpxsc7f_TFEJCQI4hmtEox_Z_H0GXzEggBYIJUjidpuOvVmBvGOE3nKTWh-EKz9VMxUY6TlmqXyke5VbJKgYgXIjBv2TFr8i4sVRq-duv_Zbx2gajvOz3PnaoCyDcywOdaCD2syGS98w==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH58xiusOnhsv6rbPHyq5uslcJsXpuei7GMwM_QWdwLr6jMHyJuuqQv6iuBPClMaUGBG-hw9iQHwGT1gHUGERjWFemf1_T4F3EIqXGCbfr3H6vV-ckKpayfV7jHy_20oraon6ZCDlVwU68fMG7AKJ0JsL_AGn9Z3uasdCg0wS41SZSOQykL6gc7Kk2VjfFG2tg5Vs8jhYxMfbPduvCE_6f-otK6VQ==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGWnfVhPKvP_nMcvfLF01y9lDYo4nvMlC6Yod_6CoKVvz2rETShvzzo3vgz9vuwv78mGyKKbrtIA3mgqm8JYUCUiozNEQV8zYqNdjHd5N_-_yddVeBTKpGoXs8BhcIGmi6_vYsVPMr1GQZ4iNukAngFXMi585maIf5FA5MUt0XJCtZfjWX5p08hfBbNFdgQc3PepIpxLKtROus1D4JZTgcjBabdn4sMSw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE04bYKqttqIGiMTkdUWwkdQUrFyBhEjKS6kKb9A5tpFOfnih04SzeRTWYSX2ajHq5REavXMVO5h6KNbS9eNAvOtj6nHQilGnWsaJkQFHfIAr6TmxGmLzBdz4_QEZOQ0USNahKX1v6V-vLZV_d8EyyvxFaAFO7twV3Qo9m4UiXreLH-2336Cw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG_jjigYLHQ5ACn5Bf_Ru7Y-Vr6APXuG-RqpJ3PehjuuwZWpgfa81gD1VBwRpyATHnRAC9gcxM5BRslURD6CGv4e3aqEyU9BlQtlkoEY9uWqAyiJC2MAvuDzg6_ZM7H4-cOAUKBvdNr",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFvkm10IhHR6rwwRsVF5mTPBZPAQ47lsFBtKCuEI27QSuODyyok40Prbc92j9BxK-kyJp7sBpoVTM3TYiJ4tzqFmgU_CnxZ1e-bLum4_GMeHuXeQqcEAT2Dj5aRP4-VAKUBjK9xfIrNrBjqXdgLpdRzDvY=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHZLI0f-JzvPDlaMpHUL2sPGeyhAodkM-l5NU3JoSX8DsFoxwkMg67wz9tjD1WbqAFq0aVY3YKvxecXPZYW_7c_9vjFvD6NAJf733cZcdVrgjkDDsOBjzJtJ7eFESSnljP_hO9qv5caZrPiAycHn8KJnq4f",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFqCK1m1m8HdMIhWxp-hkb6hG0D-tmLI8US-cdzMy2SFXqYH-9Cussnrwy-wk8OOkxFbs25T8CXro9OMsJTN3kTmAM5Ad3gHgjEB2s_5OqZcnjG_MJXvK2C7-n1SrT7NPKfyBQFa9b7jJzE8wuMMnSFYwAWyATAtx38hpzaXj4QIsKL3A==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQELgiSp5dZoXMvynLrADQUznwNNG-R-O_0wAT1pUGbzZDwHI0rc1QUciIIKtcAVlXR3c_EW2H1qLzyEAXa5gHByi5A_yjvnQrpciY88eOMZ_QygVrLvdPVAk6n8toDBJ5tTgt-7OrxhswBFQXYpXfqkObulPgQpIxoQcW04dx315Z3wuRq5L2XPNfTuHN0nJE9mXzM="
+      ],
+      "source_titles": [
+        "deeparrival.com",
+        "ohlalima.com",
+        "perusites.com",
+        "peru-spirit.com",
+        "luxuryincatrailtours.com",
+        "wanderlog.com"
+      ]
+    },
+    {
+      "at": "2026-09-10T13:50:28+00:00",
+      "prompt": "List real, currently open cevicherias in Lima, Peru that match this description:\nceviche counters inside Lima's markets\n\nFind 6. Keep going until you have 6 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\n\n\nLeave out, no matter how good: general restaurants where ceviche is one line on the menu\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 3226,
+      "rows_text": "El Cevichano | Surquillo | in Mercado N°1 de Surquillo\nTravesura Marina - Barra Cevichera | Magdalena del Mar | Puestos 12, 62 y 63, Mercado de Magdalena\nCevicheria Mochi | Jesús María | Mercado San José, local 367\nCEBICHERÍA ANDREA | Jesús María | Mercado San José, Puesto 438\nCevicheria Jose | San Isidro | Mercado Municipal de San Isidro\nCevichería Nancy | Lince | inside Mercado Lobatón",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFM3hkXwefF1ei9ggTHN__HYHXkdkW_5n3_9jJpszaTpqBwwzxmX6O2tEzJgZIHgdPtg2jVKv-iq0aEnf98um9ILeLb96Asod0-M0wM5AMmsYIB1bO8kuh7wktbFxJoAygzqJ7x5aXXJiGS8uCXXXYzeCtUEm6nZNbfj9SqYHFcx1xKQedFBDYA9hxNa2GxeBJXWr0_R7YJI29n9uDQxVW_",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG14_1noQIOtMKDLqSb1URUWfyzyXBBGYGJvFikoMUAbWfv_bGCTyVqNvOoKhGfkS_XtcTYIbyypje1KDjJAqbICmFFLVhokVNVJ-hzaINh8LULvvcJ35th6Ufg7Rpv1-dwdVc3MkYrJeEcKjjawVhp9ZDPzukvYpvQw3sqOMnGR-bEa0B0y6UAa7yDbysmadvDZZI2z_ZtgE0TW-dtGaX72HI7DkV3C0ISgw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHL822-gt64HJgAdHrBBXzl4QlmaHfcMoO5ayQ8UjcNh3DgPW56MycMAFjjICJmJNwxHNfIsHLrJBne1FM1txW2EyUY9Q9pTAlHpUS2Brd_3VC7hIx3VmH1u7R2OjTRHVW2XoKwaLC40tv0jUretCxUZMD34i8zp90ySS1cno4g9FhRVHg8K4Pu2riMxT34WdsLkUHFOjsHbi1TBkJY7dTe-1epwcuVbtvL",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFUiRimsKWBvDX-4x5--aL2VuASZ_wVyVDfC6zSGZXoqbObCP5Hsy_5QN_FbF-pF-bvzIBzuG-I8gPHRvWPL-M-jBuhTsHsmRYpC7H4tFYutoZW032Kas_rxeoRDqXypSKKr0vqgWFmZPR1u7CGo04wgrcDKjUMVw8CN-UtHrGHeMj_9dNxEszdk-mFwxotBFdcAGb8FgJWYK7dwU6xOZ-bOCs=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHlH7fKaSibh13XDwCWSl8BPGWeeLFsJi8jkTHFzKu4qjt0Qfw-Z-p7houhqVFu87fiJbJYykmRVUxUzytG9eEEIJPc1NHHhsU8uoWh9NmEzrRq75c0O9RF-56UO96TjFj291BcXC80HxbhdX5V2FzTZYOxaQ0Lk5OROEKWvfHYBP3DrgjxK_UBpa1-5mMnD_B3mtaJWNY4XGYzl2bVoHF0rMy5",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHFmZDgdtHLUZ9Q4X5rmuYB5VJBfXk7IcYMadfoHlCHqdQrhzNr5NJ1ffSNb4kbFAKnxQD4IzQyYS9etbimUT-FVKB6DkK0ZT1-bMFaflF2JBlGSjwoUL_N8-IlFnuNEeSVnIbZuh1XChmYCqorC7lPIQU1yPLXjJhYhIzyeVkpjL_K8DMM60vF2eabEAfb7tdx_16yjVz0JEPb5UGek5r8gA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFMovYk7ySLHGTIMZa8GJ7JRkuuWx8X14JhkYwfhbQFXZ0a1OTrUFInULkz-jOAQ9W35A0S4y924vLs0k3apPJjkWqhyl-foYX-db61lFjhms0j4-ZsFdC3btRY-qgbZ-cA-KsmVhmx2WWSy_6IS7oPbHmOuvdbG1SnrjYZl85ZFTjAfuyBzwviRkD8WqoqcfOBczq3FamCJQUxpuc87g6B",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHC6Ixo1fyrxNaGkiPs9Qidy6iuAzj5LfokI401c2UTjfAYug_sEvKAx3a5Y85z_rwPSoYBrxRJFyhm9VJDwyPpQf06TFGDHyWN5E0dEIjTEvdYwCxzGxxpX2e_BovVr8DqjE2Gamdyl7_hzewwDExVhmmvcM6NwbiiguGp_pu3TOzg9TzIF6ZELY_mm8nDi39rvzCdOasO0RO-r_Q=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEMFbm0JXB3JikD-43GKQXDG2fkSVGbX6MY29FA04vM6p7ewkxNhyAyfhOKt3gYRL8jw-6gMwt7FadCP9XJUDXtZTbmyZsO6Fia_UPO0sevvhmj1SMV2s2lwA0AZMI89L8FHwHBzpsOiSCSQshPoK5IRWFuy7tou5na4bIt8Ezm2VBoKX_MCXV-FIhDP9E_m8qCvq6z_tpW_ms9m1atvUJP",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGQFuv6VSP6JSthxp0-c0Vc1OoVKjWj3Pkmw1TGRn8ZqrzoFMLSSv_tXtgA-ADC_4yqgG-uN2LoVxZHQpHVaK2U1Xl4G2BnbRNRr2O-txFALr6YRCcUzuRvhkCliZyMfV-z9c1cH-tIdBqp4IxwhVoTmCcuUnFdA3hN-6l8W4DYRJWXoWzJy8DF_q1_qFCnFgk7FOkSv5D6hqZKW-N7dXs_ZZhLqYxbrqGNnIsFaV4gPezKAhUMjqfSFlb3BAtzRsqtUCLgi8Dd4sd0HjL7_1XentlRGARZTuy9PxKKi428",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGrGaKzNMGRxgWkhHlLQWwGr6q3s9uTs0-6IxNzyssCAtDxQW7DaT-WDaX-R8GEJTyUcYz2MRE8DUatAHt9HdjLX_Wl4ui0SZivE34K0WjY7k77v9mYdvC0UIRCPcpYsjWnXic8s2g="
+      ],
+      "source_titles": [
+        "elcomercio.pe",
+        "youtube.com",
+        "reddit.com",
+        "facebook.com",
+        "natatouille.com"
+      ]
+    }
+  ],
+  "provider_calls_made": 6,
+  "angles": [
+    {
+      "angle_id": "a1",
+      "angle": "cevicherias in Lima that have been open for decades",
+      "role": "broad",
+      "wanted": 8,
+      "rows": 8,
+      "sources": 12,
+      "sources_named": [
+        "ohlalima.com",
+        "newworldreview.com",
+        "cevicheriaslima.top",
+        "donperutours.com",
+        "theworlds50best.com",
+        "youtube.com"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-10T13:48:40+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 8,
+      "shared": 4,
+      "exclusive": 4
+    },
+    {
+      "angle_id": "a2",
+      "angle": "huariques Lima residents recommend that visitor guides miss",
+      "role": "broad",
+      "wanted": 8,
+      "rows": 8,
+      "sources": 12,
+      "sources_named": [
+        "escapadaviajera.com",
+        "perusites.com",
+        "elcomercio.pe",
+        "youtube.com",
+        "joinnus.com",
+        "reddit.com",
+        "ohlalima.com",
+        "emilyeatseverywhere.com"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-10T13:49:17+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 8,
+      "shared": 1,
+      "exclusive": 7
+    },
+    {
+      "angle_id": "a3",
+      "angle": "cevicherias in Lima cooking the northern Piuran style",
+      "role": "distinctive",
+      "wanted": 6,
+      "rows": 6,
+      "sources": 12,
+      "sources_named": [
+        "youtube.com",
+        "rappi.com.pe",
+        "cevicheriapuritonorte.com",
+        "elcataquensepiurano.pe",
+        "facebook.com"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-10T13:49:49+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 6,
+      "shared": 0,
+      "exclusive": 6
+    },
+    {
+      "angle_id": "a4",
+      "angle": "cevicherias in Lima that buy direct from named local fishermen",
+      "role": "specific",
+      "wanted": 2,
+      "rows": 2,
+      "sources": 10,
+      "sources_named": [
+        "escapadaviajera.com",
+        "andina.pe"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-10T13:50:02+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 2,
+      "shared": 0,
+      "exclusive": 2
+    },
+    {
+      "angle_id": "a5",
+      "angle": "lunch-only cevicherias in Lima",
+      "role": "distinctive",
+      "wanted": 6,
+      "rows": 6,
+      "sources": 12,
+      "sources_named": [
+        "deeparrival.com",
+        "ohlalima.com",
+        "perusites.com",
+        "peru-spirit.com",
+        "luxuryincatrailtours.com",
+        "wanderlog.com"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-10T13:50:16+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 6,
+      "shared": 3,
+      "exclusive": 3
+    },
+    {
+      "angle_id": "a6",
+      "angle": "ceviche counters inside Lima's markets",
+      "role": "distinctive",
+      "wanted": 6,
+      "rows": 6,
+      "sources": 12,
+      "sources_named": [
+        "elcomercio.pe",
+        "youtube.com",
+        "reddit.com",
+        "facebook.com",
+        "natatouille.com"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-10T13:50:28+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 6,
+      "shared": 0,
+      "exclusive": 6
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "226b24688734f394",
+      "name": "Canta Rana",
+      "district": "Barranco",
+      "found_by": [
+        "cevicherias in Lima that have been open for decades",
+        "lunch-only cevicherias in Lima"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "38f12e825fa3~1",
+          "angle": "cevicherias in Lima that have been open for decades",
+          "name": "Canta Rana",
+          "evidence": "Classic cevicheria"
+        },
+        {
+          "sighting_id": "2a8523949588~1",
+          "angle": "lunch-only cevicherias in Lima",
+          "name": "Canta Rana",
+          "evidence": "pair a ceviche lunch here"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "d72a1e1373fe6012",
+      "name": "Chez Wong",
+      "district": "La Victoria",
+      "found_by": [
+        "cevicherias in Lima that have been open for decades",
+        "lunch-only cevicherias in Lima"
+      ],
+      "possible_duplicates": [
+        "Chez Wong"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "6dae363b4a8d~1",
+          "angle": "cevicherias in Lima that have been open for decades",
+          "name": "Chez Wong",
+          "evidence": "Famous since before 2005"
+        },
+        {
+          "sighting_id": "d80778fb965f~1",
+          "angle": "lunch-only cevicherias in Lima",
+          "name": "Chez Wong",
+          "evidence": "restaurante abre solo al mediodía"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "540e8e53709fcd5b",
+      "name": "La Mar Cebichería",
+      "district": "Miraflores",
+      "found_by": [
+        "cevicherias in Lima that have been open for decades",
+        "lunch-only cevicherias in Lima"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "a197729469ef~1",
+          "angle": "cevicherias in Lima that have been open for decades",
+          "name": "La Mar Cebichería",
+          "evidence": "Pioneering cevicheria"
+        },
+        {
+          "sighting_id": "973df1c75793~1",
+          "angle": "lunch-only cevicherias in Lima",
+          "name": "La Mar Cebichería",
+          "evidence": "only open for lunch"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "c1aebf9b523849b6",
+      "name": "Mi Barrunto",
+      "district": "La Victoria",
+      "found_by": [
+        "cevicherias in Lima that have been open for decades",
+        "huariques Lima residents recommend that visitor guides miss"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "3f069dd40529~1",
+          "angle": "cevicherias in Lima that have been open for decades",
+          "name": "Mi Barrunto",
+          "evidence": "Ceviche institution"
+        },
+        {
+          "sighting_id": "212595581a35~1",
+          "angle": "huariques Lima residents recommend that visitor guides miss",
+          "name": "Mi Barrunto",
+          "evidence": "Institución local, ambiente futbolero"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "952fcc70765e99d5",
+      "name": "Al Toke Pez",
+      "district": "Surquillo",
+      "found_by": [
+        "lunch-only cevicherias in Lima"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "655f8ca5d021~1",
+          "angle": "lunch-only cevicherias in Lima",
+          "name": "Al Toke Pez",
+          "evidence": "solo abre al mediodía"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "45febcc741442b6f",
+      "name": "Caleta 23-Huarique Limeño",
+      "district": "La Victoria",
+      "found_by": [
+        "huariques Lima residents recommend that visitor guides miss"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "dc66eb98f25b~1",
+          "angle": "huariques Lima residents recommend that visitor guides miss",
+          "name": "Caleta 23-Huarique Limeño",
+          "evidence": "Recomendado por youtubers locales"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "9e2230e8ecf98f9c",
+      "name": "CEBICHERÍA ANDREA",
+      "district": "Jesús María",
+      "found_by": [
+        "ceviche counters inside Lima's markets"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "7b201158ba2d~1",
+          "angle": "ceviche counters inside Lima's markets",
+          "name": "CEBICHERÍA ANDREA",
+          "evidence": "Mercado San José, Puesto 438"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "e5453a9f91cc1f79",
+      "name": "Cevicheria \"El Piurano\"",
+      "district": "Santa Anita",
+      "found_by": [
+        "cevicherias in Lima cooking the northern Piuran style"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "12b26473afd6~1",
+          "angle": "cevicherias in Lima cooking the northern Piuran style",
+          "name": "Cevicheria \"El Piurano\"",
+          "evidence": "Name \"El Piurano\""
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "c53bc5a6b62767c2",
+      "name": "Cevicheria Jose",
+      "district": "San Isidro",
+      "found_by": [
+        "ceviche counters inside Lima's markets"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "1522e2a1a582~1",
+          "angle": "ceviche counters inside Lima's markets",
+          "name": "Cevicheria Jose",
+          "evidence": "Mercado Municipal de San Isidro"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "cdf41f5e7b67e632",
+      "name": "Cevicheria Mochi",
+      "district": "Jesús María",
+      "found_by": [
+        "ceviche counters inside Lima's markets"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "5d54a18564d4~1",
+          "angle": "ceviche counters inside Lima's markets",
+          "name": "Cevicheria Mochi",
+          "evidence": "Mercado San José, local 367"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "c19637264769fc80",
+      "name": "Cevicheria Purito Norte",
+      "district": "Centro de Lima",
+      "found_by": [
+        "cevicherias in Lima cooking the northern Piuran style"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "4e1b22e44d86~1",
+          "angle": "cevicherias in Lima cooking the northern Piuran style",
+          "name": "Cevicheria Purito Norte",
+          "evidence": "Lo Mejor de la Comida Norteña"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "4b5104101e22f44c",
+      "name": "Cevichería Nancy",
+      "district": "Lince",
+      "found_by": [
+        "ceviche counters inside Lima's markets"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "8abd1f6280c7~1",
+          "angle": "ceviche counters inside Lima's markets",
+          "name": "Cevichería Nancy",
+          "evidence": "inside Mercado Lobatón"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "292f6297edb8f7db",
+      "name": "Cevichería Sonia",
+      "district": "Chorrillos",
+      "found_by": [
+        "huariques Lima residents recommend that visitor guides miss"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "e81f799e47a9~1",
+          "angle": "huariques Lima residents recommend that visitor guides miss",
+          "name": "Cevichería Sonia",
+          "evidence": "Tradición familiar, pescado del muelle"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "d968bfbf218be356",
+      "name": "Chez Wong",
+      "district": "Cercado de Lima",
+      "found_by": [
+        "huariques Lima residents recommend that visitor guides miss"
+      ],
+      "possible_duplicates": [
+        "Chez Wong"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "9c6a9fac3405~1",
+          "angle": "huariques Lima residents recommend that visitor guides miss",
+          "name": "Chez Wong",
+          "evidence": "Chef decide, sin carta"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "dfa3ea0eaa8e3edf",
+      "name": "El Cataquense Piurano",
+      "district": "San Borja",
+      "found_by": [
+        "cevicherias in Lima cooking the northern Piuran style"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "480fa4fcbaf6~1",
+          "angle": "cevicherias in Lima cooking the northern Piuran style",
+          "name": "El Cataquense Piurano",
+          "evidence": "sazón de la gastronomía del norte"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "4f52119aed4c99ff",
+      "name": "El Cevichano",
+      "district": "Surquillo",
+      "found_by": [
+        "ceviche counters inside Lima's markets"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "a4bb31b0ff0e~1",
+          "angle": "ceviche counters inside Lima's markets",
+          "name": "El Cevichano",
+          "evidence": "in Mercado N°1 de Surquillo"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "8d15fe76763b2c53",
+      "name": "El Ceviche de Pedro Solari",
+      "district": "La Molina",
+      "found_by": [
+        "cevicherias in Lima that have been open for decades"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "e4190d947634~1",
+          "angle": "cevicherias in Lima that have been open for decades",
+          "name": "El Ceviche de Pedro Solari",
+          "evidence": "Una de las cevicheras más antiguas"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "865598d8b707ec31",
+      "name": "El Fayke Piurano",
+      "district": "Centro de Lima",
+      "found_by": [
+        "cevicherias in Lima cooking the northern Piuran style"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "8ed7ef45fbbb~1",
+          "angle": "cevicherias in Lima cooking the northern Piuran style",
+          "name": "El Fayke Piurano",
+          "evidence": "puro sabor del norte"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "2f06e75ecf79f10f",
+      "name": "El Maratí",
+      "district": "Chorrillos",
+      "found_by": [
+        "huariques Lima residents recommend that visitor guides miss"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "e415b63146b8~1",
+          "angle": "huariques Lima residents recommend that visitor guides miss",
+          "name": "El Maratí",
+          "evidence": "Ceviche ultra delicioso"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "14ee9dfdef01d066",
+      "name": "El Mercado",
+      "district": "Miraflores",
+      "found_by": [
+        "lunch-only cevicherias in Lima"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "5dcd671de8ce~1",
+          "angle": "lunch-only cevicherias in Lima",
+          "name": "El Mercado",
+          "evidence": "refined, lunch-only"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "4a2ac74099d011da",
+      "name": "El Muelle",
+      "district": "Chorrillos",
+      "found_by": [
+        "cevicherias in Lima that buy direct from named local fishermen"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "92cb2707cb68~1",
+          "angle": "cevicherias in Lima that buy direct from named local fishermen",
+          "name": "El Muelle",
+          "evidence": "family of fishermen, fish direct from pier"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "0f7ec11eef17ed54",
+      "name": "El Verídico de Fidel",
+      "district": "La Victoria",
+      "found_by": [
+        "huariques Lima residents recommend that visitor guides miss"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "aadf92d14e4b~1",
+          "angle": "huariques Lima residents recommend that visitor guides miss",
+          "name": "El Verídico de Fidel",
+          "evidence": "Famoso entre limeños"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "639a0536e6f42185",
+      "name": "El Warique de Karlonchito",
+      "district": "Cercado de Lima",
+      "found_by": [
+        "huariques Lima residents recommend that visitor guides miss"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "ad8821c84163~1",
+          "angle": "huariques Lima residents recommend that visitor guides miss",
+          "name": "El Warique de Karlonchito",
+          "evidence": "Recomendado por youtubers locales"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "66376ed06e9dd532",
+      "name": "La Mar [Miraflores]",
+      "district": "Miraflores",
+      "found_by": [
+        "cevicherias in Lima that buy direct from named local fishermen"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "aa1e6bf829fd~1",
+          "angle": "cevicherias in Lima that buy direct from named local fishermen",
+          "name": "La Mar [Miraflores]",
+          "evidence": "buys direct from artisanal fishermen"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "068cadbf64e0539a",
+      "name": "La Red",
+      "district": "Miraflores",
+      "found_by": [
+        "cevicherias in Lima that have been open for decades"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "11602e5d3ebf~1",
+          "angle": "cevicherias in Lima that have been open for decades",
+          "name": "La Red",
+          "evidence": "Two decades in"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "ca95bfcc2ad12d26",
+      "name": "Los Tres Pescados de Piura",
+      "district": "Los Olivos",
+      "found_by": [
+        "cevicherias in Lima cooking the northern Piuran style"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "14e6342601ef~1",
+          "angle": "cevicherias in Lima cooking the northern Piuran style",
+          "name": "Los Tres Pescados de Piura",
+          "evidence": "platos norteños, ceviche de caballa"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "f4523d36362e3cc8",
+      "name": "Mi Rico Norte",
+      "district": "La Victoria",
+      "found_by": [
+        "huariques Lima residents recommend that visitor guides miss"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "59527612093a~1",
+          "angle": "huariques Lima residents recommend that visitor guides miss",
+          "name": "Mi Rico Norte",
+          "evidence": "Carretilla de ceviche"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "ad79b33cc7742c10",
+      "name": "Punto Azul",
+      "district": "Miraflores",
+      "found_by": [
+        "lunch-only cevicherias in Lima"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "eecb4f4c5f76~1",
+          "angle": "lunch-only cevicherias in Lima",
+          "name": "Punto Azul",
+          "evidence": "expect a line at lunchtime"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "1c7c41f64f018881",
+      "name": "Restaurant “El Pacífico”",
+      "district": "Lima (Centro)",
+      "found_by": [
+        "cevicherias in Lima that have been open for decades"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "3bac81e3f5f3~1",
+          "angle": "cevicherias in Lima that have been open for decades",
+          "name": "Restaurant “El Pacífico”",
+          "evidence": "Más antiguas e icónicas"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "dd92add0f38fcdd5",
+      "name": "Restaurante Cevicheria Sabor Norteño",
+      "district": "San Martín de Porres",
+      "found_by": [
+        "cevicherias in Lima cooking the northern Piuran style"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "cb1b132b4f19~1",
+          "angle": "cevicherias in Lima cooking the northern Piuran style",
+          "name": "Restaurante Cevicheria Sabor Norteño",
+          "evidence": "Combos Norteños, cabrito a la norteña"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "5ddab8752c3e65c1",
+      "name": "Sonia",
+      "district": "Chorrillos",
+      "found_by": [
+        "cevicherias in Lima that have been open for decades"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "65b45bcb9808~1",
+          "angle": "cevicherias in Lima that have been open for decades",
+          "name": "Sonia",
+          "evidence": "This Lima institution"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "d07c19ec9c12b4ab",
+      "name": "Travesura Marina - Barra Cevichera",
+      "district": "Magdalena del Mar",
+      "found_by": [
+        "ceviche counters inside Lima's markets"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "a6c60d32c5ff~1",
+          "angle": "ceviche counters inside Lima's markets",
+          "name": "Travesura Marina - Barra Cevichera",
+          "evidence": "Puestos 12, 62 y 63, Mercado de Magdalena"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    }
+  ],
+  "outcomes_still_to_be_judged": {
+    "eligibility": "how many checked candidates fit the requirements and the angle",
+    "coverage": "how many suitable distinct venues the whole pool holds, and what is missing",
+    "identity_errors": "false merges and unresolved duplicates, counted separately",
+    "wording_drift": "unrequested restrictions added, and requirements silently broadened",
+    "operator_effort": "edits, confusing choices, repeated questions, recovery actions"
+  },
+  "judged_by": [
+    "Do the angles add variety without drifting off the specialty?",
+    "Does the exclusion hold in every search, or only in the one that mentions it?"
+  ]
+}

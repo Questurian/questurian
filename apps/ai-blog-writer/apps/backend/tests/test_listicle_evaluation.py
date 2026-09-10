@@ -73,23 +73,68 @@ def test_an_unreported_outcome_reads_as_unreported_rather_than_as_zero():
     assert len(report.unreported()) == len(REPORTED_OUTCOMES) - 1
 
 
-def test_no_comparison_has_been_run():
-    """The one thing this file must not be mistaken for.
-
-    A green suite says the mechanics behave. It says nothing about whether the
-    revised angle strategy finds better places, and the plan's own adoption
-    rule requires reviewed cases and a bounded live comparison for that. When
-    the first comparison is run, its results go in `docs/audits/` and this test
-    is replaced by one that points at them.
-    """
+def _recorded_runs():
     from pathlib import Path
 
     audits = Path(__file__).resolve().parents[3] / "docs" / "audits"
-    existing = list(audits.glob("listicle-angle-comparison-*")) if audits.exists() else []
-    assert not existing, (
-        "A comparison has been recorded. Replace this test with one that reads "
-        "it, rather than leaving a test that asserts nothing was measured."
+    return sorted(audits.glob("listicle-angle-comparison-*.json")) if audits.exists() else []
+
+
+def test_what_has_actually_been_bought_is_a_smoke_run_not_a_comparison():
+    """The one thing this file must not be mistaken for.
+
+    Three live runs were bought on 2026-09-10 -- hotels, bars and cevicherias,
+    one arm, once each, 18 grounded searches for about eighty cents. They prove
+    the rebuilt pipeline executes against real searches and they record what it
+    cost. They are NOT the comparison.
+
+    The plan's adoption rule needs two arms, three repetitions per case, and a
+    person judging the pooled union blind to arm against source pages. None of
+    that has happened, and no number in `docs/audits/` may be read as evidence
+    that the revised angle strategy finds better places.
+
+    This test exists so that reading it is the fastest way to find that out.
+    """
+    import json
+
+    runs = _recorded_runs()
+    assert runs, "the smoke run's records are missing from docs/audits/"
+
+    labels = set()
+    for path in runs:
+        record = json.loads(path.read_text())
+        labels.add(record.get("label", ""))
+        # Whatever else changes, a recorded run has to say what it cost and
+        # what it left unjudged.
+        assert record["provider_calls_made"] >= 1
+        assert record["outcomes_still_to_be_judged"], path.name
+        assert all(
+            c["judged"]["eligible"] == "" for c in record["candidates"]
+        ), f"{path.name} carries judgements; the adoption rule needs a blind judge"
+
+    assert labels == {"live"}, (
+        f"labels found: {sorted(labels)}. More than one arm is recorded, which "
+        "means this is no longer a smoke run -- replace this test with one that "
+        "checks the comparison's own conditions."
     )
+
+
+def test_a_recorded_run_keeps_the_raw_reply_it_was_built_from():
+    """What made the pooling faults findable without buying anything twice.
+
+    The live run of 2026-09-10 exposed two: square-bracketed qualifiers were
+    not read, so one rooftop bar became three candidates; and the noise-word
+    list was written for restaurants, so nine unrelated aparthotels were linked
+    to each other. Both were fixed and re-measured against these stored
+    replies, at no further cost.
+    """
+    import json
+
+    for path in _recorded_runs():
+        record = json.loads(path.read_text())
+        assert any(
+            call.get("rows_text") for call in record["provider_calls"]
+        ), path.name
 
 
 # Before anything is bought

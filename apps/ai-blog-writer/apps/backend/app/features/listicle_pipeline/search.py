@@ -109,14 +109,48 @@ _NOT_A_BUSINESS = re.compile(
 
 # Words that do not distinguish one place from another, dropped before
 # comparing names. "Cevichería Nancy" and "Nancy" are one place; "La Mar" and
-# "La Mar Cebichería" are one place. Without this the pool double-counts its
-# strongest entries, which is the one error that corrupts ranking rather than
-# just padding the list.
+# "La Mar Cebichería" are one place.
+#
+# This list was written for restaurants, and the live run of 2026-09-10 found
+# the same fault the shape catalogue had one layer up: a hotel commission was
+# being judged by a restaurant's vocabulary. Nine unrelated aparthotels --
+# Inkari, El Doral, San Martín, La Paz, Caminos del Inca -- were all linked to
+# each other as possible duplicates, because "apart" and "hotel" counted as
+# distinguishing words and every one of them shares both.
+#
+# Seventeen of thirty-four hotels came back flagged. A label that fires on half
+# the list is a label the operator learns to scroll past, which costs exactly
+# the pairs it exists to catch.
+#
+# Only ever used for the SIMILARITY hint. Grouping compares the full name with
+# nothing removed, because a word that is generic across a subject can still be
+# the whole of one business's name.
 _NOISE_WORDS = {
+    # articles and connectives
+    "el", "la", "los", "las", "de", "del", "don", "dona", "the", "and", "y",
+    "at", "by", "in",
+    # eating and drinking
     "restaurant", "restaurante", "cevicheria", "cebicheria", "ceviche",
-    "cebiche", "marisqueria", "bar", "cafe", "el", "la", "los", "las", "de",
-    "del", "don", "dona", "the", "and", "y",
+    "cebiche", "marisqueria", "bar", "bars", "cafe", "lounge", "pub",
+    # lodging
+    "hotel", "hotels", "hostal", "hostel", "apart", "aparthotel", "aparthotels",
+    "suites", "suite", "inn", "lodge", "resort", "guesthouse", "casa", "house",
+    # what kind of thing it is rather than which one
+    "boutique", "rooftop", "terraza", "terrace", "sky",
 }
+
+# What to drop from a BRACKETED ASIDE, which is almost nothing.
+#
+# Deliberately not `_NOISE_WORDS`. The two lists answer opposite questions. A
+# word that is generic across a subject tells you nothing when it is in the
+# business's name -- every aparthotel contains "apart hotel" -- and is the
+# whole distinction when it is in the aside: "(Lobby bar)" and "(Rooftop bar)"
+# are two bars in one building, and they are told apart by exactly the words a
+# venue-name list would throw away.
+#
+# Using one list for both merged "Hotel B" into "Hotel B (Rooftop bar)" and
+# would have merged the lobby bar into the rooftop bar. The suite caught it.
+_ASIDE_NOISE = {"el", "la", "los", "las", "de", "del", "the", "and", "y", "at", "by", "in"}
 
 # A list marker, and nothing longer. The version this replaced stripped every
 # leading digit and every leading full stop, which turned "1900 Hotel" into
@@ -159,17 +193,28 @@ def per_angle_ask(target_items: int, angle_count: int) -> int:
     return role_allowances(target_items, [BROAD] * angle_count)[0]
 
 
+# A bracketed aside, in any bracket a model actually uses.
+#
+# This read round brackets only, and the live run of 2026-09-10 is what it
+# cost: "27 Tapas", "27 Tapas (Iberostar Selection Miraflores)" and "27 Tapas
+# [Iberostar Selection Miraflores]" arrived from three searches and became
+# THREE candidates, because the square-bracketed one kept the hotel's name as
+# part of its own. One bar, counted three times, its overlap split three ways.
+# The search prompt asks for "brackets" and does not say which kind.
+_ASIDE = re.compile(r"\([^)]*\)|\[[^\]]*\]|\{[^}]*\}")
+
+
 def name_tokens(name: str) -> list[str]:
     """The words in a name that distinguish it from another place.
 
-    A parenthetical is dropped before anything else. Searches qualify a name
+    A bracketed aside is dropped before anything else. Searches qualify a name
     with what the row is about -- "Gran Hotel Bolívar (Bar Catedral)", "Hotel B
     (Rooftop bar)" -- and that qualifier is the row's reason, not part of the
     business's name. It is not thrown away: `qualifier_tokens` reads it back,
     because two rows qualified differently may be two different businesses
     inside one building.
     """
-    without_aside = re.sub(r"\([^)]*\)", " ", name)
+    without_aside = _ASIDE.sub(" ", name)
     folded = unicodedata.normalize("NFKD", without_aside.lower())
     folded = "".join(c for c in folded if not unicodedata.combining(c))
     return [w for w in re.findall(r"[a-z0-9]+", folded) if w not in _NOISE_WORDS]
@@ -183,10 +228,10 @@ def qualifier_tokens(name: str) -> set[str]:
     bars. Both pairs share every distinguishing word in the name itself, so the
     only thing that can keep them apart is this.
     """
-    asides = " ".join(re.findall(r"\(([^)]*)\)", name))
+    asides = " ".join(match.strip("()[]{}") for match in _ASIDE.findall(name))
     folded = unicodedata.normalize("NFKD", asides.lower())
     folded = "".join(c for c in folded if not unicodedata.combining(c))
-    return {w for w in re.findall(r"[a-z0-9]+", folded) if w not in _NOISE_WORDS}
+    return {w for w in re.findall(r"[a-z0-9]+", folded) if w not in _ASIDE_NOISE}
 
 
 def normalise_name(name: str) -> str:
@@ -230,7 +275,7 @@ def observation_key(name: str, district: str) -> tuple[str, str, tuple[str, ...]
     are two sources writing the same string; that is the strongest thing this
     step can say, and it is not proof they mean one real business.
     """
-    folded = unicodedata.normalize("NFKD", re.sub(r"\([^)]*\)", " ", name).casefold())
+    folded = unicodedata.normalize("NFKD", _ASIDE.sub(" ", name).casefold())
     folded = "".join(c for c in folded if not unicodedata.combining(c))
     full = " ".join(re.findall(r"[a-z0-9]+", folded))
     return full, _district_key(district), tuple(sorted(qualifier_tokens(name)))
