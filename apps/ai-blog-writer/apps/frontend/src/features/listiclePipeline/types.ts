@@ -190,7 +190,15 @@ export interface ListicleAngleResult {
   wanted: number
   edited: boolean
   custom: boolean
+  /** The state of the attempt whose result is being shown. */
   state: ListicleAngleState
+  /** The state of the most recent attempt, which is not always the one being
+   *  shown. A refresh that failed leaves the earlier result on screen and the
+   *  failure as the latest attempt, and one field cannot say both. */
+  latest_state?: ListicleAngleState
+  /** The result on screen was gathered by an earlier attempt than the most
+   *  recent one — a refresh that failed over work that stands. */
+  showing_earlier?: boolean
   rows: number
   sources: number
   /** A search that never came back. Different from one that ran and found
@@ -211,6 +219,13 @@ export interface ListicleAngleResult {
   /** This result was gathered under an earlier revision of the order and still
    *  answers the request being made. */
   reused: boolean
+  /** How many requests actually reached the provider for the work being shown.
+   *  One search is not one billable call: the runner retries, and a request
+   *  whose answer never arrived may still have been charged for. */
+  provider_calls?: number
+  /** 'executed' for work this pipeline ran and watched, 'reconstructed' for
+   *  work rebuilt from a row stored before attempts had identities. */
+  origin?: string
 }
 
 export interface ListicleSearchResults {
@@ -235,6 +250,9 @@ export interface ListicleSearchResults {
    *  "nobody looked", not "nothing was barred". */
   cut_checked?: boolean
   barred_count?: number
+  /** Searches whose latest attempt failed over a result that still stands. The
+   *  list is complete and something still went wrong. */
+  failed_refreshes?: string[]
   order: {
     kind: string
     place: string

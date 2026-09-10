@@ -37,10 +37,12 @@ venues into one loses a venue and nobody can see that it happened.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 import unicodedata
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +61,11 @@ MIN_PER_ANGLE = 6
 SEARCH_TIMEOUT_SECONDS = 180
 SEARCH_MAX_TOKENS = 4_096
 SEARCH_ATTEMPTS = 3
+
+# Which rules produced a candidate's membership. Part of a candidate's
+# identity, so a pool built under one set of pooling rules cannot be silently
+# compared with -- or reviewed as -- a pool built under another.
+POOLING_VERSION = "2"
 
 # The three jobs an angle can be doing, and what each may be asked for.
 #
@@ -262,6 +269,11 @@ class Sighting:
     name: str
     district: str
     evidence: str
+    # Attempt id plus the row's position in that attempt's reply. Stable for
+    # one execution's evidence however the rows are later ordered, which is
+    # what lets a candidate's identity be a function of its members rather
+    # than of the order they happened to be pooled in.
+    sighting_id: str = ""
 
 
 @dataclass
@@ -301,6 +313,25 @@ class AngleRequest:
     shape_key: str = ""
     group: str = ""
     edited: bool = False
+    # The invocation this request belongs to. Travels with the request so each
+    # returned row can be named without the runner having to reach back into
+    # the result and stamp it afterwards.
+    attempt_id: str = ""
+
+
+@dataclass
+class ProviderReceipt:
+    """One request actually put to the provider inside one invocation.
+
+    Recorded because an invocation is not a billable call: `run_one_angle`
+    retries up to three times, and a request whose answer never arrived may
+    still have been processed and charged for. A cost figure built from the
+    number of attempts is a cost figure built from the wrong number.
+    """
+
+    at: str
+    outcome: str
+    detail: str = ""
 
 
 @dataclass
@@ -325,6 +356,8 @@ class AngleResult:
     # identify nothing; these are what say whether a search written to run in
     # the local language actually reached local press.
     source_titles: list[str] = field(default_factory=list)
+    # Every request that reached the provider inside this invocation.
+    provider_calls: list[ProviderReceipt] = field(default_factory=list)
 
 
 def build_search_prompt(
@@ -618,13 +651,23 @@ def run_one_angle(
         role=request.role,
     )
     text, urls, titles, failure = "", [], [], ""
+    receipts: list[ProviderReceipt] = []
     for attempt in range(SEARCH_ATTEMPTS):
+        started = datetime.now(timezone.utc).isoformat(timespec="seconds")
         try:
             text, urls, titles = _search_once(prompt, research)
             failure = ""
+            receipts.append(ProviderReceipt(at=started, outcome="answered"))
             break
         except Exception as exc:  # pragma: no cover -- network dependent
             failure = f"{type(exc).__name__}"
+            # A request that was sent and did not answer is recorded as a
+            # request that was sent. This retry loop can put three of them to
+            # the provider, and any of the three may have been processed and
+            # charged for: counting invocations counts the wrong thing.
+            receipts.append(
+                ProviderReceipt(at=started, outcome="failed", detail=failure)
+            )
             logger.warning(
                 "Angle search failed (attempt %s) for %r: %s",
                 attempt + 1,
@@ -652,6 +695,10 @@ def run_one_angle(
     else:
         reason = "the search answered but named no places"
 
+    # The row's position in this reply is half its identity. Combined with the
+    # attempt it came from, it names one observation for good -- which is what
+    # a candidate's identity is built out of, so that reordering the pooling
+    # cannot change what the candidates are.
     sightings = [
         Sighting(
             angle=request.text,
@@ -659,8 +706,9 @@ def run_one_angle(
             name=name,
             district=district,
             evidence=evidence,
+            sighting_id=f"{request.attempt_id}#{index}" if request.attempt_id else "",
         )
-        for name, district, evidence in rows
+        for index, (name, district, evidence) in enumerate(rows)
     ]
     result = AngleResult(
         angle=request.text,
@@ -673,6 +721,7 @@ def run_one_angle(
         wanted=request.wanted,
         source_urls=list(urls),
         source_titles=list(titles),
+        provider_calls=receipts,
     )
     return result, sightings
 

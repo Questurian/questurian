@@ -1,0 +1,26 @@
+{
+  "widths": [
+    {
+      "viewport": 1280,
+      "content": 1280
+    },
+    {
+      "viewport": 736,
+      "content": 736
+    },
+    {
+      "viewport": 390,
+      "content": 390
+    },
+    {
+      "viewport": 320,
+      "content": 320
+    }
+  ],
+  "js_errors": [],
+  "links_checked": 33,
+  "broken_links": 0,
+  "expand_collapse": "10 open / 0 open verified",
+  "source_anchor": "runner.py:494 verified",
+  "application_changes": false
+}

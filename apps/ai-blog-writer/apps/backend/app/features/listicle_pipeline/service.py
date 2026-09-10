@@ -15,7 +15,9 @@ fixed once.
 from __future__ import annotations
 
 import logging
+import threading
 import uuid
+from contextlib import contextmanager
 
 from ..prompt2blog.contracts_v4 import GrillState
 from .profiles import PlaceProfile
@@ -292,23 +294,70 @@ def search(
     if not current.angles:
         raise ValueError("The agreed interview carries no angles to search.")
 
-    if not store.claim_batch(run_id, current.revision):
+    token = store.claim_batch(run_id, current.revision)
+    if not token:
         raise ValueError(
             "These searches are already running for this order. Wait for them "
             "rather than starting a second set."
         )
+    with _heartbeat(run_id, token):
+        try:
+            payload = runner.run_order(
+                current, research, only=only, reuse=reuse, owner_token=token
+            )
+            # Held through the review as well as the searches. The lease used
+            # to be released before the cut check ran, so a batch that had
+            # already lost the run could still publish a verdict over the pool
+            # the new batch had gathered.
+            store.save_results(run_id, payload)
+            _review_candidates(current, payload, review, owner_token=token)
+            return runner.assemble(current)
+        finally:
+            # Released whatever happened, so a failed batch does not lock the
+            # run out of the retry that is the point of storing attempts
+            # separately -- and only ever this batch's own lease.
+            store.release_batch(run_id, token)
+
+
+@contextmanager
+def _heartbeat(run_id: str, token: str):
+    """Say the batch is still alive, on a timer, until the block ends.
+
+    One in-process thread, not a service. A real batch can run past the lease's
+    stale window -- six grounded searches at up to three minutes each -- and the
+    fix for that is to keep saying so rather than to widen the window until a
+    crashed process wedges the run for an hour.
+
+    A batch whose lease was taken from it keeps beating harmlessly: the renewal
+    matches on the token and simply changes nothing. What stops it dispatching
+    is the ownership check in the runner.
+    """
+    stop = threading.Event()
+
+    def beat() -> None:
+        while not stop.wait(store.LEASE_HEARTBEAT_SECONDS):
+            try:
+                if not store.renew_batch(run_id, token):
+                    logger.warning(
+                        "The search lease for %s was taken by another batch", run_id
+                    )
+                    return
+            except Exception:  # pragma: no cover -- storage is local
+                logger.warning("The search lease for %s could not be renewed", run_id)
+                return
+
+    ticker = threading.Thread(target=beat, name=f"listicle-lease-{run_id}", daemon=True)
+    ticker.start()
     try:
-        payload = runner.run_order(current, research, only=only, reuse=reuse)
+        yield
     finally:
-        # Released whatever happened, so a failed batch does not lock the run
-        # out of the retry that is the point of storing attempts separately.
-        store.release_batch(run_id)
-    store.save_results(run_id, payload)
-    _review_candidates(current, payload, review)
-    return runner.assemble(current)
+        stop.set()
+        ticker.join(timeout=1)
 
 
-def _review_candidates(order: SearchOrder, payload: dict, review) -> None:
+def _review_candidates(
+    order: SearchOrder, payload: dict, review, *, owner_token: str = ""
+) -> None:
     """Judge what came back against the cut, once, on the batch that bought it.
 
     One call for the whole list, reading evidence the searches already wrote.

@@ -33,16 +33,34 @@ const STATE_LABEL: Record<string, string> = {
 }
 
 function angleNote(angle: ListicleAngleResult): string {
+  // A refresh that failed over a result that stands says so itself: the
+  // server's reason names both the failure and when the standing work was
+  // gathered, and prefixing it with the shown attempt's state ("completed —
+  // refresh failed") reads as nonsense.
+  if (angle.showing_earlier) return angle.reason
   const label = STATE_LABEL[angle.state] ?? angle.state
   if (angle.state === 'completed') return angle.reason
   return angle.reason ? `${label} — ${angle.reason}` : label
 }
 
+/** A search worth offering to run again.
+ *
+ *  Read off the LATEST attempt, not off the result being shown. A refresh that
+ *  failed leaves a completed result on screen and is still the thing the
+ *  operator wants to retry. */
+function isRerunnable(angle: ListicleAngleResult): boolean {
+  const latest = angle.latest_state ?? angle.state
+  return latest === 'failed' || latest === 'interrupted'
+}
+
 export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
   const short = results.shortfall > 0
-  const rerunnable = results.angles.filter(
-    angle => angle.state === 'failed' || angle.state === 'interrupted',
-  )
+  const rerunnable = results.angles.filter(isRerunnable)
+  // Work that stands under a refresh that did not. Both facts are true at
+  // once, and the version this replaced could only store one of them — the
+  // failure overwrote the successful attempt it was meant to replace, and the
+  // places it had found were gone.
+  const failedRefreshes = results.angles.filter(angle => angle.showing_earlier)
   const unrun = results.angles.filter(angle => angle.state === 'not_started')
   // A finished search that returned no place the others missed. Every one of
   // these was paid for. In run 33fca394 two of seven were like this and
@@ -86,6 +104,13 @@ export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
             place the others missed. Not wasted by definition — a search with
             nothing exclusive may be the coverage the rest are being checked
             against — but each one was paid for.
+          </p>
+        )}
+        {failedRefreshes.length > 0 && (
+          <p className="lp-results-short" role="status">
+            {failedRefreshes.length === 1
+              ? 'One search failed to refresh. Its earlier result is still shown below, with the time it was gathered.'
+              : `${failedRefreshes.length} searches failed to refresh. Their earlier results are still shown below, with the time each was gathered.`}
           </p>
         )}
         {short && (
@@ -138,7 +163,13 @@ export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
           {results.angles.map(angle => (
             <tr
               key={angle.angle_id || angle.angle}
-              className={angle.failed ? 'lp-angle-failed' : undefined}
+              className={
+                angle.failed
+                  ? 'lp-angle-failed'
+                  : angle.showing_earlier
+                    ? 'lp-angle-stale'
+                    : undefined
+              }
             >
               <td className="lp-angle-count">{angle.rows}</td>
               <td>
@@ -161,9 +192,7 @@ export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
                     different findings, and only one of them is worth
                     re-running. */}
                 {angleNote(angle)}
-                {(angle.state === 'failed' ||
-                  angle.state === 'interrupted' ||
-                  angle.state === 'not_started') && (
+                {(isRerunnable(angle) || angle.state === 'not_started') && (
                   <button
                     type="button"
                     className="lp-link-button"

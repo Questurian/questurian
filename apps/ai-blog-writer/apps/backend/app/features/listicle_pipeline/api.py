@@ -334,10 +334,17 @@ def _report(action, *args, **kwargs) -> dict[str, Any]:
     because a missing run and an unagreed order mean the same thing on either
     side of the boundary.
     """
+    from .runner import LeaseLost
+
     try:
         return action(*args, **kwargs)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+    except LeaseLost as error:
+        # 409, not 500. Nothing broke: another batch took the run, and the
+        # right answer is to look at what that batch is doing rather than to
+        # retry into a race.
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 

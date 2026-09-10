@@ -22,6 +22,7 @@ run under.
 from __future__ import annotations
 
 import hashlib
+import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -173,6 +174,34 @@ ATTEMPT_STATES: tuple[str, ...] = (
     "interrupted",
 )
 
+# Terminal states. Once an attempt reaches one of these its result is frozen:
+# a later invocation of the same angle is a NEW attempt with a new id, and it
+# cannot overwrite what an earlier one found. That rule is the whole of R2 --
+# before it, a refresh that timed out wrote its failure over the successful
+# result it was meant to replace, and the successful result was gone.
+TERMINAL_ATTEMPT_STATES: frozenset[str] = frozenset(
+    {"completed", "failed", "interrupted"}
+)
+
+
+class ProviderCall(ListicleModel):
+    """One request actually put to the provider, inside one invocation.
+
+    An invocation is not a billable call. `run_one_angle` retries a failed
+    provider call up to three times, and a request whose answer never arrived
+    may well have been processed and charged for. Recording each one is the
+    only way a cost figure can be built from what happened rather than from
+    how many times someone pressed a button -- and it still does not promise
+    exactly-once charging, because nothing can.
+    """
+
+    at: str = ""
+    # "answered", "failed", or "interrupted" -- sent, no answer seen.
+    outcome: str = ""
+    # The exception's type, when there was one. Not the message: a message can
+    # carry a prompt back into storage, and this is a receipt, not a log.
+    detail: str = ""
+
 
 class SearchAttempt(ListicleModel):
     """One angle's search, as it stands.
@@ -184,7 +213,19 @@ class SearchAttempt(ListicleModel):
     this pipeline is trying to stop doing.
     """
 
+    # Unique to one invocation of `run_one_angle`. Two searches of the same
+    # angle under the same revision are two attempts, and both survive.
+    #
+    # Generated rather than required, so that constructing an attempt cannot
+    # accidentally produce two rows that claim to be the same one. An id passed
+    # in wins, which is how a reconstructed attempt keeps the identity the
+    # migration gave it.
+    attempt_id: str = Field(default_factory=lambda: uuid.uuid4().hex[:12])
     run_id: str = Field(min_length=1)
+    # The revision this attempt was ORIGINATED under. It never changes: an
+    # attempt reused by a later revision is referenced from that revision's
+    # selection, not re-filed under it. Re-filing is what turned one paid
+    # execution into three entries of search history (R10).
     revision: int = 1
     angle_id: str = Field(min_length=1)
     angle_text: str = ""
@@ -220,3 +261,74 @@ class SearchAttempt(ListicleModel):
     sightings: list[dict] = Field(default_factory=list)
     started_at: str = ""
     finished_at: str = ""
+    # Every request actually put to the provider inside this invocation. One
+    # invocation can be three calls; a cost read off the number of attempts is
+    # a cost read off the wrong number.
+    provider_calls: list[ProviderCall] = Field(default_factory=list)
+    # "executed" for an attempt this pipeline ran and watched, "reconstructed"
+    # for one rebuilt from a row stored before attempts had identities. A
+    # reconstructed attempt is real evidence and an unreliable execution
+    # count, and history says so rather than averaging the two.
+    origin: str = "executed"
+
+
+class AngleSelection(ListicleModel):
+    """Which stored attempt speaks for one angle, at one revision.
+
+    Separated from the attempts themselves because they answer different
+    questions. An attempt is what happened. This is what is being shown -- and
+    the two come apart exactly when it matters: a refresh that fails leaves the
+    earlier success selected and the failure latest, and the screen has to be
+    able to say both.
+    """
+
+    run_id: str = Field(min_length=1)
+    revision: int = 1
+    angle_id: str = Field(min_length=1)
+    # The successful attempt currently displayed for this angle. Empty when no
+    # successful attempt has ever matched this revision's request.
+    selected_attempt_id: str = ""
+    # The most recent attempt of any outcome. Equal to the selected one on the
+    # ordinary path; different exactly when a refresh failed.
+    latest_attempt_id: str = ""
+
+
+class AttemptContribution(ListicleModel):
+    """What one attempt contributed to one pooling of the evidence."""
+
+    attempt_id: str = ""
+    angle_id: str = ""
+    angle_text: str = ""
+    shape_key: str = ""
+    role: str = "broad"
+    rows: int = 0
+    found: int = 0
+    shared: int = 0
+    exclusive: int = 0
+
+
+class PoolSnapshot(ListicleModel):
+    """One pooling of one run's evidence, and what each search contributed.
+
+    Contribution is a property of a pooling, not of an execution. The same
+    search contributes differently against different peers -- retry one angle
+    and every other angle's exclusivity moves -- so a number stored on the
+    execution alone is a number that cannot say what it was measured against.
+
+    This is also what makes history countable. A snapshot names the attempts it
+    pooled, once each, so an execution referenced by three revisions is one
+    execution in the record rather than three.
+    """
+
+    run_id: str = Field(min_length=1)
+    revision: int = 1
+    subject: str = ""
+    target_count: int = 0
+    candidate_count: int = 0
+    # True while any two candidates might be one venue. A distinct count taken
+    # from a snapshot with this set is provisional, and saying so is cheaper
+    # than being wrong about coverage.
+    uncertain_identity: int = 0
+    pooling_version: str = ""
+    taken_at: str = ""
+    contributions: list[AttemptContribution] = Field(default_factory=list)

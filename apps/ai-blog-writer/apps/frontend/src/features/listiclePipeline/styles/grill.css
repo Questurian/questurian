@@ -705,6 +705,13 @@
   color: var(--lp-accent);
 }
 
+/* A result that stands under a refresh that did not. Marked, not struck out:
+   the places are real and current, and the only thing wrong is that the
+   attempt to replace them failed. */
+.lp-angle-stale .lp-angle-note {
+  font-style: italic;
+}
+
 .lp-candidates {
   list-style: none;
   counter-reset: candidate;
