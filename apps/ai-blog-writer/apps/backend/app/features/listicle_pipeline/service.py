@@ -964,7 +964,7 @@ def build_profile(
     address = ""
     lookup_name = name
     if resolve_identity:
-        resolved = identity.resolve(name, city)
+        resolved = identity.resolve(name, city, district)
         if resolved is not None:
             place_id = resolved.place_id
             address = resolved.address
@@ -1030,7 +1030,13 @@ def build_profile(
             f" -- {result.reason}" if result.reason else "",
         )
 
+    # Re-read under the identity this profile actually has, including the
+    # district. A name-and-city read could match a second branch of the same
+    # business and hand back the wrong one's claims.
     refreshed = profile_store.find(
-        place_id=profile.place_id, name=name, city=city
+        place_id=profile.place_id,
+        name=name,
+        city=city,
+        district=district or profile.district,
     )
     return refreshed or profile

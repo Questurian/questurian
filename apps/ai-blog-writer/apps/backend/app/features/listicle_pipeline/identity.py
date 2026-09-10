@@ -76,7 +76,7 @@ def api_key() -> str:
     return os.getenv("GOOGLE_MAPS_API_KEY", "").strip()
 
 
-def resolve(name: str, city: str) -> ResolvedPlace | None:
+def resolve(name: str, city: str, district: str = "") -> ResolvedPlace | None:
     """Find the one real place this name refers to, or nothing.
 
     Returns None when there is no key, when nothing matches, or when the call
@@ -95,7 +95,12 @@ def resolve(name: str, city: str) -> ResolvedPlace | None:
 
     import requests  # imported here so the module loads without the dependency
 
-    query = f"{name} {city}".strip()
+    # The district goes into the query when a search gave one. Two branches of
+    # one business answer to the same name in the same city, and the top hit
+    # for a bare name is not a validated identity -- it is the branch Google
+    # ranks highest. Naming the district is the cheapest thing that can tell
+    # them apart, and it costs nothing extra.
+    query = " ".join(part for part in (name, district, city) if part.strip())
     try:
         with observe_external_call(
             provider="google-places",
