@@ -50,9 +50,18 @@ logger = logging.getLogger(__name__)
 # planned at; asking for exactly seven and losing a third to overlap is how a
 # forty-item list arrives at twenty-eight.
 OVERSHOOT = 1.8
-# Nothing is gained by asking one search for more than this: the answers get
-# thinner and the response starts truncating mid-row rather than listing more
-# places.
+# Nothing is gained by asking one search for more than this. Measured on
+# 2026-09-10, one broad angle, four searches against the live provider:
+#
+#     asked  3 -> 3 distinct      asked 10 -> 10 distinct
+#     asked  6 -> 6 distinct      asked 15 -> 15 distinct
+#     asked 40 -> 3 distinct, each repeated verbatim with citation markers
+#
+# So fifteen is clean and forty collapses. The failure at forty is NOT the
+# truncation this comment used to predict -- the reply is complete, it simply
+# runs out of places and pads by restating the ones it has. That matters,
+# because a truncated reply is short and obvious while a padded one arrives at
+# full length and is only caught by pooling.
 MAX_PER_ANGLE = 15
 MIN_PER_ANGLE = 6
 # A search that asks for a dozen named places with evidence for each takes
@@ -82,7 +91,27 @@ ROLES: tuple[str, ...] = (BROAD, DISTINCTIVE, SPECIFIC)
 # between. A broad angle carries a full share; a specific-discovery angle is
 # never pressured to fill a quota it cannot fill honestly.
 _ROLE_SHARE = {BROAD: 1.0, DISTINCTIVE: 0.7, SPECIFIC: 0.25}
-_ROLE_FLOOR = {BROAD: MIN_PER_ANGLE, DISTINCTIVE: 4, SPECIFIC: 1}
+# A broad angle's floor is twelve, not six, and the reason is measured rather
+# than reasoned. `role_allowances` divides the target among the angles, which
+# is the right shape for a budget and the wrong shape for this: each angle is
+# ONE provider call whatever number it is handed, so asking a broad angle for
+# more takes nothing from any other angle and costs nothing extra. Under the
+# old floor the bars run asked its two broad angles for six each. Asked for
+# fifteen instead, one of those same angles returned fifteen distinct bars, of
+# which SEVEN were places the entire six-search run never found.
+#
+# Twelve rather than fifteen only because the clean reading at fifteen is one
+# search in one city. The ceiling is where the measurement is, and the floor
+# keeps a margin under it until a second city agrees.
+#
+# The cost of this is real and lands on a person: more rows to sift. The bars
+# order goes from twenty-eight rows to forty. That is the trade being made --
+# a longer list to read against places that were being missed entirely.
+#
+# Untouched: distinctive and specific. Nothing has measured them at a higher
+# ask, and a number changed without evidence is the thing this comment
+# replaced.
+_ROLE_FLOOR = {BROAD: 12, DISTINCTIVE: 4, SPECIFIC: 1}
 _ROLE_CEILING = {BROAD: MAX_PER_ANGLE, DISTINCTIVE: 12, SPECIFIC: 5}
 
 
@@ -556,6 +585,23 @@ def strip_list_marker(line: str) -> str:
     return _LIST_MARKER.sub("", line, count=1).strip().strip("*_ ").strip()
 
 
+# A grounding citation, as the provider writes it into the row itself:
+# "unparalleled panoramics [cite: 2, 3, 5, 9]". Stripped rather than tolerated,
+# because the evidence column is read by a person and shown on the screen.
+#
+# Anchored to the literal word so it cannot eat a BRANCH QUALIFIER. Square
+# brackets are load-bearing here -- "27 Tapas [Iberostar Selection Miraflores]"
+# is how a second branch is told from the first -- and a rule that stripped
+# bracketed text in general would merge two real venues. Only "[cite: ...]" and
+# "[citation: ...]" go, and only with digits inside.
+_CITATION_MARKER = re.compile(r"\s*\[\s*cit(?:e|ations?)\s*:[\s\d,]*\]", re.IGNORECASE)
+
+
+def strip_citation_markers(value: str) -> str:
+    """Remove the provider's own citation markers from a field."""
+    return _CITATION_MARKER.sub("", value).strip()
+
+
 def parse_rows(text: str) -> list[tuple[str, str, str]]:
     """The named places in a search's reply.
 
@@ -575,7 +621,11 @@ def parse_rows(text: str) -> list[tuple[str, str, str]]:
             logger.info("Dropped a row that is not one named business: %r", name)
             continue
         rows.append(
-            (name, parts[1] if len(parts) > 1 else "", parts[2] if len(parts) > 2 else "")
+            (
+                strip_citation_markers(name),
+                strip_citation_markers(parts[1]) if len(parts) > 1 else "",
+                strip_citation_markers(parts[2]) if len(parts) > 2 else "",
+            )
         )
     return rows
 

@@ -103,7 +103,6 @@ def test_what_has_actually_been_bought_is_a_smoke_run_not_a_comparison():
     labels = set()
     for path in runs:
         record = json.loads(path.read_text())
-        labels.add(record.get("label", ""))
         # Whatever else changes, a recorded run has to say what it cost and
         # what it left unjudged.
         assert record["provider_calls_made"] >= 1
@@ -111,12 +110,68 @@ def test_what_has_actually_been_bought_is_a_smoke_run_not_a_comparison():
         assert all(
             c["judged"]["eligible"] == "" for c in record["candidates"]
         ), f"{path.name} carries judgements; the adoption rule needs a blind judge"
+        # A PROBE is not an arm, and the difference is not a matter of what it
+        # was called. A run whose ask was overridden asked for something its
+        # target does not imply, so it cannot be compared with one that did
+        # not -- by construction, not by convention. Those are excluded here
+        # and counted below.
+        if record.get("ask_overridden"):
+            continue
+        labels.add(record.get("label", ""))
 
     assert labels == {"live"}, (
-        f"labels found: {sorted(labels)}. More than one arm is recorded, which "
-        "means this is no longer a smoke run -- replace this test with one that "
-        "checks the comparison's own conditions."
+        f"comparison labels found: {sorted(labels)}. More than one arm is "
+        "recorded, which means this is no longer a smoke run -- replace this "
+        "test with one that checks the comparison's own conditions."
     )
+
+
+def test_a_probe_of_the_ask_is_marked_as_one():
+    """The ceiling probes of 2026-09-10, and why they are fenced off.
+
+    Four searches asked one broad angle for 3, 10, 15 and 40 places. They are
+    the reason `_ROLE_FLOOR[BROAD]` is twelve and the reason `MAX_PER_ANGLE`'s
+    comment no longer predicts truncation. They are NOT discovery runs: their
+    angle text is duplicated, their ask is set by hand, and reading their row
+    counts as a yield would be reading the experiment as its own result.
+
+    `ask_overridden` is what keeps them apart, so it has to be present and it
+    has to be true on exactly the runs that set `--wanted`.
+    """
+    import json
+
+    # The three smoke runs were bought before the marker existed, and a receipt
+    # is not edited after the fact to agree with a later rule. They are named
+    # here instead. Every run recorded since must carry the marker, and a
+    # fourth name added to this set should be argued for, not typed.
+    BEFORE_THE_MARKER = {
+        "listicle-angle-comparison-narrow-hotels-live-2026-09-10T134420Z.json",
+        "listicle-angle-comparison-narrow-bars-live-2026-09-10T134647Z.json",
+        "listicle-angle-comparison-specialist-restaurants-live-2026-09-10T134840Z.json",
+    }
+
+    for path in _recorded_runs():
+        record = json.loads(path.read_text())
+        if path.name in BEFORE_THE_MARKER:
+            assert "ask_overridden" not in record, (
+                f"{path.name} is listed as predating the marker but carries "
+                "one. Remove it from BEFORE_THE_MARKER."
+            )
+            continue
+        assert "ask_overridden" in record, (
+            f"{path.name} does not say whether its ask was its own. The script "
+            "writes this on every run; a record without it cannot be placed."
+        )
+        overridden = bool(record["ask_overridden"])
+        assert overridden == bool(record["manifest"].get("ask_overridden")), (
+            f"{path.name} disagrees with its own manifest about the ask."
+        )
+        if overridden:
+            # Belt and braces: a probe that also looked like a normal arm would
+            # be the one mistake this marker exists to prevent.
+            assert "probe" in record["label"], (
+                f"{path.name} overrode its ask without saying so in its label."
+            )
 
 
 def test_a_recorded_run_keeps_the_raw_reply_it_was_built_from():

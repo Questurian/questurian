@@ -293,6 +293,52 @@ def test_two_places_that_merely_share_a_word_stay_apart(first, second):
     assert len(pooled) == 2
 
 
+def test_the_providers_own_citation_markers_are_not_evidence():
+    """Observed live on 2026-09-10, in the reply to an over-large ask.
+
+    The provider writes its grounding citations into the row: "unparalleled
+    panoramics [cite: 2, 3, 5, 9]". The evidence column is read by a person and
+    printed on the screen, so the marker comes off.
+    """
+    rows = parse_rows(
+        "Celeste Solar Bar | San Isidro | unparalleled panoramics [cite: 2, 3, 5, 9]\n"
+        "Amador Rooftop | San Isidro | signature cocktails [citation: 4]\n"
+    )
+    assert rows[0] == ("Celeste Solar Bar", "San Isidro", "unparalleled panoramics")
+    assert rows[1] == ("Amador Rooftop", "San Isidro", "signature cocktails")
+
+
+@pytest.mark.parametrize(
+    "row, name",
+    [
+        # The reason the citation rule is anchored to the literal word rather
+        # than written as "strip bracketed text". A branch qualifier is how one
+        # venue is told from another in the same building, and stripping it
+        # merges two real places.
+        ("27 Tapas [Iberostar Selection Miraflores] | Miraflores | views",
+         "27 Tapas [Iberostar Selection Miraflores]"),
+        ("Hotel B [Rooftop bar] | Barranco | the roof one",
+         "Hotel B [Rooftop bar]"),
+        ("Bodega [1915] | Centro | a year in brackets",
+         "Bodega [1915]"),
+    ],
+)
+def test_a_branch_qualifier_in_brackets_survives_the_citation_rule(row, name):
+    assert parse_rows(row)[0][0] == name
+
+
+def test_a_broad_angle_is_asked_for_what_a_broad_search_can_actually_return():
+    """Measured, not reasoned. One broad angle asked for fifteen returned
+    fifteen distinct bars, seven of them places the whole six-search run never
+    found; the same angle asked for six returned six. Each angle is one
+    provider call whatever number it carries, so the old floor was buying
+    nothing and leaving places on the table."""
+    order = role_allowances(15, ["broad", "broad"] + ["distinctive"] * 4)
+    assert order[:2] == [12, 12]
+    assert min(role_allowances(3, ["broad"])) >= 12, "a small target must not shrink it"
+    assert max(role_allowances(500, ["broad"])) <= MAX_PER_ANGLE, "forty collapses"
+
+
 def test_a_one_word_abbreviation_is_raised_against_its_full_name():
     """Read off the live runs of 2026-09-10, both unflagged at the time.
 
@@ -395,6 +441,7 @@ def test_a_parenthetical_is_the_rows_reason_not_part_of_the_name():
 
 
 from app.features.listicle_pipeline.search import (  # noqa: E402
+    MAX_PER_ANGLE,
     SPECIFIC,
     AngleRequest,
     Sighting,

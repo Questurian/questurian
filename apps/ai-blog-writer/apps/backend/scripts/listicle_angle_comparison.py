@@ -167,8 +167,21 @@ def _resolved_model() -> str:
         return "unknown"
 
 
-def _requests_for(case, angles: list[str], roles: list[str]):
-    allowances = role_allowances(case.target_count, roles)
+def _requests_for(case, angles: list[str], roles: list[str], wanted: list[int] | None = None):
+    """One request per angle, asked for the allowance its role earns.
+
+    `wanted` overrides that allowance. It exists for probes of the ask itself:
+    `role_allowances` is arithmetic over the target and the role mix, so a run
+    driven by it can never ask a question about the arithmetic. Every live run
+    of 2026-09-10 returned EXACTLY its allowance -- eighteen angles, eighteen
+    exact hits -- and no run that derives the ask can tell whether that is the
+    supply running out or the model reading the number as the whole answer.
+
+    An override is recorded on the manifest as such. A run that asked for
+    something other than what its target implies is not a normal run and must
+    not be read beside one.
+    """
+    allowances = wanted if wanted is not None else role_allowances(case.target_count, roles)
     return [
         AngleRequest(
             angle_id=f"a{index + 1}",
@@ -196,7 +209,7 @@ def _place_of(case) -> str:
     return case.place
 
 
-def _manifest(case, requests, max_calls: int) -> dict:
+def _manifest(case, requests, max_calls: int, ask_overridden: bool = False) -> dict:
     """Exactly what a run would send, and the worst it could cost.
 
     Produced before any authorisation, because a budget agreed against a
@@ -249,6 +262,10 @@ def _manifest(case, requests, max_calls: int) -> dict:
         "resolved_model": _resolved_model(),
         "pooling_version": POOLING_VERSION,
         "search_prompt_version": SEARCH_PROMPT_VERSION,
+        # True when --wanted set the ask instead of the role allowance. The
+        # loudest place to put it: a reader comparing this run with another
+        # must not have to reverse the allowance arithmetic to notice.
+        "ask_overridden": ask_overridden,
         "judged_by": list(case.judged_by),
         "outcomes_still_to_be_judged": {
             name: reason
@@ -295,6 +312,15 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--wanted",
+        default="",
+        help=(
+            "Comma-separated, one per angle. Overrides the role allowance. For "
+            "probing the ask itself -- a run driven by the allowance cannot ask "
+            "a question about the allowance. Recorded on the manifest."
+        ),
+    )
+    parser.add_argument(
         "--label", default="", help="A word for this arm, e.g. 'before' or 'after'."
     )
     parser.add_argument(
@@ -335,11 +361,25 @@ def main() -> int:
         print("One role per angle, or none at all.", file=sys.stderr)
         return 2
 
-    requests = _requests_for(case, args.angles, roles)
+    wanted: list[int] | None = None
+    if args.wanted:
+        try:
+            wanted = [int(n.strip()) for n in args.wanted.split(",") if n.strip()]
+        except ValueError:
+            print("--wanted takes whole numbers.", file=sys.stderr)
+            return 2
+        if len(wanted) != len(args.angles):
+            print("One --wanted per angle.", file=sys.stderr)
+            return 2
+        if any(n < 0 for n in wanted):
+            print("--wanted cannot be negative.", file=sys.stderr)
+            return 2
+
+    requests = _requests_for(case, args.angles, roles, wanted)
     from app.features.listicle_pipeline.search import SEARCH_ATTEMPTS
 
     max_calls = args.max_calls or len(requests) * SEARCH_ATTEMPTS
-    manifest = _manifest(case, requests, max_calls)
+    manifest = _manifest(case, requests, max_calls, ask_overridden=wanted is not None)
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
     out = REPO / "docs" / "audits"
     out.mkdir(parents=True, exist_ok=True)
@@ -445,6 +485,10 @@ def main() -> int:
             for name, reason in REPORTED_OUTCOMES
             if name not in {"contribution", "spend"}
         },
+        # True when --wanted set the ask instead of the role allowance. The
+        # loudest place to put it: a reader comparing this run with another
+        # must not have to reverse the allowance arithmetic to notice.
+        "ask_overridden": wanted is not None,
         "judged_by": list(case.judged_by),
     }
 
