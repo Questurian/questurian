@@ -17,7 +17,7 @@ from __future__ import annotations
 import pytest
 
 from app.features.listicle_pipeline import service, spec, store
-from tests.listicle_test_support import agreed_state, default_turns, turn
+from tests.listicle_test_support import agreed_state, turn
 
 
 @pytest.fixture
