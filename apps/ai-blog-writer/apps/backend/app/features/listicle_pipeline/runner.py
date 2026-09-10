@@ -564,8 +564,12 @@ def assemble(order: SearchOrder) -> dict:
         attempt = by_angle.get(angle.angle_id)
         if attempt is not None and attempt.state == "completed":
             sightings.extend(_sightings_of(attempt))
+    # Sorted for the screen only. Identity does not come from position: the
+    # id is a function of a candidate's members, so the same evidence produces
+    # the same candidates however it is ordered here.
     candidates: list[Candidate] = sorted(
-        pool_sightings(sightings), key=lambda c: (-c.overlap, c.name.lower())
+        pool_sightings(sightings),
+        key=lambda c: (-c.overlap, c.name.lower(), c.candidate_id),
     )
 
     latest_by_angle = _latest_attempts(order)
@@ -703,12 +707,17 @@ def assemble(order: SearchOrder) -> dict:
         "angles": angle_rows,
         "candidates": [
             {
+                # The id, not the name, is what anything filed against this
+                # candidate has to key on. Two rows may legitimately show one
+                # name; they are never one candidate.
+                "candidate_id": c.candidate_id,
                 "name": c.name,
                 "district": c.district,
                 "evidence": c.evidence,
                 "found_by": list(c.found_by),
                 "overlap": c.overlap,
                 "possible_duplicates": list(c.possible_duplicates),
+                "possible_duplicate_ids": list(c.possible_duplicate_ids),
                 # What the cut check said about this place, if anything has
                 # looked. Read from storage rather than recomputed: judging
                 # costs a model call, and drawing a screen must not.
@@ -716,6 +725,7 @@ def assemble(order: SearchOrder) -> dict:
                 "barred_confidence": barred.get(c.name, {}).get("confidence", ""),
                 "sightings": [
                     {
+                        "sighting_id": s.sighting_id,
                         "angle": s.angle,
                         "name": s.name,
                         "district": s.district,

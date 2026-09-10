@@ -147,6 +147,9 @@ export interface ListicleOrder {
  * itself.
  */
 export interface ListicleSighting {
+  /** The attempt this row came from, and its position in that attempt's reply.
+   *  What a candidate's identity is built out of. */
+  sighting_id?: string
   angle: string
   name: string
   district: string
@@ -154,6 +157,11 @@ export interface ListicleSighting {
 }
 
 export interface ListicleCandidate {
+  /** A hash of this candidate's member sightings. What everything filed
+   *  against this candidate keys on — two rows may legitimately show the same
+   *  name, and they are never the same candidate. Stable under reordering;
+   *  different the moment the membership changes. */
+  candidate_id: string
   name: string
   district: string
   evidence: string
@@ -161,9 +169,14 @@ export interface ListicleCandidate {
    *  itself — not a verdict that the most-repeated place is the best one. */
   found_by: string[]
   overlap: number
-  /** Rows that look like this place and were not merged into it, because a
-   *  district or a bracketed qualifier said they might be somewhere else. */
+  /** Rows that look like this place and were not folded into it. Shown rather
+   *  than resolved: this step cannot tell a second branch from a second
+   *  spelling, and folding them loses a venue with nothing on screen to
+   *  notice. */
   possible_duplicates: string[]
+  /** The same relation by id, for a screen that wants to point at the other
+   *  row rather than name it. */
+  possible_duplicate_ids?: string[]
   /** Why this place appears to break what the operator left out. Empty when it
    *  does not, or when nothing has checked. */
   barred?: string

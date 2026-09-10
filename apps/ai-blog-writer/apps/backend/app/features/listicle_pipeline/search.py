@@ -207,12 +207,55 @@ def _district_key(district: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", folded)
 
 
-# How many distinguishing words a shorter name needs before it may be treated
-# as the same place as a longer one that contains it.
+# How many distinguishing words a shorter name needs before a longer one that
+# contains it is even worth mentioning as a possible duplicate.
 #
-# Two is the whole safety margin. One would merge "Museo del Pisco" into
-# "Pisco Bar" on the single word they share, which is two different bars.
+# Two is the whole safety margin. One would link "Museo del Pisco" to "Pisco
+# Bar" on the single word they share, which is two different bars.
 _CONTAINMENT_MIN_TOKENS = 2
+
+
+def observation_key(name: str, district: str) -> tuple[str, str, tuple[str, ...]]:
+    """What two rows must share to be the same OBSERVATION of a place.
+
+    Three things, all of them written down in the rows themselves: the full
+    name after Unicode folding, the district as stated, and the bracketed
+    qualifier. Nothing is stripped as "not part of the identity" -- not the
+    year, not the article, not the business word. "Hotel Sol" and "Hotel Sol
+    Palace" share a normalised key under the old rules and are two hotels; a
+    rule that discards words as noise is a rule that discards the word which
+    turns out to be the name.
+
+    Still provisional, and deliberately so. Two rows that agree on all three
+    are two sources writing the same string; that is the strongest thing this
+    step can say, and it is not proof they mean one real business.
+    """
+    folded = unicodedata.normalize("NFKD", re.sub(r"\([^)]*\)", " ", name).casefold())
+    folded = "".join(c for c in folded if not unicodedata.combining(c))
+    full = " ".join(re.findall(r"[a-z0-9]+", folded))
+    return full, _district_key(district), tuple(sorted(qualifier_tokens(name)))
+
+
+def candidate_id(sightings: list["Sighting"]) -> str:
+    """A candidate's identity: which observations it is made of.
+
+    A hash of the sorted member sighting ids plus the pooling version. Two
+    consequences, and both of them are the point:
+
+    - **Order cannot change it.** The same evidence pooled in any order
+      produces the same candidates with the same ids, so a retry that happens
+      to finish in a different order does not silently renumber the list.
+    - **Changed membership changes it.** A candidate that gained or lost a
+      sighting is a different snapshot, and anything filed against the old id
+      -- a cut verdict above all -- does not apply to it and cannot be made to
+      by accident.
+
+    Names are not part of it. Two candidates may legitimately display the same
+    name; they must never share an id.
+    """
+    members = "␟".join(sorted(s.sighting_id for s in sightings if s.sighting_id))
+    material = f"{POOLING_VERSION}␟{members}"
+    return hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
 
 
 def _districts_conflict(a: str, b: str) -> bool:
@@ -222,6 +265,9 @@ def _districts_conflict(a: str, b: str) -> bool:
     on a list and two different addresses. Merging them keeps one and loses the
     other, and the loss is invisible: the surviving row looks like an ordinary
     candidate.
+
+    Now a description rather than a gate. Nothing merges on a district
+    agreeing, so this exists to say WHY a pair is only a possible duplicate.
     """
     left, right = _district_key(a), _district_key(b)
     if not left or not right:
@@ -233,25 +279,8 @@ def _qualifiers_conflict(a: str, b: str) -> bool:
     """Two rows qualified differently name two things inside one building."""
     left, right = qualifier_tokens(a), qualifier_tokens(b)
     if not left or not right:
-        # One row is unqualified. "Hotel B" and "Hotel B (Rooftop bar)" in a
-        # search for bars are the same bar written two ways, and refusing that
-        # merge would split the overlap of a place two angles agreed on.
         return False
     return left.isdisjoint(right)
-
-
-def may_merge(a: "Candidate", b: "Candidate") -> bool:
-    """Whether two rows are certainly the same business.
-
-    Deliberately asymmetric in what it costs to be wrong. A duplicate left
-    standing is a row the operator glances at and dismisses. A false merge
-    deletes a real venue, and there is nothing on the screen to notice.
-    """
-    if _districts_conflict(a.district, b.district):
-        return False
-    if _qualifiers_conflict(a.name, b.name):
-        return False
-    return True
 
 
 @dataclass
@@ -285,11 +314,17 @@ class Candidate:
     evidence: str
     found_by: list[str] = field(default_factory=list)
     sightings: list[Sighting] = field(default_factory=list)
-    # Rows that look like this place but were not merged into it, because a
-    # district or a bracketed qualifier said they might be somewhere else.
-    # Shown rather than resolved: this step cannot tell a second branch from a
-    # second spelling, and pretending otherwise is how a venue disappears.
+    # Rows that look like this place but were not folded into it. Shown rather
+    # than resolved: this step cannot tell a second branch from a second
+    # spelling, and pretending otherwise is how a venue disappears.
     possible_duplicates: list[str] = field(default_factory=list)
+    # The same relation by id. Two candidates may legitimately display one
+    # name, so a name is not enough to point at one of them.
+    possible_duplicate_ids: list[str] = field(default_factory=list)
+    # A hash of this candidate's member sightings and the pooling version.
+    # Stable under reordering; different the moment the membership changes,
+    # which is what stops a stale cut verdict landing on new evidence.
+    candidate_id: str = ""
 
     @property
     def overlap(self) -> int:
@@ -466,130 +501,228 @@ def parse_rows(text: str) -> list[tuple[str, str, str]]:
     return rows
 
 
-def merge_contained(candidates: list[Candidate]) -> list[Candidate]:
-    """Fold a place named twice at different lengths into one entry.
+def link_possible_duplicates(candidates: list[Candidate]) -> list[Candidate]:
+    """Say which rows might be one place. Never decide that they are.
 
-    Exact-key pooling catches "La Mar" and "La Mar Cebichería" because the
-    noise words fall away. It does not catch a name qualified by where it is:
-    "Bar Inglés at the Country Club Hotel" and "Bar Inglés del Country Club"
-    are one bar and share no normalised key.
+    This used to merge. Containment -- one name's distinguishing words being a
+    subset of another's -- was treated as sufficient, and it is not: "Hotel
+    Sol" in Centro and "Hotel Sol Palace" in Centro became one candidate with
+    two sightings and no warning, and a real hotel disappeared with nothing on
+    the screen to notice. "Bar Inglés at the Country Club Hotel" and "Bar
+    Inglés del Country Club" really are one bar, and this step cannot tell the
+    two cases apart from the strings.
 
-    Searching in the local language made this worse rather than better, which
-    is the point -- more sources means more spellings of the same place, and an
-    undetected duplicate does not merely pad the list, it splits an entry's
-    overlap in half and drops it down the ranking.
+    So the relation stays and the merge goes. A pair that looks contained is
+    recorded on both rows as a possible duplicate, the distinct count is
+    reported as provisional while any such pair is open, and every original
+    sighting survives on the candidate it was observed as.
 
-    The name kept is the one carrying the most distinguishing words, and on a
-    tie the shorter string -- because a tie means the difference was a
-    parenthetical, and "Hotel B" is the bar's name where "Hotel B (Rooftop
-    bar)" is a search's note about why it turned up. `found_by` and every
-    original sighting absorb the other spelling's.
-
-    A containment that `may_merge` refuses is recorded on both rows instead of
-    performed. The screen can then show two entries and say they might be one,
-    which is the honest reading -- this step cannot tell a second branch from a
-    second spelling.
+    More visible duplicates is the accepted cost. A duplicate left standing is
+    a row the operator glances at; a false merge deletes a real venue.
     """
     ordered = sorted(
-        candidates, key=lambda c: (-len(name_tokens(c.name)), len(c.name))
+        candidates, key=lambda c: (-len(_full_words(c.name)), len(c.name), c.name)
     )
-    kept: list[Candidate] = []
-    for candidate in ordered:
-        tokens = set(name_tokens(candidate.name))
-        host = None
-        blocked: list[Candidate] = []
-        if len(tokens) >= _CONTAINMENT_MIN_TOKENS:
-            for other in kept:
-                if not tokens <= set(name_tokens(other.name)):
-                    continue
-                if may_merge(other, candidate):
-                    host = other
-                    break
-                blocked.append(other)
-        if host is None:
-            for other in blocked:
-                if candidate.name not in other.possible_duplicates:
-                    other.possible_duplicates.append(candidate.name)
-                if other.name not in candidate.possible_duplicates:
-                    candidate.possible_duplicates.append(other.name)
-            kept.append(candidate)
+    for index, candidate in enumerate(ordered):
+        words = _full_words(candidate.name)
+        if len(words) < _CONTAINMENT_MIN_TOKENS:
             continue
-        _absorb(host, candidate)
-    return kept
+        for other in ordered[:index]:
+            if not words <= _full_words(other.name):
+                continue
+            if not _may_be_same(candidate, other):
+                continue
+            _link(candidate, other)
+    return candidates
 
 
-def _absorb(host: Candidate, other: Candidate) -> None:
-    for angle in other.found_by:
-        if angle not in host.found_by:
-            host.found_by.append(angle)
-    host.sightings.extend(other.sightings)
-    for name in other.possible_duplicates:
-        if name not in host.possible_duplicates:
-            host.possible_duplicates.append(name)
-    if other.district and not host.district:
-        host.district = other.district
-    if not host.evidence and other.evidence:
-        host.evidence = other.evidence
+def _full_words(name: str) -> set[str]:
+    """Every word in a name, with nothing discarded as noise.
+
+    The containment hint reads these rather than `name_tokens`. Dropping
+    articles and business words to compare names loses the pairs most worth
+    raising -- "La Mar" and "La Mar Cebichería" share one word once "la" and
+    "cebicheria" are gone, which is below the threshold, so the strongest
+    entry in the first real run would have been split with no hint attached.
+    Keeping every word raises that pair and still refuses "Museo del Pisco"
+    against "Pisco Bar", which is not a containment at all.
+    """
+    return set(observation_key(name, "")[0].split())
+
+
+# How much of the shorter name's distinguishing words two rows must share
+# before the pair is worth raising. Two words at minimum, and most of the
+# shorter name -- one shared word is a coincidence, and "Museo del Pisco"
+# against "Pisco Bar" is what one shared word looks like.
+_SIMILARITY_MIN_SHARED = 2
+_SIMILARITY_MIN_SHARE = 0.6
+
+
+def link_similar(candidates: list[Candidate]) -> list[Candidate]:
+    """Raise pairs that neither contain each other nor match exactly.
+
+    "Bar Inglés at the Country Club Hotel" and "Bar Inglés del Country Club"
+    are one bar. Neither name contains the other and their normalised keys
+    differ, so containment cannot see them -- and both spellings turned up in
+    the same real run, because searching in the local language means more
+    sources and therefore more spellings of one place.
+
+    A hint and only ever a hint. Nothing here merges, so being wrong costs a
+    line on the screen.
+    """
+    for index, candidate in enumerate(candidates):
+        mine = set(name_tokens(candidate.name))
+        if len(mine) < _SIMILARITY_MIN_SHARED:
+            continue
+        for other in candidates[:index]:
+            theirs = set(name_tokens(other.name))
+            shared = mine & theirs
+            shorter = min(len(mine), len(theirs)) or 1
+            if len(shared) < _SIMILARITY_MIN_SHARED:
+                continue
+            if len(shared) / shorter < _SIMILARITY_MIN_SHARE:
+                continue
+            if not _may_be_same(candidate, other):
+                continue
+            _link(candidate, other)
+    return candidates
+
+
+def _may_be_same(one: Candidate, other: Candidate) -> bool:
+    """Whether a pair is worth raising at all.
+
+    One case is excluded outright: rows whose bracketed qualifiers disagree.
+    "Hotel Azul (Lobby bar)" and "Hotel Azul (Rooftop bar)" are two bars the
+    searches deliberately told apart, and calling them possible duplicates
+    would train the operator to dismiss the label on the pairs that matter.
+    """
+    return not _qualifiers_conflict(one.name, other.name)
+
+
+def _link(one: Candidate, other: Candidate) -> None:
+    """Record a possible duplicate on both rows, by id and by name.
+
+    Both, because they answer different questions. The id is what the screen
+    keys on and what a cut verdict is filed against; the name is what a person
+    reads, and two candidates are allowed to share one.
+    """
+    if other.candidate_id and other.candidate_id not in one.possible_duplicate_ids:
+        one.possible_duplicate_ids.append(other.candidate_id)
+    if one.candidate_id and one.candidate_id not in other.possible_duplicate_ids:
+        other.possible_duplicate_ids.append(one.candidate_id)
+    if other.name not in one.possible_duplicates:
+        one.possible_duplicates.append(other.name)
+    if one.name not in other.possible_duplicates:
+        other.possible_duplicates.append(one.name)
+
+
+def _named(sightings: list[Sighting]) -> list[Sighting]:
+    """Every sighting with an identity, giving one to any that arrived without.
+
+    A row observed by this pipeline is named by its attempt and its position in
+    that attempt's reply. A sighting that reaches pooling without one -- a
+    caller building evidence by hand, a row stored before observations had
+    identities -- is named from its content instead, with a counter for exact
+    repeats. Content rather than position, so the ids do not depend on the
+    order the sightings arrive in.
+    """
+    seen: dict[str, int] = {}
+    named: list[Sighting] = []
+    for sighting in sightings:
+        if sighting.sighting_id:
+            named.append(sighting)
+            continue
+        material = "␟".join(
+            [
+                sighting.angle_id,
+                sighting.angle,
+                sighting.name,
+                sighting.district,
+                sighting.evidence,
+            ]
+        )
+        digest = hashlib.sha256(material.encode("utf-8")).hexdigest()[:12]
+        seen[digest] = seen.get(digest, 0) + 1
+        named.append(
+            Sighting(
+                angle=sighting.angle,
+                angle_id=sighting.angle_id,
+                name=sighting.name,
+                district=sighting.district,
+                evidence=sighting.evidence,
+                sighting_id=f"{digest}~{seen[digest]}",
+            )
+        )
+    return named
 
 
 def pool_sightings(sightings: list[Sighting]) -> list[Candidate]:
     """Every row every angle returned, gathered into places.
 
-    Two passes, and both of them conservative. Exact-key pooling first, which
-    is the safe case -- the same name written two lengths. Containment second,
-    which is the case that can be wrong, and every merge there has to survive
-    `may_merge`.
+    Two passes with a hard line between them. **Grouping** is exact: rows that
+    agree on the folded full name, the district and the bracketed qualifier are
+    one observation of one place. **Linking** is everything else: a row that
+    might be the same place as another is said to be, and is not folded into
+    it.
+
+    A row that names no district does not group with one that does. That splits
+    entries a looser rule would have joined, and it is the direction that can
+    be recovered: an operator looking at two linked rows can say they are one
+    place, and cannot get back a venue that was silently deleted.
+
+    Every input sighting appears in exactly one candidate's membership, and the
+    candidates and their ids are the same whatever order the sightings arrive
+    in.
     """
+    groups: dict[tuple[str, str, tuple[str, ...]], Candidate] = {}
     pool: list[Candidate] = []
-    by_key: dict[str, list[Candidate]] = {}
-    for sighting in sightings:
-        key = normalise_name(sighting.name)
-        if not key:
+    for sighting in _named(sightings):
+        if not normalise_name(sighting.name):
             continue
-        host = next(
-            (
-                candidate
-                for candidate in by_key.get(key, [])
-                if may_merge(
-                    candidate,
-                    Candidate(
-                        name=sighting.name,
-                        district=sighting.district,
-                        evidence=sighting.evidence,
-                    ),
-                )
-            ),
-            None,
-        )
+        key = observation_key(sighting.name, sighting.district)
+        host = groups.get(key)
         if host is None:
-            fresh = Candidate(
+            host = Candidate(
                 name=sighting.name,
                 district=sighting.district,
                 evidence=sighting.evidence,
                 found_by=[sighting.angle],
                 sightings=[sighting],
             )
-            for sibling in by_key.get(key, []):
-                if sighting.name not in sibling.possible_duplicates:
-                    sibling.possible_duplicates.append(sighting.name)
-                if sibling.name not in fresh.possible_duplicates:
-                    fresh.possible_duplicates.append(sibling.name)
-            by_key.setdefault(key, []).append(fresh)
-            pool.append(fresh)
+            groups[key] = host
+            pool.append(host)
             continue
         if sighting.angle not in host.found_by:
             host.found_by.append(sighting.angle)
         host.sightings.append(sighting)
-        # Keep the longer name and fill a district the first row lacked:
-        # "La Mar" and "La Mar Cebichería" are one place, and the fuller name
-        # is the one worth printing.
+        # The longer spelling of the same key is the one worth printing: the
+        # rows agree on every word that identifies the place and one of them
+        # wrote it out more fully.
         if len(sighting.name) > len(host.name):
             host.name = sighting.name
-        if sighting.district and not host.district:
-            host.district = sighting.district
         if not host.evidence and sighting.evidence:
             host.evidence = sighting.evidence
-    return merge_contained(pool)
+
+    for candidate in pool:
+        candidate.candidate_id = candidate_id(candidate.sightings)
+
+    # Rows that share a key but not a district, or a district but not a
+    # qualifier, are the pairs most likely to be one place written two ways.
+    by_name: dict[str, list[Candidate]] = {}
+    for candidate in pool:
+        by_name.setdefault(observation_key(candidate.name, "")[0], []).append(candidate)
+    for siblings in by_name.values():
+        for index, candidate in enumerate(siblings):
+            for other in siblings[:index]:
+                if _may_be_same(candidate, other):
+                    _link(candidate, other)
+
+    link_possible_duplicates(pool)
+    link_similar(pool)
+    for candidate in pool:
+        candidate.possible_duplicates.sort()
+        candidate.possible_duplicate_ids.sort()
+    return pool
 
 
 def contribution_of(

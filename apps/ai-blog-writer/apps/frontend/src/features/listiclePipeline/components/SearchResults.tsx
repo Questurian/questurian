@@ -237,7 +237,10 @@ export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
 
       <ol className="lp-candidates">
         {results.candidates.map(candidate => (
-          <li key={`${candidate.name}-${candidate.district}`} className="lp-candidate">
+          // Keyed on the candidate's own id. Two rows may legitimately carry
+          // the same name in the same district — that is exactly the pair the
+          // pipeline refuses to merge — and a key built from those collides.
+          <li key={candidate.candidate_id} className="lp-candidate">
             <div className="lp-candidate-line">
               <span className="lp-candidate-name">{candidate.name}</span>
               {candidate.district && (
@@ -258,7 +261,7 @@ export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
             {candidate.sightings.length > 1 && (
               <ul className="lp-candidate-sightings">
                 {candidate.sightings.map((sighting, index) => (
-                  <li key={index}>
+                  <li key={sighting.sighting_id ?? index}>
                     <span className="lp-muted">{sighting.angle}:</span> {sighting.name}
                     {sighting.evidence ? ` — ${sighting.evidence}` : ''}
                   </li>

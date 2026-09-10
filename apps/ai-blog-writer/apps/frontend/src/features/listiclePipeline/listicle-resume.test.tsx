@@ -152,6 +152,7 @@ function results(overrides: Partial<ListicleSearchResults> = {}): ListicleSearch
     ],
     candidates: [
       {
+        candidate_id: 'cand-canta-rana',
         name: 'Canta Rana',
         district: 'Barranco',
         evidence: 'open since the 1980s',
@@ -289,7 +290,12 @@ describe('the agreed order on screen', () => {
     await userEvent.click(screen.getByRole('button', { name: /use this number/i }))
 
     await waitFor(() =>
-      expect(reviseOrder).toHaveBeenCalledWith('abc123', { target_count: 12 }),
+      // The revision the screen was showing travels with the correction, so
+      // the server can refuse one typed against a version that has moved.
+      expect(reviseOrder).toHaveBeenCalledWith('abc123', {
+        target_count: 12,
+        expected_revision: 1,
+      }),
     )
     expect(await screen.findByText(/revision 2/)).toBeInTheDocument()
   })
@@ -335,6 +341,7 @@ describe('the agreed order on screen', () => {
       expect(reviseOrder).toHaveBeenCalledWith('abc123', {
         standard: 'written up by someone other than the place',
         exclusions: 'no chains only',
+        expected_revision: 1,
       }),
     )
     expect(await screen.findByText(/revision 2/)).toBeInTheDocument()
@@ -450,6 +457,7 @@ describe('the agreed order on screen', () => {
         },
         candidates: [
           {
+            candidate_id: 'cand-maido',
             name: 'Maido',
             district: 'Miraflores',
             evidence: 'top Nikkei restaurant, offers ceviche',

@@ -6,7 +6,6 @@ import pytest
 
 from app.features.listicle_pipeline.search import (
     Candidate,
-    merge_contained,
     name_tokens,
     normalise_name,
     parse_rows,
@@ -163,7 +162,12 @@ def test_a_transient_failure_does_not_lose_the_angle():
     assert results[0].failed is False
 
 
-def test_the_fuller_name_and_a_missing_district_are_filled_in():
+def test_a_fuller_name_from_another_search_is_raised_not_absorbed():
+    """"La Mar" and "La Mar Cebichería" are one restaurant, and this step
+    cannot prove it: the same shape of evidence produced "Hotel Sol" and
+    "Hotel Sol Palace", which are two hotels. Both rows stand, each keeps what
+    its own search said about it, and the pair is named.
+    """
     # Matched on a word the prompt itself cannot contain: an earlier version of
     # this stub keyed on "one" and started matching every prompt the day the
     # search prompt gained the word "someone".
@@ -177,9 +181,10 @@ def test_the_fuller_name_and_a_missing_district_are_filled_in():
         target_items=10, research=research,
     )
 
-    assert len(candidates) == 1
-    assert candidates[0].name == "La Mar Cebichería"
-    assert candidates[0].district == "Miraflores"
+    assert sorted(c.name for c in candidates) == ["La Mar", "La Mar Cebichería"]
+    fuller = next(c for c in candidates if c.name == "La Mar Cebichería")
+    assert fuller.district == "Miraflores"
+    assert all(c.possible_duplicates for c in candidates)
 
 
 def test_candidate_overlap_counts_angles():
@@ -208,56 +213,70 @@ def test_an_empty_angle_says_which_kind_of_empty_it_was(reply, expected):
     assert results[0].reason == expected
 
 
+def _pooled(*rows):
+    """Pool a handful of hand-written rows. (name, district, angle)."""
+    from app.features.listicle_pipeline.search import Sighting, pool_sightings
+
+    return pool_sightings(
+        [
+            Sighting(
+                angle=angle,
+                angle_id=angle,
+                name=name,
+                district=district,
+                evidence="",
+            )
+            for name, district, angle in rows
+        ]
+    )
+
+
 @pytest.mark.parametrize(
     "first, second",
     [
         # Both seen on the same run once the searches read Spanish sources.
+        # These really are one bar and one hotel respectively -- and nothing in
+        # the strings says so, which is the whole difficulty.
         ("Bar Inglés at the Country Club Hotel", "Bar Inglés del Country Club"),
         ("Gran Hotel Bolívar", "Gran Hotel Bolívar (Bar Catedral)"),
         ("Hotel B", "Hotel B (Rooftop bar)"),
     ],
 )
-def test_one_place_named_two_ways_is_one_entry(first, second):
-    """An undetected duplicate does not merely pad the list -- it splits the
-    entry's overlap in half and drops it down the ranking."""
-    merged = merge_contained(
-        [
-            Candidate(name=first, district="", evidence="", found_by=["a"]),
-            Candidate(name=second, district="Barranco", evidence="", found_by=["b"]),
-        ]
+def test_one_place_named_two_ways_is_shown_twice_and_linked(first, second):
+    """Said to be a possible duplicate, never folded into one row.
+
+    These pairs are genuinely one place, and the pipeline still does not merge
+    them -- because the string evidence that they are one place is the same
+    evidence "Hotel Sol" and "Hotel Sol Palace" produce, and those are two
+    hotels. A duplicate on screen costs the operator a glance. A false merge
+    deletes a venue and leaves nothing to notice.
+    """
+    pooled = _pooled((first, "", "a"), (second, "Barranco", "b"))
+    assert len(pooled) == 2
+    assert all(c.possible_duplicates for c in pooled)
+    assert all(c.possible_duplicate_ids for c in pooled)
+    assert {c.candidate_id for c in pooled} != {""}, "and each one is addressable"
+
+
+def test_containment_is_not_identity():
+    """The reproduction. Two hotels in one district, one name inside the
+    other's: folded into a single candidate with two sightings and no warning,
+    and the shorter-named hotel was gone."""
+    pooled = _pooled(("Hotel Sol", "Centro", "a"), ("Hotel Sol Palace", "Centro", "b"))
+    assert sorted(c.name for c in pooled) == ["Hotel Sol", "Hotel Sol Palace"]
+    assert all(len(c.sightings) == 1 for c in pooled)
+    assert all(c.possible_duplicate_ids for c in pooled)
+
+
+def test_a_shorter_name_inside_a_longer_one_is_raised_as_a_pair():
+    """Two rows, and a hint. The hint reads every word in the name rather than
+    only the distinguishing ones: dropping "bar" and "la" before comparing is
+    what left "La Mar" and "La Mar Cebichería" with nothing to link them."""
+    pooled = _pooled(
+        ("Bar Inglés", "", "a"), ("Bar Inglés del Country Club", "", "b")
     )
-    assert len(merged) == 1
-    assert sorted(merged[0].found_by) == ["a", "b"]
-    # A district either row carried survives the merge.
-    assert merged[0].district == "Barranco"
-
-
-def test_the_name_kept_is_the_business_not_the_searchs_note():
-    """A tie on distinguishing words means the difference was a parenthetical,
-    and the parenthetical is why the row turned up rather than what it is
-    called."""
-    merged = merge_contained(
-        [
-            Candidate(name="Hotel B (Rooftop bar)", district="", evidence="", found_by=["a"]),
-            Candidate(name="Hotel B", district="", evidence="", found_by=["b"]),
-        ]
-    )
-    assert merged[0].name == "Hotel B"
-
-
-def test_a_single_distinguishing_word_is_not_enough_to_merge():
-    """"Bar Inglés" reduces to one word once "bar" falls away, and one word is
-    not evidence that two rows are the same place. The two spellings the real
-    run actually produced both carry more than that and do merge."""
-    merged = merge_contained(
-        [
-            Candidate(name="Bar Inglés", district="", evidence="", found_by=["a"]),
-            Candidate(
-                name="Bar Inglés del Country Club", district="", evidence="", found_by=["b"]
-            ),
-        ]
-    )
-    assert len(merged) == 2
+    assert len(pooled) == 2
+    assert all(c.possible_duplicates for c in pooled)
 
 
 @pytest.mark.parametrize(
@@ -270,13 +289,54 @@ def test_a_single_distinguishing_word_is_not_enough_to_merge():
     ],
 )
 def test_two_places_that_merely_share_a_word_stay_apart(first, second):
-    merged = merge_contained(
-        [
-            Candidate(name=first, district="", evidence="", found_by=["a"]),
-            Candidate(name=second, district="", evidence="", found_by=["b"]),
-        ]
+    pooled = _pooled((first, "", "a"), (second, "", "b"))
+    assert len(pooled) == 2
+
+
+def test_an_unknown_district_cannot_bridge_two_known_branches():
+    """The failure this guards: a row with no district joining a Centro branch
+    to a Barranco one, and three rows becoming one venue."""
+    pooled = _pooled(
+        ("Tanta", "Centro", "a"),
+        ("Tanta", "Barranco", "b"),
+        ("Tanta", "", "c"),
     )
-    assert len(merged) == 2
+    assert len(pooled) == 3
+    assert sum(len(c.sightings) for c in pooled) == 3
+
+
+def test_the_same_evidence_pools_the_same_way_whichever_order_it_arrives_in():
+    rows = [
+        ("El Mercado", "Miraflores", "a"),
+        ("El Mercado", "Miraflores", "b"),
+        ("Canta Rana", "Barranco", "b"),
+        ("Tanta", "Centro", "c"),
+    ]
+    forward = _pooled(*rows)
+    backward = _pooled(*reversed(rows))
+    assert {c.candidate_id for c in forward} == {c.candidate_id for c in backward}
+    assert sorted(c.name for c in forward) == sorted(c.name for c in backward)
+
+
+def test_changed_membership_is_a_different_candidate():
+    """What stops a stale verdict landing on new evidence: a candidate that
+    gained a sighting is not the candidate a review was filed against."""
+    before = _pooled(("El Mercado", "Miraflores", "a"))
+    after = _pooled(("El Mercado", "Miraflores", "a"), ("El Mercado", "Miraflores", "b"))
+    assert before[0].candidate_id != after[0].candidate_id
+
+
+def test_every_input_sighting_appears_exactly_once():
+    rows = [
+        ("Hotel Sol", "Centro", "a"),
+        ("Hotel Sol", "Centro", "b"),
+        ("Hotel Sol Palace", "Centro", "c"),
+        ("Hotel Sol", "", "d"),
+    ]
+    pooled = _pooled(*rows)
+    members = [s.sighting_id for c in pooled for s in c.sightings]
+    assert len(members) == len(rows)
+    assert len(set(members)) == len(rows)
 
 
 def test_a_parenthetical_is_the_rows_reason_not_part_of_the_name():
@@ -340,49 +400,34 @@ def test_two_branches_of_one_business_stay_two_businesses():
 
 
 def test_a_branch_named_in_the_title_is_not_folded_into_the_shorter_name():
-    merged = merge_contained(
-        [
-            Candidate(name="Tanta Larcomar", district="Miraflores", evidence="", found_by=["a"]),
-            Candidate(name="Tanta Larcomar Centro", district="Centro", evidence="", found_by=["b"]),
-        ]
+    pooled = _pooled(
+        ("Tanta Larcomar", "Miraflores", "a"),
+        ("Tanta Larcomar Centro", "Centro", "b"),
     )
-    assert len(merged) == 2
-    assert all(c.possible_duplicates for c in merged)
+    assert len(pooled) == 2
+    assert all(c.possible_duplicates for c in pooled)
 
 
 def test_two_bars_inside_one_hotel_stay_two_bars():
-    merged = merge_contained(
-        [
-            Candidate(
-                name="Gran Hotel Bolívar (Bar Catedral)",
-                district="",
-                evidence="",
-                found_by=["a"],
-            ),
-            Candidate(
-                name="Gran Hotel Bolívar (Bar Maury)",
-                district="",
-                evidence="",
-                found_by=["b"],
-            ),
-        ]
+    pooled = _pooled(
+        ("Gran Hotel Bolívar (Bar Catedral)", "", "a"),
+        ("Gran Hotel Bolívar (Bar Maury)", "", "b"),
     )
-    assert len(merged) == 2
+    assert len(pooled) == 2
 
 
-def test_a_hotel_and_its_only_named_bar_still_merge():
-    """One row qualified and one not, in a search for bars, is the same bar
-    written two ways -- and refusing that merge splits the overlap of a place
-    two angles agreed on."""
-    merged = merge_contained(
-        [
-            Candidate(name="Hotel B", district="", evidence="", found_by=["a"]),
-            Candidate(
-                name="Hotel B (Rooftop bar)", district="", evidence="", found_by=["b"]
-            ),
-        ]
-    )
-    assert len(merged) == 1
+def test_a_hotel_and_its_only_named_bar_are_linked_not_merged():
+    """One row qualified and one not, in a search for bars, is usually the same
+    bar written two ways. It is not always: "Hotel Azul" and "Hotel Azul (Lobby
+    bar)" are a hotel and a bar inside it, and the strings cannot tell the two
+    situations apart.
+
+    The cost of the honest answer is real and is recorded here: the overlap of
+    a place two angles agreed on is split across two rows, and the count is
+    reported as provisional while it is."""
+    pooled = _pooled(("Hotel B", "", "a"), ("Hotel B (Rooftop bar)", "", "b"))
+    assert len(pooled) == 2
+    assert all(c.possible_duplicates for c in pooled)
 
 
 def test_an_accent_variant_in_the_same_district_still_merges():
@@ -396,30 +441,34 @@ def test_an_accent_variant_in_the_same_district_still_merges():
     assert merged[0].overlap == 2
 
 
-def test_every_original_sighting_survives_a_merge():
+def test_every_original_sighting_survives():
     """Keeping one evidence sentence and throwing the rest away is too thin to
-    check a merge with: two angles found this place for two different reasons
-    and the reasons are the only way to see whether it is one place."""
+    check an identity with: two angles found this place for two different
+    reasons and the reasons are the only way to see whether it is one place.
+
+    These two rows disagree about the district -- one states it and one does
+    not -- so they are two candidates and both reasons are still on screen."""
     merged = pool_sightings(
         [
             Sighting(angle="awards", angle_id="a1", name="El Mercado", district="", evidence="on best-of lists"),
             Sighting(angle="nikkei", angle_id="a2", name="El Mercado", district="Miraflores", evidence="Japanese-Peruvian"),
         ]
     )
-    assert len(merged) == 1
-    assert sorted(s.evidence for s in merged[0].sightings) == [
+    assert len(merged) == 2
+    assert sorted(s.evidence for c in merged for s in c.sightings) == [
         "Japanese-Peruvian",
         "on best-of lists",
     ]
+    assert all(c.possible_duplicates for c in merged)
 
 
 def test_contribution_does_not_depend_on_which_search_ran_first():
     """The first angle to return a place used to collect it, so reordering the
     searches changed the table."""
     shared = [
-        Sighting(angle="a", angle_id="a1", name="El Mercado", district="", evidence=""),
-        Sighting(angle="b", angle_id="a2", name="El Mercado", district="", evidence=""),
-        Sighting(angle="b", angle_id="a2", name="Canta Rana", district="", evidence=""),
+        Sighting(angle="a", angle_id="a1", name="El Mercado", district="Miraflores", evidence=""),
+        Sighting(angle="b", angle_id="a2", name="El Mercado", district="Miraflores", evidence=""),
+        Sighting(angle="b", angle_id="a2", name="Canta Rana", district="Barranco", evidence=""),
     ]
     forward = pool_sightings(shared)
     backward = pool_sightings(list(reversed(shared)))

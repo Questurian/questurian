@@ -665,6 +665,10 @@ def _upgrade_legacy(stored: dict, current: "SearchOrder") -> dict:
     """
     candidates = [
         {
+            # A legacy row has no member sightings, so it cannot have a real
+            # candidate id. Named from its position instead, and marked, so
+            # nothing files a verdict against it believing it is stable.
+            "candidate_id": f"legacy-{index}",
             "name": row.get("name", ""),
             "district": row.get("district", ""),
             "evidence": row.get("evidence", ""),
@@ -673,9 +677,10 @@ def _upgrade_legacy(stored: dict, current: "SearchOrder") -> dict:
             # Neither was recorded at the time. Empty is the truthful answer:
             # nothing was checked, rather than nothing was found.
             "possible_duplicates": [],
+            "possible_duplicate_ids": [],
             "sightings": [],
         }
-        for row in stored.get("candidates", [])
+        for index, row in enumerate(stored.get("candidates", []))
     ]
     angles = [
         {
