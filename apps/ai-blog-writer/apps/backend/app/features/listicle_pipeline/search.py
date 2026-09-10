@@ -404,6 +404,7 @@ def build_search_prompt(
     standard: str,
     wanted: int,
     role: str = BROAD,
+    subject: str = "",
 ) -> str:
     """What one angle is sent to the web as.
 
@@ -443,11 +444,10 @@ def build_search_prompt(
 
 Search in the local language of {place} as well as in English, and say so to
 yourself before you start: run the query the way a resident would type it.
-Local press, local food and drink blogs, and local review sites are where most
-of this is written down, and an English-only search reaches the places written
-up for visitors and stops there. Evidence in the local language counts exactly
-the same. Write the results in English, but keep every business name exactly as
-it is written locally.
+{_where_to_look(subject)} An English-only search reaches the places written up
+for visitors and stops there. Evidence in the local language counts exactly the
+same. Write the results in English, but keep every business name exactly as it
+is written locally.
 
 Every entry must be ONE named business a reader could walk into. Not a market,
 a street or a district -- if the answer is "the stalls in X market", name the
@@ -464,6 +464,21 @@ If a business has a branch qualifier -- a district, a street, a room inside a
 hotel -- keep it in brackets after the name. Two branches are two entries.
 
 No preamble, no numbering, no closing line."""
+
+
+def _where_to_look(subject: str) -> str:
+    """Where this subject is written about, or the general answer.
+
+    A hotel list used to be sent hunting through food and drink blogs, because
+    one sentence written for restaurants was in every search prompt. The
+    sources differ by subject and saying which is free.
+    """
+    from .shapes import source_guidance
+
+    return source_guidance(subject) or (
+        "Local press, local blogs and local review sites are where most of "
+        "this is written down."
+    )
 
 
 def strip_list_marker(line: str) -> str:
@@ -763,6 +778,7 @@ def run_one_angle(
     exclusions: str = "",
     standard: str = "",
     research=None,
+    subject: str = "",
 ) -> tuple[AngleResult, list[Sighting]]:
     """One angle, run and read. The unit that is stored and retried.
 
@@ -782,6 +798,7 @@ def run_one_angle(
         standard=standard,
         wanted=request.wanted,
         role=request.role,
+        subject=subject,
     )
     text, urls, titles, failure = "", [], [], ""
     receipts: list[ProviderReceipt] = []

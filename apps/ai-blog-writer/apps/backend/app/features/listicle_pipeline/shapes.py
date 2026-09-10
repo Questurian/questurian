@@ -48,6 +48,7 @@ same number, and the narrow one answered by padding.
 from __future__ import annotations
 
 import re
+import unicodedata
 
 # Discovery roles. What an angle is for, and therefore what it may be asked
 # for. Defined in `search`, named here because a shape is where the role is
@@ -93,23 +94,131 @@ _SUBJECT_WORDS: dict[str, tuple[str, ...]] = {
 }
 
 
-def subject_of(kind: str) -> str:
-    """Which subject's catalogue a commission gets, or "" for none.
+# Where a secondary description begins. "Hotels WITH rooftop bars" is a list of
+# hotels; the bars are a condition on them. The head of the phrase decides the
+# subject, and everything from one of these words onward is the condition.
+_QUALIFIER_JOINS = (
+    " with ",
+    " featuring ",
+    " that have ",
+    " that has ",
+    " which have ",
+    " which has ",
+    " offering ",
+    " serving ",
+    " containing ",
+    " and their ",
+)
 
-    Returning "" is a real answer and the common one. A list of museums keeps
-    the shared shapes and the operator's own lines; it is not filed under
-    restaurants so that the catalogue has something to offer it, which is how
-    a hotel list was offered market stalls.
+# A genuinely mixed head. "Hotels and bars" is two subjects and the catalogue
+# has no honest answer; the interview's own kind question is what settles it.
+_MIXED_HEAD = re.compile(
+    r"(?:\b(?:and|or|plus)\b|&)(?!\s+(?:their|its|the)\b)", re.IGNORECASE
+)
+
+# How a subject was decided, kept beside the answer. "Nobody could tell" and
+# "the catalogue knows nothing about this" are different states, and a screen
+# that shows one for the other invites the operator to fix the wrong thing.
+SUBJECT_SOURCES: tuple[str, ...] = ("head", "only-match", "unknown", "mixed")
+
+
+def normalise_kind(kind: str) -> str:
+    """The searchable noun, folded for matching and for matching only.
+
+    "cevicherías" and "cevicherias" are one word. The catalogue matched on
+    ASCII and the accented spelling -- which is the correct one, and the one an
+    interview in Lima produces -- matched nothing, so a list of cevicherías got
+    the shared catalogue and none of the restaurant shapes.
+
+    The approved spelling is never touched. This is a key for lookup; the noun
+    the operator agreed to is what reaches every prompt.
     """
-    words = set(re.findall(r"[a-z&]+", kind.lower()))
-    # Longest match wins nothing here -- the subjects do not overlap in these
-    # words, and a `kind` that hits two of them ("hotel bars") is genuinely
-    # both. First in declaration order is the one it is filed under, and bars
-    # come before hotels for that phrase because the list is of bars.
-    for subject in (BARS, RESTAURANTS, HOTELS):
-        if words & set(_SUBJECT_WORDS[subject]):
-            return subject
-    return ""
+    folded = unicodedata.normalize("NFKD", kind.casefold())
+    return "".join(c for c in folded if not unicodedata.combining(c))
+
+
+def _words_of(kind: str) -> set[str]:
+    return set(re.findall(r"[a-z&]+", normalise_kind(kind)))
+
+
+def _subject_in(text: str) -> tuple[str, ...]:
+    """Every subject the catalogue can see in one phrase, in declaration order."""
+    words = _words_of(text)
+    return tuple(
+        subject
+        for subject in (BARS, RESTAURANTS, HOTELS)
+        if words & set(_SUBJECT_WORDS[subject])
+    )
+
+
+def resolve_subject(kind: str) -> tuple[str, str]:
+    """Which catalogue this commission gets, and how that was decided.
+
+    Two rules, in order.
+
+    **The head of the phrase decides.** "Hotels with rooftop bars" is a list of
+    hotels and "hotel bars" is a list of bars, and the version this replaced
+    answered `bars` to both -- it matched words anywhere in the string and let
+    a fixed precedence break the tie, so a hotel commission was handed the bar
+    catalogue on the strength of the word describing its balconies.
+
+    **A genuinely mixed head is not resolved.** "Hotels and bars" is two
+    subjects; guessing one of them hands half the commission a catalogue
+    written for the other half. It stays `unknown`, keeps the shared shapes,
+    and the interview's own kind question is what settles it.
+
+    Returns ("" , "unknown") for a subject the catalogue knows nothing about,
+    which is a real answer and the common one. A list of museums keeps the
+    shared shapes and the operator's own lines; it is not filed under
+    restaurants so that the catalogue has something to offer it, which is how
+    a hotel list came to be offered market stalls.
+    """
+    folded = normalise_kind(kind)
+    head = folded
+    for join in _QUALIFIER_JOINS:
+        index = head.find(join)
+        if index != -1:
+            head = head[:index]
+    head = head.strip()
+
+    in_head = _subject_in(head)
+    if len(in_head) == 1:
+        if _MIXED_HEAD.search(head):
+            return "", "mixed"
+        return in_head[0], "head"
+    if len(in_head) > 1:
+        # Two subjects in the head itself. "Hotel bars" is one of these and is
+        # not mixed: it is a compound noun whose head is `bars`.
+        if _MIXED_HEAD.search(head):
+            return "", "mixed"
+        return _head_noun(head, in_head), "head"
+
+    # Nothing in the head. The condition may still name one, and a phrase whose
+    # only subject word is in the condition is a phrase whose head the
+    # catalogue does not know -- so this is the shared catalogue, not the
+    # condition's.
+    return "", "unknown"
+
+
+def _head_noun(head: str, candidates: tuple[str, ...]) -> str:
+    """Which of several subjects a compound noun is actually about.
+
+    English puts the head last: "hotel bars" are bars, "bar food" is food. So
+    the subject whose word appears latest in the phrase is the one the list is
+    of.
+    """
+    positions: dict[str, int] = {}
+    for subject in candidates:
+        for word in _SUBJECT_WORDS[subject]:
+            match = re.search(rf"\b{re.escape(word)}\b", head)
+            if match:
+                positions[subject] = max(positions.get(subject, -1), match.start())
+    return max(positions, key=lambda subject: positions[subject]) if positions else ""
+
+
+def subject_of(kind: str) -> str:
+    """Which subject's catalogue a commission gets, or "" for none."""
+    return resolve_subject(kind)[0]
 
 
 class Shape:
@@ -176,7 +285,7 @@ SHAPES: tuple[Shape, ...] = (
         "World renowned",
         "Known outside the country.",
         "The ones known outside the country. International lists, foreign press.",
-        "ceviche: cevicherias that appear on world's-best restaurant lists | "
+        "ceviche: cevicherias the foreign press writes about | "
         "pizza: pizzerias written up in the international food press",
         theme="prestige",
         overlaps_with=("award", "luxury"),
@@ -185,8 +294,8 @@ SHAPES: tuple[Shape, ...] = (
         "luxury",
         "The splurge",
         "The expensive end.",
-        "The expensive end. What people book for an anniversary. Price is the"
-        " whole condition -- do not add a quality or reputation clause.",
+        "The expensive end. Price is the whole condition -- do not add a"
+        " quality, reputation or occasion clause.",
         "ceviche: expensive cevicherias people save up for | "
         "hotels: the most expensive hotels in the city",
         theme="price",
@@ -280,16 +389,20 @@ SHAPES: tuple[Shape, ...] = (
         "Where people in this trade go themselves.",
         "Where people who work in this field eat, drink or stay themselves.",
         "ceviche: where Lima chefs say they eat ceviche on their days off | "
-        "bars: where bartenders drink after their shift",
+        "bars: where bartenders drink after their shift | "
+        "hotels: hotels travel writers and guides recommend to their own"
+        " clients",
         theme="locality",
     ),
     Shape(
         "family",
         "Family run",
         "Run by one family.",
-        "Run by one family, often across generations.",
-        "ceviche: cevicherias run by the same family for more than one"
-        " generation | hotels: guesthouses run by the family who own them",
+        "Run by one family. Say nothing about how long -- age is what"
+        " `institution` is for, and asking for both narrows this to the"
+        " overlap of two shapes.",
+        "ceviche: family-run cevicherias in Lima | "
+        "hotels: guesthouses run by the family who own them",
         theme="heritage",
         overlaps_with=("institution",),
     ),
@@ -297,9 +410,11 @@ SHAPES: tuple[Shape, ...] = (
         "setting",
         "For the room or the view",
         "Chosen for where you are, not what you get.",
-        "Chosen for where you sit rather than what you get.",
+        "Chosen for where you are rather than what you get -- the room, the"
+        " view, the terrace, the street.",
         "ceviche: cevicherias people go to for the view of the sea | "
-        "bars: rooftop bars people go to for what they can see",
+        "bars: rooftop bars people go to for what they can see | "
+        "hotels: hotels people book for the room's view",
         theme="setting",
         role=BROAD,
     ),
@@ -307,10 +422,10 @@ SHAPES: tuple[Shape, ...] = (
         "district",
         "One neighbourhood's own",
         "Belongs to one named neighbourhood.",
-        "The place people in one specific district go to, that visitors miss."
-        " Name the district.",
-        "ceviche: cevicherias that one Lima neighbourhood keeps to itself | "
-        "hotels: places chosen for the street they are on",
+        "In one named district. Name it. Do not add that visitors miss it --"
+        " that is `lesser-known`, and requiring both empties the search.",
+        "ceviche: cevicherias in Barranco | bars: bars in Pueblo Libre | "
+        "hotels: hotels in Barranco",
         theme="locality",
         overlaps_with=("lesser-known",),
         role=BROAD,
@@ -354,7 +469,7 @@ SHAPES: tuple[Shape, ...] = (
         "Defined by when",
         "Exists at one time of day.",
         "Only exists at one time of day. Lunch only, late night, breakfast.",
-        "ceviche: lunch-only cevicherias that close when the fish runs out | "
+        "ceviche: lunch-only cevicherias | "
         "bars: places busiest after most bars have closed",
         theme="format",
         applies_to=(RESTAURANTS, BARS),
@@ -387,8 +502,8 @@ SHAPES: tuple[Shape, ...] = (
         "producer-links",
         "Close to the producer",
         "Sources direct, and says so.",
-        "Buys direct from a named fisherman, farm, market or maker, and is"
-        " written about for it.",
+        "Buys direct from a named supplier -- a fisherman, farm, market or"
+        " maker -- and is written about for it.",
         "ceviche: cevicherias that buy direct from named Lima fishermen | "
         "steak: steakhouses that name the ranch",
         theme="sourcing",
@@ -495,7 +610,7 @@ SHAPES: tuple[Shape, ...] = (
         "Set up for families -- family rooms, cots, a pool, somewhere for"
         " children to be.",
         "hotels: hotels with family rooms and a pool | "
-        "hotels: places that put a cot in the room at no charge",
+        "hotels: places that put a cot in the room",
         theme="audience",
         applies_to=(HOTELS,),
     ),
@@ -506,7 +621,7 @@ SHAPES: tuple[Shape, ...] = (
         "Chosen for how easy it is to get in and out -- near a named station,"
         " line, terminal or airport.",
         "hotels: hotels within walking distance of the Metropolitano | "
-        "hotels: hotels ten minutes from the airport",
+        "hotels: hotels beside the airport terminal",
         theme="locality",
         overlaps_with=("district",),
         applies_to=(HOTELS,),
@@ -558,6 +673,43 @@ def overlap_notes(subject: str = "") -> str:
             seen.add(pair)
             lines.append(f"- {pair[0]} and {pair[1]}")
     return "\n".join(lines)
+
+
+# Where each subject is actually written about.
+#
+# The search already says to run in the local language; this says WHERE that
+# language is written down, and it differs by subject. A hotel is covered by
+# accommodation and travel reporting and by listing and review sites; a
+# restaurant or a bar is covered by the local food and drink press. Sending a
+# hotel search looking for food writing is how a hotel commission comes back
+# thin -- the sources exist and the search was not pointed at them.
+#
+# Never a restriction. Nothing is excluded, and every source still counts the
+# same whatever language it is in.
+_SOURCE_GUIDANCE: dict[str, str] = {
+    HOTELS: (
+        "Local accommodation and travel reporting, hotel listing and review"
+        " sites, and the places' own pages are where this is written down."
+    ),
+    RESTAURANTS: (
+        "Local food reporting, local restaurant critics and local food blogs"
+        " are where this is written down."
+    ),
+    BARS: (
+        "Local drink and nightlife reporting, local bar critics and local"
+        " drink blogs are where this is written down."
+    ),
+}
+
+
+def source_guidance(subject: str = "") -> str:
+    """Where to look for this subject, said to the search.
+
+    Empty for a subject the catalogue does not know. A guess about where
+    museums are written up is worse than nothing: it points the search
+    somewhere specific and wrong, and the search obeys.
+    """
+    return _SOURCE_GUIDANCE.get(subject, "")
 
 
 def roles_note() -> str:

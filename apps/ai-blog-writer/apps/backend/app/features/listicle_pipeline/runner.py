@@ -46,6 +46,7 @@ from .search import (
     pool_sightings,
     run_one_angle,
 )
+from . import spec
 from .spec import planned_capacity
 
 logger = logging.getLogger(__name__)
@@ -241,6 +242,7 @@ def run_order(
             exclusions=order.exclusions,
             standard=order.standard,
             research=research,
+            subject=spec.catalogue_subject_of(order),
         )
         if owner_token and not store.holds_batch(order.run_id, owner_token):
             # The response may well have been bought. It is left in `running`,

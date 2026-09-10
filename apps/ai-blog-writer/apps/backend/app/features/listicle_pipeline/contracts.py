@@ -253,6 +253,17 @@ class SearchOrder(ListicleModel):
     # allowed to spend. The screen has to be able to tell those apart, because
     # "we looked and it is fine" and "we never looked" are different claims.
     conflicts_checked: bool = False
+    # Which catalogue this commission draws its shapes from, and how that was
+    # decided. Stored rather than re-derived, because the searchable noun and
+    # the catalogue subject are two different things: "hotels with rooftop
+    # bars" searches for hotels and used to be handed the bar catalogue.
+    #
+    # An empty subject with source `unknown` is a real answer -- the shared
+    # shapes and nothing invented. `mixed` is a different real answer: two
+    # subjects in the head, which the interview settles and the catalogue must
+    # not guess at.
+    catalogue_subject: str = ""
+    subject_source: str = ""
 
     def fingerprint(self) -> str:
         """What has to match for a stored result to still be this order's.
