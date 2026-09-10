@@ -637,18 +637,39 @@ def shapes_for(subject: str) -> tuple[Shape, ...]:
 
 
 def shape_menu(subject: str = "") -> str:
-    """The catalogue as the model is shown it."""
+    """The catalogue as the model is shown it.
+
+    The per-shape overlap line is gone. Every pair it named is in
+    `overlap_notes` immediately below the menu, so the catalogue was saying
+    each pair twice -- once on each of its two shapes, and once more in the
+    list. Said once, in the place where a pair can actually be read as a pair.
+    """
     lines: list[str] = []
     for shape in shapes_for(subject):
         lines.append(f"{shape.key} -- {shape.label}  [{shape.role}]")
         lines.append(f"    means: {shape.core}")
         lines.append(f"    write: {shape.instruction}")
         lines.append(f"    e.g.  {shape.example}")
-        if shape.overlaps_with:
-            lines.append(
-                f"    tends to overlap: {', '.join(shape.overlaps_with)}"
-            )
     return "\n".join(lines)
+
+
+def shape_outline(subject: str = "") -> str:
+    """The catalogue as a list of names, for a turn that may not use it yet."""
+    return ", ".join(shape.key for shape in shapes_for(subject))
+
+
+def theme_of(shape_key: str) -> str:
+    """A shape's theme, looked up rather than asked for.
+
+    The model used to be asked to send `group` back with every option, and the
+    value it sent was the theme of the shape it had just named -- a fact this
+    module already holds. Asking for a derivable field spends output tokens on
+    every option in the menu and adds a way for the two to disagree. An option
+    the model wrote itself has no shape and therefore no theme, which is the
+    honest answer rather than a missing one.
+    """
+    shape = SHAPES_BY_KEY.get(shape_key)
+    return shape.theme if shape else ""
 
 
 def overlap_notes(subject: str = "") -> str:

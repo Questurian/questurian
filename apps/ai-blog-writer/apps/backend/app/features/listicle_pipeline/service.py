@@ -14,6 +14,7 @@ fixed once.
 
 from __future__ import annotations
 
+import copy
 import logging
 import threading
 import uuid
@@ -27,11 +28,107 @@ from ..prompt2blog.grill_v4 import (
     reopen_grill,
     start_grill,
 )
-from . import cut_review, runner, spec, store
+from . import cut_review, runner, shapes, spec, store
 from .contracts import LISTICLE_MARKER_KEYS, SearchOrder
 from .prompts import build_listicle_turn_prompt
 
 logger = logging.getLogger(__name__)
+
+
+class _ListicleLLM:
+    """The grill's model call, with two derivable fields taken out of the ask.
+
+    A wrapper rather than a change to the engine. The article grill and the
+    listicle grill share one schema and one loop, and that sharing is the
+    reason every bug in the loop is fixed once; editing the shared schema so
+    that a listicle turn costs less would put a listicle concern inside the
+    thing both of them run on.
+
+    Two fields come out, and both are things this module already knows:
+
+    **`group`** is the theme of the shape the option names. The model was being
+    asked to send back a fact from the catalogue it had just been shown -- once
+    per option, across a menu of thirty -- and every one of those was a chance
+    for the two to disagree. It is filled from the shape key on the way back.
+
+    **`recommendation`** on the angle question is the recommended option texts,
+    joined. The model was writing them once in `options` and again in
+    `recommendation`, which is the same paragraph bought twice on the most
+    expensive turn of the interview. It is composed from the options the model
+    marked, in the order it sent them.
+
+    Nothing else changes. The job id, the model choice, usage accounting,
+    retries and the raw provider text all belong to the wrapped call and are
+    passed straight through. A reply the pipeline cannot read is still refused
+    by the engine's own guards rather than repaired here -- inventing an
+    approval is exactly the failure the menu exists to prevent.
+    """
+
+    def __init__(self, inner) -> None:
+        self._inner = inner
+
+    def __getattr__(self, name):
+        # Every ordinary method delegates untouched.
+        return getattr(self._inner, name)
+
+    def invoke_json(self, *, prompt, model_name, schema, **kwargs):
+        payload, raw = self._inner.invoke_json(
+            prompt=prompt,
+            model_name=model_name,
+            schema=_compact_schema(schema),
+            **kwargs,
+        )
+        return _restore_derived(payload), raw
+
+
+def _compact_schema(schema: dict) -> dict:
+    """The engine's schema with the fields this module derives removed.
+
+    Copied, never mutated. The schema object is module-level in the engine and
+    shared with the article grill; editing it in place would quietly change
+    what Prompt2Blog asks for.
+    """
+    if not isinstance(schema, dict):  # pragma: no cover -- defensive
+        return schema
+    compact = copy.deepcopy(schema)
+    options = (
+        compact.get("properties", {}).get("options", {}).get("items", {})
+    )
+    properties = options.get("properties")
+    if isinstance(properties, dict):
+        properties.pop("group", None)
+        required = options.get("required")
+        if isinstance(required, list) and "group" in required:
+            options["required"] = [name for name in required if name != "group"]
+    return compact
+
+
+def _restore_derived(payload):
+    """Put `group` and the angle recommendation back before the engine reads it.
+
+    Before, deliberately. The engine validates and stores what it is given, and
+    a field restored after that point would be missing from the record it
+    validated against.
+    """
+    if not isinstance(payload, dict):  # pragma: no cover -- defensive
+        return payload
+    options = payload.get("options")
+    if not isinstance(options, list) or not options:
+        return payload
+
+    picked: list[str] = []
+    for option in options:
+        if not isinstance(option, dict):
+            continue
+        option["group"] = shapes.theme_of(str(option.get("shape", "") or ""))
+        if option.get("recommended") and str(option.get("text", "")).strip():
+            picked.append(str(option["text"]).strip())
+
+    # Only when the model left it empty. A recommendation it wrote itself is
+    # its answer to its own question, and this is not the place to overrule it.
+    if picked and not str(payload.get("recommendation", "") or "").strip():
+        payload["recommendation"] = "\n".join(picked)
+    return payload
 
 
 def _dependencies(base: GrillDependencies) -> GrillDependencies:
@@ -46,7 +143,7 @@ def _dependencies(base: GrillDependencies) -> GrillDependencies:
     changed the listicle grill's model.
     """
     return GrillDependencies(
-        llm=base.llm,
+        llm=_ListicleLLM(base.llm),
         research=base.research,
         job_id=base.job_id,
         model_name=base.model_name,
