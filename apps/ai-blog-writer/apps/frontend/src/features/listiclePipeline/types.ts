@@ -182,6 +182,10 @@ export interface ListicleCandidate {
   barred?: string
   /** 'clear' or 'arguable'. Anything unrecognised is read as 'arguable'. */
   barred_confidence?: string
+  /** Whether the cut review covered this row at all. A partial review leaves
+   *  rows nobody judged, and an unjudged row must not read as one that came
+   *  back clean. */
+  cut_reviewed?: boolean
   /** Every row exactly as a search returned it. Kept so a merge can be
    *  checked: two angles found this place for two different reasons. */
   sightings: ListicleSighting[]
@@ -259,9 +263,23 @@ export interface ListicleSearchResults {
    *  fact about this run, not a verdict: a search with nothing exclusive may
    *  be the coverage everything else is being checked against. */
   empty_handed?: string[]
-  /** Whether anything judged this revision's places against the cut. False is
-   *  "nobody looked", not "nothing was barred". */
+  /** Whether a review COVERED every candidate below. False is "nobody
+   *  finished looking", which is not "nothing was barred" — read
+   *  `cut_review_status` for which of the several ways that can be true. */
   cut_checked?: boolean
+  /** 'not_checked' | 'not_needed' | 'complete' | 'partial' | 'failed'. A pool
+   *  with no exclusions to check is not the same as one nobody looked at, and
+   *  neither is the same as one where a chunk of the reviewing failed. */
+  cut_review_status?: string
+  /** How many of the candidates a finished chunk actually covered, out of how
+   *  many there are. Unequal means part of the list is unjudged. */
+  cut_reviewed_count?: number
+  cut_expected_count?: number
+  /** Chunks of the review that failed. Each one is a call a retry would buy —
+   *  and only those, never the chunks that already answered. */
+  cut_missing_chunks?: number[]
+  /** How many reviewer calls this pool takes. Said before they are bought. */
+  cut_chunks_planned?: number
   barred_count?: number
   /** Searches whose latest attempt failed over a result that still stands. The
    *  list is complete and something still went wrong. */

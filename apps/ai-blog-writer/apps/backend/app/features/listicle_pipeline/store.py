@@ -36,6 +36,7 @@ from ..prompt2blog.contracts_v4 import GrillState
 from .contracts import (
     TERMINAL_ATTEMPT_STATES,
     AngleSelection,
+    CutReview,
     InterviewBaseline,
     PoolSnapshot,
     SearchAttempt,
@@ -173,6 +174,21 @@ CREATE TABLE IF NOT EXISTS listicle_pool_snapshots (
 # record that it ran, or it either runs every boot or is guarded by "is the new
 # table empty", which is wrong the moment a run legitimately has no attempts.
 # What the interview had settled when an order was last written from it.
+# A judgement of one pool against one cut, keyed by the fingerprint of the
+# material actually sent. Keyed by revision, which is what it was, a review of
+# a pool that had since changed came back as an answer about the new one.
+_CUT_REVIEWS_V2_TABLE = """
+CREATE TABLE IF NOT EXISTS listicle_cut_reviews_by_pool (
+    run_id      TEXT NOT NULL,
+    fingerprint TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT '',
+    revision    INTEGER NOT NULL DEFAULT 0,
+    payload     TEXT NOT NULL,
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (run_id, fingerprint)
+)
+"""
+
 _BASELINES_TABLE = """
 CREATE TABLE IF NOT EXISTS listicle_interview_baselines (
     run_id     TEXT PRIMARY KEY,
@@ -224,6 +240,7 @@ def ensure_tables() -> None:
         conn.execute(_SELECTED_ATTEMPTS_TABLE)
         conn.execute(_POOL_SNAPSHOTS_TABLE)
         conn.execute(_BASELINES_TABLE)
+        conn.execute(_CUT_REVIEWS_V2_TABLE)
         conn.execute(_MIGRATIONS_TABLE)
         for statement in _ATTEMPT_INDEXES:
             conn.execute(statement)
@@ -785,6 +802,48 @@ def latest_pool_snapshots(subject: str, *, exclude_run: str = "") -> list[PoolSn
             if payload is not None:
                 found.append(PoolSnapshot.model_validate(json.loads(payload[0])))
     return found
+
+
+def save_pool_review(review: CutReview) -> None:
+    """Store one review under the pool it actually judged.
+
+    Never under a revision. A pool whose candidates changed is a different
+    question, and the version this replaces answered it with the old verdict:
+    a refresh that replaced every venue, followed by a review that failed, left
+    the new pool reading `checked` with nothing barred.
+    """
+    ensure_tables()
+    with get_db_connection() as conn:
+        conn.execute(
+            "INSERT INTO listicle_cut_reviews_by_pool (run_id, fingerprint, "
+            "status, revision, payload) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(run_id, fingerprint) DO UPDATE SET "
+            "status=excluded.status, revision=excluded.revision, "
+            "payload=excluded.payload, updated_at=datetime('now')",
+            (
+                review.run_id,
+                review.fingerprint,
+                review.status,
+                review.revision,
+                review.model_dump_json(),
+            ),
+        )
+
+
+def load_pool_review(run_id: str, fingerprint: str) -> CutReview | None:
+    """The review of exactly this pool, or None because nobody judged it.
+
+    None and an empty verdict list are different findings: nobody checked,
+    versus checked and nothing was barred. The screen says which.
+    """
+    ensure_tables()
+    with get_db_connection() as conn:
+        row = conn.execute(
+            "SELECT payload FROM listicle_cut_reviews_by_pool "
+            "WHERE run_id = ? AND fingerprint = ?",
+            (run_id, fingerprint),
+        ).fetchone()
+    return None if row is None else CutReview.model_validate(json.loads(row[0]))
 
 
 def save_cut_review(run_id: str, revision: int, flags: dict) -> None:

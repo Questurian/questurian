@@ -6,6 +6,7 @@ import {
   loadGrill,
   loadOrder,
   loadSearch,
+  recheckCut,
   reviseOrder,
   runSearch,
   startGrill,
@@ -54,6 +55,9 @@ interface UseListicleGrill {
   start: (seed: string) => void
   answer: (text: string, selections?: ListicleAngleSelection[]) => void
   search: (options?: { angleIds?: string[]; reuse?: boolean }) => void
+  /** Buy the part of the cut review nobody has done. Costs one call per
+   *  unjudged chunk, and nothing at all when the pool is already covered. */
+  recheck: () => void
   correctCount: (target: number) => void
   /** The bar or the cut, typed out. Needed because either can have been
    *  assembled from more than one answer, and an assembled value has to be
@@ -208,6 +212,27 @@ export function useListicleGrill(runId: string | null): UseListicleGrill {
     [searching, state?.run_id],
   )
 
+  const recheck = useCallback(() => {
+    const id = state?.run_id
+    if (!id || searching) return
+    setSearching(true)
+    setError(null)
+    void (async () => {
+      try {
+        const found = await recheckCut(id)
+        if (showing.current !== id) return
+        setResults(found)
+      } catch (caught) {
+        if (showing.current !== id) return
+        setError(
+          caught instanceof Error ? caught.message : 'The cut check failed.',
+        )
+      } finally {
+        setSearching(false)
+      }
+    })()
+  }, [searching, state?.run_id])
+
   // One correction path, whatever is being corrected. The count, the bar and
   // the cut all make a new revision and all invalidate stored results the same
   // way, and a second copy of that sequence is a second place for the re-read
@@ -283,6 +308,7 @@ export function useListicleGrill(runId: string | null): UseListicleGrill {
     start,
     answer,
     search,
+    recheck,
     correctCount,
     correctRequirements: correctOrder,
     reset,

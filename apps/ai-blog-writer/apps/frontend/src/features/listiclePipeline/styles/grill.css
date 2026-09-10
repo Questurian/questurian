@@ -712,6 +712,15 @@
   font-style: italic;
 }
 
+/* A row a partial review never reached. Quiet, and present: the absence of a
+   flag on this row means nobody looked, not that it came back clean. */
+.lp-candidate-unchecked {
+  font-size: 0.85em;
+  font-style: italic;
+  color: var(--lp-muted, #6b6b6b);
+  margin: 0;
+}
+
 .lp-candidates {
   list-style: none;
   counter-reset: candidate;

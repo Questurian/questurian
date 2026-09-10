@@ -36,7 +36,7 @@ from .contracts import (
     SearchAttempt,
     SearchOrder,
 )
-from . import store
+from . import cut_review, store
 from .search import (
     POOLING_VERSION,
     AngleRequest,
@@ -537,6 +537,51 @@ def _latest_attempts(order: SearchOrder) -> dict[str, SearchAttempt]:
     return latest
 
 
+def _review_for(order: SearchOrder, candidates: list[Candidate]):
+    """The stored review of exactly this pool, if there is one.
+
+    A read and never a call. Drawing a screen must not spend, and the whole
+    point of storing the verdict is that opening the page again is free.
+    """
+    fingerprint = cut_review.review_fingerprint(
+        order, [candidate_payload(c) for c in candidates]
+    )
+    return store.load_pool_review(order.run_id, fingerprint)
+
+
+def candidate_payload(candidate: Candidate) -> dict:
+    """One candidate in the shape the reviewer and the fingerprint read.
+
+    Built in one place so that what is hashed and what is sent cannot drift --
+    a fingerprint over material the reviewer was not actually shown is a cache
+    key that means nothing.
+    """
+    return {
+        "candidate_id": candidate.candidate_id,
+        "name": candidate.name,
+        "district": candidate.district,
+        "evidence": candidate.evidence,
+        "possible_duplicates": list(candidate.possible_duplicates),
+        "sightings": [
+            {"angle": s.angle, "evidence": s.evidence} for s in candidate.sightings
+        ],
+    }
+
+
+def pooled_candidates(order: SearchOrder) -> list[Candidate]:
+    """The pool as `assemble` builds it, without building the whole payload."""
+    by_angle = _current_attempts(order)
+    sightings: list[Sighting] = []
+    for angle in order.angles:
+        attempt = by_angle.get(angle.angle_id)
+        if attempt is not None and attempt.state == "completed":
+            sightings.extend(_sightings_of(attempt))
+    return sorted(
+        pool_sightings(sightings),
+        key=lambda c: (-c.overlap, c.name.lower(), c.candidate_id),
+    )
+
+
 def _state_of(attempt: SearchAttempt | None, running: bool) -> str:
     if attempt is None:
         return "not_started"
@@ -644,11 +689,13 @@ def assemble(order: SearchOrder) -> dict:
 
     uncertain = sum(1 for c in candidates if c.possible_duplicates)
     capacity = planned_capacity(order)
-    # None means nobody has checked this revision against the cut; `{}` means
-    # something checked and barred nothing. The screen says which, because
-    # "we looked and it is fine" and "we never looked" are different claims.
-    stored_review = store.load_cut_review(order.run_id, order.revision)
-    barred = stored_review or {}
+    # The review of exactly THIS pool, or nothing. Looked up by the fingerprint
+    # of the material a reviewer would be sent, so a pool whose candidates
+    # changed cannot be answered by the verdict on the pool they replaced --
+    # which is what used to happen, and left a completely different set of
+    # venues reading as checked and clean.
+    review = _review_for(order, candidates)
+    barred = review.by_candidate() if review else {}
     payload = {
         "run_id": order.run_id,
         "revision": order.revision,
@@ -677,9 +724,26 @@ def assemble(order: SearchOrder) -> dict:
         # Whether anything has judged this revision's places against the cut,
         # and what it said. Separate from the flags themselves so an unchecked
         # run does not read as a clean one.
-        "cut_checked": stored_review is not None,
+        # True only for a review that COVERED every candidate. A partial
+        # review, a failed one and a pool nobody looked at are three different
+        # states and used to be one.
+        "cut_checked": bool(review and review.status == "complete"),
+        "cut_review_status": review.status if review else "not_checked",
+        "cut_reviewed_count": len(review.reviewed_candidate_ids) if review else 0,
+        "cut_expected_count": len(review.expected_candidate_ids) if review else 0,
+        # Which chunks failed, so a retry can buy the missing part and nothing
+        # else. An additional chunk is an additional call, and it is named
+        # before it is bought.
+        "cut_missing_chunks": (
+            [chunk.index for chunk in review.chunks if chunk.state != "complete"]
+            if review
+            else []
+        ),
+        "cut_chunks_planned": len(cut_review.chunks_of(
+            [{"candidate_id": c.candidate_id} for c in candidates]
+        )),
         "barred_count": sum(
-            1 for c in candidates if barred.get(c.name, {}).get("why")
+            1 for c in candidates if c.candidate_id in barred
         ),
         "empty_handed": [
             row["angle_id"]
@@ -718,11 +782,27 @@ def assemble(order: SearchOrder) -> dict:
                 "overlap": c.overlap,
                 "possible_duplicates": list(c.possible_duplicates),
                 "possible_duplicate_ids": list(c.possible_duplicate_ids),
-                # What the cut check said about this place, if anything has
-                # looked. Read from storage rather than recomputed: judging
-                # costs a model call, and drawing a screen must not.
-                "barred": barred.get(c.name, {}).get("why", ""),
-                "barred_confidence": barred.get(c.name, {}).get("confidence", ""),
+                # What the cut check said about THIS candidate, if anything
+                # has looked. Keyed by id: two branches of one bar are two
+                # candidates with one name, and keying by name put the flag
+                # meant for the branch inside a hotel onto the independent
+                # street bar as well. Read from storage rather than
+                # recomputed: judging costs a model call, and drawing a screen
+                # must not.
+                "barred": (
+                    barred[c.candidate_id].why if c.candidate_id in barred else ""
+                ),
+                "barred_confidence": (
+                    barred[c.candidate_id].confidence
+                    if c.candidate_id in barred
+                    else ""
+                ),
+                # Whether anything looked at this row at all. A partial review
+                # leaves rows nobody judged, and an unjudged row must not read
+                # as one that came back clean.
+                "cut_reviewed": bool(
+                    review and c.candidate_id in set(review.reviewed_candidate_ids)
+                ),
                 "sightings": [
                     {
                         "sighting_id": s.sighting_id,

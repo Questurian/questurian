@@ -159,7 +159,12 @@ export function ListiclePipelinePage() {
             )}
 
             {results && (
-              <SearchResults results={results} busy={searching} onRun={grill.search} />
+              <SearchResults
+                results={results}
+                busy={searching}
+                onRun={grill.search}
+                onRecheck={grill.recheck}
+              />
             )}
           </>
         )}

@@ -6,6 +6,24 @@ Skips package __init__ to avoid API/provider bootstrapping. Only the external
 grill engine is stubbed; its behavior is explicitly outside this review.
 No API calls, production DB reads/writes, or dependency installation.
 Run with Python 3.11+ and Pydantic 2. Output is JSON, no files by default.
+
+ADAPTED 2026-09-09, while implementing the plan this harness was written for.
+Two probes called an interface the fix necessarily changed, and a probe that
+crashes cannot report that a fault stopped reproducing. The claims are
+unchanged; only the call shape is:
+
+  R5  `review_candidates` returned a dict keyed by NAME, which is the fault.
+      It now returns a review record whose verdicts are keyed by candidate id.
+      The probe still asks the original question -- does looking a verdict up
+      by name give the same flag to both rows -- against a name index built
+      from the returned record.
+  R1  `service._ensure_order` was split into create / read / re-agree. The name
+      is kept in the source as a thin shim for exactly this caller, so this
+      line is untouched.
+  R7  the probe asked whether candidate 121 reached the FIRST reviewer prompt,
+      which was the only prompt there could be while the pool was truncated at
+      120. The pool is now chunked, so the same question is asked of every
+      prompt the reviewer received.
 """
 from __future__ import annotations
 
@@ -140,8 +158,11 @@ def main():
         o = order("branches", exclusions="No bars inside hotels")
         candidates = [dict(name="Azul", district=d, sightings=[{"evidence": e}]) for d, e in [
             ("Centro", "inside a hotel"), ("Barranco", "independent street bar")]]
-        flags = cut.review_candidates(o, candidates, lambda *_: {"barred": [{
+        reviewed = cut.review_candidates(o, candidates, lambda *_: {"barred": [{
             "number": 1, "name": "Azul", "why": "Inside a hotel", "confidence": "clear"}]})
+        flags = {}
+        for verdict in getattr(reviewed, "verdicts", []):
+            flags.setdefault(verdict.name, {"why": verdict.why, "confidence": verdict.confidence})
         looked_up = [flags.get(x["name"]) for x in candidates]
         record("R5", looked_up, "Only row 1 flagged", bool(looked_up[0]) and looked_up[0] == looked_up[1])
 
@@ -165,7 +186,8 @@ def main():
         assembled = runner.assemble(o); captured = []
         def review_capture(_job, prompt, *_): captured.append(prompt); return {"barred": []}
         service._review_candidates(o, assembled, review_capture)
-        observed = {"pool_count": len(assembled["candidates"]), "last_candidate_sent": "Venue120" in captured[0],
+        observed = {"pool_count": len(assembled["candidates"]),
+                    "last_candidate_sent": any("Venue120" in prompt for prompt in captured),
                     "cut_checked": runner.assemble(o)["cut_checked"]}
         record("R7", observed, "All 121 reviewed or partial coverage explicit", observed == {
             "pool_count": 121, "last_candidate_sent": False, "cut_checked": True})

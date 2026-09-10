@@ -22,6 +22,9 @@ interface SearchResultsProps {
   busy: boolean
   /** Re-run some or all of the order. Named angles cost one search each. */
   onRun: (options: { angleIds?: string[]; reuse?: boolean }) => void
+  /** Buy the part of the cut review nobody has done. One call per unjudged
+   *  chunk; nothing at all when the pool is already covered. */
+  onRecheck?: () => void
 }
 
 const STATE_LABEL: Record<string, string> = {
@@ -53,7 +56,12 @@ function isRerunnable(angle: ListicleAngleResult): boolean {
   return latest === 'failed' || latest === 'interrupted'
 }
 
-export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
+export function SearchResults({
+  results,
+  busy,
+  onRun,
+  onRecheck,
+}: SearchResultsProps) {
   const short = results.shortfall > 0
   const rerunnable = results.angles.filter(isRerunnable)
   // Work that stands under a refresh that did not. Both facts are true at
@@ -220,19 +228,7 @@ export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
           not do it either: it weighs whether enough is published about a
           place, and every one of those eight is written about constantly. */}
       {results.order.exclusions && results.candidates.length > 0 && (
-        results.cut_checked ? (
-          <p className="lp-results-unchecked" role="status">
-            {results.barred_count
-              ? `${results.barred_count} of these look like places you left out — marked below. Judged from what the searches themselves reported, not from a fresh look at each place, so check before dropping any.`
-              : 'Checked against what you left out; none of these looked barred. That is a reading of what the searches reported, not a verification of the places.'}
-          </p>
-        ) : (
-          <p className="lp-results-unchecked" role="status">
-            Nothing below has been checked against what you left out. The rule
-            went to every search; whether a place breaks it is not something
-            this step decides.
-          </p>
-        )
+        <CutReviewNote results={results} busy={busy} onRecheck={onRecheck} />
       )}
 
       <ol className="lp-candidates">
@@ -293,6 +289,16 @@ export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
                 : {candidate.barred}
               </p>
             )}
+            {/* A partial review leaves rows nobody looked at. Said on the row,
+                because the alternative is a place that reads as having
+                survived a check it was never part of. */}
+            {results.order.exclusions &&
+              results.cut_review_status === 'partial' &&
+              candidate.cut_reviewed === false && (
+                <p className="lp-candidate-unchecked">
+                  Not checked against what you left out.
+                </p>
+              )}
             {candidate.possible_duplicates.length > 0 && (
               <p className="lp-candidate-duplicate">
                 Might be the same place as {candidate.possible_duplicates.join(', ')}.
@@ -342,5 +348,99 @@ export function SearchResults({ results, busy, onRun }: SearchResultsProps) {
         been charged already.
       </p>
     </section>
+  )
+}
+
+
+/** What the cut check did, said as one of the several things it can be.
+ *
+ *  There used to be two readings — checked, or nobody looked — and four states
+ *  underneath them. A pool of 121 candidates was truncated at 120 and reported
+ *  as checked; a review that failed over a refreshed pool left the new venues
+ *  reading as checked and clean. Every one of those says "we looked and it is
+ *  fine", which is the one thing this step must never say falsely. */
+function CutReviewNote({
+  results,
+  busy,
+  onRecheck,
+}: {
+  results: ListicleSearchResults
+  busy: boolean
+  onRecheck?: () => void
+}) {
+  const status = results.cut_review_status ?? (results.cut_checked ? 'complete' : 'not_checked')
+  const reviewed = results.cut_reviewed_count ?? 0
+  const expected = results.cut_expected_count ?? results.candidates.length
+
+  if (status === 'not_needed') {
+    return (
+      <p className="lp-results-unchecked" role="status">
+        Nothing was barred, so there was nothing to check these against.
+      </p>
+    )
+  }
+
+  if (status === 'complete') {
+    return (
+      <p className="lp-results-unchecked" role="status">
+        {results.barred_count
+          ? `${results.barred_count} of these look like places you left out — marked below. Judged from what the searches themselves reported, not from a fresh look at each place, so check before dropping any.`
+          : 'Checked against what you left out; none of these looked barred. That is a reading of what the searches reported, not a verification of the places.'}
+      </p>
+    )
+  }
+
+  if (status === 'partial') {
+    return (
+      <p className="lp-results-unchecked" role="status">
+        {reviewed} of {expected} checked against what you left out. The rest
+        were never looked at, and an unchecked row below says so rather than
+        reading as one that came back clean.
+        {onRecheck && (
+          <>
+            {' '}
+            <button
+              type="button"
+              className="lp-link-button"
+              disabled={busy}
+              onClick={onRecheck}
+            >
+              check the remaining {expected - reviewed}
+            </button>
+            {results.cut_missing_chunks?.length
+              ? ` — ${results.cut_missing_chunks.length} more call${
+                  results.cut_missing_chunks.length === 1 ? '' : 's'
+                }.`
+              : '.'}
+          </>
+        )}
+      </p>
+    )
+  }
+
+  return (
+    <p className="lp-results-unchecked" role="status">
+      Nothing below has been checked against what you left out. The rule went
+      to every search; whether a place breaks it is not something this step
+      decides.
+      {onRecheck && (
+        <>
+          {' '}
+          <button
+            type="button"
+            className="lp-link-button"
+            disabled={busy}
+            onClick={onRecheck}
+          >
+            check them now
+          </button>
+          {results.cut_chunks_planned
+            ? ` — ${results.cut_chunks_planned} call${
+                results.cut_chunks_planned === 1 ? '' : 's'
+              }.`
+            : '.'}
+        </>
+      )}
+    </p>
   )
 }

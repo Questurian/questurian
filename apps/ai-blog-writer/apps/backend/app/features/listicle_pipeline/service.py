@@ -592,28 +592,113 @@ def _heartbeat(run_id: str, token: str):
 def _review_candidates(
     order: SearchOrder, payload: dict, review, *, owner_token: str = ""
 ) -> None:
-    """Judge what came back against the cut, once, on the batch that bought it.
+    """Judge what came back against the cut, once per distinct pool.
 
-    One call for the whole list, reading evidence the searches already wrote.
-    Nothing is looked up: that is the difference between this and researching
-    forty places to rediscover what the first search said.
+    One call per chunk, reading evidence the searches already wrote. Nothing is
+    looked up: that is the difference between this and researching forty places
+    to rediscover what the first search said.
 
-    Like the order check, a failure is not a finding -- nothing is stored, and
-    a run with no stored review says nobody looked rather than nothing was
-    barred.
+    **A pool already judged is not judged again.** The stored verdict is looked
+    up by the fingerprint of the material a reviewer would be sent, so a
+    reuse-only POST that bought no research buys no review either -- which it
+    did, on every press, while reporting the searches as reused.
+
+    **A failed chunk is retried, and only the failed chunk.** Coverage is a
+    question with an answer, so a retry knows which rows are still unjudged and
+    pays for those.
+
+    Like the order check, a failure is not a finding. A pool with no complete
+    review says nobody finished looking rather than nothing was barred.
     """
     if review is None:
         return
+    candidates = payload.get("candidates", [])
+    fingerprint = cut_review.review_fingerprint(order, candidates)
+    stored = store.load_pool_review(order.run_id, fingerprint)
+    if stored is not None and stored.status in {"complete", "not_needed"}:
+        return
+
+    missing: set[str] | None = None
+    if stored is not None and stored.status == "partial":
+        # Buy the part nobody has judged. Re-buying the chunks that already
+        # answered is the operator paying twice for the same verdict.
+        missing = set(stored.expected_candidate_ids) - set(
+            stored.reviewed_candidate_ids
+        )
+
     try:
-        flags = cut_review.review_candidates(
-            order, payload.get("candidates", []), review
+        fresh = cut_review.review_candidates(
+            order, candidates, review, only_candidate_ids=missing
         )
     except Exception:
         logger.warning(
             "The cut check did not run over %s's candidates", order.run_id
         )
         return
-    store.save_cut_review(order.run_id, order.revision, flags)
+
+    if owner_token and not store.holds_batch(order.run_id, owner_token):
+        # Another batch owns the run. This verdict was bought and is real, and
+        # it is not this process's to publish over whatever the new owner has
+        # gathered.
+        logger.warning(
+            "A cut review for %s finished after its batch lost the run; not "
+            "published", order.run_id,
+        )
+        return
+
+    if stored is not None:
+        fresh = _merged_reviews(stored, fresh)
+    store.save_pool_review(fresh)
+
+
+def _merged_reviews(stored, fresh):
+    """A retry's answer, added to what already stood.
+
+    The chunks that succeeded before are still answers about rows that have not
+    changed -- the fingerprint says so, or this would not be the same review at
+    all. Keeping them is what makes a retry cost one chunk.
+    """
+    verdicts = {v.candidate_id: v for v in stored.verdicts}
+    verdicts.update({v.candidate_id: v for v in fresh.verdicts})
+    chunks = {c.index: c for c in stored.chunks}
+    chunks.update({c.index: c for c in fresh.chunks})
+    reviewed = sorted(
+        {
+            *stored.reviewed_candidate_ids,
+            *fresh.reviewed_candidate_ids,
+        }
+    )
+    covered = set(reviewed)
+    expected = set(fresh.expected_candidate_ids)
+    if expected <= covered:
+        status = "complete"
+    elif covered:
+        status = "partial"
+    else:
+        status = fresh.status
+    return fresh.model_copy(
+        update={
+            "status": status,
+            "verdicts": list(verdicts.values()),
+            "chunks": [chunks[index] for index in sorted(chunks)],
+            "reviewed_candidate_ids": reviewed,
+        }
+    )
+
+
+def recheck_cut(run_id: str, review) -> dict:
+    """Buy the review of this pool that is still missing.
+
+    Explicitly asked for, because it costs. A partial review retries only its
+    unjudged chunks; a failed one starts again; a pool already covered is
+    returned as it stands without a call.
+    """
+    current = order(run_id)
+    if current is None:
+        raise LookupError(f"No agreed search order for run {run_id}")
+    payload = runner.assemble(current)
+    _review_candidates(current, payload, review)
+    return runner.assemble(current)
 
 
 def progress(run_id: str) -> dict | None:

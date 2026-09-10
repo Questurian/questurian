@@ -422,6 +422,17 @@ def run_listicle_search(
     )
 
 
+@router.post("/recheck/{run_id}")
+def recheck_listicle_cut(run_id: str, _staff=Depends(require_staff)):
+    """Buy the part of the cut review that is still missing.
+
+    Its own route because it costs, and because "some of this list was never
+    checked" is a state the operator has to be able to act on. A pool already
+    covered is returned as it stands and no call is made.
+    """
+    return _report(service.recheck_cut, run_id, _review_call)
+
+
 @router.get("/search/{run_id}")
 def get_listicle_search(run_id: str, _staff=Depends(require_staff)):
     """What this run knows, without running anything.

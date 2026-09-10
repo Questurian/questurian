@@ -98,6 +98,95 @@ class AngleConflict(ListicleModel):
     why: str = Field(min_length=1)
 
 
+# Which version of the reviewer's prompt and schema produced a verdict. Part
+# of the review fingerprint: a changed prompt is a changed question, and a
+# stored answer to the old one is not an answer to the new one.
+CUT_REVIEW_VERSION = "2"
+
+# What a review of one pool can be. `partial` is the state the version this
+# replaced could not represent at all -- it truncated at 120 candidates and
+# reported the pool as checked.
+REVIEW_STATUSES: tuple[str, ...] = (
+    "not_needed",
+    "complete",
+    "partial",
+    "failed",
+)
+
+
+class CutVerdict(ListicleModel):
+    """What the reviewer said about one candidate.
+
+    Keyed by candidate id wherever it is stored. The version this replaces
+    stored verdicts by name, and a name is not an identity: two branches of one
+    bar are two candidates with one name, the reviewer flagged the branch
+    inside a hotel, and both branches came back flagged with the same sentence.
+    """
+
+    candidate_id: str = Field(min_length=1)
+    # Carried for the screen and for audit. Never the key.
+    name: str = ""
+    why: str = ""
+    # "clear" or "arguable". A value outside the two reads as `arguable`, which
+    # is the reading that costs less when it is wrong.
+    confidence: str = "arguable"
+
+
+class CutReviewChunk(ListicleModel):
+    """One reviewer call, and exactly which candidates it was asked about.
+
+    A chunk that failed keeps its expected ids, so a retry can buy the missing
+    part and nothing else -- and so that whole-pool coverage is a question with
+    an answer rather than an assumption.
+    """
+
+    index: int = 0
+    candidate_ids: list[str] = Field(default_factory=list)
+    # "complete" or "failed". A chunk is never partially complete: the reviewer
+    # answered about the rows it was sent, or it did not answer.
+    state: str = "failed"
+    reason: str = ""
+
+
+class CutReview(ListicleModel):
+    """One judgement of one pool against one cut.
+
+    Stored under the fingerprint of the material actually sent, not under a
+    revision. A pool whose candidates changed is a different question, and the
+    old answer used to be returned for it: a refresh that replaced every venue
+    and a review that then failed left the new pool reading `checked` with
+    nothing barred.
+    """
+
+    run_id: str = Field(min_length=1)
+    # The revision the pool was assembled at. Recorded, never matched on.
+    revision: int = 0
+    fingerprint: str = Field(min_length=1)
+    status: str = "failed"
+    # Every candidate the pool held when this review was dispatched.
+    expected_candidate_ids: list[str] = Field(default_factory=list)
+    # Every candidate a completed chunk actually covered.
+    reviewed_candidate_ids: list[str] = Field(default_factory=list)
+    verdicts: list[CutVerdict] = Field(default_factory=list)
+    chunks: list[CutReviewChunk] = Field(default_factory=list)
+    review_version: str = CUT_REVIEW_VERSION
+    pooling_version: str = ""
+    reviewer_model: str = ""
+    completed_at: str = ""
+
+    @property
+    def covers_everything(self) -> bool:
+        """Whether every candidate sent was covered by a chunk that finished.
+
+        The one question `cut_checked` is allowed to be true for. Coverage is
+        not "the call returned"; it is "every row was looked at".
+        """
+        return set(self.expected_candidate_ids) <= set(self.reviewed_candidate_ids)
+
+    def by_candidate(self) -> dict[str, CutVerdict]:
+        return {verdict.candidate_id: verdict for verdict in self.verdicts}
+
+
 class InterviewBaseline(ListicleModel):
     """What the interview had settled, the last time an order was written.
 

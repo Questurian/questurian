@@ -156,6 +156,20 @@ export async function runSearch(
   return (await response.json()) as ListicleSearchResults
 }
 
+/** Buy the part of the cut review that is still missing.
+ *
+ *  Its own call because it costs. A partial review retries only its unjudged
+ *  chunks; a pool already covered is returned as it stands with no call at
+ *  all. */
+export async function recheckCut(runId: string): Promise<ListicleSearchResults> {
+  const response = await apiFetch(`${BASE}/recheck/${runId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  if (!response.ok) throw await readError(response, 'The cut check could not be run.')
+  return (await response.json()) as ListicleSearchResults
+}
+
 export async function loadSearch(runId: string): Promise<ListicleSearchResults | null> {
   const response = await apiFetch(`${BASE}/search/${runId}`)
   // A 404 here means "not run yet", which is a state and not a failure.
