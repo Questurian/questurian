@@ -264,6 +264,40 @@ def test_reopening_keeps_what_was_learned_and_drops_the_agreement():
     assert "guide" in deps.llm.prompts[-1]
 
 
+def test_reopening_is_the_only_thing_that_uncovers_a_marker():
+    """The line between a decision and a slip, and why both tests must stand.
+
+    A marker no longer un-covers itself when the grill leaves it out of
+    `markers_covered` -- listicle run abb7004b forgot `count` on its third turn
+    and was sent back to re-ask a question it had already settled. But
+    reopening MUST still un-cover, or the single exit from every dead end
+    becomes a grill that agrees with itself instantly and never asks anything.
+
+    So reopening does it explicitly, here, rather than relying on a model to
+    shorten a list.
+    """
+    deps = _deps(
+        [
+            {"done": False, **_question()},
+            _done("Settled."),
+            {"done": False, **_question(question_id="q3", ask="What changed?")},
+        ]
+    )
+    agreed = answer_grill(start_grill("run-1", SEED, deps), "guide", deps)
+    assert set(agreed.markers_covered) == set(MARKER_KEYS), "agreement covers everything"
+
+    reopened = reopen_grill(agreed, deps)
+
+    assert reopened.status == "asking"
+    assert reopened.pending is not None, "a reopened grill has to ask something"
+    # Only what an actual question was asked about survives, restored from the
+    # transcript rather than from the claim.
+    assert set(reopened.markers_covered) <= {
+        turn.question.asks_about for turn in reopened.turns
+    }
+    assert len(reopened.markers_covered) < len(MARKER_KEYS)
+
+
 def test_an_empty_answer_is_refused():
     deps = _deps([{"done": False, **_question()}])
     state = start_grill("run-1", SEED, deps)
