@@ -36,6 +36,7 @@ from ..prompt2blog.contracts_v4 import GrillState
 from .contracts import (
     TERMINAL_ATTEMPT_STATES,
     AngleSelection,
+    InterviewBaseline,
     PoolSnapshot,
     SearchAttempt,
     SearchOrder,
@@ -171,6 +172,15 @@ CREATE TABLE IF NOT EXISTS listicle_pool_snapshots (
 # What has already been migrated. A one-shot data move needs somewhere to
 # record that it ran, or it either runs every boot or is guarded by "is the new
 # table empty", which is wrong the moment a run legitimately has no attempts.
+# What the interview had settled when an order was last written from it.
+_BASELINES_TABLE = """
+CREATE TABLE IF NOT EXISTS listicle_interview_baselines (
+    run_id     TEXT PRIMARY KEY,
+    payload    TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+"""
+
 _MIGRATIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS listicle_migrations (
     name       TEXT PRIMARY KEY,
@@ -213,6 +223,7 @@ def ensure_tables() -> None:
         conn.execute(_ATTEMPTS_V2_TABLE)
         conn.execute(_SELECTED_ATTEMPTS_TABLE)
         conn.execute(_POOL_SNAPSHOTS_TABLE)
+        conn.execute(_BASELINES_TABLE)
         conn.execute(_MIGRATIONS_TABLE)
         for statement in _ATTEMPT_INDEXES:
             conn.execute(statement)
@@ -433,6 +444,83 @@ def load_order(run_id: str, revision: int | None = None) -> SearchOrder | None:
 def next_revision(run_id: str) -> int:
     current = load_order(run_id)
     return 1 if current is None else current.revision + 1
+
+
+class RevisionConflict(RuntimeError):
+    """Two corrections tried to become the same revision, or one was stale.
+
+    Carries the revision that actually won, so the screen can re-read rather
+    than guess. This is not an error in the ordinary sense: the operator's
+    browser was showing a version of the order that has since moved, and the
+    honest answer is to show them the one that exists.
+    """
+
+    def __init__(self, message: str, current_revision: int) -> None:
+        super().__init__(message)
+        self.current_revision = current_revision
+
+
+def insert_next_revision(order: SearchOrder) -> SearchOrder:
+    """Write this order as the run's next revision, atomically.
+
+    Reading the current revision and then writing one higher is a
+    check-against-a-value-that-has-already-moved. Two corrections arriving
+    together both read revision 2, both write revision 3, and one of them is
+    gone -- with no error and nothing on the screen to notice.
+
+    The read and the write happen inside one immediate transaction, and there
+    is deliberately no model call anywhere near it: this holds the database's
+    write lock, and a lock held across a network round trip is how a pipeline
+    stops being usable by two tabs.
+    """
+    ensure_tables()
+    with transaction() as conn:
+        row = conn.execute(
+            "SELECT MAX(revision) AS revision FROM listicle_search_orders "
+            "WHERE run_id = ?",
+            (order.run_id,),
+        ).fetchone()
+        current = int(row["revision"] or 0)
+        placed = order.model_copy(update={"revision": current + 1})
+        conn.execute(
+            "INSERT INTO listicle_search_orders (run_id, revision, payload) "
+            "VALUES (?, ?, ?)",
+            (placed.run_id, placed.revision, placed.model_dump_json()),
+        )
+    return placed
+
+
+# --- what the interview had settled -----------------------------------------
+
+
+def save_baseline(baseline: InterviewBaseline) -> None:
+    ensure_tables()
+    with get_db_connection() as conn:
+        conn.execute(
+            "INSERT INTO listicle_interview_baselines (run_id, payload) "
+            "VALUES (?, ?) ON CONFLICT(run_id) DO UPDATE SET "
+            "payload=excluded.payload, updated_at=datetime('now')",
+            (baseline.run_id, baseline.model_dump_json()),
+        )
+
+
+def load_baseline(run_id: str) -> InterviewBaseline | None:
+    """What the interview had settled when the order was last written.
+
+    None for every order stored before baselines existed. That is a real state
+    and not a missing one: nobody wrote down what the transcript then said, so
+    a re-agreement has to fall back to the order itself and say so when it
+    overrides a direct correction.
+    """
+    ensure_tables()
+    with get_db_connection() as conn:
+        row = conn.execute(
+            "SELECT payload FROM listicle_interview_baselines WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+    return (
+        None if row is None else InterviewBaseline.model_validate(json.loads(row[0]))
+    )
 
 
 # --- what the picker chose -------------------------------------------------

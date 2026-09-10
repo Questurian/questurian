@@ -83,6 +83,10 @@ class ReviseOrderRequest(BaseModel):
     angles: list[AngleEdit] | None = None
     standard: str | None = Field(default=None, max_length=2000)
     exclusions: str | None = Field(default=None, max_length=2000)
+    # The revision the browser was looking at. A correction typed against a
+    # version that has since moved is refused with the current one rather than
+    # applied over whatever happened in between.
+    expected_revision: int | None = Field(default=None, ge=1)
 
 
 class SearchRequest(BaseModel):
@@ -335,11 +339,20 @@ def _report(action, *args, **kwargs) -> dict[str, Any]:
     side of the boundary.
     """
     from .runner import LeaseLost
+    from .store import RevisionConflict
 
     try:
         return action(*args, **kwargs)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+    except RevisionConflict as error:
+        # 409 with the revision that actually won, so the screen can re-read
+        # rather than guess which version it is now arguing with.
+        raise HTTPException(
+            status_code=409,
+            detail=str(error),
+            headers={"X-Listicle-Revision": str(error.current_revision)},
+        ) from error
     except LeaseLost as error:
         # 409, not 500. Nothing broke: another batch took the run, and the
         # right answer is to look at what that batch is doing rather than to
@@ -378,6 +391,7 @@ def revise_listicle_order(
         angles=None if req.angles is None else [a.model_dump() for a in req.angles],
         standard=req.standard,
         exclusions=req.exclusions,
+        expected_revision=req.expected_revision,
         # Changing the angles or the cut is when the two can start disagreeing,
         # so the question is asked again on the correction that caused it.
         review=_review_call,

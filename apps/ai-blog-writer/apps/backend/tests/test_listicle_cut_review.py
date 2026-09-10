@@ -227,7 +227,7 @@ def test_a_number_naming_a_different_place_is_dropped_as_an_off_by_one():
 def test_agreeing_checks_the_order_because_that_turn_already_spends(isolated_db):
     state = agreed_state()
     store.save(state)
-    order = service._ensure_order(
+    order = service.create_order(
         state,
         _reviewer({"conflicts": [{"angle_id": "a1", "why": "it fights the cut"}]}),
     )
@@ -252,7 +252,7 @@ def test_a_check_that_fails_is_not_a_clean_bill(isolated_db):
 
     state = agreed_state()
     store.save(state)
-    order = service._ensure_order(state, explode)
+    order = service.create_order(state, explode)
     assert order.conflicts_checked is False, "a failure must not read as checked"
     assert order.angle_conflicts == []
 
@@ -260,7 +260,7 @@ def test_a_check_that_fails_is_not_a_clean_bill(isolated_db):
 def test_changing_the_cut_retires_the_old_verdict(isolated_db):
     state = agreed_state()
     store.save(state)
-    service._ensure_order(
+    service.create_order(
         state, _reviewer({"conflicts": [{"angle_id": "a1", "why": "stale"}]})
     )
 
@@ -276,7 +276,7 @@ def test_changing_the_cut_retires_the_old_verdict(isolated_db):
 def test_nobody_checked_and_nothing_was_barred_are_different(isolated_db):
     state = agreed_state()
     store.save(state)
-    service._ensure_order(state, None)
+    service.create_order(state, None)
     order = service.order(state.run_id)
 
     assert store.load_cut_review(order.run_id, order.revision) is None

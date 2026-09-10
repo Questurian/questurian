@@ -91,8 +91,20 @@ export async function loadOrder(runId: string): Promise<ListicleOrder | null> {
   return (await response.json()) as ListicleOrder
 }
 
+/** A correction typed against a version of the order that has since moved.
+ *
+ *  Its own class because it has its own next step: nothing is broken and
+ *  retrying the same body would apply the correction over whatever happened in
+ *  between. The screen re-reads and shows the operator the order that exists. */
+export class RevisionConflictError extends Error {}
+
 /** Correct the agreement. The correction becomes a new revision, so results
- *  gathered under the old one cannot be shown as answers to the new one. */
+ *  gathered under the old one cannot be shown as answers to the new one.
+ *
+ *  `expected_revision` is the revision the screen was showing. The server
+ *  refuses a correction written against a version that has moved rather than
+ *  applying it over the intervening one — two tabs, or a tab left open while
+ *  the interview re-agreed, are the ordinary way that happens. */
 export async function reviseOrder(
   runId: string,
   patch: {
@@ -100,6 +112,7 @@ export async function reviseOrder(
     angles?: ListicleOrder['angles']
     standard?: string
     exclusions?: string
+    expected_revision?: number
   },
 ): Promise<ListicleOrder> {
   const response = await apiFetch(`${BASE}/order/${runId}`, {
@@ -107,7 +120,12 @@ export async function reviseOrder(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch),
   })
-  if (!response.ok) throw await readError(response, 'That correction was refused.')
+  if (!response.ok) {
+    const error = await readError(response, 'That correction was refused.')
+    throw response.status === 409
+      ? new RevisionConflictError(error.message)
+      : error
+  }
   return (await response.json()) as ListicleOrder
 }
 

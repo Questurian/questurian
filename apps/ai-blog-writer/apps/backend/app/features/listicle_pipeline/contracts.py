@@ -98,6 +98,33 @@ class AngleConflict(ListicleModel):
     why: str = Field(min_length=1)
 
 
+class InterviewBaseline(ListicleModel):
+    """What the interview had settled, the last time an order was written.
+
+    An order is not a view of the transcript -- it can be corrected directly,
+    and a correction that a later reading of the transcript silently undid
+    would be the same class of fault as reading the count out of prose, one
+    layer up. So a re-agreement is resolved against THIS rather than against
+    the order: a field the interview did not change keeps whatever the order
+    says, correction included, and a field the interview did change is the
+    operator saying so explicitly and wins.
+    """
+
+    run_id: str = Field(min_length=1)
+    # The order revision this baseline was captured alongside.
+    revision: int = 1
+    kind: str = ""
+    place: str = ""
+    target_count: int = 0
+    standard: str = ""
+    exclusions: str = ""
+    # The approved wording, in order. Compared exactly: an edited angle is a
+    # different search, and deciding by text similarity that it is "really" a
+    # previous one is the guessing this record exists to stop.
+    angles: list[str] = Field(default_factory=list)
+    taken_at: str = ""
+
+
 class SearchOrder(ListicleModel):
     """The agreement, in the form the searches run from.
 

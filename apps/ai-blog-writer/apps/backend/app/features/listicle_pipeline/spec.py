@@ -23,7 +23,7 @@ import unicodedata
 from dataclasses import dataclass
 
 from ..prompt2blog.contracts_v4 import GrillState
-from .contracts import SearchOrder, SelectedAngle
+from .contracts import InterviewBaseline, SearchOrder, SelectedAngle
 from .contracts import ANGLE_ROLES
 from .search import BROAD, DISTINCTIVE, role_allowances
 from .shapes import SHAPES_BY_KEY
@@ -636,6 +636,47 @@ def build_search_order(
         count_ambiguous=False if target_count is not None else decision.ambiguous,
         count_note="" if target_count is not None else decision.note,
         answer_notes=answer_notes(state),
+    )
+
+
+def resolve_interview(
+    state: GrillState, selections: list[dict] | None = None
+) -> InterviewBaseline:
+    """Everything the transcript currently settles, resolved once.
+
+    The same resolution `build_search_order` does, without building an order.
+    Re-agreement needs to ask "did the interview change its mind about this
+    field", and asking that of a freshly built order would compare against the
+    order's own corrections rather than against the interview.
+    """
+    return InterviewBaseline(
+        run_id=state.run_id,
+        kind=kind_from(state),
+        place=place_from(state),
+        target_count=resolve_count(state).value,
+        standard=standard_from(state),
+        exclusions=exclusions_from(state),
+        angles=[angle.text for angle in selected_angles(state, selections)],
+    )
+
+
+def baseline_of(order: SearchOrder) -> InterviewBaseline:
+    """An order read back as though the interview had just said it.
+
+    The fallback for a run stored before baselines were written down. It is
+    right for every field the operator never corrected and wrong for the ones
+    they did -- so a re-agreement that overrides one of those says so, rather
+    than silently undoing a correction it cannot see.
+    """
+    return InterviewBaseline(
+        run_id=order.run_id,
+        revision=order.revision,
+        kind=order.kind,
+        place=order.place,
+        target_count=order.target_count,
+        standard=order.standard,
+        exclusions=order.exclusions,
+        angles=[angle.text for angle in order.angles],
     )
 
 

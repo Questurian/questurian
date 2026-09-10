@@ -93,7 +93,15 @@ def answer(
         # readings of a paragraph. This is also the one moment the cut check
         # may run: the turn is already a paid call, and every later read of the
         # order is a GET that must stay free.
-        _ensure_order(state, review)
+        #
+        # An interview that agrees a SECOND time is a re-agreement, and the
+        # version this replaced returned the existing order unconditionally --
+        # so a run that reopened, agreed twenty and stored forty looked normal
+        # from every screen. Creating and re-agreeing are now separate acts.
+        if store.load_order(state.run_id) is None:
+            create_order(state, review)
+        else:
+            reagree_order(state, review)
     return state
 
 
@@ -111,13 +119,14 @@ def get(run_id: str) -> GrillState | None:
     return store.load(run_id)
 
 
-def _ensure_order(state: GrillState, review=None) -> SearchOrder:
-    """The agreed order, built once and kept.
+def create_order(state: GrillState, review=None) -> SearchOrder:
+    """The agreed order, written down once, with the interview beside it.
 
-    Rebuilt only when there is none. An order that already exists may have been
-    corrected by the operator, and regenerating it from the transcript would
-    silently undo that correction -- which is the same class of bug as reading
-    the count out of prose, one layer up.
+    Only ever called when there is none. An order that already exists may have
+    been corrected by the operator, and regenerating it from the transcript
+    would silently undo that correction -- which is the same class of bug as
+    reading the count out of prose, one layer up. Re-agreement is
+    `reagree_order`, and it is a different act.
 
     `review` is the cut check, and it is a parameter rather than an import
     because this function is reached from two kinds of caller. Answering a turn
@@ -129,12 +138,184 @@ def _ensure_order(state: GrillState, review=None) -> SearchOrder:
     existing = store.load_order(state.run_id)
     if existing is not None:
         return existing
-    order = spec.build_search_order(
-        state, revision=1, selections=store.load_selections(state.run_id)
-    )
+    selections = store.load_selections(state.run_id)
+    order = spec.build_search_order(state, revision=1, selections=selections)
     _apply_conflicts(order, review)
     store.save_order(order)
+    _save_baseline(state, order, selections)
     return order
+
+
+def _save_baseline(
+    state: GrillState, order: SearchOrder, selections: list[dict] | None
+) -> None:
+    baseline = spec.resolve_interview(state, selections)
+    store.save_baseline(
+        baseline.model_copy(
+            update={"revision": order.revision, "taken_at": _now()}
+        )
+    )
+
+
+def _now() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+# Which order fields an interview can settle, and where each one lives.
+_INTERVIEW_FIELDS: tuple[tuple[str, str], ...] = (
+    ("kind", "kind"),
+    ("place", "place"),
+    ("target_count", "target_count"),
+    ("standard", "standard"),
+    ("exclusions", "exclusions"),
+)
+
+
+def reagree_order(state: GrillState, review=None) -> SearchOrder:
+    """A second agreement, applied field by field.
+
+    The rule, stated once: **a field the interview changed its mind about wins;
+    a field it did not is left exactly as the order has it, correction and
+    all.** Reading the whole order back out of the transcript would undo every
+    direct correction; returning the existing order -- which is what this used
+    to do -- ignores the operator saying twenty when the order says forty.
+
+    A re-agreement that says nothing new saves no revision and asks no
+    question. Every stored result still answers the request it answered, and a
+    revision number that moved for nothing is a revision number nobody can
+    reason about.
+    """
+    current = store.load_order(state.run_id)
+    if current is None:  # pragma: no cover -- caller checks
+        return create_order(state, review)
+
+    selections = store.load_selections(state.run_id)
+    fresh = spec.resolve_interview(state, selections)
+    baseline = store.load_baseline(state.run_id) or spec.baseline_of(current)
+    had_baseline = store.load_baseline(state.run_id) is not None
+
+    updated = current.model_copy(deep=True)
+    changed: list[str] = []
+    notes: list[str] = []
+
+    for field, column in _INTERVIEW_FIELDS:
+        said = getattr(fresh, field)
+        was = getattr(baseline, field)
+        if said == was:
+            continue
+        held = getattr(current, column)
+        if held != was:
+            # The operator had corrected this directly, and has now said
+            # something different in the interview. The explicit later answer
+            # wins, and the override is visible rather than silent.
+            notes.append(
+                f"You corrected this to {held!r} and then said {said!r} in the "
+                "interview. The interview answer is the one being used."
+                if had_baseline
+                else
+                f"The interview now says {said!r}. This order said {held!r}, "
+                "and nothing recorded whether that was a correction -- check it."
+            )
+        setattr(updated, column, said)
+        changed.append(column)
+
+    if fresh.angles != baseline.angles:
+        updated.angles = _reagreed_angles(current, state, selections)
+        changed.append("angles")
+
+    if not changed:
+        return current
+
+    if updated.target_count != current.target_count:
+        updated.count_source = "answered"
+        updated.count_ambiguous = False
+        updated.count_note = ""
+    updated.answer_notes = [
+        *spec.answer_notes(state),
+        *notes,
+    ]
+    _apply_allowances(updated)
+
+    if "angles" in changed or "exclusions" in changed:
+        # The two can only start disagreeing when one of them moves.
+        updated.angle_conflicts = []
+        updated.conflicts_checked = False
+
+    _guard_mutation(state.run_id)
+    placed = store.insert_next_revision(updated)
+    _save_baseline(state, placed, selections)
+    # Asked after the revision is safely written, because a model call inside
+    # the write transaction would hold the database's write lock across a
+    # network round trip.
+    if "angles" in changed or "exclusions" in changed:
+        _apply_conflicts(placed, review)
+        store.save_order(placed)
+    return placed
+
+
+def _reagreed_angles(current: SearchOrder, state: GrillState, selections):
+    """The newly approved searches, keeping the ids of the ones that stayed.
+
+    Matched on exact wording. An angle whose text is unchanged is the same
+    search and keeps its id, so its stored result is still its result. An angle
+    whose text changed is a different search and gets a new id -- deciding by
+    similarity that an edited line is "really" a previous one is how a stored
+    result comes to answer a question nobody asked.
+    """
+    from .contracts import SelectedAngle
+
+    by_text = {angle.text.strip(): angle.angle_id for angle in current.angles}
+    used = {angle.angle_id for angle in current.angles}
+    rebuilt: list[SelectedAngle] = []
+    for index, angle in enumerate(spec.selected_angles(state, selections)):
+        kept = by_text.pop(angle.text.strip(), "")
+        if kept:
+            rebuilt.append(angle.model_copy(update={"angle_id": kept}))
+            continue
+        fresh_id = angle.angle_id
+        while not fresh_id or fresh_id in used:
+            fresh_id = f"a{len(used) + index + 1}-{uuid.uuid4().hex[:4]}"
+        used.add(fresh_id)
+        rebuilt.append(angle.model_copy(update={"angle_id": fresh_id}))
+    return rebuilt
+
+
+def _apply_allowances(order: SearchOrder) -> None:
+    from .search import role_allowances
+
+    allowances = role_allowances(order.target_count, [a.role for a in order.angles])
+    for angle, allowance in zip(order.angles, allowances):
+        angle.wanted = allowance
+
+
+def _guard_mutation(run_id: str) -> None:
+    """Refuse to move the order out from under a batch that is spending on it.
+
+    A revision written while searches are running changes what those searches
+    were bought to answer, halfway through buying them. The operator gets an
+    actionable conflict instead: wait, or stop the batch.
+    """
+    if store.batch_is_running(run_id):
+        raise store.RevisionConflict(
+            "Searches are running against this order. Wait for them to finish "
+            "before correcting it.",
+            store.next_revision(run_id) - 1,
+        )
+
+
+def _ensure_order(state: GrillState, review=None) -> SearchOrder:
+    """Create the order if there is none, otherwise read the stored one.
+
+    Kept because the plan's reproduction harness calls it by name, and that
+    harness is the evidence these fixes are checked against -- editing it to
+    match the code would make it agree with the code by construction. New
+    callers want `create_order`, `reagree_order` or `order`, which say which
+    of the three acts they mean.
+    """
+    existing = store.load_order(state.run_id)
+    return existing if existing is not None else create_order(state, review)
 
 
 def _apply_conflicts(order: SearchOrder, review) -> None:
@@ -156,14 +337,19 @@ def _apply_conflicts(order: SearchOrder, review) -> None:
 
 
 def order(run_id: str) -> SearchOrder | None:
-    """The order as it stands, built from the interview if it has agreed."""
+    """The order as it stands. A read, and never a regeneration.
+
+    A stored order is returned exactly as stored. Only a run that has agreed
+    and has no order at all gets one built, which is the first read after
+    agreement and not a rebuild of anything.
+    """
     existing = store.load_order(run_id)
     if existing is not None:
         return existing
     state = store.load(run_id)
     if state is None or state.status != "agreed":
         return None
-    return _ensure_order(state)
+    return create_order(state)
 
 
 def revise_order(
@@ -173,6 +359,7 @@ def revise_order(
     angles: list[dict] | None = None,
     standard: str | None = None,
     exclusions: str | None = None,
+    expected_revision: int | None = None,
     review=None,
 ) -> SearchOrder:
     """Correct the agreement, at a new revision.
@@ -182,30 +369,45 @@ def revise_order(
     request to still exist -- so a revision is added rather than the old one
     overwritten, and every stored result is re-checked against the new request
     before it is shown as current.
+
+    `expected_revision` is the revision the browser was looking at. A
+    correction typed against a version that has since moved is refused rather
+    than applied over whatever happened in between -- two tabs, or a tab left
+    open while the interview re-agreed, are the ordinary way that happens.
     """
     current = order(run_id)
     if current is None:
         raise LookupError(f"No agreed search order for run {run_id}")
+    if expected_revision is not None and expected_revision != current.revision:
+        raise store.RevisionConflict(
+            f"This correction was written against revision {expected_revision}, "
+            f"and the order is now at revision {current.revision}. Re-read it "
+            "and correct the version that exists.",
+            current.revision,
+        )
 
     updated = current.model_copy(deep=True)
-    updated.revision = store.next_revision(run_id)
     if target_count is not None:
         if not 1 <= target_count <= 200:
             raise ValueError("A list length has to be between 1 and 200.")
-        updated.target_count = target_count
-        updated.count_source = "corrected by operator"
-        updated.count_ambiguous = False
-        updated.count_note = ""
+        # Re-typing the number that is already there is not a correction, and
+        # recording it as one would move the revision for nothing -- which
+        # invalidates stored results that still answer the request being made.
+        if target_count != updated.target_count:
+            updated.target_count = target_count
+            updated.count_source = "corrected by operator"
+            updated.count_ambiguous = False
+            updated.count_note = ""
     # The bar and the cut can be typed out here because they may have been
     # assembled from two answers rather than given once. A combined value is
     # the safe reading and not necessarily the right one -- it keeps a rule the
     # operator may have meant to drop -- so the only honest way to combine is
     # to leave a way to disagree. Correcting one clears its note: it was a
     # question about an inference, and there is no longer an inference.
-    if standard is not None:
+    if standard is not None and standard.strip() != updated.standard:
         updated.standard = standard.strip()
         updated.answer_notes = spec.drop_note_for(updated.answer_notes, "bar")
-    if exclusions is not None:
+    if exclusions is not None and exclusions.strip() != updated.exclusions:
         updated.exclusions = exclusions.strip()
         updated.answer_notes = spec.drop_note_for(updated.answer_notes, "cut")
     if angles is not None:
@@ -242,13 +444,7 @@ def revise_order(
             raise ValueError("An order with no searches in it cannot be run.")
         updated.angles = rebuilt
 
-    from .search import role_allowances
-
-    allowances = role_allowances(
-        updated.target_count, [a.role for a in updated.angles]
-    )
-    for angle, allowance in zip(updated.angles, allowances):
-        angle.wanted = allowance
+    _apply_allowances(updated)
 
     # Changing the angles or the cut is exactly the moment the two can start
     # disagreeing, so the old verdict is not an answer about the new order.
@@ -257,10 +453,48 @@ def revise_order(
     if angles is not None or exclusions is not None:
         updated.angle_conflicts = []
         updated.conflicts_checked = False
-        _apply_conflicts(updated, review)
 
-    store.save_order(updated)
-    return updated
+    if _says_nothing_new(current, updated):
+        # A correction that corrects nothing. Saving a revision for it would
+        # move a number nobody can then reason about, and would invalidate
+        # stored results that still answer the request being made.
+        return current
+
+    _guard_mutation(run_id)
+    placed = store.insert_next_revision(updated)
+    if angles is not None or exclusions is not None:
+        _apply_conflicts(placed, review)
+        store.save_order(placed)
+    return placed
+
+
+# Everything a revision is allowed to differ in. `revision` itself and the
+# derived allowances are excluded: they follow from the rest.
+_REVISION_FIELDS: tuple[str, ...] = (
+    "kind",
+    "place",
+    "target_count",
+    "standard",
+    "exclusions",
+    "count_source",
+    "count_note",
+    "count_ambiguous",
+    "answer_notes",
+)
+
+
+def _says_nothing_new(current: SearchOrder, updated: SearchOrder) -> bool:
+    """Whether this correction changes anything the searches would notice."""
+    for field in _REVISION_FIELDS:
+        if getattr(current, field) != getattr(updated, field):
+            return False
+    before = [
+        (a.angle_id, a.text, a.role, a.shape_key, a.wanted) for a in current.angles
+    ]
+    after = [
+        (a.angle_id, a.text, a.role, a.shape_key, a.wanted) for a in updated.angles
+    ]
+    return before == after
 
 
 def search(
@@ -290,7 +524,7 @@ def search(
             "nothing to search for."
         )
 
-    current = _ensure_order(state)
+    current = order(run_id)
     if not current.angles:
         raise ValueError("The agreed interview carries no angles to search.")
 

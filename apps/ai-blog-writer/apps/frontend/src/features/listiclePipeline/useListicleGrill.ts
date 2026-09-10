@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   NotFoundError,
+  RevisionConflictError,
   answerGrill,
   loadGrill,
   loadOrder,
@@ -215,10 +216,17 @@ export function useListicleGrill(runId: string | null): UseListicleGrill {
     (patch: { target_count?: number; standard?: string; exclusions?: string }) => {
       const id = state?.run_id
       if (!id) return
+      // Which revision this correction was written against. Sent so the server
+      // can refuse a correction typed against a version that has since moved,
+      // rather than applying it over whatever happened in between.
+      const against = order?.revision
       setError(null)
       void (async () => {
         try {
-          const revised = await reviseOrder(id, patch)
+          const revised = await reviseOrder(id, {
+            ...patch,
+            ...(against ? { expected_revision: against } : {}),
+          })
           if (showing.current !== id) return
           setOrder(revised)
           // The results on screen answered the previous request. Re-read
@@ -228,13 +236,26 @@ export function useListicleGrill(runId: string | null): UseListicleGrill {
           if (showing.current === id) setResults(stored)
         } catch (caught) {
           if (showing.current !== id) return
+          if (caught instanceof RevisionConflictError) {
+            // The order moved. Show them the one that exists rather than
+            // leaving a stale version on screen with an error beside it.
+            const [current, stored] = await Promise.all([
+              loadOrder(id),
+              loadSearch(id),
+            ])
+            if (showing.current !== id) return
+            if (current) setOrder(current)
+            setResults(stored)
+            setError(caught.message)
+            return
+          }
           setError(
             caught instanceof Error ? caught.message : 'That correction failed.',
           )
         }
       })()
     },
-    [state?.run_id],
+    [order?.revision, state?.run_id],
   )
 
   const correctCount = useCallback(
