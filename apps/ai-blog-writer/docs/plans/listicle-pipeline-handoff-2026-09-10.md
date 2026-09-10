@@ -10,6 +10,12 @@ to pick this up is here or linked from here.
 harness are fixed. Frontend typecheck and eslint clean. $0.80 of real searches
 spent, deliberately.
 
+> **Superseded in part, 2026-09-10 (later the same day).** Sections 5-8 below
+> were written before the lists were read and before the interview had ever
+> run live. Everything in them still happened; some of it has been overtaken.
+> **Read §8 first** — its table is now a record of completed work, and it names
+> the two audit documents that carry the current state. The suite is at 2,399.
+
 ---
 
 ## 1. What this is
@@ -246,10 +252,35 @@ line, and worth a human glance — do not over-tune the pooling on one run.
 
 | # | task | cost |
 |---|---|---|
-| 1 | Read the bars and cevicherias lists in `docs/audits/` against their briefs, as was done for hotels | **$0** |
-| 2 | **Run one live interview** and read the angles the model writes from the repaired catalogue | ~$0.15 |
-| 3 | One full run end to end | ~$0.30 |
-| 4 | Batch H | ~$13, deferred |
+| 1 | ~~Read the bars and cevicherias lists against their briefs~~ | **done, $0** |
+| 2 | ~~Run one live interview~~ | **done, ~$0.06** |
+| 3 | ~~One full run end to end~~ | **done, ~$0.29** |
+| 4 | ~~Batch H~~ | **CANCELLED by the operator, 2026-09-10** |
+
+### Everything above is done. Read these two before anything else:
+
+- `docs/audits/2026-09-10-listicle-list-read.md` — what reading the two unread
+  lists found. Three faults, all in how the pipeline COUNTS what came back.
+- `docs/audits/2026-09-10-listicle-first-live-interview.md` — the first live
+  interview and the first full run, `abb7004b`. **25 distinct venues against a
+  target of 15, where the previous run found 16.**
+
+Batch H is cancelled and should not be revived as written. Two reasons now:
+the operator would rather work toward a change than buy a comparison of one,
+and the list read found the mechanism — every angle returns exactly
+`sum(wanted)` rows, so count cannot separate two arms.
+
+### What is actually next
+
+| # | task | cost |
+|---|---|---|
+| 1 | **Nothing verifies a place is real or still open.** `gate.assess` exists, answers a different question, is not wired. Largest remaining gap. | ? |
+| 2 | No article is written from any of this. The pipeline ends at a candidate pool. | ? |
+| 3 | Decide cluster-level overlap (fault 2 of the list read) — a decision, not a bug | $0 |
+
+Measured prices, for the next budget conversation: **~$0.045** per grounded
+search, **~$0.06** for a full interview, **~$0.29** for a complete five-search
+run.
 
 The operator's stated preference, and it is the right one: **small tests, fix
 what they show, repeat, until the pipeline is visibly working better.**
