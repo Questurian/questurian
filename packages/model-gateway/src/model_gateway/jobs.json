@@ -194,7 +194,7 @@
       "call": "json",
       "summary": "Interview the operator about the list, using the article grill's engine.",
       "site": "features/listicle_pipeline/service.py",
-      "defaultModel": "gemini-2.5-flash"
+      "defaultModel": "claude-opus-5-high"
     },
     {
       "id": "listicle.grill_lookup",

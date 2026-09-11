@@ -108,9 +108,19 @@ _ROLE_SHARE = {BROAD: 1.0, DISTINCTIVE: 0.7, SPECIFIC: 0.25}
 # order goes from twenty-eight rows to forty. That is the trade being made --
 # a longer list to read against places that were being missed entirely.
 #
-# Untouched: distinctive and specific. Nothing has measured them at a higher
-# ask, and a number changed without evidence is the thing this comment
-# replaced.
+# Distinctive stays at four, and that is now measured too. Run add41aca asked
+# five distinctive angles for four and every one returned exactly four, which
+# looked like the broad under-ask all over again. It is not. Asked for ten
+# instead (2026-09-11, two searches):
+#
+#     pisco cocktails      asked 10 -> 10 rows, about half not pisco bars at
+#                          all -- the generic hotel rooftops, with "signature
+#                          cocktails" as the reason
+#     Barranco terraces    asked 10 -> 2 places, each repeated with citation
+#                          markers -- the same collapse as a broad angle at 40
+#
+# A narrow angle's supply really is small. Asking past it buys padding that
+# arrives looking like a full answer. Specific is unmeasured and stays put.
 _ROLE_FLOOR = {BROAD: 12, DISTINCTIVE: 4, SPECIFIC: 1}
 _ROLE_CEILING = {BROAD: MAX_PER_ANGLE, DISTINCTIVE: 12, SPECIFIC: 5}
 

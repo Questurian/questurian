@@ -1,0 +1,473 @@
+{
+  "case": "narrow-bars",
+  "label": "distinctive-probe",
+  "ran_at": "2026-09-11T023612Z",
+  "manifest": {
+    "case": "narrow-bars",
+    "place": "Lima, Peru",
+    "kind": "rooftop bars",
+    "subject": "bars",
+    "target": 15,
+    "standard": "an actual roof terrace open to guests",
+    "exclusions": "",
+    "angles": [
+      {
+        "angle_id": "a1",
+        "text": "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists",
+        "role": "distinctive",
+        "wanted": 10,
+        "prompt": "List real, currently open rooftop bars in Lima, Peru that match this description:\nLima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists\n\nFind 10. Keep going until you have 10 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal drink and nightlife reporting, local bar critics and local drink blogs are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: an actual roof terrace open to guests\n\n\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      },
+      {
+        "angle_id": "a2",
+        "text": "Rooftop terraces in Barranco with views over the district's colourful old streets and the sea",
+        "role": "distinctive",
+        "wanted": 10,
+        "prompt": "List real, currently open rooftop bars in Lima, Peru that match this description:\nRooftop terraces in Barranco with views over the district's colourful old streets and the sea\n\nFind 10. Keep going until you have 10 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal drink and nightlife reporting, local bar critics and local drink blogs are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: an actual roof terrace open to guests\n\n\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      }
+    ],
+    "provider_calls_at_best": 2,
+    "provider_calls_at_worst": 6,
+    "cap_enforced_at_dispatch": 2,
+    "resolved_model": "gemini-2.5-flash",
+    "pooling_version": "2",
+    "search_prompt_version": "2026-09-09",
+    "ask_overridden": true,
+    "judged_by": [
+      "Does every returned place actually have a roof terrace?",
+      "Does any angle spend itself restating 'rooftop', which every search already carries?"
+    ],
+    "outcomes_still_to_be_judged": {
+      "eligibility": "how many checked candidates fit the requirements and the angle",
+      "coverage": "how many suitable distinct venues the whole pool holds, and what is missing",
+      "identity_errors": "false merges and unresolved duplicates, counted separately",
+      "wording_drift": "unrequested restrictions added, and requirements silently broadened",
+      "operator_effort": "edits, confusing choices, repeated questions, recovery actions"
+    }
+  },
+  "stopped_at_cap": "",
+  "target": 15,
+  "found": 11,
+  "shortfall": 4,
+  "uncertain_identity": 2,
+  "provider_calls": [
+    {
+      "at": "2026-09-11T02:36:12+00:00",
+      "prompt": "List real, currently open rooftop bars in Lima, Peru that match this description:\nLima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists\n\nFind 10. Keep going until you have 10 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: an actual roof terrace open to guests\n\n\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 2301,
+      "rows_text": "Rooftop La Guardia [Casa Republica Barranco] | Barranco | crafted pisco cocktails\nAmbra Rooftop Bar [Pullman Lima Miraflores] | Miraflores | pisco-based drinks\nInsumo Rooftop [AC Hotel by Marriott Lima Miraflores] | Miraflores | delicious selection of cocktails\nCeleste Solar Bar [Hyatt Centric Hotel] | San Isidro | high-level mixology, creative cocktails\nCataleya Rooftop Bar [INNSiDE by Meliá Lima Miraflores] | Miraflores | contemporary signature cocktails\nThe Rooftop at Hotel B | Barranco | Peruvian-inspired cocktails, pisco sours\n27 Tapas [Hotel Souma] | Miraflores | creative cocktails, coctelería de autor\nPisco Bar | Miraflores | focus on Pisco Sour, innovative cocktails\nSAHA Rooftop | Miraflores | pisco and accessible creations\nAmador Rooftop | San Isidro | signature cocktails, modern atmosphere",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH2wfifKq3C30KbtNGJOpuIV_zkVm4sMUZPoXy_Bj8n1kgY_xxh6RQUUFKPWY-Mi8lr7jqz96lZ-yMcZqdhegehSqHT766nIhdKH6-IpWHhXWw46UlGvMCutNCdjGy54ME3hbpvgnM8qzjMELER95o5mGdsnVz1l0Dw6hhLgrfwwoaZ8VWNW7iCX0ypfyd07MTnkA2-euHrY2Fc0Wl8u_Oggz4JJV2G",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGGgdoyywx1vWMFJMuXIIWhZ-yhYl474RHHP0gQ7UEUOp2QmPIB3Zct_xmpR-wTYSZdEldD7rBb6u7z1ZEoWM0Y_wa-Y7CeJq89qYhyq_Dobm_5MgQzbjBZ_UYDRX3ZrPewvZH-HnRXMv-rtKfMrjRByhif1HBlxunymu1aoVTb6HGS4yzRxqUmm-6_K8ZvL4dxEQXsUN1PY5N3y0HGNg03mwldQvne",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGF-2wGPgKvosju-5UObxeUJonfl2yHdNb46uARa3F4dJCpX19nULyTlqBCWmOrZ2H_Cr2HKZIGvbnXxeUonidm2VYeK3Edi3lcDZZpPUWf_X4UbMxMBIv6aBaiFiDG3mBXdb8anYMMqcMfKFUWBpnqKFO-1aAk7NayltiExdgqKqscQ_JghENUijhmIfz3zAIqA9fLFkQmfVkdLZcHP-FTl25YOzr3FKY-",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHNvDEQ5nK_x1Q0xCSleC9lx-Zldz-WjGwfNPcNbgLHRuinEth7-EOqnUWVziMYXyzSPTsmIgZm3QZVpCmgTjL0PAsFdiN7rl98AgS1Z1CNC6VDQzrCo2FGM8pFo1arDTNbinW3oxOKQe5DkNQAAoaF9Oj8k1NFuII1hV2TUcKq9lN4jOTqGeIBzl8koIEhoz-2TjDX2F7V-dAJDE0_j5vVg6HnJGunODH9Iw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGK9sQPoSlpCcXHKu5veoq3rJDj8IxyAH05dEK8UMdIcuBW7kO_KxusKkoF-pqUOjjVwb-selfBfjszTVswUFlTERd31dWvTuwIqNNfdYxqbbyzY0ehRqPbTDGDeXA68qDUiMxuQPrdL3Vpb_nGRVsBjU83wYFJ6kfwecxHjYj03AzPwig44Nu89hr8OUvzkPl8Q8duWCZZWMvRO1KC50GFcSKb6g==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFoFCizosmzUQxktzfi0LPTmr54JO2z00qFB7K0I0x1oltKYOjN0V6bFaHWJZ8V6NmaaRSBV5sRYl7-o4ageF1oOjXFOy84S50rZgE-QxtZPyQGWpBQupFIeT2YF0XN9HmJLMeTtafs_Sms77E3uDwcUxadMGSiDwo9ubi_1Yi3QuRRksEvO0SEbYrq0HmzXSzhzqh0wlyKAxvtesThzkFwb-E=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEKaUWTE-sH93Y8R27tKpVKBr2pjA1kXn0MCRJmvotRArx_-KWJJRY0tJqRNC-wrxfwvLDUc7-iC1oOPDnTB--ydGxUbTpCUZrGP4d5U_JwvKAmf5PLSUEu_XmFbzPvJye8nHdW-Ia131Qyu5AtikmdUPU7xQTnO0bPzjrR4G6_emiax7rFFezd70t5OXOTwpq7KRCiRtTqQxSS-cZ2XUKY6W7hHA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHtL6DfzPd15J2OvOkkXG36rnB-9O6AZj0Yx4NdxxWdwdkGAv3it6vd4deO36QGnh8-3Qdi9guykqREARXSw8RSe5lHiRmgWVm7sDFFRnsV08LqP0LwUVwUs7kaS3Stcqji9USrkbm98QcdxlK8Sd4XZlYxZZNzeuega5UtBaLmWbZnK2rUnErQU5cRTmniAkFTniEjqEf_TLkUNwbXlEr-CyPpTECZyfwqNHEB",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGpYQTJscPVB2xyJBzpuIq2O-CQpUa7z1voT5RWPxAvVp35n3U4umlWi4UHmFWfDFuwYRHb4zf2CWK561cRHHEC6ZZ9zRKiEyymvLGipIXWJPiMblKDfOl7I0WhLEKM5krQKY3OnbnvS4iJrwSp45VCeteQgzFaiSSlIEdHX7879nn76RVB4W5gtx6ErTOOQrYCG73xFFkNPMH_W95XVi0odg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE8Xm9UybNfA7XBrZjfJZw17wHFqPUfeHsUDHXIxHJG-GicXDZ3OO81GeFabyVzQHxJL5aa87PVH5ZFbx9y2kps6I7PCG7IT5Na-KV4rU9IM8-nCMsQe84lrXGG8pMegON8efuDYAkPv9U807_aOLSC2eRkuwkaUe98A_PNL3tAvJb36Re5YaR54DT2aUkjC_-MlueQIEAL8isQ_UEtJeA2gvYQ",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFScM3Gdn7e5L3jcVYeJisuYYXveYhTpTqHxyH5bBtX22EKgaCFCnBLiPb1n_VdrmkG4gmDjAY2XKrESVqtt7nX6X6MsShPbokIJeV75mmBpvOwh0P5pNPYejW5aVkwQaWa4segFT6BrqyoTty_S7LLqbL0eax1STmon1DQ7_tit2feJApzawkgbKIvDproJrNVX0ec5VkRhz-VSAgYlc_tqtOt"
+      ],
+      "source_titles": [
+        "therooftopguide.com",
+        "exploorperu.com",
+        "wanderlog.com",
+        "limainsider.com",
+        "hotelmartinika.com",
+        "bestlima.tours",
+        "soumahotel.com",
+        "viajeaperu.com",
+        "limawalkingtour.com",
+        "rguide.co",
+        "limatours.com.pe"
+      ]
+    },
+    {
+      "at": "2026-09-11T02:36:25+00:00",
+      "prompt": "List real, currently open rooftop bars in Lima, Peru that match this description:\nRooftop terraces in Barranco with views over the district's colourful old streets and the sea\n\nFind 10. Keep going until you have 10 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: an actual roof terrace open to guests\n\n\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 18533,
+      "rows_text": "The Rooftop at Hotel B | Barranco | Ocean and Barranco rooftops views\nRooftop La Guardia at Casa República Barranco | Barranco | Ocean and surrounding rooftops views [cite: 77, 78, 82, 83, 85, 88, 90, 94, 96, 97, 99, 11\nThe Rooftop at Hotel B | Barranco | Ocean and Barranco rooftops views [cite: 74, 80, 84, 86, 87, 89, 92, 111, 114, 116, 117, 120, 121, 122, 126, 132]\nRooftop La Guardia at Casa República Barranco | Barranco | Ocean and surrounding rooftops views [cite: 77, 78, 82, 83, 85, 88, 90, 94, 96, 97, 99, 11",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHh7zxhwtSe_J0TAajoVPiKgf4h1ZAgrW5SU1_4NKI-LJzy-B0NEQjaQePM2cdsG5UnV2Ns77JS-QW_qk1kdNK0xi3ilaJWNBLFGkT3Mt0t50jothSsnhCwGeuwFN9qPd9SkCJifBjUcvVxKYwjB_ZICu092aVXkktbD-g0gADx4QHvPPVukJ8ro_9o56C1uwpCoZFnh4WekXRpULJnklYooMUTON5C3qWwjPd6KeGvKEDJacUZoFjL4A==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEZdw43HHlNeVEeuiaMsEEir34xTYV4fZfvD3wb2FFQPdq4y6mA8sYonL7o7o4yjxhkY5NRpPWh2gJfmVMZ7uo5wachAh8i_m7nymBdU8p1TjVIloQxr2VgC2GMq59H9r4132yI62Azp_Vv0V1CjXCYoQU23SIzNJGojXP1vxJCtHxsErQNJ2H2mES7Ts8laVdwImx2tF37Jiv8gRDi0OdRnxO9",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGZ2vnBp2KO1HQGiRUrEWyPmxEg0CaiDML1pIKRzK4ohL1ApDHhE7wVyDOsZ9OCGseoyeRG2nV8oqJhQnqneKlOcg0T4wK9afhR9eUzW_toI8cMcVuqp9Wmk7ID-YucwRjKvooId2l7-8MuuB0FxKG4PD9xzDk4rDg2-Zzm6RpCuKmEf_qeJymIn3W9y3tKqgKUWurg-zt_Al8GmvGOoLSNqKz-",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGntYRGUR74dVv6L5WwmGSLeui12lKIccGcKSimoZBfnLQ62VOSw2X2w2Pj7z0OYfWt_YvC8p7B5_yYdN0wo5pXAoJbftF_eP7dg8wMAHRDvmNNY3A8OUHTpJidhkIMioPoP0YTa_WRgtcuHqFtnwgTmQc-l86U3GP22ME65cae5OtwzxovlX-mafn383_2XTNqzxnPSudlmt3aD658a_nR1U0Tzz-bgCFQ953K2Zn7bdzqaA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFOKtYZnqKeyc-4ynJpUOiE5JacHIwOGFskxIrx-9Ic4sMTkHFnx-us4QiEbBBvlS_sc9ih2mVsNVjX5j3Pkg4WyAEKxOKuAh952z7sIsSRw-BKYUpgwibMpacdflduDGlm_YoXqEglmyD-aNsDwdxdIbyt34Z9_BL2eRkwhNOmKgCuUUEkU2TAtqoj6Mq7PKbJRhjsYQqrzyBmaQBt6u725ouk0TNoKFxqzIMcPYU=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFoJsHisrT7Y_nmqtdyB5VI4SkGeWlNkfCpWV3937r-ZKBGYzJcW_3mRKLMlMHI48rv1r8cdtcHcW63U3QMqZWWzfoVjkxJGsqi2u-1nCCHcudX4fYiSBmXGxnXOYV0uKckZZWKPprPi_Zw8ke5i2O1NOVeWoZ1Ec9lPRYhnPukuA5EMHEHkPpSfWtjxDp7YTylPwwcQm49t5fqC1YOTiD5OU5vMYVMDx3KQBXrS4mXgpvUGNa5w_nVWPLSFA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG60GqOz2YWljQqwNnZThJ0_QHkNfbmnHO-jlX70saCvnHjEm5WrNMJ24r9w8tFaRjZWdHa7Fqp060tPetpRAxtgNfe6N5sEHz1P_eHyHsvVR_QLYoa9o2SLARR16gIJZ2E5uclkC4TB30yWeo0Cf6n94qwdDGHjYKg2SncQyzF8mJBobJ2AHT3UvFOP1i8syVP8E1-dbWh0DcltLjj_590yubr1Ezr3b9U4Y2R5MvnjcXOO17rig==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHQD_iYt0vrVwknw_Y7sacd_DDXHXVqUAZJiOe2EyAH1gCd6uFkYutDv9t-HRIidYS4WbwjhLxQpjQPT9YQ1YPMgMm-aPne70a69oFfrOGsiE5wp-i6-tcDmPnthdW2AcI9wfzXczalWgrcOCvoG9R0auBnPCKD3ExkffQzrptrUTNLs38e4KhPf12Imc6bJSDDE2n60q28aEnB1LkfU-ak1Wak3FBGIytNLA3t",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGha9Qqi3PGdCL75TFkIsOsOytiCx6flLlFemCSK5BJWrSRNiIuVwOCMcTcBoIjVylG0KXGjp-Hz7YdpTbSWWt5gZv9BfvOgsrStNAMx9UsBlOqkzZpX50lx_T-wLFJqo1APYrPJOYWiceEhElVtd110FA_xI2LfPnBTL1qSv-UxpQvF_qDKab82mQ8Fdf1wxP0vVqX2N5ytW_8UmD2fgfcpD-vrhT9bqc-",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFebFaYVfBQstwlLWqZLvjjFdxfv3kpb3wFI7nTZyWDw_lI0DgLXYZxGlaShF2nwGdQQks_T9UTrEUKUyTyPqKkklXfq3I4calNazLOPKVq41TuiVeg1JdCchMxCjnJIhVDts6ovPmSXH7zO2_i-G63fTrNWgikZtb0AQOI-J7AivMPPB_ycyxseD32sO2szWDTGm6FQjcJRYmhCgmwnioLhONgnKZZbi7DEH9897Ijn5O2og==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHlhK55hcjiWNkhNm7wEdyemhMVWmCt7JSbXd9PE-JmjO0ZWZ1DJYAJzdVeaopjEJU-0jhMAfGx2PWRGgdAVE32ii8CSpBN2xSHrSdMGIgT9mk_zLJ-ihuM6U7Uttrc52wIuqZq2ghTdZaLR494QvAdFkVYq2cPPDrygzuMeWkpWHEnWFgCnMj6Nx5UhynFerpS5fwfN-uLzYzSu4JqKXiAVwkv8_PpH2y9geJSazBnqaMhrYn_2Q=="
+      ],
+      "source_titles": [
+        "therooftopguide.com",
+        "journey.com",
+        "exploorperu.com",
+        "soumahotel.com",
+        "hotelb.pe",
+        "scottdunn.com",
+        "thelandofwanderlust.com",
+        "limainsider.com",
+        "thebetterbeyond.com",
+        "flycuscoperu.com",
+        "aracari.com",
+        "relaischateaux.com"
+      ]
+    }
+  ],
+  "provider_calls_made": 2,
+  "angles": [
+    {
+      "angle_id": "a1",
+      "angle": "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists",
+      "role": "distinctive",
+      "wanted": 10,
+      "rows": 10,
+      "sources": 12,
+      "sources_named": [
+        "therooftopguide.com",
+        "exploorperu.com",
+        "wanderlog.com",
+        "limainsider.com",
+        "hotelmartinika.com",
+        "bestlima.tours",
+        "soumahotel.com",
+        "viajeaperu.com",
+        "limawalkingtour.com",
+        "rguide.co",
+        "limatours.com.pe"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-11T02:36:12+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 10,
+      "shared": 1,
+      "exclusive": 9
+    },
+    {
+      "angle_id": "a2",
+      "angle": "Rooftop terraces in Barranco with views over the district's colourful old streets and the sea",
+      "role": "distinctive",
+      "wanted": 10,
+      "rows": 4,
+      "sources": 12,
+      "sources_named": [
+        "therooftopguide.com",
+        "journey.com",
+        "exploorperu.com",
+        "soumahotel.com",
+        "hotelb.pe",
+        "scottdunn.com",
+        "thelandofwanderlust.com",
+        "limainsider.com",
+        "thebetterbeyond.com",
+        "flycuscoperu.com",
+        "aracari.com",
+        "relaischateaux.com"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-11T02:36:25+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 2,
+      "shared": 1,
+      "exclusive": 1
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "b5b80e637b1e9350",
+      "name": "The Rooftop at Hotel B",
+      "district": "Barranco",
+      "found_by": [
+        "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists",
+        "Rooftop terraces in Barranco with views over the district's colourful old streets and the sea"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "21cbb6379def~1",
+          "angle": "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists",
+          "name": "The Rooftop at Hotel B",
+          "evidence": "Peruvian-inspired cocktails, pisco sours"
+        },
+        {
+          "sighting_id": "b192ce650b1c~1",
+          "angle": "Rooftop terraces in Barranco with views over the district's colourful old streets and the sea",
+          "name": "The Rooftop at Hotel B",
+          "evidence": "Ocean and Barranco rooftops views"
+        },
+        {
+          "sighting_id": "b192ce650b1c~2",
+          "angle": "Rooftop terraces in Barranco with views over the district's colourful old streets and the sea",
+          "name": "The Rooftop at Hotel B",
+          "evidence": "Ocean and Barranco rooftops views"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "115ff72be226a77c",
+      "name": "27 Tapas [Hotel Souma]",
+      "district": "Miraflores",
+      "found_by": [
+        "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "45af80e4d213~1",
+          "angle": "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists",
+          "name": "27 Tapas [Hotel Souma]",
+          "evidence": "creative cocktails, coctelería de autor"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "08fa52fe68f8ca7c",
+      "name": "Amador Rooftop",
+      "district": "San Isidro",
+      "found_by": [
+        "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "5bb132056acd~1",
+          "angle": "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists",
+          "name": "Amador Rooftop",
+          "evidence": "signature cocktails, modern atmosphere"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "5abcac9a255c6426",
+      "name": "Ambra Rooftop Bar [Pullman Lima Miraflores]",
+      "district": "Miraflores",
+      "found_by": [
+        "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "95424bb50758~1",
+          "angle": "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists",
+          "name": "Ambra Rooftop Bar [Pullman Lima Miraflores]",
+          "evidence": "pisco-based drinks"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "30ce84df4ee368a1",
+      "name": "Cataleya Rooftop Bar [INNSiDE by Meliá Lima Miraflores]",
+      "district": "Miraflores",
+      "found_by": [
+        "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "aaf9ab2ffcf1~1",
+          "angle": "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists",
+          "name": "Cataleya Rooftop Bar [INNSiDE by Meliá Lima Miraflores]",
+          "evidence": "contemporary signature cocktails"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "3ea49de15666dc43",
+      "name": "Celeste Solar Bar [Hyatt Centric Hotel]",
+      "district": "San Isidro",
+      "found_by": [
+        "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "856ef3796f0f~1",
+          "angle": "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists",
+          "name": "Celeste Solar Bar [Hyatt Centric Hotel]",
+          "evidence": "high-level mixology, creative cocktails"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "b43071f6e61442a2",
+      "name": "Insumo Rooftop [AC Hotel by Marriott Lima Miraflores]",
+      "district": "Miraflores",
+      "found_by": [
+        "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "9bb894956286~1",
+          "angle": "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists",
+          "name": "Insumo Rooftop [AC Hotel by Marriott Lima Miraflores]",
+          "evidence": "delicious selection of cocktails"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "d2d3471a68f31f16",
+      "name": "Pisco Bar",
+      "district": "Miraflores",
+      "found_by": [
+        "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "59b82a20eb62~1",
+          "angle": "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists",
+          "name": "Pisco Bar",
+          "evidence": "focus on Pisco Sour, innovative cocktails"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "496b6787feafad2b",
+      "name": "Rooftop La Guardia [Casa Republica Barranco]",
+      "district": "Barranco",
+      "found_by": [
+        "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists"
+      ],
+      "possible_duplicates": [
+        "Rooftop La Guardia at Casa República Barranco"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "99305c122d05~1",
+          "angle": "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists",
+          "name": "Rooftop La Guardia [Casa Republica Barranco]",
+          "evidence": "crafted pisco cocktails"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "bdec49a40ca02b57",
+      "name": "Rooftop La Guardia at Casa República Barranco",
+      "district": "Barranco",
+      "found_by": [
+        "Rooftop terraces in Barranco with views over the district's colourful old streets and the sea"
+      ],
+      "possible_duplicates": [
+        "Rooftop La Guardia [Casa Republica Barranco]"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "7e23a854678b~1",
+          "angle": "Rooftop terraces in Barranco with views over the district's colourful old streets and the sea",
+          "name": "Rooftop La Guardia at Casa República Barranco",
+          "evidence": "Ocean and surrounding rooftops views [cite: 77, 78, 82, 83, 85, 88, 90, 94, 96, 97, 99, 11"
+        },
+        {
+          "sighting_id": "7e23a854678b~2",
+          "angle": "Rooftop terraces in Barranco with views over the district's colourful old streets and the sea",
+          "name": "Rooftop La Guardia at Casa República Barranco",
+          "evidence": "Ocean and surrounding rooftops views [cite: 77, 78, 82, 83, 85, 88, 90, 94, 96, 97, 99, 11"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "1656ca1379576144",
+      "name": "SAHA Rooftop",
+      "district": "Miraflores",
+      "found_by": [
+        "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "2e408c402b3f~1",
+          "angle": "Lima rooftop bars known for their pisco sours, chilcanos and pisco-based cocktail lists",
+          "name": "SAHA Rooftop",
+          "evidence": "pisco and accessible creations"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    }
+  ],
+  "outcomes_still_to_be_judged": {
+    "eligibility": "how many checked candidates fit the requirements and the angle",
+    "coverage": "how many suitable distinct venues the whole pool holds, and what is missing",
+    "identity_errors": "false merges and unresolved duplicates, counted separately",
+    "wording_drift": "unrequested restrictions added, and requirements silently broadened",
+    "operator_effort": "edits, confusing choices, repeated questions, recovery actions"
+  },
+  "ask_overridden": true,
+  "judged_by": [
+    "Does every returned place actually have a roof terrace?",
+    "Does any angle spend itself restating 'rooftop', which every search already carries?"
+  ]
+}
