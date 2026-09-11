@@ -85,6 +85,30 @@ MAX_CANDIDATES_REVIEWED = CHUNK_SIZE
 CONFLICT_TOOL = "record_angle_conflicts"
 CANDIDATE_TOOL = "record_barred_places"
 
+# The two checks are separate jobs because they are different questions, and
+# they were measured apart.
+#
+# The order check is one short call, on the path to spending money, and it is
+# a judgement about wording. Replayed against four stored orders with a known
+# answer plus five planted clashes (2026-09-11), with the prompt below:
+#
+#     gemini-2.5-flash        ceviche orders perfect; missed "private members'
+#                             clubs with a rooftop terrace" against a cut that
+#                             bars members-only clubs, three times in three
+#     claude-sonnet-5-medium  9 true, 0 false, 0 missed, ~9s
+#     claude-opus-5-high      9 true, 0 false, 0 missed, twice, ~15s
+#
+# The place check reads up to sixty rows of evidence in one call with an 8k
+# output budget, and nothing has measured it on another model. It stays where
+# it was.
+#
+# With the Claude subscription off, the order check substitutes back to
+# Flash. That fails toward saying nothing, which is the recoverable side:
+# a missed clash is still caught place by place after the searches run, and a
+# false one teaches the operator to stop reading the warning.
+CONFLICT_JOB = "listicle.angle_conflicts"
+CANDIDATE_JOB = "listicle.cut_review"
+
 CONFLICT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
@@ -134,11 +158,33 @@ CANDIDATE_SCHEMA: dict[str, Any] = {
 
 
 def build_conflict_prompt(order: SearchOrder) -> str:
-    """Ask whether any approved search is hunting for barred places."""
+    """Ask whether any approved search is, by its own wording, a search for
+    barred places.
+
+    It used to ask which searches were "likely to return" barred places, and
+    that is a question about the future that every model answers yes to. Run
+    add41aca had eight searches for rooftop bars and a cut barring members-only
+    clubs and guest-only terraces; the check flagged six, every reason some
+    form of "a sunset bar could still be members-only". Replayed on four stored
+    orders with a known answer, Flash raised 16 false flags against 6 true
+    ones, and Opus 9 against 3 -- Opus's being the worse kind, confident local
+    claims ("decades-old cevicherias are mostly chains") that the stored
+    results contradict.
+
+    The one real conflict on record is a different kind of thing. "Nikkei
+    cevicherias doing Japanese-Peruvian fusion" against "no places where
+    ceviche is not the primary offering" clashes IN THE WORDS: a place that
+    perfectly fits the search is, by that description, a place the cut bars.
+    That is checkable from the text alone, and it is the only thing this check
+    can know before anything has been searched. What a search happens to drag
+    back is the job of `review_candidates`, which reads the actual results.
+    """
     angles = "\n".join(
         f"- {angle.angle_id}: {angle.text}" for angle in order.angles
     )
-    return f"""An operator is building a list of {order.kind or "places"} in {order.place or "a city"}.
+    kind = order.kind or "places"
+    place = order.place or "the city"
+    return f"""An operator is building a list of {kind} in {place}.
 
 They said to leave these out, no matter how good the place is:
 
@@ -148,20 +194,36 @@ These are the searches they approved:
 
 {angles}
 
-Name any search that is likely to return places the operator just barred.
+Every search is sent as "{kind} in {place} that match this description", with
+the leave-out rules above attached. So every search is already asking for
+{kind}, and already told what to leave out. After the searches run, every
+place they return is checked against the rules separately. You are not being
+asked whether a search might return a bad place. Nearly every search might.
 
-A real example of what this is for: a list of cevicherias whose cut said "no
-places where ceviche is not the primary offering", with an approved search for
-"Nikkei cevicherias doing Japanese-Peruvian preparations". Most Nikkei
-restaurants are Japanese-Peruvian restaurants that serve ceviche among many
-things, so that search mostly returns barred places. It did: 8 of the 10 it
-found were barred.
+You are being asked something narrower. For each search, picture a place that
+PERFECTLY fits its description. Does that description, by itself, make it a
+place the rules leave out?
 
-Only name a search where the clash is likely, not merely possible. Nearly any
-search can return one bad result; that is not what this is asking. Say nothing
-about a search that is fine.
+The real case this exists for: a list of cevicherias whose rules said "no
+places where ceviche is not the primary offering", and an approved search for
+"Nikkei cevicherias doing Japanese-Peruvian preparations". A place that
+perfectly fits that search is a Japanese-Peruvian restaurant, and those serve
+ceviche as one dish among many. The description itself points at barred
+places, and 8 of the 10 it returned were barred.
 
-For each one, give its id and one plain sentence saying why the two disagree.
+Compare "cevicherias that have been open for decades". A place that perfectly
+fits it is an old cevicheria, and nothing in "open for decades" makes a place a
+chain or a hotel restaurant. Some old places may be chains; that is a guess
+about what the search returns, and it is not what you are being asked. Do not
+name a search on the strength of what places of that kind are usually like in
+this city.
+
+Name a search only when the clash is in its own words: when you can point at
+the words of the search and the words of the rules that cannot both be true of
+one place. If you cannot point at both, the search is fine. Most orders have no
+clashing search at all, and an empty list is the normal answer.
+
+For each one, give its id and one plain sentence naming the words that clash.
 Address the operator. Do not suggest replacement wording -- they will decide
 what to do."""
 
@@ -360,7 +422,7 @@ def review_order(
 
     try:
         payload = review(
-            "listicle.cut_review",
+            CONFLICT_JOB,
             build_conflict_prompt(order),
             CONFLICT_TOOL,
             CONFLICT_SCHEMA,
@@ -449,7 +511,7 @@ def review_candidates(
             continue
         try:
             payload = review(
-                "listicle.cut_review",
+                CANDIDATE_JOB,
                 build_candidate_prompt(order, chunk),
                 CANDIDATE_TOOL,
                 CANDIDATE_SCHEMA,

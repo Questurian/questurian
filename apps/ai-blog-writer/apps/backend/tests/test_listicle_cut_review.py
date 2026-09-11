@@ -97,6 +97,49 @@ def test_an_order_with_no_angles_does_not_spend_either():
     assert seen == []
 
 
+def test_the_order_check_asks_about_wording_not_about_what_might_come_back():
+    """Run add41aca, 2026-09-11: eight rooftop-bar searches, a cut barring
+    members-only clubs and guest-only terraces, and six flagged -- every reason
+    "a sunset bar could still be members-only". The question asked which
+    searches were LIKELY TO RETURN barred places, and every model answers that
+    one yes.
+
+    The one real conflict on record clashes in the words themselves, so that
+    is what the prompt asks now: picture a place that perfectly fits the
+    search, and say whether its description alone puts it out.
+    """
+    seen: list = []
+    cut_review.review_order(_order(), _reviewer({"conflicts": []}, seen=seen))
+    prompt = seen[0][1]
+    assert "likely to return" not in prompt
+    assert "PERFECTLY fits" in prompt
+    # It is told the truth about how each search is sent, in this order's own
+    # words, so it does not reason about a search that forgot the kind.
+    assert '"cevicherias in Lima that match this description"' in prompt
+    assert "an empty list is the normal answer" in prompt
+
+
+def test_the_two_checks_run_as_the_two_jobs_they_were_measured_as():
+    """Measured apart, so registered apart. The order check is one short
+    judgement about wording and moved off Flash on evidence; the place check
+    reads sixty rows of evidence and was not measured anywhere else."""
+    seen: list = []
+    cut_review.review_order(_order(), _reviewer({"conflicts": []}, seen=seen))
+    assert seen[0][0] == cut_review.CONFLICT_JOB == "listicle.angle_conflicts"
+    assert cut_review.CANDIDATE_JOB == "listicle.cut_review"
+
+
+def test_both_cut_jobs_are_ones_the_gateway_has_heard_of():
+    """The registry sweep in test_prompt2blog_job_ids_are_registered walks the
+    article pipeline only, and these ids are passed positionally, so it would
+    not see an unregistered one. That is the p2b.section_edit bug: every test
+    green, and UnknownJob on the first real call."""
+    from model_gateway import JOBS_BY_ID
+
+    assert cut_review.CONFLICT_JOB in JOBS_BY_ID
+    assert cut_review.CANDIDATE_JOB in JOBS_BY_ID
+
+
 # After they come back
 
 
