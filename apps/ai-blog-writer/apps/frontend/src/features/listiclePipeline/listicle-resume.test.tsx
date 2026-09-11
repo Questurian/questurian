@@ -10,6 +10,8 @@ const loadOrder = vi.fn()
 const reviseOrder = vi.fn()
 const runSearch = vi.fn()
 const loadSearch = vi.fn()
+const listRuns = vi.fn()
+const setRunHidden = vi.fn()
 
 vi.mock('./api', async importOriginal => {
   const actual = await importOriginal<typeof import('./api')>()
@@ -22,6 +24,8 @@ vi.mock('./api', async importOriginal => {
     reviseOrder: (...args: unknown[]) => reviseOrder(...args),
     runSearch: (...args: unknown[]) => runSearch(...args),
     loadSearch: (...args: unknown[]) => loadSearch(...args),
+    listRuns: (...args: unknown[]) => listRuns(...args),
+    setRunHidden: (...args: unknown[]) => setRunHidden(...args),
   }
 })
 
@@ -30,6 +34,7 @@ import { ListiclePipelinePage } from './pages/ListiclePipelinePage'
 import type {
   ListicleGrillState,
   ListicleOrder,
+  ListicleRunSummary,
   ListicleSearchResults,
 } from './types'
 
@@ -170,9 +175,15 @@ function ShowLocation() {
   return <span data-testid="where">{useLocation().pathname}</span>
 }
 
+/** The app's router runs every navigation as a transition. Tests render the
+ *  same way, because a screen reset commits BEFORE a transitioned navigation
+ *  does, and the gap between the two is where "Opening run…" got stuck. */
 function renderAt(path: string) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
+    <MemoryRouter
+      initialEntries={[path]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
       <ShowLocation />
       <Routes>
         <Route path="/listicle-pipeline" element={<ListiclePipelinePage />} />
@@ -190,6 +201,8 @@ beforeEach(() => {
   reviseOrder.mockReset()
   runSearch.mockReset()
   loadSearch.mockReset().mockResolvedValue(null)
+  listRuns.mockReset().mockResolvedValue([])
+  setRunHidden.mockReset().mockResolvedValue(undefined)
 })
 
 describe('getting back to a run', () => {
@@ -620,5 +633,93 @@ describe('recovering from a partial failure', () => {
       await screen.findByText(/Might be the same place as Canta Rana Centro/),
     ).toBeInTheDocument()
     expect(screen.getByText(/this count is provisional/)).toBeInTheDocument()
+  })
+})
+
+describe('the shelf of saved lists', () => {
+  const WINGS: ListicleRunSummary = {
+    run_id: 'efd5a7cd',
+    seed: 'The Best Chicken Wings in Lima Peru',
+    status: 'agreed',
+    stage: 'searched',
+    found: 44,
+    target: 20,
+    created_at: '2026-09-11 13:28:38',
+    touched_at: '2026-09-11 13:51:00',
+    hidden: false,
+  }
+  const OLD: ListicleRunSummary = {
+    ...WINGS,
+    run_id: 'c422e80f',
+    seed: 'The 30 Best Cevicherias in Lima',
+    stage: 'interview',
+    found: null,
+    target: null,
+    hidden: true,
+  }
+
+  it('shows every saved list and how far it got', async () => {
+    listRuns.mockResolvedValue([WINGS, OLD])
+    renderAt('/listicle-pipeline')
+
+    expect(await screen.findByText('The Best Chicken Wings in Lima Peru')).toBeInTheDocument()
+    expect(screen.getByText(/44 places found for a list of 20/)).toBeInTheDocument()
+    // Hidden lists stay off the shelf until asked for.
+    expect(screen.queryByText('The 30 Best Cevicherias in Lima')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show 1 hidden' }))
+    expect(screen.getByText('The 30 Best Cevicherias in Lima')).toBeInTheDocument()
+  })
+
+  it('opens a saved list by reading it, never by searching it', async () => {
+    listRuns.mockResolvedValue([WINGS])
+    loadGrill.mockResolvedValue({ ...AGREED, run_id: 'efd5a7cd' })
+    renderAt('/listicle-pipeline')
+
+    await userEvent.click(await screen.findByText('The Best Chicken Wings in Lima Peru'))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('where')).toHaveTextContent('/listicle-pipeline/efd5a7cd'),
+    )
+    await waitFor(() => expect(loadGrill).toHaveBeenCalledWith('efd5a7cd'))
+    expect(runSearch).not.toHaveBeenCalled()
+  })
+
+  it('hides a list without touching it', async () => {
+    listRuns.mockResolvedValueOnce([WINGS]).mockResolvedValue([{ ...WINGS, hidden: true }])
+    renderAt('/listicle-pipeline')
+
+    await screen.findByText('The Best Chicken Wings in Lima Peru')
+    await userEvent.click(screen.getByRole('button', { name: 'Hide' }))
+
+    expect(setRunHidden).toHaveBeenCalledWith('efd5a7cd', true)
+    expect(await screen.findByRole('button', { name: 'Show 1 hidden' })).toBeInTheDocument()
+  })
+
+  it('is not shown inside a run, which links back to it instead', async () => {
+    loadGrill.mockResolvedValue(grill())
+    renderAt('/listicle-pipeline/abc123')
+
+    expect(await screen.findByText(/How many items/)).toBeInTheDocument()
+    expect(listRuns).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('link', { name: 'All lists' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('where')).toHaveTextContent(/^\/listicle-pipeline$/),
+    )
+    expect(await screen.findByRole('region', { name: 'Your lists' })).toBeInTheDocument()
+    expect(screen.queryByText(/Opening run/)).not.toBeInTheDocument()
+  })
+
+  it('starting over lands on the seed box, not on a run that never opens', async () => {
+    loadGrill.mockResolvedValue(AGREED)
+    renderAt('/listicle-pipeline/abc123')
+
+    await userEvent.click(await screen.findByRole('button', { name: /start over/i }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('where')).toHaveTextContent(/^\/listicle-pipeline$/),
+    )
+    expect(await screen.findByText('Paste a working title')).toBeInTheDocument()
+    expect(screen.queryByText(/Opening run/)).not.toBeInTheDocument()
   })
 })

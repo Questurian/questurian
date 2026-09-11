@@ -1,6 +1,7 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { GrillScreen } from '../components/GrillScreen'
 import { OrderPanel } from '../components/OrderPanel'
+import { RunShelf } from '../components/RunShelf'
 import { SearchResults } from '../components/SearchResults'
 import { SeedScreen } from '../components/SeedScreen'
 import { useListicleGrill } from '../useListicleGrill'
@@ -57,6 +58,15 @@ export function ListiclePipelinePage() {
           <Link to="/" className="lp-nav-link">
             &larr; Home
           </Link>
+          {runId && (
+            <Link
+              to="/listicle-pipeline"
+              className="lp-nav-link"
+              onClick={() => grill.reset()}
+            >
+              All lists
+            </Link>
+          )}
           <Link to="/single-type-listicles" className="lp-nav-link">
             Manual builder
           </Link>
@@ -111,7 +121,13 @@ export function ListiclePipelinePage() {
             </button>
           </div>
         ) : state === null ? (
-          <SeedScreen busy={busy} onStart={grill.start} />
+          <>
+            <SeedScreen busy={busy} onStart={grill.start} />
+            {/* What is already on the go, under the box that starts something
+                new. A list is worked on across days, and the way back to one
+                should not be remembering its id. */}
+            {!runId && <RunShelf />}
+          </>
         ) : (
           <>
             <GrillScreen

@@ -940,6 +940,59 @@ def results(run_id: str) -> dict | None:
     return progress(run_id)
 
 
+def runs(*, include_hidden: bool = False) -> list[dict]:
+    """The shelf: every run, and how far each one got.
+
+    A read and nothing else. It does not go through `order()`, because that
+    builds an order for an agreed run that has none, and looking at a list is
+    not a decision to write to every run on it.
+
+    A run whose stage cannot be worked out is still listed, as `unreadable`.
+    One bad row must not take the rest of the shelf down with it.
+    """
+    shelf = []
+    for row in store.list_runs(include_hidden=include_hidden):
+        try:
+            where = _stage_of(row["run_id"], row["status"])
+        except Exception:  # noqa: BLE001 -- one run must not hide the others
+            logger.exception("Could not read listicle run %s", row["run_id"])
+            where = {"stage": "unreadable", "found": None, "target": None}
+        shelf.append({**row, **where})
+    return shelf
+
+
+def _stage_of(run_id: str, status: str) -> dict:
+    """Where one run stands: interview, agreed, searching or searched."""
+    if status != "agreed":
+        return {"stage": "interview", "found": None, "target": None}
+    if store.load_order(run_id) is None:
+        # Agreed before orders were recorded. Its stored result, if any, is a
+        # real one -- the same reading `progress` gives it.
+        legacy = store.load_results(run_id)
+        if legacy and legacy.get("candidates"):
+            return {
+                "stage": "searched",
+                "found": int(legacy.get("found") or len(legacy["candidates"])),
+                "target": legacy.get("target"),
+            }
+        return {"stage": "agreed", "found": None, "target": None}
+    found = progress(run_id)
+    if found is None:
+        return {"stage": "agreed", "found": None, "target": None}
+    return {
+        "stage": "searching" if found.get("running") else "searched",
+        "found": found.get("found"),
+        "target": found.get("target"),
+    }
+
+
+def set_hidden(run_id: str, hidden: bool) -> None:
+    """Take a run off the shelf, or put it back. Nothing about the run changes."""
+    if not store.run_exists(run_id):
+        raise LookupError(f"No listicle run {run_id}.")
+    store.set_hidden(run_id, hidden)
+
+
 def build_profile(
     *,
     name: str,

@@ -67,6 +67,79 @@
   line-height: 1.5;
 }
 
+/* ---------- the shelf of saved lists ---------- */
+
+.lp-shelf,
+.lp-shelf-loading {
+  max-width: 42rem;
+  margin: var(--space-6) auto 0;
+}
+
+.lp-shelf-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.lp-shelf-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+
+.lp-shelf-row + .lp-shelf-row {
+  border-top: 1px solid var(--border);
+}
+
+.lp-shelf-row-hidden {
+  opacity: 0.6;
+}
+
+.lp-shelf-open {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 18rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.lp-shelf-open:hover .lp-shelf-title {
+  color: var(--lp-accent);
+}
+
+.lp-shelf-title {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.lp-shelf-stage {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.lp-shelf-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+/* Doubled so it beats `.lp-link-button`, which is declared further down and
+   indents itself for sitting beside text. */
+.lp-link-button.lp-shelf-toggle {
+  margin-top: var(--space-3);
+  padding-left: 0;
+  font-size: 0.8125rem;
+}
+
 /* ---------- the interview, as a chat ---------- */
 
 .lp-chat {

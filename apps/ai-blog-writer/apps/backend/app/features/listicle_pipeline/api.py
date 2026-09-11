@@ -449,6 +449,28 @@ def get_listicle_search(run_id: str, _staff=Depends(require_staff)):
     return found
 
 
+class HideRequest(BaseModel):
+    hidden: bool
+
+
+@router.get("/runs")
+def list_listicle_runs(include_hidden: bool = False, _staff=Depends(require_staff)):
+    """Every saved run and how far it got, so one can be picked up again.
+
+    A read. Nothing is searched, checked or rebuilt by looking at the shelf.
+    """
+    return {"runs": service.runs(include_hidden=include_hidden)}
+
+
+@router.post("/runs/{run_id}/hidden")
+def hide_listicle_run(
+    run_id: str, req: HideRequest, _staff=Depends(require_staff)
+):
+    """Take a run off the shelf or put it back. The run itself is untouched."""
+    _report(service.set_hidden, run_id, req.hidden)
+    return {"run_id": run_id, "hidden": req.hidden}
+
+
 @router.get("/shapes")
 def list_shapes(_staff=Depends(require_staff)):
     """The shape catalogue, for a screen that wants to offer more angles.

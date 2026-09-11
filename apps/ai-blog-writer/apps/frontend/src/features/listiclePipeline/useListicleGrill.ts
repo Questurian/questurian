@@ -128,6 +128,12 @@ export function useListicleGrill(runId: string | null): UseListicleGrill {
   // again.
   useEffect(() => {
     if (!runId) {
+      // No run in the address means nothing is being read. Cleared here and
+      // not only when a read finishes: the router navigates in a transition,
+      // so a reset commits first, a read of the run being left starts in the
+      // gap, and the navigation that follows cancels it before it can clear
+      // its own flag. The screen then said "Opening run…" forever.
+      setLoading(false)
       setMissing(false)
       return
     }

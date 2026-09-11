@@ -3,6 +3,7 @@ import type {
   ListicleAngleSelection,
   ListicleGrillState,
   ListicleOrder,
+  ListicleRunSummary,
   ListicleSearchResults,
 } from './types'
 
@@ -168,6 +169,26 @@ export async function recheckCut(runId: string): Promise<ListicleSearchResults> 
   })
   if (!response.ok) throw await readError(response, 'The cut check could not be run.')
   return (await response.json()) as ListicleSearchResults
+}
+
+/** Every saved run and how far it got. A read: nothing is searched or rebuilt
+ *  by looking at the shelf. */
+export async function listRuns(includeHidden = false): Promise<ListicleRunSummary[]> {
+  const query = includeHidden ? '?include_hidden=true' : ''
+  const response = await apiFetch(`${BASE}/runs${query}`)
+  if (!response.ok) throw await readError(response, 'The saved lists could not be read.')
+  const body = (await response.json()) as { runs: ListicleRunSummary[] }
+  return body.runs
+}
+
+/** Take a run off the shelf or put it back. The run itself is untouched. */
+export async function setRunHidden(runId: string, hidden: boolean): Promise<void> {
+  const response = await apiFetch(`${BASE}/runs/${runId}/hidden`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hidden }),
+  })
+  if (!response.ok) throw await readError(response, 'That list could not be moved.')
 }
 
 export async function loadSearch(runId: string): Promise<ListicleSearchResults | null> {

@@ -197,6 +197,18 @@ CREATE TABLE IF NOT EXISTS listicle_interview_baselines (
 )
 """
 
+# Runs taken off the shelf. A row here hides a run from the list of runs and
+# does nothing else: its interview, order, searches and history stay exactly
+# where they are, it still opens by its address, and what its searches bought
+# still counts in "last time". Hiding is how a shelf of test runs is cleared
+# without spending or losing any of them.
+_HIDDEN_RUNS_TABLE = """
+CREATE TABLE IF NOT EXISTS listicle_hidden_runs (
+    run_id    TEXT PRIMARY KEY,
+    hidden_at TEXT NOT NULL
+)
+"""
+
 _MIGRATIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS listicle_migrations (
     name       TEXT PRIMARY KEY,
@@ -241,6 +253,7 @@ def ensure_tables() -> None:
         conn.execute(_POOL_SNAPSHOTS_TABLE)
         conn.execute(_BASELINES_TABLE)
         conn.execute(_CUT_REVIEWS_V2_TABLE)
+        conn.execute(_HIDDEN_RUNS_TABLE)
         conn.execute(_MIGRATIONS_TABLE)
         for statement in _ATTEMPT_INDEXES:
             conn.execute(statement)
@@ -386,6 +399,81 @@ def load(run_id: str) -> GrillState | None:
     if row is None:
         return None
     return GrillState.model_validate(json.loads(row[0]))
+
+
+def list_runs(*, include_hidden: bool = False) -> list[dict]:
+    """Every run, newest activity first, read without validating the interview.
+
+    The seed and status are read out of the stored JSON by hand rather than
+    through `GrillState`. Runs from the first week were stored under an older
+    shape that no longer validates, and a list that raised on one of them
+    would hide every run behind it -- the one thing a list must not do.
+
+    "Last touched" is the latest of the interview, the stored results and any
+    search, because a run whose interview ended yesterday and whose searches
+    finished an hour ago was worked on an hour ago.
+    """
+    ensure_tables()
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT g.run_id, g.state, g.created_at, "
+            "MAX(g.updated_at, "
+            "    COALESCE((SELECT r.updated_at FROM listicle_search_results r "
+            "              WHERE r.run_id = g.run_id), ''), "
+            "    COALESCE((SELECT MAX(a.updated_at) FROM listicle_attempts a "
+            "              WHERE a.run_id = g.run_id), '')) AS touched_at, "
+            "h.hidden_at "
+            "FROM listicle_grills g "
+            "LEFT JOIN listicle_hidden_runs h ON h.run_id = g.run_id "
+            "ORDER BY touched_at DESC, g.run_id"
+        ).fetchall()
+    found: list[dict] = []
+    for row in rows:
+        hidden = row["hidden_at"] is not None
+        if hidden and not include_hidden:
+            continue
+        try:
+            state = json.loads(row["state"])
+        except (TypeError, ValueError):  # pragma: no cover -- corrupt row
+            state = {}
+        if not isinstance(state, dict):  # pragma: no cover -- corrupt row
+            state = {}
+        found.append(
+            {
+                "run_id": row["run_id"],
+                "seed": str(state.get("seed") or ""),
+                "status": str(state.get("status") or ""),
+                "created_at": row["created_at"],
+                "touched_at": row["touched_at"],
+                "hidden": hidden,
+            }
+        )
+    return found
+
+
+def run_exists(run_id: str) -> bool:
+    ensure_tables()
+    with get_db_connection() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM listicle_grills WHERE run_id = ?", (run_id,)
+        ).fetchone()
+    return row is not None
+
+
+def set_hidden(run_id: str, hidden: bool) -> None:
+    """Take a run off the shelf, or put it back. Touches nothing else."""
+    ensure_tables()
+    with get_db_connection() as conn:
+        if hidden:
+            conn.execute(
+                "INSERT INTO listicle_hidden_runs (run_id, hidden_at) "
+                "VALUES (?, ?) ON CONFLICT(run_id) DO NOTHING",
+                (run_id, _now()),
+            )
+        else:
+            conn.execute(
+                "DELETE FROM listicle_hidden_runs WHERE run_id = ?", (run_id,)
+            )
 
 
 def save_results(run_id: str, payload: dict) -> None:

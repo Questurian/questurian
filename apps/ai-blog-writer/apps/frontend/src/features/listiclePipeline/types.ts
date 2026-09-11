@@ -309,3 +309,20 @@ export interface ListicleSearchResults {
    *  retryable at the angle level. */
   legacy?: boolean
 }
+
+/** One saved run, as the shelf lists it.
+ *
+ *  `found` and `target` are set only once searches have come back. `hidden`
+ *  runs are off the shelf and nothing else: they still open and still hold
+ *  everything they found. */
+export interface ListicleRunSummary {
+  run_id: string
+  seed: string
+  status: string
+  stage: 'interview' | 'agreed' | 'searching' | 'searched' | 'unreadable'
+  found: number | null
+  target: number | null
+  created_at: string
+  touched_at: string
+  hidden: boolean
+}
