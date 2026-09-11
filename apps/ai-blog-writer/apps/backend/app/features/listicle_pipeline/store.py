@@ -209,6 +209,41 @@ CREATE TABLE IF NOT EXISTS listicle_hidden_runs (
 )
 """
 
+# The operator's answers to "might be the same place". Two tables, because
+# they are two different answers.
+#
+# A removal takes a place off the board as a duplicate of the one kept. It is
+# not a deletion: the candidate is still in the pool, still counted in what
+# its searches contributed, and "Put back" deletes this row and nothing else.
+#
+# A distinct pair says two flagged places are different venues, so the warning
+# between them stops showing. Stored with the smaller id first, so the pair is
+# one row whichever card it was answered from.
+#
+# Both key on candidate ids. A candidate's id changes when its membership does
+# -- a re-search can change it -- and a decision about the old id then simply
+# stops applying. It is not carried over by name, for the same reason nothing
+# else here is: two rows with one name are exactly the case being decided.
+_BOARD_REMOVALS_TABLE = """
+CREATE TABLE IF NOT EXISTS listicle_board_removals (
+    run_id       TEXT NOT NULL,
+    candidate_id TEXT NOT NULL,
+    kept_id      TEXT NOT NULL,
+    removed_at   TEXT NOT NULL,
+    PRIMARY KEY (run_id, candidate_id)
+)
+"""
+
+_BOARD_DISTINCT_TABLE = """
+CREATE TABLE IF NOT EXISTS listicle_board_distinct (
+    run_id     TEXT NOT NULL,
+    first_id   TEXT NOT NULL,
+    second_id  TEXT NOT NULL,
+    decided_at TEXT NOT NULL,
+    PRIMARY KEY (run_id, first_id, second_id)
+)
+"""
+
 _MIGRATIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS listicle_migrations (
     name       TEXT PRIMARY KEY,
@@ -254,6 +289,8 @@ def ensure_tables() -> None:
         conn.execute(_BASELINES_TABLE)
         conn.execute(_CUT_REVIEWS_V2_TABLE)
         conn.execute(_HIDDEN_RUNS_TABLE)
+        conn.execute(_BOARD_REMOVALS_TABLE)
+        conn.execute(_BOARD_DISTINCT_TABLE)
         conn.execute(_MIGRATIONS_TABLE)
         for statement in _ATTEMPT_INDEXES:
             conn.execute(statement)
@@ -474,6 +511,79 @@ def set_hidden(run_id: str, hidden: bool) -> None:
             conn.execute(
                 "DELETE FROM listicle_hidden_runs WHERE run_id = ?", (run_id,)
             )
+
+
+def load_board(run_id: str) -> dict:
+    """Every duplicate decision for one run: what was removed, and which
+    flagged pairs were judged to be different places."""
+    ensure_tables()
+    with get_db_connection() as conn:
+        removed = conn.execute(
+            "SELECT candidate_id, kept_id, removed_at FROM listicle_board_removals "
+            "WHERE run_id = ? ORDER BY removed_at, candidate_id",
+            (run_id,),
+        ).fetchall()
+        distinct = conn.execute(
+            "SELECT first_id, second_id FROM listicle_board_distinct "
+            "WHERE run_id = ? ORDER BY first_id, second_id",
+            (run_id,),
+        ).fetchall()
+    return {
+        "removed": [
+            {
+                "candidate_id": row["candidate_id"],
+                "kept_id": row["kept_id"],
+                "removed_at": row["removed_at"],
+            }
+            for row in removed
+        ],
+        "distinct_pairs": [[row["first_id"], row["second_id"]] for row in distinct],
+    }
+
+
+def record_duplicates(
+    run_id: str,
+    *,
+    removed: list[tuple[str, str]],
+    distinct: list[tuple[str, str]],
+) -> None:
+    """Write one answer from the duplicate check, all of it or none of it.
+
+    `removed` is (candidate, kept) pairs; `distinct` is pairs of places judged
+    to be different. One transaction, because half an answer -- the keeper
+    recorded and the duplicates still on the board -- is a board that says
+    something nobody decided.
+    """
+    ensure_tables()
+    now = _now()
+    with transaction() as conn:
+        for candidate_id, kept_id in removed:
+            conn.execute(
+                "INSERT INTO listicle_board_removals (run_id, candidate_id, "
+                "kept_id, removed_at) VALUES (?, ?, ?, ?) "
+                "ON CONFLICT(run_id, candidate_id) DO UPDATE SET "
+                "kept_id=excluded.kept_id, removed_at=excluded.removed_at",
+                (run_id, candidate_id, kept_id, now),
+            )
+        for one, other in distinct:
+            first, second = sorted((one, other))
+            conn.execute(
+                "INSERT INTO listicle_board_distinct (run_id, first_id, "
+                "second_id, decided_at) VALUES (?, ?, ?, ?) "
+                "ON CONFLICT(run_id, first_id, second_id) DO NOTHING",
+                (run_id, first, second, now),
+            )
+
+
+def restore_candidate(run_id: str, candidate_id: str) -> None:
+    """Put a removed place back on the board. Touches nothing else."""
+    ensure_tables()
+    with get_db_connection() as conn:
+        conn.execute(
+            "DELETE FROM listicle_board_removals WHERE run_id = ? "
+            "AND candidate_id = ?",
+            (run_id, candidate_id),
+        )
 
 
 def save_results(run_id: str, payload: dict) -> None:

@@ -986,6 +986,75 @@ def _stage_of(run_id: str, status: str) -> dict:
     }
 
 
+def board(run_id: str) -> dict:
+    """The operator's duplicate decisions for one run. A read."""
+    if not store.run_exists(run_id):
+        raise LookupError(f"No listicle run {run_id}.")
+    return store.load_board(run_id)
+
+
+def _current_candidate_ids(run_id: str) -> set[str]:
+    found = progress(run_id)
+    if found is None:
+        raise LookupError("This run has no search results to sort out yet.")
+    return {candidate["candidate_id"] for candidate in found.get("candidates", [])}
+
+
+def resolve_duplicates(
+    run_id: str,
+    candidate_id: str,
+    *,
+    same: list[str],
+    different: list[str],
+    keep: str = "",
+) -> dict:
+    """Record one answer to "might be the same place".
+
+    `same` are the flagged places the operator says ARE this one; `different`
+    the ones they say are not. When anything is the same, `keep` names the one
+    that stays on the board, and every other place in that group comes off it.
+
+    Refused rather than guessed at: an id this run does not hold, a place
+    called both same and different, or a keeper outside the group it is
+    keeping. Each of those is a screen out of step with the run, and writing
+    it anyway would remove a place nobody chose to remove.
+    """
+    known = _current_candidate_ids(run_id)
+    named = {candidate_id, *same, *different, *([keep] if keep else [])}
+    unknown = sorted(named - known)
+    if unknown:
+        raise ValueError(
+            f"Not places on this run's list: {', '.join(unknown)}. "
+            "Reload the results and try again."
+        )
+    if set(same) & set(different):
+        raise ValueError("A place cannot be both the same and different.")
+    if candidate_id in same or candidate_id in different:
+        raise ValueError("A place is not compared with itself.")
+    if not same and not different:
+        raise ValueError("Nothing was decided.")
+    group = {candidate_id, *same}
+    removed: list[tuple[str, str]] = []
+    if same:
+        if keep not in group:
+            raise ValueError("Choose which of the matching places to keep.")
+        removed = [(other, keep) for other in sorted(group) if other != keep]
+    store.record_duplicates(
+        run_id,
+        removed=removed,
+        distinct=[(candidate_id, other) for other in different],
+    )
+    return store.load_board(run_id)
+
+
+def restore_candidate(run_id: str, candidate_id: str) -> dict:
+    """Put a removed place back on the board."""
+    if not store.run_exists(run_id):
+        raise LookupError(f"No listicle run {run_id}.")
+    store.restore_candidate(run_id, candidate_id)
+    return store.load_board(run_id)
+
+
 def set_hidden(run_id: str, hidden: bool) -> None:
     """Take a run off the shelf, or put it back. Nothing about the run changes."""
     if not store.run_exists(run_id):

@@ -1,6 +1,7 @@
 import { apiFetch } from '../../shared/api/client/apiFetch'
 import type {
   ListicleAngleSelection,
+  ListicleBoard,
   ListicleGrillState,
   ListicleOrder,
   ListicleRunSummary,
@@ -189,6 +190,39 @@ export async function setRunHidden(runId: string, hidden: boolean): Promise<void
     body: JSON.stringify({ hidden }),
   })
   if (!response.ok) throw await readError(response, 'That list could not be moved.')
+}
+
+/** Duplicate decisions for one run. A read. */
+export async function loadBoard(runId: string): Promise<ListicleBoard> {
+  const response = await apiFetch(`${BASE}/board/${runId}`)
+  if (!response.ok) throw await readError(response, 'The duplicate decisions could not be read.')
+  return (await response.json()) as ListicleBoard
+}
+
+/** Settle one duplicate warning. `same` places other than `keep` come off the
+ *  board; `different` places stop being flagged against this one. */
+export async function resolveDuplicates(
+  runId: string,
+  answer: { candidate_id: string; same: string[]; different: string[]; keep: string },
+): Promise<ListicleBoard> {
+  const response = await apiFetch(`${BASE}/board/${runId}/duplicates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(answer),
+  })
+  if (!response.ok) throw await readError(response, 'That answer could not be saved.')
+  return (await response.json()) as ListicleBoard
+}
+
+/** Put a removed place back on the board. */
+export async function restoreCandidate(runId: string, candidateId: string): Promise<ListicleBoard> {
+  const response = await apiFetch(`${BASE}/board/${runId}/restore`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ candidate_id: candidateId }),
+  })
+  if (!response.ok) throw await readError(response, 'That place could not be put back.')
+  return (await response.json()) as ListicleBoard
 }
 
 export async function loadSearch(runId: string): Promise<ListicleSearchResults | null> {

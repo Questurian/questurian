@@ -326,3 +326,13 @@ export interface ListicleRunSummary {
   touched_at: string
   hidden: boolean
 }
+
+/** The operator's answers to "might be the same place".
+ *
+ *  A removed place is off the board, not deleted: it is listed at the bottom
+ *  and can be put back. A distinct pair is two flagged places judged to be
+ *  different, so the warning between them stops showing. */
+export interface ListicleBoard {
+  removed: { candidate_id: string; kept_id: string; removed_at: string }[]
+  distinct_pairs: [string, string][]
+}

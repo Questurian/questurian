@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -12,6 +12,9 @@ const runSearch = vi.fn()
 const loadSearch = vi.fn()
 const listRuns = vi.fn()
 const setRunHidden = vi.fn()
+const loadBoard = vi.fn()
+const resolveDuplicates = vi.fn()
+const restoreCandidate = vi.fn()
 
 vi.mock('./api', async importOriginal => {
   const actual = await importOriginal<typeof import('./api')>()
@@ -26,13 +29,18 @@ vi.mock('./api', async importOriginal => {
     loadSearch: (...args: unknown[]) => loadSearch(...args),
     listRuns: (...args: unknown[]) => listRuns(...args),
     setRunHidden: (...args: unknown[]) => setRunHidden(...args),
+    loadBoard: (...args: unknown[]) => loadBoard(...args),
+    resolveDuplicates: (...args: unknown[]) => resolveDuplicates(...args),
+    restoreCandidate: (...args: unknown[]) => restoreCandidate(...args),
   }
 })
 
 import { NotFoundError } from './api'
+import { CANDIDATE_CHECKLIST } from './components/CandidateCard'
 import { ListiclePipelinePage } from './pages/ListiclePipelinePage'
 import type {
   ListicleGrillState,
+  ListicleCandidate,
   ListicleOrder,
   ListicleRunSummary,
   ListicleSearchResults,
@@ -203,6 +211,9 @@ beforeEach(() => {
   loadSearch.mockReset().mockResolvedValue(null)
   listRuns.mockReset().mockResolvedValue([])
   setRunHidden.mockReset().mockResolvedValue(undefined)
+  loadBoard.mockReset().mockResolvedValue({ removed: [], distinct_pairs: [] })
+  resolveDuplicates.mockReset()
+  restoreCandidate.mockReset()
 })
 
 describe('getting back to a run', () => {
@@ -486,11 +497,12 @@ describe('the agreed order on screen', () => {
     )
     renderAt('/listicle-pipeline/abc123')
 
-    expect(
-      await screen.findByText(/Looks like something you left out/),
-    ).toBeInTheDocument()
-    // Flagged, never removed.
-    expect(screen.getByText('Maido')).toBeInTheDocument()
+    // Flagged, never removed. The flag is research, so it lives in the
+    // place's details rather than on the card.
+    await userEvent.click(await screen.findByRole('button', { name: 'Details for Maido' }))
+    const details = screen.getByRole('dialog', { name: 'Details for Maido' })
+    expect(within(details).getByText(/Looks like something you left out/)).toBeInTheDocument()
+    expect(within(details).getByText(/Ceviche is one dish of many here/)).toBeInTheDocument()
   })
 
   it('says when the order cannot fill the list, without adding a search', async () => {
@@ -612,7 +624,7 @@ describe('recovering from a partial failure', () => {
     )
     renderAt('/listicle-pipeline/abc123')
 
-    expect(await screen.findByText(/found by 3 searches/)).toBeInTheDocument()
+    expect(await screen.findByText(/found by 3 searches/i)).toBeInTheDocument()
     expect(screen.queryByText(/strongest|best/i)).not.toBeInTheDocument()
   })
 
@@ -633,6 +645,238 @@ describe('recovering from a partial failure', () => {
       await screen.findByText(/Might be the same place as Canta Rana Centro/),
     ).toBeInTheDocument()
     expect(screen.getByText(/this count is provisional/)).toBeInTheDocument()
+  })
+})
+
+describe('reading the places', () => {
+  const WINGMAN: ListicleCandidate = {
+    candidate_id: 'cand-wingman',
+    name: 'Wingman',
+    district: 'Miraflores',
+    evidence: 'especializado en alitas, shows fútbol',
+    found_by: [
+      'Lima sports bars where people watch the fútbol over a plate of alitas',
+      'Pollerías in Lima serving alitas a la brasa',
+    ],
+    overlap: 2,
+    possible_duplicates: ['Wingman Barranco'],
+    sightings: [
+      {
+        sighting_id: 's1',
+        angle: 'Lima sports bars where people watch the fútbol over a plate of alitas',
+        name: 'Wingman',
+        district: 'Miraflores',
+        evidence: 'especializado en alitas, shows fútbol',
+      },
+      {
+        sighting_id: 's2',
+        angle: 'Pollerías in Lima serving alitas a la brasa',
+        name: 'Wingman Miraflores',
+        district: 'Miraflores',
+        evidence: 'alitas a la brasa con ají verde',
+      },
+    ],
+  }
+
+  async function openWings() {
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(order())
+    loadSearch.mockResolvedValue(results({ candidates: [WINGMAN] }))
+    renderAt('/listicle-pipeline/abc123')
+    await screen.findByText('Wingman')
+  }
+
+  it('keeps the card to name, district, repeat finds and a possible duplicate', async () => {
+    await openWings()
+
+    expect(screen.getByText('Miraflores')).toBeInTheDocument()
+    expect(screen.getByText(/found by 2 searches/i)).toBeInTheDocument()
+    expect(screen.getByText(/Might be the same place as Wingman Barranco/)).toBeInTheDocument()
+    // What the searches said is research, and stays off the card.
+    expect(screen.queryByText(/especializado en alitas/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/alitas a la brasa con ají verde/)).not.toBeInTheDocument()
+  })
+
+  it('opens what every search said about one place, and closes again', async () => {
+    await openWings()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Details for Wingman' }))
+    const details = screen.getByRole('dialog', { name: 'Details for Wingman' })
+    expect(within(details).getByText(/Found by 2 searches/)).toBeInTheDocument()
+    expect(within(details).getByText(/especializado en alitas, shows fútbol/)).toBeInTheDocument()
+    expect(within(details).getByText(/alitas a la brasa con ají verde/)).toBeInTheDocument()
+    expect(within(details).getByText(/Listed as Wingman Miraflores/)).toBeInTheDocument()
+    expect(
+      within(details).getByText('Pollerías in Lima serving alitas a la brasa'),
+    ).toBeInTheDocument()
+
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('gives every place its own checklist, and ticking one touches no other', async () => {
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(order())
+    loadSearch.mockResolvedValue(
+      results({
+        candidates: [WINGMAN, { ...WINGMAN, candidate_id: 'cand-juno', name: 'JUNO WINGS' }],
+      }),
+    )
+    renderAt('/listicle-pipeline/abc123')
+
+    const wingman = await screen.findByRole('list', { name: 'Checklist for Wingman' })
+    const juno = screen.getByRole('list', { name: 'Checklist for JUNO WINGS' })
+    const boxes = within(wingman).getAllByRole('checkbox')
+    expect(boxes).toHaveLength(CANDIDATE_CHECKLIST.length)
+
+    await userEvent.click(within(wingman).getByLabelText(CANDIDATE_CHECKLIST[0]))
+
+    expect(within(wingman).getByLabelText(CANDIDATE_CHECKLIST[0])).toBeChecked()
+    expect(within(juno).getByLabelText(CANDIDATE_CHECKLIST[0])).not.toBeChecked()
+  })
+
+  it('looks a place up on Google and Maps in one click, in the right city', async () => {
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(order())
+    loadSearch.mockResolvedValue(
+      results({ candidates: [{ ...WINGMAN, name: 'Wingman [Miraflores]' }] }),
+    )
+    renderAt('/listicle-pipeline/abc123')
+
+    const google = await screen.findByRole('link', {
+      name: 'Search Google for Wingman [Miraflores]',
+    })
+    const maps = screen.getByRole('link', { name: 'Find Wingman [Miraflores] on Google Maps' })
+    // The bracketed branch is dropped; the district and the list's city are
+    // what tell Google which Wingman.
+    const query = encodeURIComponent('Wingman Miraflores Lima, Peru')
+    expect(google).toHaveAttribute('href', `https://www.google.com/search?q=${query}`)
+    expect(maps).toHaveAttribute(
+      'href',
+      `https://www.google.com/maps/search/?api=1&query=${query}`,
+    )
+    expect(google).toHaveAttribute('target', '_blank')
+  })
+
+  it('folds how the places were found under one line above them', async () => {
+    await openWings()
+
+    const fold = screen.getByText(/How these were found/).closest('details')
+    expect(fold).not.toBeNull()
+    expect(fold).not.toHaveAttribute('open')
+    // The per-search table is inside the fold, not above the places.
+    expect(fold?.querySelector('.lp-angle-table')).not.toBeNull()
+  })
+})
+
+describe('settling a possible duplicate', () => {
+  const place = (id: string, name: string, district: string, dupes: string[]): ListicleCandidate => ({
+    candidate_id: id,
+    name,
+    district,
+    evidence: `${name} evidence`,
+    found_by: ['wings in Lima'],
+    overlap: 1,
+    possible_duplicates: dupes,
+    possible_duplicate_ids: dupes,
+    sightings: [],
+  })
+  const WINGMAN = place('wm', 'Wingman', 'Miraflores', ['wa', 'wb'])
+  const ALITAS = place('wa', 'Wingman Alitas Inc.', 'Miraflores', ['wm'])
+  const BARRANCO = place('wb', 'Wingman', 'Barranco', ['wm'])
+
+  async function openBoard(board = { removed: [], distinct_pairs: [] }) {
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(order())
+    loadSearch.mockResolvedValue(results({ found: 3, candidates: [WINGMAN, ALITAS, BARRANCO] }))
+    loadBoard.mockResolvedValue(board)
+    renderAt('/listicle-pipeline/abc123')
+    await screen.findByText('Wingman Alitas Inc.')
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith('abc123'))
+  }
+
+  function cardOf(name: string) {
+    return screen.getByRole('list', { name: `Checklist for ${name}` }).closest('li.lp-candidate') as HTMLElement
+  }
+
+  it('opens the check from the warning itself', async () => {
+    await openBoard()
+
+    await userEvent.click(within(cardOf('Wingman Alitas Inc.')).getByRole('button', { name: /Sort it out/ }))
+
+    const check = screen.getByRole('dialog', { name: 'Is Wingman Alitas Inc. a duplicate?' })
+    expect(within(check).getByText('Wingman Alitas Inc.')).toBeInTheDocument()
+    expect(within(check).getByRole('group', { name: 'Is Wingman the same place?' })).toBeInTheDocument()
+  })
+
+  it('chooses nothing for you, and will not remove until a keeper is picked', async () => {
+    await openBoard()
+    await userEvent.click(within(cardOf('Wingman Alitas Inc.')).getByRole('button', { name: /Sort it out/ }))
+    const check = screen.getByRole('dialog')
+
+    expect(within(check).getByRole('button', { name: 'Save' })).toBeDisabled()
+    await userEvent.click(within(check).getByRole('button', { name: 'Same place' }))
+    expect(within(check).getByRole('button', { name: 'Choose which one stays' })).toBeDisabled()
+    expect(within(check).getAllByRole('radio').every(radio => !(radio as HTMLInputElement).checked)).toBe(true)
+  })
+
+  it('keeps the chosen place and moves the other to the bottom, where it can be put back', async () => {
+    await openBoard()
+    resolveDuplicates.mockResolvedValue({
+      removed: [{ candidate_id: 'wa', kept_id: 'wm', removed_at: '2026-09-11T20:00:00+00:00' }],
+      distinct_pairs: [],
+    })
+    await userEvent.click(within(cardOf('Wingman Alitas Inc.')).getByRole('button', { name: /Sort it out/ }))
+    const check = screen.getByRole('dialog')
+
+    await userEvent.click(within(check).getByRole('button', { name: 'Same place' }))
+    await userEvent.click(within(check).getByRole('radio', { name: /Wingman \(Miraflores\)/ }))
+    await userEvent.click(within(check).getByRole('button', { name: 'Keep Wingman, remove 1' }))
+
+    expect(resolveDuplicates).toHaveBeenCalledWith('abc123', {
+      candidate_id: 'wa',
+      same: ['wm'],
+      different: [],
+      keep: 'wm',
+    })
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.queryByRole('list', { name: 'Checklist for Wingman Alitas Inc.' })).not.toBeInTheDocument()
+    expect(screen.getByText(/1 removed as a duplicate/)).toBeInTheDocument()
+    expect(screen.getByText('Removed places (1)')).toBeInTheDocument()
+
+    restoreCandidate.mockResolvedValue({ removed: [], distinct_pairs: [] })
+    await userEvent.click(screen.getByRole('button', { name: 'Put back Wingman Alitas Inc.' }))
+    expect(restoreCandidate).toHaveBeenCalledWith('abc123', 'wa')
+    expect(await screen.findByRole('list', { name: 'Checklist for Wingman Alitas Inc.' })).toBeInTheDocument()
+  })
+
+  it('stops warning about a pair once they are called different places', async () => {
+    await openBoard()
+    resolveDuplicates.mockResolvedValue({ removed: [], distinct_pairs: [['wb', 'wm']] })
+    // Two cards are called Wingman; the district is what tells them apart.
+    const barranco = screen
+      .getAllByRole('list', { name: 'Checklist for Wingman' })
+      .map(list => list.closest('li.lp-candidate') as HTMLElement)
+      .find(card => within(card).queryByText('Barranco'))!
+    await userEvent.click(within(barranco).getByRole('button', { name: /Sort it out/ }))
+    const check = screen.getByRole('dialog')
+
+    await userEvent.click(within(check).getByRole('button', { name: 'Different place' }))
+    await userEvent.click(within(check).getByRole('button', { name: 'Save: a different place' }))
+
+    expect(resolveDuplicates).toHaveBeenCalledWith('abc123', {
+      candidate_id: 'wb',
+      same: [],
+      different: ['wm'],
+      keep: '',
+    })
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(within(barranco).queryByText(/Might be the same place/)).not.toBeInTheDocument()
+    // The Miraflores Wingman is still flagged against the other one.
+    const miraflores = cardOf('Wingman Alitas Inc.')
+    expect(within(miraflores).getByText(/Might be the same place as Wingman \(Miraflores\)/)).toBeInTheDocument()
+    // Nothing was removed.
+    expect(screen.queryByText(/Removed places/)).not.toBeInTheDocument()
   })
 })
 

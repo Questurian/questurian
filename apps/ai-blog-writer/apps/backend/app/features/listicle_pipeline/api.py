@@ -471,6 +471,48 @@ def hide_listicle_run(
     return {"run_id": run_id, "hidden": req.hidden}
 
 
+class DuplicateAnswer(BaseModel):
+    """One answer to "might be the same place", from the card it was asked on."""
+
+    candidate_id: str = Field(min_length=1, max_length=64)
+    same: list[str] = Field(default_factory=list, max_length=40)
+    different: list[str] = Field(default_factory=list, max_length=40)
+    keep: str = Field(default="", max_length=64)
+
+
+class RestoreRequest(BaseModel):
+    candidate_id: str = Field(min_length=1, max_length=64)
+
+
+@router.get("/board/{run_id}")
+def get_listicle_board(run_id: str, _staff=Depends(require_staff)):
+    """What was removed as a duplicate, and which pairs are different places."""
+    return _report(service.board, run_id)
+
+
+@router.post("/board/{run_id}/duplicates")
+def resolve_listicle_duplicates(
+    run_id: str, req: DuplicateAnswer, _staff=Depends(require_staff)
+):
+    """Settle a duplicate warning. Removing is not deleting: a removed place
+    can be put back."""
+    return _report(
+        service.resolve_duplicates,
+        run_id,
+        req.candidate_id,
+        same=req.same,
+        different=req.different,
+        keep=req.keep,
+    )
+
+
+@router.post("/board/{run_id}/restore")
+def restore_listicle_candidate(
+    run_id: str, req: RestoreRequest, _staff=Depends(require_staff)
+):
+    return _report(service.restore_candidate, run_id, req.candidate_id)
+
+
 @router.get("/shapes")
 def list_shapes(_staff=Depends(require_staff)):
     """The shape catalogue, for a screen that wants to offer more angles.
