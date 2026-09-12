@@ -1330,3 +1330,87 @@ def test_calling_two_google_twins_different_places_does_not_tick_the_problem_awa
     }
     assert "identity_mismatch" in codes
     assert "identity_conflict" not in codes
+
+
+def test_a_settled_duplicate_leaves_no_mark_on_the_card(client, run):
+    """A finished card should read as finished, not as one that once had
+    trouble. Where the decision went is Removed places; the card itself moves
+    on."""
+    cards = list(_cards(client, run).values())
+    first, second = cards[0], cards[1]
+    found = service.progress(run)
+    paired = dict(found)
+    for candidate in paired["candidates"]:
+        other = second if candidate["candidate_id"] == first["candidate_id"] else first
+        if candidate["candidate_id"] in {first["candidate_id"], second["candidate_id"]}:
+            candidate["possible_duplicate_ids"] = [other["candidate_id"]]
+
+    import app.features.listicle_pipeline.service as service_module
+
+    original = service_module.progress
+    try:
+        service_module.progress = lambda run_id: (
+            paired if run_id == run else original(run_id)
+        )
+        # While it stands, it is a required check and it blocks.
+        open_state = _prepare(client, run, first["candidate_id"])["readiness"]
+        assert open_state["required_total"] == 3
+        assert "duplicates_open" in {b["code"] for b in open_state["blockers"]}
+
+        service.resolve_duplicates(
+            run, first["candidate_id"], same=[], different=[second["candidate_id"]]
+        )
+        settled = _cards(client, run)[first["name"]]["readiness"]
+        assert settled["required_total"] == 2
+        assert settled["required_done"] == 2
+        assert settled["ready"] is True
+    finally:
+        service_module.progress = original
+
+
+def test_one_place_can_be_looked_up_again_when_google_matched_it_wrong(client, run):
+    """The ordinary check never re-asks about a place already answered for,
+    which leaves no way out of a wrong match. This is that way out: one lookup,
+    for one place."""
+    cards = list(_cards(client, run).values())
+    first = cards[0]
+    asked: list[tuple] = []
+
+    def elsewhere(name, city, district=""):
+        asked.append((name, city, district))
+        return identity.Lookup(
+            "found",
+            identity.ResolvedPlace(
+                place_id="place-the-right-one",
+                name=name,
+                address="Somewhere else entirely 900",
+                types=("restaurant",),
+                business_status="OPERATIONAL",
+            ),
+        )
+
+    _prepare(client, run, first["candidate_id"])
+    assert _cards(client, run)[first["name"]]["readiness"]["ready"] is True
+
+    service.recheck_on_google(run, first["candidate_id"], lookup=elsewhere)
+
+    assert len(asked) == 1
+    after = _cards(client, run)[first["name"]]["readiness"]
+    assert after["place_id"] == "place-the-right-one"
+    # The confirmations were made about a different building, so they are stale
+    # rather than carried across.
+    assert {"identity_stale", "open_stale"} <= {b["code"] for b in after["blockers"]}
+
+
+def test_a_second_lookup_does_not_re_raise_a_warning_already_overruled(client, run):
+    """Putting a place back overrules Google. Asking which building it is must
+    not undo that."""
+    cards = list(_cards(client, run).values())
+    first = cards[0]
+    store.dismiss_closed(run, first["candidate_id"])
+
+    def same_place(name, city, district=""):
+        return _resolved(name, city, district)
+
+    service.recheck_on_google(run, first["candidate_id"], lookup=same_place)
+    assert store.load_google_checks(run)[first["candidate_id"]]["closed_dismissed"]

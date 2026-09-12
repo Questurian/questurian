@@ -549,6 +549,14 @@ export function SearchResults({
                     void research.savePrep(candidate.candidate_id, patch),
                   onResearch: () => void research.research(candidate.candidate_id),
                   onOpenResearch: () => setResearchId(candidate.candidate_id),
+                  onRecheckGoogle: () => {
+                    void google.recheck(candidate.candidate_id).then(done => {
+                      // The identity moved, so everything that was confirmed
+                      // against the old one has to be read again.
+                      if (done) void research.refresh()
+                    })
+                  },
+                  recheckingGoogle: google.checking,
                 }
               })()}
             />

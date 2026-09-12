@@ -1185,6 +1185,60 @@ def check_on_google(run_id: str, lookup=None) -> dict:
     }
 
 
+def recheck_on_google(run_id: str, candidate_id: str, lookup=None) -> dict:
+    """Ask Google about one place again, throwing away the answer it gave.
+
+    The ordinary check never re-asks about a place Google has already answered
+    for, which is right: a lookup is billed, and re-asking forty places on
+    every visit would spend on every visit. But that leaves one state with no
+    way out -- a place Google matched to the WRONG building. On the wings run
+    three cards resolved to one bar on Bolognesi 494, and for two of them that
+    is simply not where they are.
+
+    One lookup, for one place, asked for by name. The stored answer is
+    replaced, so whatever was confirmed against the old identity goes stale and
+    has to be looked at again -- which is the point: the confirmations were
+    about a different building.
+    """
+    from . import identity
+
+    if lookup is None:
+        if not identity.api_key():
+            raise ValueError(
+                "No Google Maps key is set for the blog writer "
+                "(GOOGLE_MAPS_API_KEY), so nothing was checked."
+            )
+        lookup = identity.lookup
+    current = store.load_order(run_id)
+    found = progress(run_id)
+    if current is None or found is None:
+        raise LookupError("This run has no search results to check yet.")
+    candidate = next(
+        (
+            row
+            for row in found.get("candidates", [])
+            if row["candidate_id"] == candidate_id
+        ),
+        None,
+    )
+    if candidate is None:
+        raise ValueError(
+            f"Not a place on this run's list: {candidate_id}. "
+            "Reload the results and try again."
+        )
+    result = lookup(candidate["name"], current.place, candidate.get("district", ""))
+    check = _google_check_of(result)
+    # What the operator already overruled stays overruled. A second lookup is
+    # about which building this is, and it is not a reason to re-raise a
+    # closure or a venue warning they have already answered.
+    previous = store.load_google_checks(run_id).get(candidate_id, {})
+    for flag in ("closed_dismissed", "venue_dismissed"):
+        if previous.get(flag):
+            check[flag] = True
+    store.save_google_check(run_id, candidate_id, check)
+    return {"checks": store.load_google_checks(run_id), "asked": 1}
+
+
 def _google_check_of(result) -> dict:
     """One lookup, as stored and as the card reads it."""
     place = result.place

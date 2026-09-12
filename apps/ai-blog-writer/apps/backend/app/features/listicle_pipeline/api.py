@@ -543,6 +543,24 @@ def check_listicle_places_on_google(run_id: str, _staff=Depends(require_staff)):
     return _report(service.check_on_google, run_id)
 
 
+class RecheckPlaceRequest(BaseModel):
+    candidate_id: str = Field(min_length=1, max_length=64)
+
+
+@router.post("/google/{run_id}/recheck")
+def recheck_one_listicle_place(
+    run_id: str, req: RecheckPlaceRequest, _staff=Depends(require_staff)
+):
+    """Ask Google about one place again, because it matched the wrong building.
+
+    One lookup, billed like any other, for the one state the ordinary check
+    cannot get out of: a place already answered for, wrongly. Whatever was
+    confirmed against the old identity goes stale, which is correct -- those
+    confirmations were about a different building.
+    """
+    return _report(service.recheck_on_google, run_id, req.candidate_id)
+
+
 @router.get("/google-allowance")
 def get_places_allowance(refresh: bool = False, _staff=Depends(require_staff)):
     """Free Google place lookups left this month, as Google counts them.

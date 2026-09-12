@@ -45,6 +45,10 @@ interface CandidateResearch {
   onPrep: (patch: PrepPatch) => void
   onResearch: () => void
   onOpenResearch: () => void
+  /** Ask Google about this one place again. Offered only where it is the
+   *  answer to something: a match the operator has said is wrong. */
+  onRecheckGoogle?: () => void
+  recheckingGoogle?: boolean
 }
 
 interface CandidateCardProps {
@@ -582,7 +586,28 @@ function ResearchAction({
       {!ready && blockers.length > 0 && (
         <ul className="lp-research-blockers">
           {blockers.map(blocker => (
-            <li key={blocker.code}>{blocker.message}</li>
+            <li key={blocker.code}>
+              {blocker.message}
+              {/* The one blocker with a fix that is not a removal: Google can
+                  be asked again. Offered here rather than in the Google bar at
+                  the top, because it is about this card and costs one lookup. */}
+              {blocker.code === 'identity_mismatch' && research.onRecheckGoogle && (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    className="lp-link-button"
+                    disabled={research.recheckingGoogle}
+                    onClick={research.onRecheckGoogle}
+                  >
+                    {research.recheckingGoogle
+                      ? 'Asking Google…'
+                      : 'check this one on Google again'}
+                  </button>
+                  <span className="lp-muted"> — one lookup.</span>
+                </>
+              )}
+            </li>
           ))}
         </ul>
       )}

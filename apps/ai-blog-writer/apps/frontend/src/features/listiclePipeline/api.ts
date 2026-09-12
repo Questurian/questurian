@@ -282,6 +282,28 @@ export async function checkOnGoogle(
   }
 }
 
+/** Ask Google about one place again, because it matched the wrong building.
+ *
+ *  One lookup, billed like any other. The ordinary check deliberately skips a
+ *  place Google has already answered for, which leaves no way out of a wrong
+ *  match; this is that way out. Whatever was confirmed against the old
+ *  identity goes stale, because it was about a different building. */
+export async function recheckPlaceOnGoogle(
+  runId: string,
+  candidateId: string,
+): Promise<{ checks: Record<string, ListicleGoogleCheck>; asked: number }> {
+  const response = await apiFetch(`${BASE}/google/${runId}/recheck`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ candidate_id: candidateId }),
+  })
+  if (!response.ok) throw await readError(response, 'That place could not be checked again.')
+  return (await response.json()) as {
+    checks: Record<string, ListicleGoogleCheck>
+    asked: number
+  }
+}
+
 /** Free Google place lookups left this month. Reading it is free. */
 export async function loadPlacesAllowance(refresh = false): Promise<ListiclePlacesAllowance> {
   const response = await apiFetch(`${BASE}/google-allowance${refresh ? '?refresh=true' : ''}`)

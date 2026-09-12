@@ -637,27 +637,28 @@ def readiness_of(
         and (min(candidate_id, other), max(candidate_id, other)) not in ctx.distinct
         and other in ctx.candidates
     ]
-    if candidate.get("possible_duplicate_ids"):
-        # A card with a duplicate beside it has one more thing to settle than a
-        # card without one, whether or not it has been settled yet. Counting
-        # the settled case as a completed check but NOT as a required one let
-        # a card read "3 of 3 checked" while a blocker was still standing --
-        # the count promised a completion the card did not have.
+    if open_pairs:
+        # Counted only while it is still a question. A settled duplicate is
+        # gone: the other card is off the board or judged a different place,
+        # and there is nothing left to do about it.
+        #
+        # It used to be counted either way, which put a permanent extra mark on
+        # a card for a problem somebody had already dealt with -- and a
+        # finished card should read as finished, not as one that once had
+        # trouble. Where the decision went is in Removed places, which is where
+        # a record of it belongs.
         required_total += 1
-        if open_pairs:
-            names = ", ".join(
-                ctx.candidates[other].get("name", other) for other in open_pairs
+        names = ", ".join(
+            ctx.candidates[other].get("name", other) for other in open_pairs
+        )
+        blockers.append(
+            Blocker(
+                "duplicates_open",
+                f"Settle whether this is the same place as {names} before "
+                "researching either of them.",
+                "board",
             )
-            blockers.append(
-                Blocker(
-                    "duplicates_open",
-                    f"Settle whether this is the same place as {names} before "
-                    "researching either of them.",
-                    "board",
-                )
-            )
-        else:
-            required_done += 1
+        )
 
     # Two cards on the board resolved to ONE Google Place ID. Name-based
     # duplicate detection cannot see this -- "Tradición Chalaca Rovira 1907"
@@ -695,11 +696,11 @@ def readiness_of(
                 blockers.append(
                     Blocker(
                         "identity_mismatch",
-                        f"You said this and {names} are different places, and "
-                        "Google has them as one. At least one of these cards "
-                        "is matched to the wrong building — research would be "
-                        "about somewhere else. Check it on Google again, or "
-                        "take the wrong one off.",
+                        f"You said this and {names} are different places, "
+                        "and Google has them as one. One of these cards is "
+                        "pointing at the wrong building, so its research would "
+                        "be about somewhere else. Check this one on Google "
+                        "again, or take the wrong card off.",
                         "board",
                     )
                 )
