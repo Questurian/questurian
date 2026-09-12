@@ -586,8 +586,8 @@ function ResearchAction({
           One search, one reading pass over what it names, one extraction from
           the text that was actually read. */}
       <p className="lp-muted lp-research-cost">
-        One web search and one reading pass — two model calls at most, up to
-        eight pages opened. No automatic retries.
+        Google&rsquo;s reviews, one web search and one reading pass — two model
+        calls at most, up to eight pages opened. No automatic retries.
       </p>
       {attempt && !running && attempt.generations > 0 && (
         <p className="lp-muted lp-research-cost">

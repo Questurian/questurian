@@ -229,6 +229,13 @@ For every claim:
   business. A platform's own blurb is an aggregator. A review with a name and a
   date is a named_reviewer. A star rating with no words is not a review at all
   and is not a claim.
+- A page of Google reviews is laid out as blocks beginning `REVIEW by <name> —
+  <n> stars — written <date>`. Each block is one person. Attribute to that
+  person by name in `who_name`, put their date in `event_date`, and never
+  describe several of them as a consensus -- three people saying a thing is
+  three people, and the number is the interesting part. Most of any review is
+  about parking and the music: take only what is about {subject}, and take
+  nothing from a review that says nothing about it.
 - `channel` matters only for a price: a delivery-platform price is `delivery`
   and is never written as the price of the dish.
 - `about_subject` is true only when the claim is about {subject}. Collect the
@@ -431,7 +438,18 @@ def _loads(raw: object) -> dict:
             "answer. The request ran and may still have been charged for."
         )
     try:
-        loaded = json.loads(text)
+        # `strict=False` permits a raw newline or tab inside a quoted string.
+        # Gemini writes one whenever it quotes a passage that was laid out over
+        # two lines in the page -- a menu row, an address block -- and strict
+        # JSON refuses the whole envelope over it. A real reply was lost that
+        # way: "Invalid control character at: line 26 column 5520", six
+        # thousand characters of readable pages thrown out because one quoted
+        # sentence contained the line break it had on the page.
+        #
+        # This loosens what counts as JSON, not what counts as evidence. Every
+        # check downstream is unchanged, and a passage carrying a newline still
+        # has to be found in the page it names.
+        loaded = json.loads(text, strict=False)
     except ValueError as error:
         raise ExtractionInvalid(f"The reply was not JSON: {error}") from error
     if not isinstance(loaded, dict):
@@ -529,7 +547,7 @@ def check(
                     f"The passage credited to p{index} "
                     f"({page.final_url or page.requested_url}) is not in that page."
                 )
-            page_says_branch = any(
+            page_says_branch = page.branch_anchored or any(
                 marker and marker in _normalise(page.text) for marker in markers
             )
             claim.support.append(

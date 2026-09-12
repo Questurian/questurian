@@ -550,6 +550,80 @@ Rules:
   to you."""
 
 
+# A run of one character repeated past any plausible content. A model that
+# loses the thread emits these: gemini-2.5-flash answered one real BarBarian
+# request with 2,623 characters of pages and 10,932 characters of the digit
+# zero, in two runs of 5,466, having started the whole answer over in between.
+# 11,778 output tokens were charged for it.
+#
+# A hundred is well past anything real. The longest legitimate repeat in a page
+# address or a Spanish passage is a row of dashes in a menu, and it is short.
+_DEGENERATE = re.compile(r"(.)\1{99,}")
+
+
+def degenerate_runs(text: str) -> list[tuple[int, int, str]]:
+    """Where a reply stopped saying anything, and with what character."""
+    return [
+        (match.start(), len(match.group(0)), match.group(1))
+        for match in _DEGENERATE.finditer(text or "")
+    ]
+
+
+def _complete_objects(text: str, key: str) -> list[dict]:
+    """Every whole `{...}` inside `"key": [ ... ]`, stopping at the first that
+    is not whole.
+
+    Deterministic salvage of a truncated array, and nothing more. No model is
+    asked to repair anything, no missing brace is invented, and an object that
+    was cut mid-way is dropped rather than guessed at. What this recovers is
+    what the reply actually finished writing.
+
+    It is safe *because of what happens next*: a recovered page is an address
+    to open, and it only becomes evidence once it has been fetched and once a
+    passage has been found in it. A bad salvage produces a page that fails to
+    load or a claim that fails its check -- not a false finding.
+    """
+    found: list[dict] = []
+    for opening in [
+        match.end()
+        for match in re.finditer(rf'"{re.escape(key)}"\s*:\s*\[', text)
+    ]:
+        depth = 0
+        start = -1
+        index = opening
+        in_string = False
+        escaped = False
+        while index < len(text):
+            char = text[index]
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+            elif char == '"':
+                in_string = True
+            elif char == "{":
+                if depth == 0:
+                    start = index
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0 and start >= 0:
+                    try:
+                        found.append(
+                            json.loads(text[start : index + 1], strict=False)
+                        )
+                    except ValueError:
+                        pass
+                    start = -1
+            elif char == "]" and depth == 0:
+                break
+            index += 1
+    return [item for item in found if isinstance(item, dict)]
+
+
 class _PageIn(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -613,6 +687,11 @@ class Discovery:
     not_found: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     issues: list[str] = field(default_factory=list)
+    # True when the envelope did not parse and whole page entries were lifted
+    # out of it by hand. The pages are real; the reply was not finished, so
+    # whatever it had not written yet is simply absent -- and a screen that
+    # does not say so reports a partial answer as a complete one.
+    salvaged: bool = False
 
     def summary(self) -> str:
         """The discovery, as context for extraction. Labelled as a claim.
@@ -643,20 +722,69 @@ def parse_discovery(raw: str) -> Discovery:
     one that fails.
     """
     issues: list[str] = []
+    salvaged = False
+    rescued_count = 0
     text = (raw or "").strip()
     fenced = _FENCE.match(text)
     text = fenced.group(1).strip() if fenced else _OPEN_FENCE.sub("", text).strip()
     if not text:
         raise ResponseInvalid("The search call came back empty.")
+
+    # A model that loses the thread mid-answer. Said as what it is, with the
+    # character and the length, because "the reply was not JSON" sends whoever
+    # reads it looking for a formatting problem when the actual problem is that
+    # the provider stopped writing an answer and kept billing.
+    looping = degenerate_runs(text)
+    if looping:
+        lost = sum(length for _, length, _ in looping)
+        issues.append(
+            f"The model repeated one character {len(looping)} time(s) for "
+            f"{lost:,} characters and never finished the answer "
+            f"({looping[0][2]!r} x {looping[0][1]:,} at character "
+            f"{looping[0][0]:,}). The whole reply was charged for."
+        )
+        text = _DEGENERATE.sub("", text)
+
     if len(text) < 20:
         raise ResponseInvalid(
             f"The model stopped after {len(text)} characters without writing an "
             "answer. The request ran and may still have been charged for."
         )
     try:
-        loaded = json.loads(text)
+        # `strict=False` permits a raw newline or tab inside a quoted string.
+        # Gemini writes one whenever it quotes a passage that was laid out over
+        # two lines in the page -- a menu row, an address block -- and strict
+        # JSON refuses the whole envelope over it. A real reply was lost that
+        # way: "Invalid control character at: line 26 column 5520", six
+        # thousand characters of readable pages thrown out because one quoted
+        # sentence contained the line break it had on the page.
+        #
+        # This loosens what counts as JSON, not what counts as evidence. Every
+        # check downstream is unchanged, and a passage carrying a newline still
+        # has to be found in the page it names.
+        loaded = json.loads(text, strict=False)
     except ValueError as error:
-        raise ResponseInvalid(f"The reply was not JSON: {error}") from error
+        # The envelope is unfinished. Lift out the page entries it DID finish
+        # writing, and say how it ended -- a paid call that named four real
+        # pages before it stopped is not the same as one that named none, and
+        # throwing both away treats them as if it were.
+        #
+        # No repair, no second call, nothing invented: an object cut in half is
+        # dropped. And a salvaged page is still only an address to open, which
+        # is what makes this safe -- it has to be fetched, and a passage has to
+        # be found in it, before any of it becomes evidence.
+        rescued = _complete_objects(text, "pages")
+        if not rescued:
+            raise ResponseInvalid(f"The reply was not JSON: {error}") from error
+        salvaged = True
+        issues.append(
+            f"The reply stopped before it was finished ({error}). "
+            f"{len(rescued)} complete page entr{'y' if len(rescued) == 1 else 'ies'} "
+            "were read out of it; anything it had not written yet is missing, "
+            "and no second call was made."
+        )
+        loaded = {"pages": rescued}
+        rescued_count = len(rescued)
     if not isinstance(loaded, dict):
         raise ResponseInvalid("The reply was JSON but not an object.")
     try:
@@ -696,12 +824,21 @@ def parse_discovery(raw: str) -> Discovery:
                 why=given.why.strip()[:300],
             )
         )
+    if salvaged and rescued_count != len(pages):
+        # A model that restarts its own answer writes the same page twice. The
+        # duplicate is dropped, and saying so keeps the recovered count from
+        # reading as more coverage than there is.
+        issues.append(
+            f"{rescued_count - len(pages)} of those were the same page written "
+            "twice, after the model started the answer over."
+        )
     return Discovery(
         pages=pages,
         searched=[line.strip()[:300] for line in envelope.searched if line.strip()],
         not_found=[line.strip()[:400] for line in envelope.not_found if line.strip()],
         notes=[line.strip()[:400] for line in envelope.notes if line.strip()],
         issues=issues,
+        salvaged=salvaged,
     )
 
 

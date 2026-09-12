@@ -209,3 +209,85 @@ def _review_year(review: dict, default: int) -> int | None:
         return datetime.fromtimestamp(float(stamp), tz=timezone.utc).year
     except Exception:  # pragma: no cover -- defensive
         return None
+
+
+# ---------------------------------------------------------------------------
+# Reviews, for the per-place research path.
+#
+# `claims_from` above turns the whole details payload into `Claim` rows for the
+# old whole-run pass. The per-place path wants something different: not five
+# reviews stored whole -- most of any five reviews is about parking and the
+# music -- but the sentences in them that are about this list's subject, each
+# with the reviewer who wrote it and the day they wrote it.
+#
+# So the reviews arrive as one collected page. Extraction reads it the way it
+# reads a fetched page, quotes the passage it used, and the same check applies:
+# the sentence has to really be in the text. The difference is that this text
+# did not come from a model and could not have been invented by one.
+# ---------------------------------------------------------------------------
+
+# Where a person can go and read them. The same page for every review of a
+# place -- Google publishes no per-review permalink -- so the reviews are one
+# source with a passage per claim rather than five sources sharing a link.
+REVIEWS_URL = "https://search.google.com/local/reviews?placeid={place_id}"
+
+
+def reviews_as_page(details: PlaceDetails, place_id: str):
+    """The reviews Google returned, as one page evidence can be quoted from.
+
+    `None` when there are none, which is a real answer about a place and not a
+    failure.
+
+    Branch-anchored: a Google review hangs off the Place ID, and the Place ID
+    is the branch. That is a stronger anchor than a street name appearing in
+    body text, and without it the address check would reject every review claim
+    for want of an address the reviews do not print.
+    """
+    from .source_reader import PageRead
+
+    if details.failed or not details.reviews:
+        return None
+    blocks = []
+    for review in details.reviews:
+        text = str(review.get("text") or "").strip()
+        if not text:
+            continue
+        who = str(review.get("author_name") or "").strip() or "an unnamed reviewer"
+        stars = review.get("rating")
+        age = str(review.get("relative_time_description") or "").strip()
+        when = _review_date(review)
+        blocks.append(
+            f"REVIEW by {who} — {stars} stars"
+            + (f" — {age}" if age else "")
+            + (f" — written {when}" if when else "")
+            + f"\n{text}"
+        )
+    if not blocks:
+        return None
+    return PageRead(
+        requested_url=REVIEWS_URL.format(place_id=place_id),
+        final_url=REVIEWS_URL.format(place_id=place_id),
+        state="ok",
+        http_status=200,
+        title=f"Google reviews for {details.name or 'this place'}",
+        text="\n\n".join(blocks),
+        # The page has no publication date of its own. Each review carries its
+        # own, inline, and a claim drawn from one takes that as its event date.
+        published_at="",
+        origin="google_reviews",
+        branch_anchored=True,
+        note=(
+            f"{len(blocks)} review(s) Google returned as most relevant. Not all "
+            "of them, and not a sample anybody chose."
+        ),
+    )
+
+
+def _review_date(review: dict) -> str:
+    stamp = review.get("time")
+    if not isinstance(stamp, (int, float)):
+        return ""
+    try:
+        return datetime.fromtimestamp(float(stamp), tz=timezone.utc).date().isoformat()
+    except Exception:  # pragma: no cover -- defensive
+        return ""

@@ -1071,8 +1071,14 @@ function History({ research }: { research: ListicleProfileResearch }) {
                             {page.title || page.final_url || page.requested_url}
                           </a>
                           <span className="lp-muted">
-                            {' · published '}
-                            {page.published_at || 'date unknown'}
+                            {page.origin === 'google_reviews' ? (
+                              <> · from Google, not fetched · no page budget spent</>
+                            ) : (
+                              <>
+                                {' · published '}
+                                {page.published_at || 'date unknown'}
+                              </>
+                            )}
                             {' · read '}
                             {page.retrieved_at.slice(0, 10)}
                             {page.reused ? ' · from an earlier read, not re-checked' : ''}

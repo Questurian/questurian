@@ -540,11 +540,17 @@ export interface ListicleReadPage {
   retrieved_at: string
   content_hash: string
   byte_count: number
+  /** `lead`, `discovered`, `operator`, or `google_reviews` — the last of
+   *  which was never fetched over HTTP and spends none of the page budget. */
   origin: string
   /** True when the text came from a page this attempt already held rather than
    *  from a second fetch. A refresh must not present cached text as newly
    *  checked. */
   reused: boolean
+  /** True when the source belongs to this branch by identity rather than by an
+   *  address printed on it — a Google review hangs off the Place ID, and the
+   *  Place ID is the branch. */
+  branch_anchored: boolean
   note: string
   chars: number
 }

@@ -82,6 +82,9 @@ def client(isolated_db, monkeypatch):
     # whose whole promise is that it does not.
     monkeypatch.setattr(listicle_api, "_read_pages", _Reader())
     monkeypatch.setattr(listicle_api, "_extract_call", _Extract())
+    # Google's reviews are a paid call on the owner's account. Off by default
+    # here; the tests that are about reviews put their own back.
+    monkeypatch.setattr(profile_service, "fetch_reviews", _no_reviews)
     app = FastAPI()
     app.include_router(listicle_api.router)
     return TestClient(app)
@@ -110,6 +113,37 @@ def _prepare(client, run_id, candidate_id, **extra):
     )
     assert response.status_code == 200, response.text
     return response.json()
+
+
+def _no_reviews(place_id: str):
+    """Google, asked nothing. The default for every test that is not about
+    reviews, so no test reaches a billed endpoint by forgetting to."""
+    from app.features.listicle_pipeline.places import PlaceDetails
+
+    return PlaceDetails(place_id, failed=True, reason="not in this test")
+
+
+def _reviews(*written: tuple[str, int, str]):
+    """Google, answering with the reviews a test names."""
+    from app.features.listicle_pipeline.places import PlaceDetails
+
+    def answer(place_id: str):
+        return PlaceDetails(
+            place_id,
+            name="Example Wings",
+            reviews=[
+                {
+                    "author_name": who,
+                    "rating": stars,
+                    "text": text,
+                    "time": 1750000000,
+                    "relative_time_description": "2 months ago",
+                }
+                for who, stars, text in written
+            ],
+        )
+
+    return answer
 
 
 class _Transport:
@@ -2113,3 +2147,172 @@ def test_a_retest_reports_the_whole_packet_and_the_net_new_rows(
     # was added, and the two numbers say exactly that.
     assert again["attempt"]["findings_seen"] == 3
     assert again["attempt"]["findings_added"] == 0
+
+
+# --------------------------------------------------------------------------
+# Google's reviewers
+# --------------------------------------------------------------------------
+
+
+def test_google_reviews_reach_the_extraction_without_being_fetched(
+    client, ready, monkeypatch
+):
+    """The customer voice the pilot could not find.
+
+    Every review platform the reader touched answered 403 or 404, and this was
+    one call away the whole time -- already written, wired only into the old
+    whole-run pass. It is not fetched over HTTP, so it does not spend the page
+    budget, and it cannot be refused by a platform.
+    """
+    run_id, candidate_id, _ = ready
+    monkeypatch.setattr(
+        profile_service,
+        "fetch_reviews",
+        _reviews(
+            ("Carlos Ruiz", 5, "Las alitas picantes son las mejores del barrio."),
+            ("Ana P", 3, "Buen ambiente pero el servicio va lento."),
+        ),
+    )
+    extract = _Extract(
+        json.dumps(
+            {
+                "claims": [
+                    {
+                        "text": "Carlos Ruiz called the spicy wings the best in "
+                        "the neighbourhood.",
+                        "kind": "review",
+                        "categories": ["customer_observations"],
+                        "about_subject": True,
+                        "scope": "branch",
+                        "who_said_it": "named_reviewer",
+                        "who_name": "Carlos Ruiz",
+                        "event_date": "2025-06-15",
+                        "support": [
+                            {
+                                "page_id": "p1",
+                                "excerpt": "alitas picantes son las mejores del barrio",
+                            }
+                        ],
+                    }
+                ],
+                "coverage": [],
+                "unresolved": [],
+            }
+        )
+    )
+    monkeypatch.setattr(listicle_api, "_extract_call", extract)
+    monkeypatch.setattr(listicle_api, "_research_call", _Transport())
+    body = client.post(
+        f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+        json={"idempotency_key": "reviews-key-0001"},
+    ).json()
+    assert body["attempt"]["state"] == "completed"
+
+    attempt = client.get(
+        f"{BASE}/research-attempts/{body['attempt']['attempt_id']}"
+    ).json()
+    reviews = next(
+        page for page in attempt["pages"] if page["origin"] == "google_reviews"
+    )
+    assert reviews["state"] == "ok"
+    assert reviews["branch_anchored"] is True
+    assert "REVIEW by Carlos Ruiz" in extract.prompts[0]
+    # It cost no HTTP fetch, so the eight-page reading budget is untouched.
+    assert reviews["byte_count"] == 0
+
+    profile = client.get(
+        f"{BASE}/profiles/{body['attempt']['profile_id']}/research"
+    ).json()
+    said = next(f for f in profile["findings"] if "Carlos Ruiz" in f["text"])
+    assert said["validation"] == "evidence_ready"
+    assert said["who_said_it"] == "named_reviewer"
+    assert said["who_name"] == "Carlos Ruiz"
+    # A Google review hangs off the Place ID, and the Place ID is the branch.
+    # No street name appears in the review text and none has to.
+    assert said["scope"] == "branch"
+    assert said["evidence"][0]["publisher"] == "Google reviews"
+    assert said["evidence"][0]["url"].startswith(
+        "https://search.google.com/local/reviews?placeid="
+    )
+
+
+def test_a_claim_a_reviewer_did_not_write_still_fails(client, ready, monkeypatch):
+    """The reviews are real text, so a passage check over them is a real check.
+
+    This is the property that makes reviews worth more than a provider snippet:
+    the words came from Google, not from a model reading a page it may not have
+    opened, so an invented quotation has nowhere to hide.
+    """
+    run_id, candidate_id, _ = ready
+    monkeypatch.setattr(
+        profile_service,
+        "fetch_reviews",
+        _reviews(("Ana P", 3, "Buen ambiente pero el servicio va lento.")),
+    )
+    monkeypatch.setattr(listicle_api, "_research_call", _Transport())
+    monkeypatch.setattr(
+        listicle_api,
+        "_extract_call",
+        _Extract(
+            json.dumps(
+                {
+                    "claims": [
+                        {
+                            "text": "Reviewers agree the wings are the best in Lima.",
+                            "kind": "review",
+                            "about_subject": True,
+                            "scope": "branch",
+                            "who_said_it": "named_reviewer",
+                            "who_name": "Ana P",
+                            "support": [
+                                {
+                                    "page_id": "p1",
+                                    "excerpt": "las mejores alitas de Lima",
+                                }
+                            ],
+                        }
+                    ],
+                    "coverage": [],
+                    "unresolved": [],
+                }
+            )
+        ),
+    )
+    body = client.post(
+        f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+        json={"idempotency_key": "reviews-key-0002"},
+    ).json()
+    profile = client.get(
+        f"{BASE}/profiles/{body['attempt']['profile_id']}/research"
+    ).json()
+    invented = next(f for f in profile["findings"] if "best in Lima" in f["text"])
+    assert invented["validation"] == "unsupported"
+
+
+def test_a_place_with_no_reviews_is_not_a_failure(client, ready, monkeypatch):
+    """A place nobody has reviewed is a fact about the place. A Places call
+    that failed is a fact about the network, and they are not the same."""
+    run_id, candidate_id, _ = ready
+    monkeypatch.setattr(profile_service, "fetch_reviews", _reviews())
+    monkeypatch.setattr(listicle_api, "_research_call", _Transport())
+    body = client.post(
+        f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+        json={"idempotency_key": "reviews-key-0003"},
+    ).json()
+    assert body["attempt"]["state"] == "completed"
+    attempt = client.get(
+        f"{BASE}/research-attempts/{body['attempt']['attempt_id']}"
+    ).json()
+    assert not [p for p in attempt["pages"] if p["origin"] == "google_reviews"]
+
+
+def test_reading_the_board_never_calls_google(client, run, monkeypatch):
+    """Places is billed per call. Opening a screen is not a decision to spend,
+    and that has to hold for the paid lookup as well as for the model."""
+    calls = []
+    monkeypatch.setattr(
+        profile_service, "fetch_reviews", lambda pid: calls.append(pid)
+    )
+    client.get(f"{BASE}/board/{run}/research")
+    client.get(f"{BASE}/board/{run}/research")
+    assert calls == []

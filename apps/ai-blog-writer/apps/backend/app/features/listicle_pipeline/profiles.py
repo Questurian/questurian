@@ -557,9 +557,11 @@ class CallReceipt(BaseModel):
     grounded: bool = False
     usage: dict = Field(default_factory=dict)
     duration_seconds: float | None = None
-    # `ok`, `failed`, `invalid`, `skipped`. A skipped call is recorded with its
-    # reason, because "no extraction ran" and "extraction found nothing" are
-    # different facts about a packet.
+    # `ok`, `salvaged`, `failed`, `invalid`, `skipped`. A skipped call is
+    # recorded with its reason, because "no extraction ran" and "extraction
+    # found nothing" are different facts about a packet. `salvaged` means the
+    # provider stopped mid-answer and whole entries were lifted out of what it
+    # had written -- a real result, and not the same as a clean one.
     outcome: str = "ok"
     reason: str = ""
     # What the provider said about why it stopped, when it says anything.

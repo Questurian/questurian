@@ -212,6 +212,10 @@ def dry_run() -> int:
         f"Ceiling for the whole pilot: {MAX_GENERATIONS} generations, "
         f"{MAX_GROUNDED} of them grounded, 8 pages per place."
     )
+    print(
+        "Each place also makes one Google Places Details call for its reviews. "
+        "Billed per call on the owner's account; no model, no page budget."
+    )
     if problems:
         print("\nIdentity has moved since the handoff:")
         for line in problems:

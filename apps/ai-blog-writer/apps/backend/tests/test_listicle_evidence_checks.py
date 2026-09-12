@@ -528,3 +528,114 @@ def test_a_truncated_extraction_says_where_the_json_stops():
         evidence.check(cut, brief=brief(), pages=[page("anything")])
     assert "not JSON" in str(raised.value)
     assert "column 1" not in str(raised.value)
+
+
+# --------------------------------------------------------------------------
+# A newline inside a quoted passage
+# --------------------------------------------------------------------------
+
+
+def test_a_passage_containing_a_line_break_does_not_lose_the_whole_reply():
+    """Seen in the field: "Invalid control character at: line 26 column 5520".
+
+    Gemini quotes a passage the way it was laid out on the page, and a menu row
+    or an address block carries a line break. Strict JSON refuses the entire
+    envelope over it -- six thousand characters of readable pages thrown away
+    because one quoted sentence kept the newline it had in the source.
+    """
+    pages = [page("Alitas 6 piezas\nS/ 25.00 en el local, C. Manuel Bonilla 108.")]
+    raw = (
+        '{"claims": [{"text": "Six wings cost S/ 25.00 at the table.",'
+        ' "kind": "price", "scope": "branch", "channel": "dine_in",'
+        ' "support": [{"page_id": "p1", "excerpt": "Alitas 6 piezas\n'
+        'S/ 25.00 en el local"}]}]}'
+    )
+    packet = evidence.check(raw, brief=brief(), pages=pages)
+    assert len(packet.claims) == 1
+    # And the passage still has to be in the page. Loosening the parser did not
+    # loosen the check.
+    assert packet.claims[0].validation == "evidence_ready"
+
+
+def test_a_line_break_in_a_discovery_passage_survives_too():
+    from app.features.listicle_pipeline import profile_research
+
+    raw = (
+        '{"pages": [{"url": "https://press.test/a", "publisher": "El Comercio",'
+        ' "passage": "Alitas ahumadas\npor cuatro horas"}]}'
+    )
+    parsed = profile_research.parse_discovery(raw)
+    assert parsed.pages[0].passage == "Alitas ahumadas\npor cuatro horas"
+
+
+def test_a_reply_that_is_genuinely_not_json_still_fails():
+    """The loosened parser must not start accepting prose."""
+    with pytest.raises(evidence.ExtractionInvalid) as raised:
+        evidence.check(
+            "Here is what I found about the wings at this bar, in summary form.",
+            brief=brief(),
+            pages=[page("anything")],
+        )
+    assert "not JSON" in str(raised.value)
+
+
+# --------------------------------------------------------------------------
+# A provider that stops saying anything
+# --------------------------------------------------------------------------
+
+
+def test_a_model_that_loops_on_one_character_is_named_as_that():
+    """Seen for real on BarBarian: gemini-2.5-flash wrote 2,623 characters of
+    pages and 10,932 characters of the digit zero, in two runs, having started
+    the whole answer over in between. 11,778 output tokens were charged.
+
+    "The reply was not JSON" sends whoever reads it looking for a formatting
+    problem. The problem is that the provider stopped writing an answer.
+    """
+    from app.features.listicle_pipeline import profile_research
+
+    reply = (
+        '{"pages": [{"url": "https://press.test/a", "publisher": "El Comercio",'
+        ' "passage": "alitas ahumadas"}, {"url": "https://press.test/b",'
+        ' "publisher": "Publimetro"' + "0" * 5000
+    )
+    parsed = profile_research.parse_discovery(reply)
+    assert parsed.salvaged is True
+    assert any("repeated one character" in issue for issue in parsed.issues)
+    assert any("x 5,000" in issue for issue in parsed.issues)
+    # The one entry it finished writing is kept. The half-written one is not
+    # guessed at.
+    assert [page.url for page in parsed.pages] == ["https://press.test/a"]
+
+
+def test_salvage_never_invents_the_half_written_entry():
+    from app.features.listicle_pipeline import profile_research
+
+    reply = '{"pages": [{"url": "https://press.test/a", "publisher": "El Com'
+    with pytest.raises(profile_research.ResponseInvalid):
+        profile_research.parse_discovery(reply)
+
+
+def test_a_restarted_answer_does_not_count_its_pages_twice():
+    """A model that loses the thread often starts over. Both copies are
+    complete and they are one page."""
+    from app.features.listicle_pipeline import profile_research
+
+    entry = '{"url": "https://press.test/a", "publisher": "El Comercio"}'
+    reply = (
+        '{"pages": [' + entry + "," + "0" * 200 + '\n{"pages": [' + entry + ","
+    )
+    parsed = profile_research.parse_discovery(reply)
+    assert len(parsed.pages) == 1
+    assert any("same page written twice" in issue for issue in parsed.issues)
+
+
+def test_a_reply_that_finishes_cleanly_is_not_marked_salvaged():
+    from app.features.listicle_pipeline import profile_research
+
+    parsed = profile_research.parse_discovery(
+        '{"pages": [{"url": "https://press.test/a", "publisher": "El Comercio"}],'
+        ' "searched": ["alitas"], "not_found": [], "notes": []}'
+    )
+    assert parsed.salvaged is False
+    assert parsed.issues == []

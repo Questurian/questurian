@@ -46,6 +46,25 @@ own publication date, its content hash and whether it could be read at all.
 Following the redirect is most of the win by itself: the citation becomes the
 publisher's own address, which still resolves next year.
 
+**Google's own reviewers are read before anything is searched.** One Places
+Details call returns up to five reviews as text -- the reviewer's name, their
+rating, the day they wrote it -- and they arrive as one collected page that
+extraction quotes from like any other. Nothing is fetched over HTTP, so no
+review platform can refuse it and it spends none of the page budget.
+
+It is attached to the Place ID, which *is* the branch, so a claim drawn from it
+is branch-level by identity rather than by an address printed in body text. The
+address check knows that; without it every review claim would be downgraded for
+want of an address reviews do not print.
+
+This is the one source of customer voice that is not a model's transcription of
+a page it may not have opened. The text came from Google, so an invented
+quotation has nowhere to hide, and the passage check over it is a real check.
+
+`places.py` already did all of this. It was wired only into the old whole-run
+pass, which is why the three-place pilot reported zero attributable opinion
+while every review platform its reader touched answered 403 or 404.
+
 **A finding is extracted from collected text, not from a search.** One
 ungrounded generation receives the pages under stable ids and returns atomic
 claims, each with the passage in a named page that carries it. It has no search
@@ -115,6 +134,22 @@ that is detectable from the text.
 one. 0039's rule is unchanged and this design has more places to fail, which
 makes it more important rather than less.
 
+**A reply that stops mid-sentence is salvaged, not repaired.** Whole entries are
+lifted out of an unfinished array by bracket matching; an object cut in half is
+dropped rather than guessed at, and no model is asked to fix another model's
+output. This is safe *because of what happens next*: a recovered entry is an
+address to open, and it becomes evidence only once the page has been fetched and
+a passage found in it. A bad salvage produces a page that fails to load, not a
+false finding.
+
+It exists because the alternative is throwing away a call that was paid for. One
+real BarBarian request wrote 2,623 characters of pages and then repeated the
+digit zero 10,932 times across two runs, having restarted the whole answer in
+between; 11,778 output tokens were charged and the operator was told "the reply
+was not JSON". A run of one character past a hundred is now reported as what it
+is -- the provider stopped writing an answer -- rather than as a formatting
+problem.
+
 **It does not decide anything about candidates.** No ranking, no approval, no
 removal. Evidence coverage cannot block a place or start another call.
 
@@ -144,6 +179,21 @@ The whole-run pass (`build_profile`, `research_place`, `Claim`) is untouched and
 still works. The old findings-envelope parser is deleted: the new path does not
 speak that shape, and keeping a second parser for a request nothing makes would
 be a compatibility layer for our own past.
+
+**What the reviews cost, and what they are not.** One Places Details call per
+research action, on the Atmosphere field group, billed to the owner's Google
+account. Google returns at most five and chooses them itself -- "most relevant"
+is not a sample anybody designed, and the page record says so. Storing review
+text is what the whole-run pass has always done; quoting it in a published
+article is a separate decision with its own terms to read.
+
+**Why not the review platforms.** Every one the reader has touched refuses it:
+Restaurant Guru 404, PedidosYa 403, Mercado Negro 403, and TripAdvisor 403 on
+both `.com` and `.com.pe`. TripAdvisor was the obvious alternative and it is not
+one -- the prep card's optional TripAdvisor link already reaches the reader, so a
+pasted URL costs no code and buys nothing but a `blocked` page record. Google's
+API returns the text directly and is the only customer voice this pipeline can
+actually reach.
 
 **Not yet proven.** Two generations is a ceiling chosen against the shape of the
 material, not a measured optimum. Eight pages is the same. The three-place pilot

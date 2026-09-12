@@ -36,6 +36,7 @@ from urllib.parse import urlparse
 from . import (
     candidate_prep,
     evidence,
+    places,
     profile_research,
     profile_store,
     research_store,
@@ -702,6 +703,16 @@ def _build_request(
     )
 
 
+def fetch_reviews(place_id: str):
+    """What Google's reviewers said about this place.
+
+    A seam of its own so a test can stand in front of it without standing in
+    front of the whole Places module, and so the one paid call this stage makes
+    is visible at the top of the file rather than buried in the sequence.
+    """
+    return places.fetch_details(place_id)
+
+
 def _default_extract(prompt: str):
     """The extraction call, when a caller did not hand one in.
 
@@ -871,6 +882,33 @@ def research(
     read_pages = reader or source_reader.read_pages
     pages: list[source_reader.PageRead] = []
     receipts: list[CallReceipt] = []
+
+    # --- What Google's own reviewers said, before anything is searched -------
+    #
+    # The one source of customer voice that is not a model's transcription of a
+    # page and cannot be a review platform's refusal: Google returns the text
+    # itself, with the reviewer's name, their rating and the day they wrote it.
+    # It is attached to the Place ID, so it is about this branch by identity
+    # rather than by an address printed somewhere in body text.
+    #
+    # The three-place pilot found zero attributable opinion about its subject
+    # while every review platform the reader touched answered 403 or 404 -- and
+    # this call was one line away the whole time, already written, wired only
+    # into the old whole-run pass.
+    #
+    # Billed per call on the owner's Google account, and it does not spend the
+    # page budget: nothing is fetched over HTTP.
+    if brief.place_id:
+        details = fetch_reviews(brief.place_id)
+        review_page = places.reviews_as_page(details, brief.place_id)
+        if review_page is not None:
+            pages.append(review_page)
+        elif details.failed:
+            logger.warning(
+                "Google reviews unavailable for %s: %s",
+                candidate_id,
+                details.reason,
+            )
 
     # --- Known pages, before anything is bought ------------------------------
     #
@@ -1209,16 +1247,28 @@ def _save_packet(
         told = described.get(
             source_reader.normalise(page.final_url or page.requested_url)
         ) or described.get(source_reader.normalise(page.requested_url))
+        # Google's reviews are not a publisher's page and a hostname is a poor
+        # name for them. "Google reviews" is what the attribution should still
+        # say in two years.
+        from_reviews = page.origin == "google_reviews"
         stored = profile_store.save_source(
             profile_id,
             ResearchSource(
                 source_id=uuid.uuid4().hex[:12],
                 url=page.final_url or page.requested_url,
-                publisher=_publisher_of(
-                    page.final_url or page.requested_url,
-                    getattr(told, "publisher", "") or "",
+                publisher=(
+                    "Google reviews"
+                    if from_reviews
+                    else _publisher_of(
+                        page.final_url or page.requested_url,
+                        getattr(told, "publisher", "") or "",
+                    )
                 ),
-                source_type=getattr(told, "source_type", "") or "",
+                source_type=(
+                    "review_platform"
+                    if from_reviews
+                    else getattr(told, "source_type", "") or ""
+                ),
                 title=page.title,
                 # The page's own date, read off the page. Never the day it was
                 # fetched, and never the provider's guess at it.

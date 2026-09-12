@@ -132,6 +132,11 @@ class PageRead:
     # than from a second request. A refresh must not present cached content as
     # newly checked, so this travels with the record.
     reused: bool = False
+    # True when the source is attached to this branch by identity rather than
+    # by an address printed on it. Google's reviews hang off a Place ID, which
+    # IS the branch -- a stronger anchor than a street name in body text, and
+    # one the address check below would otherwise fail for want of the address.
+    branch_anchored: bool = False
     note: str = ""
 
     @property
@@ -153,6 +158,7 @@ class PageRead:
             "byte_count": self.byte_count,
             "origin": self.origin,
             "reused": self.reused,
+            "branch_anchored": self.branch_anchored,
             "note": self.note,
             "chars": len(self.text),
         }

@@ -260,6 +260,7 @@ function attemptDetail(
         byte_count: 41000,
         origin: 'discovered',
         reused: false,
+        branch_anchored: false,
         note: '',
         chars: 4200,
       },
@@ -275,6 +276,7 @@ function attemptDetail(
         byte_count: 0,
         origin: 'discovered',
         reused: false,
+        branch_anchored: false,
         note: 'The page answered 403.',
         chars: 0,
       },
@@ -587,7 +589,7 @@ describe('the card', () => {
     // The budget, said before the press rather than discovered after it.
     expect(
       screen.getByText(
-        /One web search and one reading pass — two model calls at most, up to eight pages opened. No automatic retries./,
+        /Google.s reviews, one web search and one reading pass — two model calls at most, up to eight pages opened\. No automatic retries\./,
       ),
     ).toBeInTheDocument()
 
