@@ -389,3 +389,251 @@ export interface ListiclePlacesAllowance {
   as_of: string
   reason?: string
 }
+
+/* ------------------------------------------------------------------ *
+ * Per-place research.
+ *
+ * Three things the screen has to keep apart and used to conflate:
+ * how a request WENT (execution), what was FOUND (evidence), and what a
+ * person has DECIDED about what was found (curation). A failed call with four
+ * good findings still on the profile is all three at once, and one status
+ * field cannot say it.
+ * ------------------------------------------------------------------ */
+
+/** One reason a place cannot be researched yet.
+ *
+ *  `where` says which screen fixes it: `prep` is the card itself, `board` is
+ *  the duplicate or removal workflow, `google` is a check nobody has bought,
+ *  `execution` clears itself when something finishes. */
+export interface ListicleResearchBlocker {
+  code: string
+  message: string
+  where: 'prep' | 'board' | 'google' | 'execution' | string
+}
+
+/** Whether one place can be researched, computed on the server.
+ *
+ *  The card never decides this for itself. A second, client-side version of
+ *  the rule is how a button comes back enabled over a board that has moved. */
+export interface ListicleReadiness {
+  candidate_id: string
+  ready: boolean
+  blockers: ListicleResearchBlocker[]
+  /** Required checks only. An optional link is not part of this, so a card
+   *  with an empty TripAdvisor box still reads as finished. */
+  required_total: number
+  required_done: number
+  progress: number
+  prep_version: number
+  identity_fingerprint: string
+  status_fingerprint: string
+  exclusion_fingerprint: string
+  cut_fingerprint: string
+  /** What Google holds, printed beside the tick so a confirmation is made
+   *  about a named place rather than about a checkbox. */
+  google_name: string
+  google_address: string
+  place_id: string
+}
+
+export interface ListicleSourceLink {
+  label: string
+  url: string
+}
+
+/** What somebody has said about one card, as stored. Survives a reload. */
+export interface ListiclePrep {
+  run_id: string
+  candidate_id: string
+  version: number
+  identity_confirmed: boolean
+  identity_confirmed_at: string
+  identity_confirmed_by: string
+  open_confirmed: boolean
+  open_confirmed_at: string
+  open_confirmed_by: string
+  status_note: string
+  exclusion_decision: string
+  exclusion_reason: string
+  exclusion_at: string
+  cut_confirmed: boolean
+  cut_confirmed_at: string
+  tripadvisor_url: string
+  source_links: ListicleSourceLink[]
+  updated_at: string
+}
+
+/** What a card says about research that exists. Counts, never a score. */
+export interface ListicleProfileSummary {
+  profile_id: string
+  name: string
+  place_id: string
+  district: string
+  findings_total: number
+  findings_this_topic: number
+  kept: number
+  unreviewed: number
+  unattributed: number
+  open_questions: number
+  /** Topics this place has material under, other than this list's. What makes
+   *  "saved research available" a true sentence on a second list. */
+  other_topics: string[]
+  last_research_at: string
+  last_state: string
+  angles: number
+  other_runs: { run_id: string; candidate_id: string; name: string; linked_at: string }[]
+}
+
+/** `completed_empty` is not a failure: the request ran and nothing is
+ *  published. `response_invalid` is not a failure either — something came
+ *  back and it was not the shape asked for. `interrupted` may already have
+ *  been charged for. */
+export type ListicleAttemptState =
+  | 'running'
+  | 'completed'
+  | 'completed_empty'
+  | 'failed'
+  | 'response_invalid'
+  | 'interrupted'
+
+export interface ListicleAttemptSummary {
+  attempt_id: string
+  run_id: string
+  candidate_id: string
+  profile_id: string
+  mode: string
+  state: ListicleAttemptState
+  reason_code: string
+  reason: string
+  findings_added: number
+  findings_seen: number
+  open_questions: string[]
+  started_at: string
+  finished_at: string
+  model: string
+  running: boolean
+}
+
+export interface ListicleAttemptDetail extends ListicleAttemptSummary {
+  topic: string
+  /** What this request asked to look for. Ours, not the provider's. */
+  requested_queries: string[]
+  /** What the provider says it actually searched. Evidence; often empty. */
+  actual_queries: string[]
+  validation_issues: string[]
+  coverage: { topic: string; category: string; state: string; note: string }[]
+  usage: Record<string, number>
+  duration_seconds: number | null
+  prompt_version: string
+  gap_text: string
+  raw_response: string
+  prompt: string
+}
+
+export interface ListicleResearchCard {
+  candidate_id: string
+  name: string
+  district: string
+  prep: ListiclePrep
+  readiness: ListicleReadiness
+  profile: ListicleProfileSummary | null
+  last_attempt: ListicleAttemptSummary | null
+}
+
+export interface ListicleResearchBoard {
+  run_id: string
+  revision: number
+  /** The key this run's findings are filed under, derived from what the
+   *  interview agreed the list is about. */
+  topic: string
+  topic_label: string
+  exclusions: string
+  active_attempt: ListicleAttemptSummary | null
+  cards: ListicleResearchCard[]
+}
+
+/** One source under one finding, with the source's own dates beside it. */
+export interface ListicleFindingEvidence {
+  source_id: string
+  supporting_excerpt: string
+  evidence_scope: string
+  url: string
+  publisher: string
+  title: string
+  /** When the source was published. Empty means unknown, which is not the
+   *  same as recent. */
+  published_at: string
+  /** When we read it. Never used to fill in the line above. */
+  retrieved_at: string
+}
+
+export interface ListicleFinding {
+  finding_id: string
+  text: string
+  kind: string
+  categories: string[]
+  topics: string[]
+  scope: string
+  temporal_type: string
+  event_date: string
+  source_published_at: string
+  valid_until: string
+  expired: boolean
+  curation: 'unreviewed' | 'kept' | 'discarded' | string
+  origin: string
+  version: number
+  /** `attributed` or `incomplete`. Derived from whether it actually has a
+   *  source — never asserted, and never filled in from the search's own URL
+   *  list. */
+  attribution: string
+  author: string
+  observed_at: string
+  attempt_id: string
+  created_at: string
+  updated_at: string
+  evidence: ListicleFindingEvidence[]
+  revisions: {
+    revision_id: string
+    version: number
+    editor: string
+    origin: string
+    changed_at: string
+    before: Record<string, unknown>
+    after: Record<string, unknown>
+  }[]
+}
+
+export interface ListiclePossibleAngle {
+  angle_id: string
+  label: string
+  topic: string
+  supporting_finding_ids: string[]
+  author: string
+  archived: boolean
+  created_at: string
+}
+
+export interface ListicleProfileResearch {
+  profile_id: string
+  name: string
+  city: string
+  district: string
+  place_id: string
+  topics: string[]
+  topic: string
+  findings: ListicleFinding[]
+  sources: {
+    source_id: string
+    url: string
+    publisher: string
+    source_type: string
+    title: string
+    published_at: string
+    retrieved_at: string
+  }[]
+  possible_angles: ListiclePossibleAngle[]
+  history: ListicleAttemptSummary[]
+  coverage: { topic: string; category: string; state: string; note: string }[]
+  open_questions: string[]
+  runs: { run_id: string; candidate_id: string; name: string; linked_at: string }[]
+}

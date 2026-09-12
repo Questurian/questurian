@@ -50,6 +50,12 @@ class GroundedGenerationResult:
     total_tokens: int | None = None
     reasoning_tokens: int | None = None
     cached_input_tokens: int | None = None
+    # What the provider says it actually searched, from
+    # `groundingMetadata.webSearchQueries`. Distinct from anything the caller
+    # asked for: a prompt naming four search directions is an instruction, and
+    # this is the only evidence about what was really run. Empty means the
+    # response did not say, which is not the same as "it searched nothing".
+    search_queries: list[str] = field(default_factory=list)
 
 
 def _usage_counts(response: Any) -> tuple[int | None, int | None, int | None]:
@@ -170,6 +176,46 @@ def _extract_urls_from_nested(value: Any) -> list[str]:
             if cleaned:
                 collected.append(cleaned)
     return collected
+
+
+def extract_grounded_search_queries(response: Any, max_queries: int = 24) -> list[str]:
+    """The searches the provider reports having run.
+
+    Read off `groundingMetadata.webSearchQueries`, wherever the response
+    happens to nest it -- the REST and SDK shapes differ, and both spell it
+    with and without the underscore.
+
+    Kept separate from whatever the prompt asked for. A caller that prints its
+    own requested directions as though the provider had run them is claiming
+    coverage nobody proved, and this is the field that makes the honest version
+    possible.
+    """
+    if response is None:
+        return []
+
+    found: list[str] = []
+    seen: set[str] = set()
+
+    def walk(value: Any) -> None:
+        if len(found) >= max_queries:
+            return
+        if isinstance(value, dict):
+            for key in ("webSearchQueries", "web_search_queries"):
+                queries = value.get(key)
+                if isinstance(queries, list):
+                    for query in queries:
+                        text = str(query).strip()
+                        if text and text not in seen:
+                            seen.add(text)
+                            found.append(text)
+            for nested in value.values():
+                walk(nested)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    walk(response)
+    return found[:max_queries]
 
 
 def extract_grounded_source_titles(response: Any, max_titles: int = 24) -> list[str]:
@@ -380,6 +426,7 @@ def invoke_google_grounded_text(
         text=_safe_text(response),
         source_urls=extract_grounded_urls_from_response(response),
         source_titles=extract_grounded_source_titles(response),
+        search_queries=extract_grounded_search_queries(response),
         model_name=response.get("modelVersion", effective_model_name),
         input_tokens=input_tokens,
         output_tokens=output_tokens,

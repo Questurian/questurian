@@ -1,13 +1,22 @@
 import { apiFetch } from '../../shared/api/client/apiFetch'
 import type {
   ListicleAngleSelection,
+  ListicleAttemptDetail,
+  ListicleAttemptSummary,
   ListicleBoard,
   ListicleGoogleCheck,
   ListiclePlacesAllowance,
   ListicleGrillState,
   ListicleOrder,
+  ListiclePrep,
+  ListicleProfileResearch,
+  ListicleProfileSummary,
+  ListicleReadiness,
+  ListicleResearchBlocker,
+  ListicleResearchBoard,
   ListicleRunSummary,
   ListicleSearchResults,
+  ListicleSourceLink,
 } from './types'
 
 /**
@@ -286,4 +295,191 @@ export async function loadSearch(runId: string): Promise<ListicleSearchResults |
   if (response.status === 404) return null
   if (!response.ok) throw await readError(response, 'Those results could not be read.')
   return (await response.json()) as ListicleSearchResults
+}
+
+/* ------------------------------------------------------------------ *
+ * Per-place research.
+ *
+ * One board read, one save per card, one research POST per press. The board
+ * read is deliberately a single request: a profile call per card is
+ * thirty-five requests to draw a screen somebody opens every time they come
+ * back to the list.
+ * ------------------------------------------------------------------ */
+
+/** A request refused because the place is not ready. Carries the blockers, so
+ *  the card can show what to fix instead of "that could not be done". Nothing
+ *  was bought. */
+export class ResearchBlockedError extends Error {
+  blockers: ListicleResearchBlocker[]
+
+  constructor(message: string, blockers: ListicleResearchBlocker[]) {
+    super(message)
+    this.blockers = blockers
+  }
+}
+
+/** Something moved between being looked at and being acted on — the card was
+ *  saved elsewhere, the order changed, or another request holds the one slot.
+ *  Nothing was bought; re-read and decide again. */
+export class ResearchConflictError extends Error {}
+
+async function readResearchError(response: Response, fallback: string): Promise<Error> {
+  try {
+    const body = (await response.json()) as { detail?: unknown }
+    const detail = body.detail
+    if (typeof detail === 'string' && detail) {
+      return response.status === 409
+        ? new ResearchConflictError(detail)
+        : new Error(detail)
+    }
+    if (detail && typeof detail === 'object') {
+      const shaped = detail as { message?: string; blockers?: ListicleResearchBlocker[] }
+      const message = shaped.message || fallback
+      if (response.status === 422 && shaped.blockers) {
+        return new ResearchBlockedError(message, shaped.blockers)
+      }
+      return response.status === 409
+        ? new ResearchConflictError(message)
+        : new Error(message)
+    }
+  } catch {
+    // Not JSON. The fallback is the honest answer.
+  }
+  return new Error(fallback)
+}
+
+async function researchCall<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await apiFetch(path, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+  })
+  if (!response.ok) {
+    const error = await readResearchError(response, 'That could not be done.')
+    throw response.status === 404 ? new NotFoundError(error.message) : error
+  }
+  return (await response.json()) as T
+}
+
+/** Preparation, blockers and saved research for every place on one run.
+ *
+ *  A read. It never resolves an identity, creates a profile or reaches the
+ *  web — opening a screen is not a decision to spend. */
+export function loadResearchBoard(runId: string): Promise<ListicleResearchBoard> {
+  return researchCall<ListicleResearchBoard>(`${BASE}/board/${runId}/research`)
+}
+
+/** Save one card's preparation. Every field is optional and absent means
+ *  "leave it alone", so a checkbox saving on click cannot clear a URL box
+ *  somebody is still typing in. */
+export function saveCandidatePrep(
+  runId: string,
+  candidateId: string,
+  patch: {
+    expected_version?: number
+    identity_confirmed?: boolean
+    open_confirmed?: boolean
+    status_note?: string
+    exclusion_decision?: string
+    exclusion_reason?: string
+    cut_confirmed?: boolean
+    tripadvisor_url?: string
+    source_links?: ListicleSourceLink[]
+  },
+): Promise<{ prep: ListiclePrep; readiness: ListicleReadiness }> {
+  return researchCall(`${BASE}/board/${runId}/candidates/${candidateId}/prep`, {
+    method: 'PUT',
+    body: JSON.stringify(patch),
+  })
+}
+
+/** One grounded research call about one place.
+ *
+ *  `idempotency_key` names this logical action. A lost response and a retried
+ *  request carry the same key and return the same attempt; "Try again" makes a
+ *  new key and says so before it is pressed.
+ *
+ *  Deliberately not given an AbortController: navigating away from the board
+ *  must not cancel a call that has already been charged for. */
+export function startPlaceResearch(
+  runId: string,
+  candidateId: string,
+  body: {
+    idempotency_key: string
+    expected_prep_version?: number
+    expected_order_revision?: number
+    mode?: 'initial' | 'gap' | 'refresh'
+    gap_text?: string
+  },
+): Promise<{
+  attempt: ListicleAttemptSummary
+  profile: ListicleProfileSummary | null
+  repeated?: boolean
+  reused?: boolean
+}> {
+  return researchCall(`${BASE}/board/${runId}/candidates/${candidateId}/research`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+/** How one request went. A read, and the way a reloaded page finds out. */
+export function loadResearchAttempt(attemptId: string): Promise<ListicleAttemptDetail> {
+  return researchCall<ListicleAttemptDetail>(`${BASE}/research-attempts/${attemptId}`)
+}
+
+/** Everything known about one place. Free to open, and free to reopen. */
+export function loadProfileResearch(
+  profileId: string,
+  topic = '',
+): Promise<ListicleProfileResearch> {
+  const query = topic ? `?topic=${encodeURIComponent(topic)}` : ''
+  return researchCall<ListicleProfileResearch>(
+    `${BASE}/profiles/${profileId}/research${query}`,
+  )
+}
+
+/** One finding, typed by a person. No provider call. */
+export function addProfileFinding(
+  profileId: string,
+  body: Record<string, unknown>,
+): Promise<ListicleProfileResearch> {
+  return researchCall<ListicleProfileResearch>(`${BASE}/profiles/${profileId}/findings`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+/** Correct a finding, or keep, discard or restore it. Discarding hides it from
+ *  the writing material and deletes nothing. */
+export function editProfileFinding(
+  profileId: string,
+  findingId: string,
+  body: Record<string, unknown>,
+): Promise<ListicleProfileResearch> {
+  return researchCall<ListicleProfileResearch>(
+    `${BASE}/profiles/${profileId}/findings/${findingId}`,
+    { method: 'PATCH', body: JSON.stringify(body) },
+  )
+}
+
+/** An editorial idea about a place. Explicitly not a fact. */
+export function addPossibleAngle(
+  profileId: string,
+  body: { label: string; topic?: string; supporting_finding_ids?: string[] },
+): Promise<ListicleProfileResearch> {
+  return researchCall<ListicleProfileResearch>(
+    `${BASE}/profiles/${profileId}/possible-angles`,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
+}
+
+export function editPossibleAngle(
+  profileId: string,
+  angleId: string,
+  body: { label?: string; topic?: string; archived?: boolean },
+): Promise<ListicleProfileResearch> {
+  return researchCall<ListicleProfileResearch>(
+    `${BASE}/profiles/${profileId}/possible-angles/${angleId}`,
+    { method: 'PATCH', body: JSON.stringify(body) },
+  )
 }

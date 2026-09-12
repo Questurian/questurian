@@ -739,3 +739,37 @@ def summary_of(order: SearchOrder) -> str:
             note.append("edited")
         lines.append(f"  - {angle.text}  [{', '.join(note)}]")
     return "\n".join(lines)
+
+
+# The subject of a list, as a key that can be filed under.
+#
+# A profile outlives the list that created it: the same restaurant is on the
+# wings list this month and the cocktail list next, and its wings evidence must
+# not be replaced when somebody researches its drinks. The topic is what keeps
+# those apart, and it is derived from what the interview agreed the list is
+# about rather than typed anywhere.
+#
+# Deterministic on purpose. A key that changes between two reads of the same
+# order splits one topic into two, and the evidence filed under the first one
+# quietly stops being found.
+_TOPIC_STRIP = re.compile(r"[^a-z0-9]+")
+
+
+def topic_key_of(order: "SearchOrder") -> str:
+    """The stable key this order's findings are filed under.
+
+    Folded, punctuation removed, hyphen-joined: "Chicken Wings" and "chicken
+    wings" are one topic. Falls back to the run's own id only when the order
+    never settled what kind of thing it is about, which is not a state an
+    agreed order should reach -- and a wrong-but-stable key is better than one
+    that changes on the next read.
+    """
+    folded = unicodedata.normalize("NFKD", (order.kind or "").lower())
+    folded = "".join(c for c in folded if not unicodedata.combining(c))
+    key = _TOPIC_STRIP.sub("-", folded).strip("-")
+    return key or f"run-{order.run_id}"
+
+
+def topic_label_of(order: "SearchOrder") -> str:
+    """The topic as a person wrote it, for a screen to print."""
+    return (order.kind or "").strip() or "this list"

@@ -1,0 +1,349 @@
+/*
+ * Listicle pipeline — per-place research.
+ *
+ * Two surfaces. On the card: the checklist that has to be true before a place
+ * can be researched, the one button that spends, and a line saying what the
+ * last request did. In the drawer: the findings themselves, as a table you can
+ * read down and open a row of.
+ *
+ * The table is deliberately a table. A finding is judged by four things at once
+ * — what it says, who said it, when, and whether anybody has looked at it — and
+ * a stack of cards makes you read each one to compare any of them.
+ */
+
+/* The card grew: it now carries a checklist that saves, a research action and
+   a result line. Still one height for every box, so forty of them read as a
+   board. */
+.lp-candidates .lp-candidate {
+  height: 23rem;
+}
+
+/* ---------- on the card ---------- */
+
+.lp-research-action {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--lp-card-rule-soft);
+}
+
+.lp-research-line {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--lp-card-ink);
+}
+
+.lp-research-reason,
+.lp-research-cost {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+/* What is in the way, one line each. A disabled button with no explanation is
+   a screen nobody can argue with. */
+.lp-research-blockers {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #6b4a12;
+}
+
+.lp-research-blockers li + li {
+  margin-top: 0.2rem;
+}
+
+/* The name Google holds, printed under the tick it is about. */
+.lp-check-note {
+  margin: 0 0 0.5rem 2.1rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.lp-check-status {
+  padding: 0.4rem 0.25rem;
+  font-size: 0.8125rem;
+}
+
+.lp-check-optional-group {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--lp-card-rule-soft);
+}
+
+.lp-check-optional-group .lp-eyebrow {
+  margin-bottom: 0.35rem;
+}
+
+/* ---------- the drawer ---------- */
+
+.lp-research {
+  max-width: 68rem;
+  width: min(68rem, 94vw);
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.lp-research-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+.lp-chip {
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--cream);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+}
+
+.lp-chip-on {
+  border-color: var(--lp-accent);
+  color: var(--lp-accent);
+  font-weight: 600;
+}
+
+.lp-research-count {
+  margin: 0 0 var(--space-3);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.lp-research-table-wrap {
+  overflow-x: auto;
+}
+
+.lp-research-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.lp-research-table th {
+  text-align: left;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 0 0.6rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.lp-research-table td {
+  vertical-align: top;
+  padding: 0.7rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Discarded, not deleted. Dimmed and still there, because the research
+   happened and was paid for. */
+.lp-research-discarded td {
+  opacity: 0.55;
+}
+
+.lp-research-text {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  line-height: 1.5;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.lp-research-text:hover {
+  color: var(--lp-accent);
+}
+
+.lp-research-meta {
+  display: table-cell;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.lp-research-meta > span,
+.lp-research-meta > a {
+  display: block;
+}
+
+.lp-research-kind {
+  font-weight: 600;
+}
+
+/* Anything the reader cannot check: no source, or an offer that has ended. */
+.lp-research-warn {
+  color: #a8541b;
+}
+
+.lp-research-curation {
+  font-weight: 600;
+}
+
+.lp-research-unreviewed {
+  color: #8a6d1f;
+}
+
+.lp-research-kept {
+  color: var(--lp-accent);
+}
+
+.lp-research-discarded .lp-research-curation {
+  color: var(--muted);
+}
+
+.lp-research-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.lp-research-detail td {
+  background: var(--cream);
+}
+
+.lp-research-evidence + .lp-research-evidence {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.lp-research-excerpt {
+  margin: 0 0 0.25rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--lp-accent);
+  line-height: 1.55;
+}
+
+.lp-research-revisions,
+.lp-research-issues,
+.lp-research-questions,
+.lp-research-coverage,
+.lp-research-history,
+.lp-research-angles {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.lp-research-angles {
+  list-style: none;
+  padding-left: 0;
+  color: var(--ink);
+}
+
+.lp-research-angles li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.lp-research-state {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.lp-research-block {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.lp-research-form {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.lp-research-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.lp-research-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.lp-research-field input,
+.lp-research-field select {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--cream);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.lp-research-textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--cream);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  padding: 0.5rem 0.7rem;
+  resize: vertical;
+}
+
+.lp-research-edit-actions,
+.lp-research-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.lp-research-inline-form .lp-link-input {
+  flex: 1 1 18rem;
+}
+
+.lp-research-attempt {
+  margin: 0.4rem 0 0.8rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--border-strong);
+}
+
+.lp-research-raw pre {
+  max-height: 18rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.75rem;
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.6rem;
+}

@@ -14,7 +14,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.staff_auth import require_staff
-from app.shared.api_usage import observe_external_call
 
 from ..prompt2blog.contracts_v4 import GrillState
 from ..prompt2blog.dependencies import DefaultPrompt2BlogLLM
@@ -650,3 +649,335 @@ def _order_view(order) -> dict[str, Any]:
             for angle in order.angles
         ],
     }
+
+
+# ---------------------------------------------------------------------------
+# Per-place research.
+#
+# Thin handlers. Every one of them resolves a dependency, calls the service and
+# translates one kind of refusal into one status code -- nothing here decides
+# what is ready, builds a prompt or writes a row, because a rule that lives in
+# a route handler is a rule the tests have to go through HTTP to reach.
+# ---------------------------------------------------------------------------
+
+
+class SourceLink(BaseModel):
+    label: str = Field(default="", max_length=80)
+    url: str = Field(default="", max_length=500)
+
+
+class PrepRequest(BaseModel):
+    """A change to one card's preparation.
+
+    Every field optional and absent means "leave it alone": a checkbox saves on
+    click and a URL box saves on blur, and neither should send -- or clear --
+    the other.
+    """
+
+    expected_version: int | None = Field(default=None, ge=0)
+    identity_confirmed: bool | None = None
+    open_confirmed: bool | None = None
+    status_note: str | None = Field(default=None, max_length=600)
+    exclusion_decision: str | None = Field(default=None, max_length=16)
+    exclusion_reason: str | None = Field(default=None, max_length=600)
+    cut_confirmed: bool | None = None
+    tripadvisor_url: str | None = Field(default=None, max_length=500)
+    source_links: list[SourceLink] | None = Field(default=None, max_length=10)
+
+
+class ResearchRequestBody(BaseModel):
+    """One press of the button.
+
+    `idempotency_key` is the client's name for this logical action. A lost
+    response and a retried request carry the same key and return the same
+    attempt; Try again is a new key, and says so before it is pressed.
+    """
+
+    idempotency_key: str = Field(min_length=8, max_length=80)
+    expected_prep_version: int | None = Field(default=None, ge=0)
+    expected_order_revision: int | None = Field(default=None, ge=0)
+    mode: str = Field(default="initial", max_length=16)
+    gap_text: str = Field(default="", max_length=400)
+
+
+class FindingBody(BaseModel):
+    """A finding somebody typed, or a change to one."""
+
+    text: str | None = Field(default=None, max_length=1200)
+    kind: str | None = Field(default=None, max_length=32)
+    categories: list[str] | None = Field(default=None, max_length=8)
+    topics: list[str] | None = Field(default=None, max_length=8)
+    topic: str = Field(default="", max_length=80)
+    scope: str | None = Field(default=None, max_length=16)
+    temporal_type: str | None = Field(default=None, max_length=24)
+    event_date: str | None = Field(default=None, max_length=10)
+    source_published_at: str | None = Field(default=None, max_length=10)
+    valid_until: str | None = Field(default=None, max_length=10)
+    observed_at: str | None = Field(default=None, max_length=10)
+    curation: str | None = Field(default=None, max_length=16)
+    source_url: str = Field(default="", max_length=500)
+    source_publisher: str = Field(default="", max_length=160)
+    source_type: str = Field(default="", max_length=40)
+    supporting_excerpt: str = Field(default="", max_length=1000)
+    expected_version: int | None = Field(default=None, ge=1)
+
+
+class AngleBody(BaseModel):
+    label: str | None = Field(default=None, max_length=400)
+    topic: str = Field(default="", max_length=80)
+    supporting_finding_ids: list[str] | None = Field(default=None, max_length=20)
+    archived: bool | None = None
+
+
+def _research_call(prompt: str):
+    """The web, asked what one place research request wrote.
+
+    Its own job id, so the money spent looking places up is legible beside the
+    money spent finding them. One invocation, no retry: the caller records what
+    happened rather than buying a second opinion about it.
+    """
+    from app.shared.model_calls import grounded_text
+
+    from .profile_research import (
+        PLACE_RESEARCH_MAX_TOKENS,
+        PLACE_RESEARCH_TIMEOUT_SECONDS,
+    )
+    from .profile_service import TransportResult
+
+    result = grounded_text(
+        "listicle.profile_research",
+        prompt,
+        max_tokens=PLACE_RESEARCH_MAX_TOKENS,
+        timeout_seconds=PLACE_RESEARCH_TIMEOUT_SECONDS,
+        endpoint="generateContent:googleSearch",
+    )
+    if result is None:
+        # A helper returning None swallowed its own failure. Raised, so the
+        # attempt is recorded as failed rather than as a place nothing is
+        # published about.
+        raise RuntimeError("The research call returned nothing.")
+    return TransportResult(
+        text=result.text or "",
+        source_urls=list(getattr(result, "source_urls", []) or []),
+        source_titles=list(getattr(result, "source_titles", []) or []),
+        model=str(getattr(result, "model_name", "") or ""),
+        usage={
+            "input_tokens": getattr(result, "input_tokens", 0) or 0,
+            "output_tokens": getattr(result, "output_tokens", 0) or 0,
+            "total_tokens": getattr(result, "total_tokens", 0) or 0,
+            "reasoning_tokens": getattr(result, "reasoning_tokens", 0) or 0,
+        },
+        # Only what the provider itself reported. Never the directions we
+        # asked for: those are stored separately and are not evidence that
+        # anything was searched.
+        actual_queries=list(getattr(result, "search_queries", []) or []),
+    )
+
+
+def _staff_name(staff) -> str:
+    """Who is doing this, as far as the session says.
+
+    Empty on a machine with staff auth switched off, which is the normal
+    development case and is recorded honestly rather than as "unknown user".
+    """
+    if isinstance(staff, dict):
+        return str(staff.get("email") or staff.get("id") or "")
+    return str(getattr(staff, "email", "") or getattr(staff, "id", "") or "")
+
+
+def _research(action, *args, **kwargs):
+    """Run one research action and translate its refusals.
+
+    409 for something that moved or is already running, 422 for a request that
+    is not allowed yet, 404 for something that is not there. Every one of them
+    returns before any provider call, which is the property worth having: a
+    refused request costs nothing.
+    """
+    from .candidate_prep import PrepConflict
+    from .profile_service import Blocked, Stale
+    from .profile_store import FindingConflict
+    from .research_store import NotTheOwner, SlotTaken
+
+    try:
+        return action(*args, **kwargs)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except Blocked as error:
+        raise HTTPException(
+            status_code=422,
+            detail={"message": str(error), "blockers": error.blockers},
+        ) from error
+    except SlotTaken as error:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": str(error),
+                "attempt_id": error.holder.attempt_id,
+                "candidate_id": error.holder.candidate_id,
+            },
+        ) from error
+    except PrepConflict as error:
+        raise HTTPException(
+            status_code=409,
+            detail={"message": str(error), "version": error.current_version},
+        ) from error
+    except FindingConflict as error:
+        raise HTTPException(
+            status_code=409,
+            detail={"message": str(error), "version": error.current_version},
+        ) from error
+    except Stale as error:
+        raise HTTPException(
+            status_code=409, detail={"message": str(error), **error.current}
+        ) from error
+    except NotTheOwner as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.get("/board/{run_id}/research")
+def get_listicle_research_board(run_id: str, _staff=Depends(require_staff)):
+    """Preparation, blockers and saved research for every place on one run.
+
+    A read. It never resolves an identity, creates a profile or reaches the
+    web -- opening a screen is not a decision to spend.
+    """
+    from . import profile_service
+
+    return _research(profile_service.board, run_id)
+
+
+@router.put("/board/{run_id}/candidates/{candidate_id}/prep")
+def save_listicle_candidate_prep(
+    run_id: str,
+    candidate_id: str,
+    req: PrepRequest,
+    staff=Depends(require_staff),
+):
+    """Save what somebody has said about one card, and say where it stands."""
+    from . import profile_service
+
+    body = req.model_dump(exclude_unset=True, exclude={"expected_version"})
+    if req.source_links is not None:
+        body["source_links"] = [link.model_dump() for link in req.source_links]
+    return _research(
+        profile_service.save_prep,
+        run_id,
+        candidate_id,
+        body,
+        staff=_staff_name(staff),
+        expected_version=req.expected_version,
+    )
+
+
+@router.post("/board/{run_id}/candidates/{candidate_id}/research")
+def research_one_listicle_place(
+    run_id: str,
+    candidate_id: str,
+    req: ResearchRequestBody,
+    staff=Depends(require_staff),
+):
+    """One grounded research call about one place.
+
+    Synchronous: the first version of this is a person looking at one place and
+    waiting for it, and a queue would be a service to run and a state machine
+    to debug before anybody has read a single finding. The attempt is written
+    down before the call goes out, so a browser that loses the answer reads it
+    back from `GET /research-attempts/{id}` rather than buying it again.
+    """
+    from . import profile_service
+
+    return _research(
+        profile_service.research,
+        run_id,
+        candidate_id,
+        idempotency_key=req.idempotency_key,
+        transport=_research_call,
+        mode=req.mode,
+        gap_text=req.gap_text,
+        expected_prep_version=req.expected_prep_version,
+        expected_order_revision=req.expected_order_revision,
+        staff=_staff_name(staff),
+    )
+
+
+@router.get("/research-attempts/{attempt_id}")
+def get_listicle_research_attempt(attempt_id: str, _staff=Depends(require_staff)):
+    """How one request went. A read, and the way a reloaded page finds out."""
+    from . import profile_service
+
+    return _research(profile_service.attempt_view, attempt_id)
+
+
+@router.get("/profiles/{profile_id}/research")
+def get_listicle_profile_research(
+    profile_id: str, topic: str = "", _staff=Depends(require_staff)
+):
+    """Everything known about one place. Free to open, and free to reopen."""
+    from . import profile_service
+
+    return _research(profile_service.profile_view, profile_id, topic=topic)
+
+
+@router.post("/profiles/{profile_id}/findings")
+def add_listicle_finding(
+    profile_id: str, req: FindingBody, staff=Depends(require_staff)
+):
+    """One finding, typed by a person. No provider call."""
+    from . import profile_service
+
+    return _research(
+        profile_service.add_finding,
+        profile_id,
+        req.model_dump(exclude_unset=True),
+        staff=_staff_name(staff),
+    )
+
+
+@router.patch("/profiles/{profile_id}/findings/{finding_id}")
+def edit_listicle_finding(
+    profile_id: str,
+    finding_id: str,
+    req: FindingBody,
+    staff=Depends(require_staff),
+):
+    """Correct a finding, or keep, discard or restore it. No provider call."""
+    from . import profile_service
+
+    return _research(
+        profile_service.edit_finding,
+        profile_id,
+        finding_id,
+        req.model_dump(exclude_unset=True),
+        staff=_staff_name(staff),
+    )
+
+
+@router.post("/profiles/{profile_id}/possible-angles")
+def add_listicle_possible_angle(
+    profile_id: str, req: AngleBody, staff=Depends(require_staff)
+):
+    """An editorial idea about a place. Explicitly not a fact."""
+    from . import profile_service
+
+    return _research(
+        profile_service.add_angle,
+        profile_id,
+        req.model_dump(exclude_unset=True),
+        staff=_staff_name(staff),
+    )
+
+
+@router.patch("/profiles/{profile_id}/possible-angles/{angle_id}")
+def edit_listicle_possible_angle(
+    profile_id: str, angle_id: str, req: AngleBody, _staff=Depends(require_staff)
+):
+    from . import profile_service
+
+    return _research(
+        profile_service.edit_angle,
+        profile_id,
+        angle_id,
+        req.model_dump(exclude_unset=True),
+    )

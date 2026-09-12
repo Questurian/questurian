@@ -11,6 +11,8 @@ import { ConfirmRemove } from './ConfirmRemove'
 import { DuplicateReview } from './DuplicateReview'
 import { useCandidateBoard } from '../useCandidateBoard'
 import { useGoogleChecks } from '../useGoogleChecks'
+import { usePlaceResearch } from '../usePlaceResearch'
+import { ResearchViewer } from './ResearchViewer'
 
 /**
  * What the searches found.
@@ -142,6 +144,16 @@ export function SearchResults({
   // What Google said. Only places still on the board are worth paying to
   // look up, and only those Google has not already answered for.
   const google = useGoogleChecks(results.run_id)
+  // Preparation, readiness and saved research for every place on this run.
+  // One read for the board: readiness is a property of the run, not of a card
+  // -- a duplicate settled on one card changes whether another can be
+  // researched -- and thirty-five cards each holding their own copy could not
+  // agree about it.
+  const research = usePlaceResearch(results.run_id)
+  const [researchId, setResearchId] = useState<string | null>(null)
+  const closeResearch = useCallback(() => setResearchId(null), [])
+  const researchCard = researchId ? research.cardFor(researchId) : undefined
+  const researchCandidate = researchId ? byId.get(researchId) : undefined
   const answered = (id: string) => ['found', 'not_found'].includes(google.checks[id]?.status ?? '')
   const toCheck = onBoard.filter(candidate => !answered(candidate.candidate_id))
   const onBoardChecks = onBoard.map(candidate => google.checks[candidate.candidate_id]).filter(Boolean)
@@ -293,6 +305,17 @@ export function SearchResults({
         {google.error && (
           <p className="lp-error" role="alert">
             {google.error}
+          </p>
+        )}
+        {research.error && (
+          <p className="lp-error" role="alert">
+            {research.error}
+          </p>
+        )}
+        {research.board?.active_attempt?.running && (
+          <p className="lp-muted" role="status">
+            One place is being researched. Nothing else can be started until it
+            finishes.
           </p>
         )}
         {boardError && !reviewing && (
@@ -492,6 +515,22 @@ export function SearchResults({
               google={google.checks[candidate.candidate_id]}
               onRemove={() => setConfirmId(candidate.candidate_id)}
               onRemoveNotAVenue={() => void remove(candidate.candidate_id, 'not_a_venue')}
+              research={(() => {
+                const card = research.cardFor(candidate.candidate_id)
+                if (!card) return undefined
+                return {
+                  card,
+                  saveState: research.saves[candidate.candidate_id],
+                  saveError: research.saveErrors[candidate.candidate_id],
+                  researching:
+                    research.waitingFor === candidate.candidate_id ||
+                    card.last_attempt?.state === 'running',
+                  onPrep: patch =>
+                    void research.savePrep(candidate.candidate_id, patch),
+                  onResearch: () => void research.research(candidate.candidate_id),
+                  onOpenResearch: () => setResearchId(candidate.candidate_id),
+                }
+              })()}
             />
           )
         })}
@@ -547,6 +586,24 @@ export function SearchResults({
           error={boardError}
           onSave={resolve}
           onClose={closeReview}
+        />
+      )}
+
+      {/* The research drawer sits over the board rather than replacing it, so
+          closing it returns to the same place in the same list. */}
+      {researchId && researchCard?.profile?.profile_id && (
+        <ResearchViewer
+          profileId={researchCard.profile.profile_id}
+          topic={research.board?.topic ?? ''}
+          topicLabel={research.board?.topic_label ?? ''}
+          placeName={researchCandidate?.name ?? researchCard.name}
+          branch={researchCard.readiness.google_address}
+          canResearch={researchCard.readiness.ready}
+          researching={research.waitingFor === researchId}
+          onGapResearch={question =>
+            void research.research(researchId, { mode: 'gap', gapText: question })
+          }
+          onClose={closeResearch}
         />
       )}
 
