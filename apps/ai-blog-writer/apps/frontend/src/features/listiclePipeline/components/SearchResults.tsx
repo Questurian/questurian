@@ -628,6 +628,7 @@ export function SearchResults({
           branch={researchCard.readiness.google_address}
           canResearch={researchCard.readiness.ready}
           researching={research.waitingFor === researchId}
+          reviewsBudget={research.board?.reviews_budget ?? null}
           onGapResearch={question =>
             void research.research(researchId, { mode: 'gap', gapText: question })
           }

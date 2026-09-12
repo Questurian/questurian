@@ -36,10 +36,11 @@ from urllib.parse import urlparse
 from . import (
     candidate_prep,
     evidence,
-    places,
     profile_research,
     profile_store,
     research_store,
+    reviews_api,
+    reviews_budget,
     source_reader,
 )
 from .candidate_prep import BoardContext, Prep
@@ -199,6 +200,11 @@ def board(run_id: str) -> dict:
         "topic_label": ctx.topic_label,
         "exclusions": ctx.exclusions,
         "active_attempt": _attempt_summary(active) if active else None,
+        # What is left of the free reviews allowance, said in places rather
+        # than in objects. On the board because this is the screen the button
+        # is pressed from, and a budget nobody can see before pressing is not
+        # a budget.
+        "reviews_budget": reviews_budget.status().as_dict(),
         "cards": cards,
     }
 
@@ -707,10 +713,15 @@ def fetch_reviews(place_id: str):
     """What Google's reviewers said about this place.
 
     A seam of its own so a test can stand in front of it without standing in
-    front of the whole Places module, and so the one paid call this stage makes
-    is visible at the top of the file rather than buried in the sequence.
+    front of the whole reviews module, and so the one paid call this stage
+    makes is visible at the top of the file rather than buried in the sequence.
+
+    Reads through the Local Business Data API rather than Places Details: same
+    reviews, twenty of them instead of five, each with its own link and its own
+    exact date. `reviews_api` refuses on its own if the free allowance is spent,
+    so a caller never has to check the budget before asking.
     """
-    return places.fetch_details(place_id)
+    return reviews_api.fetch_reviews(place_id)
 
 
 def _default_extract(prompt: str):
@@ -886,28 +897,37 @@ def research(
     # --- What Google's own reviewers said, before anything is searched -------
     #
     # The one source of customer voice that is not a model's transcription of a
-    # page and cannot be a review platform's refusal: Google returns the text
-    # itself, with the reviewer's name, their rating and the day they wrote it.
-    # It is attached to the Place ID, so it is about this branch by identity
-    # rather than by an address printed somewhere in body text.
+    # page and cannot be a review platform's refusal: the text itself, with the
+    # reviewer's name, their rating and the day they wrote it. Attached to the
+    # Place ID, so it is about this branch by identity rather than by an address
+    # printed somewhere in body text.
+    #
+    # Google's reviews, but fetched through a vendor who scrapes and resells
+    # them (ADR 0041). That changes who bills for the fetch and nothing about
+    # what may be done with the words.
     #
     # The three-place pilot found zero attributable opinion about its subject
     # while every review platform the reader touched answered 403 or 404 -- and
     # this call was one line away the whole time, already written, wired only
     # into the old whole-run pass.
     #
-    # Billed per call on the owner's Google account, and it does not spend the
-    # page budget: nothing is fetched over HTTP.
+    # Billed per review returned, against a free allowance of five hundred, and
+    # it does not spend the page budget: nothing is fetched over HTTP. The
+    # allowance is enforced inside `reviews_api`, which refuses rather than
+    # overspends, so an exhausted budget arrives here as a place with no
+    # reviews and a reason -- not as an exception and not as a charge.
     if brief.place_id:
-        details = fetch_reviews(brief.place_id)
-        review_page = places.reviews_as_page(details, brief.place_id)
+        fetched = fetch_reviews(brief.place_id)
+        review_page = reviews_api.reviews_as_page(
+            fetched, brief.place_id, place_name=brief.name
+        )
         if review_page is not None:
             pages.append(review_page)
-        elif details.failed:
+        elif fetched.failed:
             logger.warning(
                 "Google reviews unavailable for %s: %s",
                 candidate_id,
-                details.reason,
+                fetched.reason,
             )
 
     # --- Known pages, before anything is bought ------------------------------

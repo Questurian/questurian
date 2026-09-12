@@ -150,6 +150,44 @@ def _check_identity(ctx, place: dict) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+def _print_reviews_budget(places: int) -> None:
+    """What is left of the free reviews allowance, before anything is bought.
+
+    Printed by `--dry-run` and again before a spend, because this is the number
+    that decides whether the run can finish -- and it is the only cost in the
+    pilot that is metered against a hard cap rather than billed as it goes.
+    """
+    from app.features.listicle_pipeline import reviews_api, reviews_budget
+
+    budget = reviews_budget.status()
+    print(
+        f"\nReviews allowance: {budget.remaining} of {budget.ceiling} reviews "
+        f"left — about {budget.places_left} more places."
+    )
+    if budget.reported_remaining is not None:
+        print(
+            f"  RapidAPI's own count says {budget.reported_remaining}. "
+            + (
+                "They disagree, which usually means another app is spending "
+                "the same key."
+                if budget.disagrees
+                else "That agrees with ours."
+            )
+        )
+    want = places * reviews_api.DEFAULT_LIMIT
+    print(
+        f"  This run would ask for up to {want} "
+        f"({places} places x {reviews_api.DEFAULT_LIMIT})."
+    )
+    if want > budget.remaining:
+        print(
+            "  ! Not enough left for every place. Nothing will overspend: the "
+            "places that fit are researched and the rest are refused."
+        )
+    if not reviews_api.api_key():
+        print("  ! RAPID_API_KEY is not set, so no reviews would be fetched.")
+
+
 def dry_run() -> int:
     """What each request would ask, what it would read first, and the ceiling.
 
@@ -212,10 +250,7 @@ def dry_run() -> int:
         f"Ceiling for the whole pilot: {MAX_GENERATIONS} generations, "
         f"{MAX_GROUNDED} of them grounded, 8 pages per place."
     )
-    print(
-        "Each place also makes one Google Places Details call for its reviews. "
-        "Billed per call on the owner's account; no model, no page budget."
-    )
+    _print_reviews_budget(len(PILOT))
     if problems:
         print("\nIdentity has moved since the handoff:")
         for line in problems:
@@ -246,6 +281,9 @@ def spend(only: str = "") -> int:
         for line in problems:
             print(f"  ! {line}")
         return 1
+
+    _print_reviews_budget(len([p for p in PILOT if not only or only.lower() in p["who"].lower()]))
+    print()
 
     audit = _audit_links_by_profile()
     original = profile_service._build_request

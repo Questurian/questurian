@@ -11,6 +11,7 @@ import type {
   ListicleAttemptDetail,
   ListicleFinding,
   ListicleProfileResearch,
+  ListicleReviewsBudget,
 } from '../types'
 
 /**
@@ -110,6 +111,10 @@ interface ResearchViewerProps {
    *  follow-up box closed and says why. */
   canResearch: boolean
   researching: boolean
+  /** What is left of the free customer-reviews allowance. Shown beside the
+   *  button that spends it, because a cap nobody can see before pressing is
+   *  not a cap. */
+  reviewsBudget?: ListicleReviewsBudget | null
   onGapResearch?: (question: string) => void
   onClose: () => void
 }
@@ -122,6 +127,7 @@ export function ResearchViewer({
   branch,
   canResearch,
   researching,
+  reviewsBudget,
   onGapResearch,
   onClose,
 }: ResearchViewerProps) {
@@ -384,6 +390,8 @@ export function ResearchViewer({
                 )}
               </details>
             )}
+
+            {reviewsBudget && <ReviewsAllowance budget={reviewsBudget} />}
 
             <GapRequest
               canResearch={canResearch}
@@ -889,6 +897,44 @@ function PossibleAngles({
  *
  *  It asks for the question first, because a follow-up with nothing specific
  *  to look for buys the same search again. One call, no chain. */
+/** What is left of the free customer-reviews allowance.
+ *
+ *  Said in places rather than in review objects, because "eleven places left"
+ *  is a decision and "224 reviews left" is arithmetic somebody has to do first.
+ *
+ *  At zero this is a statement, not a warning to act on: research still runs
+ *  and still reads pages, it just buys no customer reviews. Nothing here can
+ *  overspend -- the cap is enforced on the server before the call goes out. */
+function ReviewsAllowance({ budget }: { budget: ListicleReviewsBudget }) {
+  return (
+    <section className="lp-research-block">
+      <h4 className="lp-eyebrow">Customer reviews left to buy</h4>
+      {budget.exhausted ? (
+        <p className="lp-muted">
+          The free allowance of {budget.ceiling} reviews is spent. Research still
+          runs and still reads pages — it will not fetch customer reviews, and it
+          will not start charging.
+        </p>
+      ) : (
+        <p className="lp-muted">
+          <strong>
+            About {budget.places_left} more {budget.places_left === 1 ? 'place' : 'places'}
+          </strong>{' '}
+          — {budget.remaining} of {budget.ceiling} reviews left on the free plan.
+          Each place asks for up to 20.
+        </p>
+      )}
+      {budget.disagrees && budget.reported_remaining !== null && (
+        <p className="lp-muted">
+          Our count says {budget.ours_remaining} and RapidAPI says{' '}
+          {budget.reported_remaining}. The lower one is used. A gap this size
+          usually means another app is spending the same key.
+        </p>
+      )}
+    </section>
+  )
+}
+
 function GapRequest({
   canResearch,
   researching,

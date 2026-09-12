@@ -116,31 +116,34 @@ def _prepare(client, run_id, candidate_id, **extra):
 
 
 def _no_reviews(place_id: str):
-    """Google, asked nothing. The default for every test that is not about
-    reviews, so no test reaches a billed endpoint by forgetting to."""
-    from app.features.listicle_pipeline.places import PlaceDetails
+    """The reviews API, asked nothing. The default for every test that is not
+    about reviews, so no test reaches a billed endpoint by forgetting to."""
+    from app.features.listicle_pipeline.reviews_api import ReviewFetch
 
-    return PlaceDetails(place_id, failed=True, reason="not in this test")
+    return ReviewFetch(place_id, failed=True, reason="not in this test")
 
 
 def _reviews(*written: tuple[str, int, str]):
-    """Google, answering with the reviews a test names."""
-    from app.features.listicle_pipeline.places import PlaceDetails
+    """The reviews API, answering with the reviews a test names."""
+    from app.features.listicle_pipeline.reviews_api import ReviewFetch
 
     def answer(place_id: str):
-        return PlaceDetails(
-            place_id,
-            name="Example Wings",
+        return ReviewFetch(
+            business_id=place_id,
+            place_name="Example Wings",
             reviews=[
                 {
                     "author_name": who,
                     "rating": stars,
-                    "text": text,
-                    "time": 1750000000,
-                    "relative_time_description": "2 months ago",
+                    "review_text": text,
+                    "review_datetime_utc": "2025-06-15T12:00:00.000Z",
+                    "review_timestamp": 1750000000,
+                    "review_link": "https://www.google.com/maps/reviews/data=!x",
+                    "author_review_count": 12,
                 }
                 for who, stars, text in written
             ],
+            objects=len(written),
         )
 
     return answer

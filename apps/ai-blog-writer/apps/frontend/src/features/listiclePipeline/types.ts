@@ -672,7 +672,34 @@ export interface ListicleResearchBoard {
   topic_label: string
   exclusions: string
   active_attempt: ListicleAttemptSummary | null
+  reviews_budget: ListicleReviewsBudget
   cards: ListicleResearchCard[]
+}
+
+/** What is left of the free customer-reviews allowance.
+ *
+ *  The reviews API is billed per review returned against a free cap, so this
+ *  is a hard stop rather than a running cost: at zero, research still runs but
+ *  buys no reviews. Shown on the board because that is where the button is. */
+export interface ListicleReviewsBudget {
+  /** The cap, in review objects. */
+  ceiling: number
+  spent: number
+  /** The spendable number: the stricter of our ledger and RapidAPI's own count. */
+  remaining: number
+  ours_remaining: number
+  /** RapidAPI's count, or null when no answer has carried the header yet.
+   *  Null is "not known", never "none left". */
+  reported_remaining: number | null
+  reported_limit: number | null
+  /** `remaining` said in the unit decisions are made in. */
+  places_left: number
+  exhausted: boolean
+  /** The two counters have drifted, which usually means another app is
+   *  spending the same key. Worth showing rather than resolving. */
+  disagrees: boolean
+  calls: number
+  last_call_at: string
 }
 
 /** One source under one finding, with the source's own dates beside it. */

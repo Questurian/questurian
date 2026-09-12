@@ -316,6 +316,19 @@ function board(overrides: Partial<ListicleResearchBoard> = {}): ListicleResearch
     topic_label: 'chicken wings',
     exclusions: 'no delivery-only kitchens',
     active_attempt: null,
+    reviews_budget: {
+      ceiling: 500,
+      spent: 0,
+      remaining: 500,
+      ours_remaining: 500,
+      reported_remaining: null,
+      reported_limit: null,
+      places_left: 25,
+      exhausted: false,
+      disagrees: false,
+      calls: 0,
+      last_call_at: '',
+    },
     cards: [
       {
         candidate_id: 'cand-wings',
@@ -685,6 +698,104 @@ describe('the research viewer', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'View research' }))
     return screen.findByRole('dialog', { name: 'Research for Example Wings' })
   }
+
+  it('says how many more places the free reviews allowance covers', async () => {
+    const dialog = await openViewer()
+
+    // The unit a decision is made in. "500 reviews" is arithmetic somebody has
+    // to do first; "25 more places" is the answer.
+    expect(within(dialog).getByText(/About 25 more places/)).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(/500 of 500 reviews left on the free plan/),
+    ).toBeInTheDocument()
+  })
+
+  it('says the allowance is spent without implying anything broke', async () => {
+    loadResearchBoard.mockResolvedValue(
+      board({
+        cards: [
+          {
+            candidate_id: 'cand-wings',
+            name: 'Example Wings',
+            district: 'Jesús María',
+            prep: prep(),
+            readiness: readiness(),
+            profile: profile(),
+            last_attempt: attempt(),
+          },
+        ],
+        reviews_budget: {
+          ceiling: 500,
+          spent: 500,
+          remaining: 0,
+          ours_remaining: 0,
+          reported_remaining: 0,
+          reported_limit: 500,
+          places_left: 0,
+          exhausted: true,
+          disagrees: false,
+          calls: 25,
+          last_call_at: '2026-09-12T18:00:00Z',
+        },
+      }),
+    )
+    show()
+    await userEvent.click(await screen.findByRole('button', { name: 'View research' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Research for Example Wings',
+    })
+
+    // Research is not blocked -- only the reviews are. Saying "you cannot
+    // research" here would be false, and would stop somebody doing work that
+    // costs nothing extra.
+    expect(
+      within(dialog).getByText(/will not fetch customer reviews/),
+    ).toBeInTheDocument()
+    expect(within(dialog).getByText(/will not start charging/)).toBeInTheDocument()
+  })
+
+  it('shows both counts when the key is being spent somewhere else', async () => {
+    loadResearchBoard.mockResolvedValue(
+      board({
+        cards: [
+          {
+            candidate_id: 'cand-wings',
+            name: 'Example Wings',
+            district: 'Jesús María',
+            prep: prep(),
+            readiness: readiness(),
+            profile: profile(),
+            last_attempt: attempt(),
+          },
+        ],
+        reviews_budget: {
+          ceiling: 500,
+          spent: 20,
+          remaining: 100,
+          ours_remaining: 480,
+          reported_remaining: 100,
+          reported_limit: 500,
+          places_left: 5,
+          exhausted: false,
+          disagrees: true,
+          calls: 1,
+          last_call_at: '2026-09-12T18:00:00Z',
+        },
+      }),
+    )
+    show()
+    await userEvent.click(await screen.findByRole('button', { name: 'View research' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Research for Example Wings',
+    })
+
+    // The lower number is the one that gates, but hiding the disagreement
+    // would hide that another app is on the same key.
+    expect(within(dialog).getByText(/About 5 more places/)).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(/Our count says 480 and RapidAPI says 100/),
+    ).toBeInTheDocument()
+  })
 
   it('opens free, and shows each finding with its source and dates', async () => {
     const dialog = await openViewer()
