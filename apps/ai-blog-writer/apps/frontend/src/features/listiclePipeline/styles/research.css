@@ -1,0 +1,502 @@
+/*
+ * Listicle pipeline — per-place research.
+ *
+ * Two surfaces. On the card: the checklist that has to be true before a place
+ * can be researched, the one button that spends, and a line saying what the
+ * last request did. In the drawer: the findings themselves, as a table you can
+ * read down and open a row of.
+ *
+ * The table is deliberately a table. A finding is judged by four things at once
+ * — what it says, who said it, when, and whether anybody has looked at it — and
+ * a stack of cards makes you read each one to compare any of them.
+ */
+
+/* ---------- the card, and how far it has got ---------- */
+
+/* Taller, because the box now holds a checklist that saves, a research action
+   and a result line. Still one height for every card: forty boxes of one size
+   read as a board you are working through, and forty of different sizes read
+   as a list you are lost in. */
+.lp-candidates .lp-candidate {
+  height: 27rem;
+  /* An even edge on all four sides rather than an accent rail along the top.
+     The rail was doing two jobs badly -- decoration, and a progress bar that
+     crept without saying what it was counting -- and the card's own border can
+     carry the state honestly. */
+  border: 1.5px solid var(--lp-card-rule);
+  box-shadow: 0 1px 2px rgba(45, 42, 38, 0.05);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+/* Nothing missing: every required check is in, and the button is live. The
+   edge closes up in the section's colour -- the card is saying "go". */
+.lp-candidates .lp-candidate-ready {
+  border-color: var(--lp-accent);
+  box-shadow: 0 1px 2px rgba(45, 42, 38, 0.05), 0 0 0 3px var(--lp-accent-softer);
+}
+
+/* Done. Researched, with material saved against this list.
+ *
+ * A deeper, quieter green than the working teal: finished is not the same
+ * signal as ready, and it should read as settled rather than as urgent. The
+ * ground warms very slightly, so a worked-through board has visible texture
+ * from across the room. */
+.lp-candidates .lp-candidate-done {
+  --lp-done: #2f6b4f;
+  border-color: var(--lp-done);
+  background: linear-gradient(180deg, #fbfdfb 0%, #f6faf7 100%);
+  box-shadow: 0 1px 2px rgba(45, 42, 38, 0.05), 0 0 0 3px rgba(47, 107, 79, 0.07);
+}
+
+.lp-candidates .lp-candidate-done::after {
+  background: linear-gradient(to bottom, rgba(246, 250, 247, 0), #f6faf7);
+}
+
+/* The mark in the corner: pips for the required checks, and one word for what
+   they add up to. */
+.lp-candidate-state {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.15rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.lp-candidate-pips {
+  display: inline-flex;
+  gap: 0.22rem;
+}
+
+.lp-pip {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--lp-card-rule);
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+
+.lp-pip-on {
+  background: var(--lp-accent);
+  border-color: var(--lp-accent);
+}
+
+.lp-candidate-ready .lp-candidate-state-text {
+  color: var(--lp-accent);
+  font-weight: 600;
+}
+
+.lp-candidate-done .lp-pip-on {
+  background: var(--lp-done);
+  border-color: var(--lp-done);
+}
+
+.lp-candidate-done .lp-candidate-state-text {
+  color: var(--lp-done);
+  font-weight: 600;
+}
+
+/* The one moment of movement on this screen, and it is earned: a card that has
+   just been finished says so once and then stops. */
+.lp-candidate-done .lp-candidate-pips .lp-pip-on {
+  animation: lpPipSettle 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+.lp-candidate-done .lp-pip-on:nth-child(2) { animation-delay: 0.06s; }
+.lp-candidate-done .lp-pip-on:nth-child(3) { animation-delay: 0.12s; }
+.lp-candidate-done .lp-pip-on:nth-child(4) { animation-delay: 0.18s; }
+
+@keyframes lpPipSettle {
+  0% { transform: scale(0.4); opacity: 0.4; }
+  60% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* A done card's research line carries the same settled green. */
+.lp-candidate-done .lp-research-line {
+  color: var(--lp-done);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-candidates .lp-candidate,
+  .lp-pip,
+  .lp-candidate-done .lp-candidate-pips .lp-pip-on {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* ---------- the board, as one rule of marks ---------- */
+
+.lp-board-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: var(--space-2) 0 var(--space-1);
+}
+
+.lp-board-progress-line {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.lp-board-progress-line strong {
+  font-size: 1.05rem;
+  color: var(--lp-accent);
+}
+
+.lp-board-done {
+  color: #2f6b4f;
+  font-weight: 600;
+}
+
+/* One tick per place still on the list. Flexible width, so the row is the
+   width of the board whether it holds seven places or forty. */
+.lp-board-ticks {
+  display: flex;
+  gap: 2px;
+  height: 0.55rem;
+  align-items: stretch;
+}
+
+.lp-tick {
+  flex: 1 1 0;
+  min-width: 2px;
+  border-radius: 1px;
+  background: var(--border-strong);
+  transition: background 0.3s ease;
+}
+
+.lp-tick-ready { background: var(--lp-accent); opacity: 0.45; }
+.lp-tick-done { background: #2f6b4f; opacity: 1; }
+
+/* ---------- on the card ---------- */
+
+.lp-research-action {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--lp-card-rule-soft);
+}
+
+.lp-research-line {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--lp-card-ink);
+}
+
+.lp-research-reason,
+.lp-research-cost {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+/* What is in the way, one line each. A disabled button with no explanation is
+   a screen nobody can argue with. */
+.lp-research-blockers {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #6b4a12;
+}
+
+.lp-research-blockers li + li {
+  margin-top: 0.2rem;
+}
+
+/* The name Google holds, printed under the tick it is about. */
+.lp-check-note {
+  margin: 0 0 0.5rem 2.1rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.lp-check-status {
+  padding: 0.4rem 0.25rem;
+  font-size: 0.8125rem;
+}
+
+.lp-check-optional-group {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--lp-card-rule-soft);
+}
+
+.lp-check-optional-group .lp-eyebrow {
+  margin-bottom: 0.35rem;
+}
+
+/* ---------- the drawer ---------- */
+
+.lp-research {
+  max-width: 68rem;
+  width: min(68rem, 94vw);
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.lp-research-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+.lp-chip {
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--cream);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+}
+
+.lp-chip-on {
+  border-color: var(--lp-accent);
+  color: var(--lp-accent);
+  font-weight: 600;
+}
+
+.lp-research-count {
+  margin: 0 0 var(--space-3);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.lp-research-table-wrap {
+  overflow-x: auto;
+}
+
+.lp-research-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.lp-research-table th {
+  text-align: left;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 0 0.6rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.lp-research-table td {
+  vertical-align: top;
+  padding: 0.7rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Discarded, not deleted. Dimmed and still there, because the research
+   happened and was paid for. */
+.lp-research-discarded td {
+  opacity: 0.55;
+}
+
+.lp-research-text {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  line-height: 1.5;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.lp-research-text:hover {
+  color: var(--lp-accent);
+}
+
+.lp-research-meta {
+  display: table-cell;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.lp-research-meta > span,
+.lp-research-meta > a {
+  display: block;
+}
+
+.lp-research-kind {
+  font-weight: 600;
+}
+
+/* Anything the reader cannot check: no source, or an offer that has ended. */
+.lp-research-warn {
+  color: #a8541b;
+}
+
+.lp-research-curation {
+  font-weight: 600;
+}
+
+.lp-research-unreviewed {
+  color: #8a6d1f;
+}
+
+.lp-research-kept {
+  color: var(--lp-accent);
+}
+
+.lp-research-discarded .lp-research-curation {
+  color: var(--muted);
+}
+
+.lp-research-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.lp-research-detail td {
+  background: var(--cream);
+}
+
+.lp-research-evidence + .lp-research-evidence {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.lp-research-excerpt {
+  margin: 0 0 0.25rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--lp-accent);
+  line-height: 1.55;
+}
+
+.lp-research-revisions,
+.lp-research-issues,
+.lp-research-questions,
+.lp-research-coverage,
+.lp-research-history,
+.lp-research-angles {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.lp-research-angles {
+  list-style: none;
+  padding-left: 0;
+  color: var(--ink);
+}
+
+.lp-research-angles li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.lp-research-state {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.lp-research-block {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.lp-research-form {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.lp-research-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.lp-research-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.lp-research-field input,
+.lp-research-field select {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--cream);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.lp-research-textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--cream);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  padding: 0.5rem 0.7rem;
+  resize: vertical;
+}
+
+.lp-research-edit-actions,
+.lp-research-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.lp-research-inline-form .lp-link-input {
+  flex: 1 1 18rem;
+}
+
+.lp-research-attempt {
+  margin: 0.4rem 0 0.8rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--border-strong);
+}
+
+.lp-research-raw pre {
+  max-height: 18rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.75rem;
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.6rem;
+}

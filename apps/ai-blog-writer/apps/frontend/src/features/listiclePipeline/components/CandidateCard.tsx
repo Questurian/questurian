@@ -1,8 +1,13 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { handOffWheel } from '../scrollHandoff'
 import { LookupLinks } from './LookupLinks'
 import { isTripAdvisorPlaceLink } from '../tripadvisor'
-import type { ListicleCandidate, ListicleGoogleCheck } from '../types'
+import type { PrepPatch, SaveState } from '../usePlaceResearch'
+import type {
+  ListicleCandidate,
+  ListicleGoogleCheck,
+  ListicleResearchCard,
+} from '../types'
 
 /**
  * One place, as a full-width box in a single column.
@@ -16,19 +21,35 @@ import type { ListicleCandidate, ListicleGoogleCheck } from '../types'
  * Built for someone checking places by hand, with each kind of thing looking
  * like what it is: the name large, the lookups as real buttons, the warning as
  * a caution, and the checklist as a form on its own side of the box. The line
- * along the top edge fills as the checklist does, so a half-checked board
+ * along the top edge fills as the required checks do, so a half-prepared board
  * reads at a glance.
  *
- * The checklist is "Still open", ticked by hand, and an optional TripAdvisor
- * link that ticks itself when the link is a real TripAdvisor place page. It
- * lives only in this screen: nothing is saved, and nothing is approved by it.
+ * The checklist used to be component state: two boxes, neither saved, both
+ * lost on reload, and a progress bar that counted an optional link as half the
+ * work. It is now the run's stored preparation, and what it is for has
+ * changed with it -- the checks are what has to be true before a place can be
+ * researched, and the server decides that, not this component.
  */
 
-/** What each place is checked for. "Still open" is ticked by hand; the
- *  TripAdvisor item ticks itself when a real TripAdvisor place link is pasted,
- *  and is optional -- plenty of places have no page. */
 export const STILL_OPEN = 'Still open'
-const CHECK_COUNT = 2
+/** What the identity tick says, beside the name Google actually holds. */
+export const RIGHT_PLACE = 'Correct place and branch'
+
+interface CandidateResearch {
+  card: ListicleResearchCard
+  saveState?: SaveState
+  saveError?: string
+  /** True only while THIS card's request is in flight. Another place being
+   *  researched is a blocker, not this card being busy. */
+  researching: boolean
+  onPrep: (patch: PrepPatch) => void
+  onResearch: () => void
+  onOpenResearch: () => void
+  /** Ask Google about this one place again. Offered only where it is the
+   *  answer to something: a match the operator has said is wrong. */
+  onRecheckGoogle?: () => void
+  recheckingGoogle?: boolean
+}
 
 interface CandidateCardProps {
   candidate: ListicleCandidate
@@ -49,6 +70,10 @@ interface CandidateCardProps {
   /** Take it off because Google lists it as something that is not a
    *  restaurant or bar. No question: it obviously has to go. */
   onRemoveNotAVenue?: () => void
+  /** Preparation, readiness and saved research for this place. Absent while
+   *  the board is still being read, in which case the card shows the place and
+   *  no checklist rather than a checklist that cannot be saved. */
+  research?: CandidateResearch
 }
 
 /** What Google said about whether the place is open, in words, and how
@@ -79,6 +104,40 @@ function priceSigns(level?: number | null): string {
   return level === 0 ? 'Free' : '$'.repeat(Math.min(4, Math.max(1, level)))
 }
 
+/** How a finished request is summed up on the card.
+ *
+ *  Quantities, never a quality score: "4 findings" says how much material
+ *  there is, and nothing on this card has judged whether any of it is good. */
+function attemptLine(card: ListicleResearchCard): string {
+  const attempt = card.last_attempt
+  const profile = card.profile
+  if (!attempt) {
+    if (profile && profile.findings_total > 0) return 'Saved research available'
+    return ''
+  }
+  switch (attempt.state) {
+    case 'running':
+      return 'Researching…'
+    case 'completed': {
+      const found = profile?.findings_this_topic ?? attempt.findings_added
+      const open = attempt.open_questions.length
+      return `${found} ${found === 1 ? 'finding' : 'findings'}${
+        open ? ` · ${open} unresolved ${open === 1 ? 'question' : 'questions'}` : ''
+      }`
+    }
+    case 'completed_empty':
+      return 'No findings returned'
+    case 'failed':
+      return 'The request failed'
+    case 'response_invalid':
+      return 'The answer could not be read'
+    case 'interrupted':
+      return 'The request never came back'
+    default:
+      return attempt.state
+  }
+}
+
 export function CandidateCard({
   candidate,
   place,
@@ -88,10 +147,22 @@ export function CandidateCard({
   google,
   onRemove,
   onRemoveNotAVenue,
+  research,
 }: CandidateCardProps) {
-  const [open, setOpen] = useState(false)
-  const [tripAdvisor, setTripAdvisor] = useState('')
   const scroller = useRef<HTMLDivElement>(null)
+  const prep = research?.card.prep
+  const readiness = research?.card.readiness
+  // A draft of the link box, so typing is not a save on every keystroke. It
+  // follows the stored value whenever that changes underneath.
+  const [tripAdvisor, setTripAdvisor] = useState(prep?.tripadvisor_url ?? '')
+  const [note, setNote] = useState(prep?.status_note ?? '')
+  const [keepReason, setKeepReason] = useState(prep?.exclusion_reason ?? '')
+  const stored = prep?.tripadvisor_url ?? ''
+  const storedNote = prep?.status_note ?? ''
+  const storedReason = prep?.exclusion_reason ?? ''
+  useEffect(() => setTripAdvisor(stored), [stored])
+  useEffect(() => setNote(storedNote), [storedNote])
+  useEffect(() => setKeepReason(storedReason), [storedReason])
 
   // A box scrolled to its end gives the rest of the wheel to the page, so
   // reading down the board is one movement and not a stop at every card.
@@ -112,17 +183,18 @@ export function CandidateCard({
   // Typed but not a TripAdvisor place page. Said only once there is
   // something in the box, so an empty optional field is not an error.
   const badLink = tripAdvisor.trim() !== '' && !linked
-  const progress = (Number(open) + Number(linked)) / CHECK_COUNT
-  // Done means every required item: TripAdvisor is optional, so a place
-  // with no page is not held back by it.
-  const complete = open
+  // Required checks only. The optional link is not part of it, so a place with
+  // no TripAdvisor page is not held back by it and the bar does not imply that
+  // something is unfinished.
+  const blockers = readiness?.blockers ?? []
+  const state = cardState(research?.card)
+  const has = (code: string) => blockers.some(blocker => blocker.code === code)
+  const prepBlockers = blockers.filter(blocker => blocker.where !== 'execution')
+  const line = research ? attemptLine(research.card) : ''
+  const saving = research?.saveState === 'saving'
 
   return (
-    <li
-      className={complete ? 'lp-candidate lp-candidate-complete' : 'lp-candidate'}
-      style={{ '--lp-progress': progress } as CSSProperties}
-    >
-      <span className="lp-candidate-progress" aria-hidden="true" />
+    <li className={`lp-candidate lp-candidate-${state}`}>
       <div className="lp-candidate-scroll" ref={scroller}>
         <div className="lp-candidate-main">
           {/* In the corner, apart from the lookups: removing is a decision
@@ -138,6 +210,14 @@ export function CandidateCard({
             </button>
           )}
           <header className="lp-candidate-head">
+            {readiness && (
+              <StateMark
+                state={state}
+                done={readiness.required_done}
+                total={readiness.required_total}
+                findings={research?.card.profile?.findings_this_topic ?? 0}
+              />
+            )}
             <h3 className="lp-candidate-name">
               {candidate.name}
               {closedForGood && <span className="lp-candidate-closed">Permanently closed</span>}
@@ -192,15 +272,16 @@ export function CandidateCard({
           <div className="lp-candidate-tools">
             <LookupLinks candidate={candidate} place={place} placeId={found?.place_id} />
             {/* The descriptions, the search behind each one and any cut
-                warning. Research, read one place at a time. */}
+                warning. Discovery, read one place at a time -- not the same
+                thing as the research below. */}
             <button
               type="button"
               className="lp-tool lp-tool-quiet"
-              aria-label={`Details for ${candidate.name}`}
+              aria-label={`Discovery details for ${candidate.name}`}
               onClick={onDetails}
             >
               <NotesIcon />
-              Details
+              Discovery details
             </button>
           </div>
 
@@ -222,63 +303,386 @@ export function CandidateCard({
                 Might be the same place as {duplicates.join(', ')}.
               </p>
             ))}
+
+          {research && (
+            <ResearchAction
+              research={research}
+              line={line}
+              blockers={prepBlockers}
+              name={candidate.name}
+              saving={saving}
+            />
+          )}
         </div>
 
-        <ul className="lp-candidate-checks" aria-label={`Checklist for ${candidate.name}`}>
-          <li>
-            <label className="lp-check">
-              <input
-                type="checkbox"
-                className="lp-check-input"
-                checked={open}
-                onChange={() => setOpen(value => !value)}
-              />
-              <CheckBox />
-              <span className="lp-check-text">{STILL_OPEN}</span>
-              {status && (
-                <span className={`lp-check-google lp-check-google-${status.tone}`}>
-                  {status.text}
-                </span>
-              )}
-            </label>
-          </li>
-          <li className="lp-check-link">
-            {/* Not a checkbox. The tick is the link being right, so it cannot
-                be ticked without one -- and anything but a TripAdvisor place
-                page leaves it unticked and says why. */}
-            <div className={linked ? 'lp-check lp-check-auto lp-check-done' : 'lp-check lp-check-auto'}>
-              <CheckBox />
+        {research && prep && readiness ? (
+          <ul className="lp-candidate-checks" aria-label={`Checklist for ${candidate.name}`}>
+            <li>
+              <label className="lp-check">
+                <input
+                  type="checkbox"
+                  className="lp-check-input"
+                  checked={prep.identity_confirmed && !has('identity_stale')}
+                  disabled={saving || has('identity_unresolved')}
+                  onChange={event =>
+                    research.onPrep({ identity_confirmed: event.target.checked })
+                  }
+                />
+                <CheckBox />
+                <span className="lp-check-text">{RIGHT_PLACE}</span>
+              </label>
+              {/* The tick is made about a named place, not about a checkbox. */}
+              <p className="lp-check-note">
+                {readiness.google_name ? (
+                  <>
+                    {readiness.google_name}
+                    {readiness.google_address ? ` · ${readiness.google_address}` : ''}
+                  </>
+                ) : (
+                  <span className="lp-check-google lp-check-google-warn">
+                    Google has not resolved this to a place with an address.
+                  </span>
+                )}
+              </p>
+            </li>
+            <li>
+              <label className="lp-check">
+                <input
+                  type="checkbox"
+                  className="lp-check-input"
+                  checked={prep.open_confirmed && !has('open_stale')}
+                  disabled={saving}
+                  onChange={event =>
+                    research.onPrep({ open_confirmed: event.target.checked })
+                  }
+                />
+                <CheckBox />
+                <span className="lp-check-text">{STILL_OPEN}</span>
+                {status && (
+                  <span className={`lp-check-google lp-check-google-${status.tone}`}>
+                    {status.text}
+                  </span>
+                )}
+              </label>
+            </li>
+
+            {/* Google will not say it is open. A tick cannot clear that; a
+                sentence from the person deciding can. */}
+            {(has('status_note_missing') || has('status_note_stale') || note) && (
+              <li className="lp-check-link">
+                <label className="lp-check-text" htmlFor={`note-${candidate.candidate_id}`}>
+                  Why research should go ahead anyway
+                </label>
+                <textarea
+                  id={`note-${candidate.candidate_id}`}
+                  className="lp-link-input"
+                  rows={2}
+                  value={note}
+                  placeholder="The owner confirmed by phone that it reopens on Monday."
+                  onChange={event => setNote(event.target.value)}
+                  onBlur={() =>
+                    note !== storedNote && research.onPrep({ status_note: note })
+                  }
+                />
+              </li>
+            )}
+
+            {/* A cut warning is resolved by a decision with a reason. The
+                decision settles the warning; it does not make it untrue. */}
+            {(candidate.barred || prep.exclusion_decision) && (
+              <li className="lp-check-link">
+                <label className="lp-check">
+                  <input
+                    type="checkbox"
+                    className="lp-check-input"
+                    checked={prep.exclusion_decision === 'keep'}
+                    disabled={saving}
+                    onChange={event =>
+                      research.onPrep({
+                        exclusion_decision: event.target.checked ? 'keep' : '',
+                        exclusion_reason: keepReason,
+                      })
+                    }
+                  />
+                  <CheckBox />
+                  <span className="lp-check-text">Keep it for this list</span>
+                </label>
+                {candidate.barred && (
+                  <p className="lp-check-note lp-check-google-warn">{candidate.barred}</p>
+                )}
+                <input
+                  type="text"
+                  className="lp-link-input"
+                  value={keepReason}
+                  aria-label="Why this one is kept despite the warning"
+                  placeholder="Why it stays"
+                  onChange={event => setKeepReason(event.target.value)}
+                  onBlur={() =>
+                    keepReason !== storedReason &&
+                    research.onPrep({
+                      exclusion_decision: 'keep',
+                      exclusion_reason: keepReason,
+                    })
+                  }
+                />
+              </li>
+            )}
+
+            {/* Nothing flagged this row, and nothing looked at it either. */}
+            {(has('cut_unchecked') || has('cut_stale') || prep.cut_confirmed) && (
+              <li>
+                <label className="lp-check">
+                  <input
+                    type="checkbox"
+                    className="lp-check-input"
+                    checked={prep.cut_confirmed && !has('cut_stale')}
+                    disabled={saving}
+                    onChange={event =>
+                      research.onPrep({ cut_confirmed: event.target.checked })
+                    }
+                  />
+                  <CheckBox />
+                  <span className="lp-check-text">
+                    I checked this against what is left out
+                  </span>
+                </label>
+              </li>
+            )}
+
+            {/* Optional, and kept apart so nothing implies the card is
+                unfinished because a box nobody has to fill is empty. */}
+            <li className="lp-check-link lp-check-optional-group">
+              <p className="lp-eyebrow">Optional sources</p>
               <label className="lp-check-text" htmlFor={`ta-${candidate.candidate_id}`}>
                 TripAdvisor link
               </label>
-              <span className="lp-check-optional">Optional</span>
-            </div>
-            <input
-              id={`ta-${candidate.candidate_id}`}
-              type="url"
-              inputMode="url"
-              className="lp-link-input"
-              placeholder="Paste this place's TripAdvisor page"
-              value={tripAdvisor}
-              aria-invalid={badLink}
-              aria-describedby={badLink ? `ta-${candidate.candidate_id}-why` : undefined}
-              onChange={event => setTripAdvisor(event.target.value)}
-            />
-            {badLink && (
-              <p className="lp-link-why" id={`ta-${candidate.candidate_id}-why`}>
-                That isn't a TripAdvisor page for a place. Paste the link to this
-                place's own TripAdvisor page.
-              </p>
+              <input
+                id={`ta-${candidate.candidate_id}`}
+                type="url"
+                inputMode="url"
+                className="lp-link-input"
+                placeholder="Paste this place's TripAdvisor page"
+                value={tripAdvisor}
+                aria-invalid={badLink}
+                aria-describedby={badLink ? `ta-${candidate.candidate_id}-why` : undefined}
+                onChange={event => setTripAdvisor(event.target.value)}
+                onBlur={() =>
+                  tripAdvisor !== stored &&
+                  research.onPrep({ tripadvisor_url: tripAdvisor })
+                }
+              />
+              {badLink && (
+                <p className="lp-link-why" id={`ta-${candidate.candidate_id}-why`}>
+                  That isn't a TripAdvisor page for a place. Paste the link to this
+                  place's own TripAdvisor page, or clear the box — it is optional.
+                </p>
+              )}
+              {linked && <p className="lp-muted">Saved. Nothing was fetched.</p>}
+            </li>
+
+            {research.saveState && (
+              <li className="lp-check-status" role="status">
+                {research.saveState === 'saving' && <span className="lp-muted">Saving…</span>}
+                {research.saveState === 'saved' && <span className="lp-muted">Saved</span>}
+                {research.saveState === 'error' && (
+                  <span className="lp-link-why">
+                    {research.saveError || 'That could not be saved.'}
+                  </span>
+                )}
+              </li>
             )}
-          </li>
-        </ul>
+          </ul>
+        ) : (
+          <ul className="lp-candidate-checks" aria-label={`Checklist for ${candidate.name}`}>
+            <li className="lp-muted">Reading what is prepared for this place…</li>
+          </ul>
+        )}
       </div>
     </li>
   )
 }
 
-/** The drawn square beside a check. Ticked by the input before it for "Still
- *  open", and by the row's done class for the TripAdvisor link. */
+/** The one control on this card that spends money, and everything standing
+ *  between it and being pressed.
+ *
+ *  A disabled button with no explanation is a screen nobody can argue with, so
+ *  what is missing is listed instead — and each line says which screen fixes
+ *  it. */
+function ResearchAction({
+  research,
+  line,
+  blockers,
+  name,
+  saving,
+}: {
+  research: CandidateResearch
+  line: string
+  blockers: { code: string; message: string; where: string }[]
+  name: string
+  /** A tick is still on its way to the server. Until it lands, this card's
+   *  readiness is the readiness of the version before it, and a request sent
+   *  against that would be refused anyway -- having paid for the round trip. */
+  saving: boolean
+}) {
+  const { card, researching, onResearch, onOpenResearch } = research
+  const attempt = card.last_attempt
+  const running = researching || attempt?.state === 'running'
+  const ready = card.readiness.ready
+  const hasResearch = Boolean(card.profile && card.profile.findings_total > 0)
+  const otherTopics = card.profile?.other_topics ?? []
+
+  return (
+    <div className="lp-research-action">
+      {line && (
+        <p className={running ? 'lp-research-line lp-muted' : 'lp-research-line'}>
+          {line}
+          {attempt?.finished_at && !running && (
+            <span className="lp-muted"> · {attempt.finished_at.slice(0, 10)}</span>
+          )}
+        </p>
+      )}
+      {/* Research paid for by another list. Reading it is free; researching
+          this topic is still a decision. */}
+      {otherTopics.length > 0 && (
+        <p className="lp-muted">
+          Saved research from {otherTopics.join(', ')}.
+        </p>
+      )}
+      {attempt?.reason && !running && (
+        <p className="lp-muted lp-research-reason">{attempt.reason}</p>
+      )}
+      <div className="lp-candidate-tools">
+        <button
+          type="button"
+          className="lp-tool"
+          disabled={!ready || running || saving}
+          aria-label={`Research ${name}`}
+          onClick={onResearch}
+        >
+          {running
+            ? 'Researching…'
+            : attempt && attempt.state !== 'running'
+              ? 'Research again'
+              : 'Research this place'}
+        </button>
+        {hasResearch && (
+          <button
+            type="button"
+            className="lp-tool lp-tool-quiet"
+            onClick={onOpenResearch}
+          >
+            {running ? 'Open research' : 'View research'}
+          </button>
+        )}
+      </div>
+      <p className="lp-muted lp-research-cost">
+        One grounded request. No automatic retries.
+      </p>
+      {research.saveError && (
+        <p className="lp-link-why" role="alert">
+          {research.saveError}
+        </p>
+      )}
+      {!ready && blockers.length > 0 && (
+        <ul className="lp-research-blockers">
+          {blockers.map(blocker => (
+            <li key={blocker.code}>
+              {blocker.message}
+              {/* The one blocker with a fix that is not a removal: Google can
+                  be asked again. Offered here rather than in the Google bar at
+                  the top, because it is about this card and costs one lookup. */}
+              {blocker.code === 'identity_conflict' && research.onRecheckGoogle && (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    className="lp-link-button"
+                    disabled={research.recheckingGoogle}
+                    onClick={research.onRecheckGoogle}
+                  >
+                    {research.recheckingGoogle
+                      ? 'Asking Google…'
+                      : 'check this one on Google again'}
+                  </button>
+                  <span className="lp-muted"> — one lookup.</span>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {!ready &&
+        card.readiness.blockers.some(one => one.where === 'execution') && (
+          <p className="lp-muted">
+            {card.readiness.blockers.find(one => one.where === 'execution')?.message}
+          </p>
+        )}
+    </div>
+  )
+}
+
+/** Where one place has got to, as one word.
+ *
+ *  Three states rather than a percentage, because they are three different
+ *  things to do: something is still missing, nothing is missing and the button
+ *  is live, or the work is done and this card can be left alone. A bar that
+ *  creeps from 40% to 70% says none of that.
+ */
+export type CardState = 'open' | 'ready' | 'done'
+
+export function cardState(card?: ListicleResearchCard): CardState {
+  if (!card) return 'open'
+  // Done means this list has material from this place. A request that ran and
+  // found nothing is not done -- there is still a decision to make about it,
+  // and the card should keep offering to help make it.
+  if ((card.profile?.findings_this_topic ?? 0) > 0) return 'done'
+  return card.readiness.ready ? 'ready' : 'open'
+}
+
+/** The mark in the corner: how many required checks are in, and what that
+ *  adds up to.
+ *
+ *  One pip per required check, and the number of pips is itself information --
+ *  a card with a duplicate to settle has more to do than one without, and it
+ *  shows that before you read a word.
+ */
+function StateMark({
+  state,
+  done,
+  total,
+  findings,
+}: {
+  state: CardState
+  done: number
+  total: number
+  findings: number
+}) {
+  const label =
+    state === 'done'
+      ? `${findings} ${findings === 1 ? 'finding' : 'findings'}`
+      : state === 'ready'
+        ? 'Ready to research'
+        : `${done} of ${total} checked`
+  return (
+    <p className="lp-candidate-state">
+      <span className="lp-candidate-pips" aria-hidden="true">
+        {Array.from({ length: Math.max(total, 1) }, (_, index) => (
+          <span
+            key={index}
+            className={
+              state === 'done' || index < done
+                ? 'lp-pip lp-pip-on'
+                : 'lp-pip'
+            }
+          />
+        ))}
+      </span>
+      <span className="lp-candidate-state-text">{label}</span>
+    </p>
+  )
+}
+
+/** The drawn square beside a check. Ticked by the input before it. */
 function CheckBox() {
   return (
     <span className="lp-check-box" aria-hidden="true">

@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { checkOnGoogle, loadGoogleChecks, loadPlacesAllowance } from './api'
+import {
+  checkOnGoogle,
+  loadGoogleChecks,
+  loadPlacesAllowance,
+  recheckPlaceOnGoogle,
+} from './api'
 import type { ListicleBoard, ListicleGoogleCheck, ListiclePlacesAllowance } from './types'
 
 /**
@@ -67,6 +72,30 @@ export function useGoogleChecks(runId: string) {
     }
   }, [runId, readAllowance])
 
+  /** Ask again about one place whose match is wrong. One lookup. */
+  const recheck = useCallback(
+    async (candidateId: string): Promise<boolean> => {
+      setChecking(true)
+      setError(null)
+      try {
+        const found = await recheckPlaceOnGoogle(runId, candidateId)
+        setChecks(found.checks)
+        return true
+      } catch (caught) {
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : 'That place could not be checked again.',
+        )
+        return false
+      } finally {
+        setChecking(false)
+        readAllowance(true)
+      }
+    },
+    [runId, readAllowance],
+  )
+
   /** Mirror what the server records when a place Google flagged is put back
    *  -- the operator overruling Google -- so the card stops showing the flag
    *  without another read. */
@@ -81,5 +110,5 @@ export function useGoogleChecks(runId: string) {
     [],
   )
 
-  return { checks, checking, error, check, allowance, dismiss }
+  return { checks, checking, error, check, recheck, allowance, dismiss }
 }

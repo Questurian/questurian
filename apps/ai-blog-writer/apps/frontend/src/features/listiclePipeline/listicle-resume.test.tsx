@@ -19,6 +19,10 @@ const removeCandidate = vi.fn()
 const loadGoogleChecks = vi.fn()
 const checkOnGoogle = vi.fn()
 const loadPlacesAllowance = vi.fn()
+const loadResearchBoard = vi.fn()
+const saveCandidatePrep = vi.fn()
+const startPlaceResearch = vi.fn()
+const loadProfileResearch = vi.fn()
 
 vi.mock('./api', async importOriginal => {
   const actual = await importOriginal<typeof import('./api')>()
@@ -40,6 +44,10 @@ vi.mock('./api', async importOriginal => {
     loadGoogleChecks: (...args: unknown[]) => loadGoogleChecks(...args),
     checkOnGoogle: (...args: unknown[]) => checkOnGoogle(...args),
     loadPlacesAllowance: (...args: unknown[]) => loadPlacesAllowance(...args),
+    loadResearchBoard: (...args: unknown[]) => loadResearchBoard(...args),
+    saveCandidatePrep: (...args: unknown[]) => saveCandidatePrep(...args),
+    startPlaceResearch: (...args: unknown[]) => startPlaceResearch(...args),
+    loadProfileResearch: (...args: unknown[]) => loadProfileResearch(...args),
   }
 })
 
@@ -50,6 +58,9 @@ import type {
   ListicleGrillState,
   ListicleCandidate,
   ListicleOrder,
+  ListiclePrep,
+  ListicleResearchBoard,
+  ListicleResearchCard,
   ListicleRunSummary,
   ListicleSearchResults,
 } from './types'
@@ -209,6 +220,116 @@ function renderAt(path: string) {
   )
 }
 
+/**
+ * The research board, faked exactly as far as these tests need it.
+ *
+ * Preparation is stored on the server now, so a checklist that ticks is a
+ * round trip. This stands in for it: one prep per candidate, and readiness
+ * computed by the same two rules the server uses -- both required checks
+ * ticked, and any link that was typed being a real one.
+ *
+ * It is deliberately not a second implementation of readiness. It is a stub
+ * with the same shape, and the rule itself is tested where it lives, against
+ * the server.
+ */
+const PREP: Record<string, ListiclePrep> = {}
+
+function emptyPrep(candidateId: string): ListiclePrep {
+  return {
+    run_id: 'abc123',
+    candidate_id: candidateId,
+    version: 0,
+    identity_confirmed: false,
+    identity_confirmed_at: '',
+    identity_confirmed_by: '',
+    open_confirmed: false,
+    open_confirmed_at: '',
+    open_confirmed_by: '',
+    status_note: '',
+    exclusion_decision: '',
+    exclusion_reason: '',
+    exclusion_at: '',
+    cut_confirmed: false,
+    cut_confirmed_at: '',
+    tripadvisor_url: '',
+    source_links: [],
+    updated_at: '',
+  }
+}
+
+function readinessFor(prep: ListiclePrep): ListicleResearchCard['readiness'] {
+  const blockers: ListicleResearchCard['readiness']['blockers'] = []
+  if (!prep.identity_confirmed) {
+    blockers.push({
+      code: 'identity_unconfirmed',
+      message: 'Confirm this is the right place and the right branch.',
+      where: 'prep',
+    })
+  }
+  if (!prep.open_confirmed) {
+    blockers.push({
+      code: 'open_unconfirmed',
+      message: 'Confirm the place is still open.',
+      where: 'prep',
+    })
+  }
+  const done = Number(prep.identity_confirmed) + Number(prep.open_confirmed)
+  return {
+    candidate_id: prep.candidate_id,
+    ready: blockers.length === 0,
+    blockers,
+    required_total: 2,
+    required_done: done,
+    progress: done / 2,
+    prep_version: prep.version,
+    identity_fingerprint: 'fp',
+    status_fingerprint: 'fp',
+    exclusion_fingerprint: '',
+    cut_fingerprint: '',
+    google_name: 'Wingman',
+    google_address: 'Av. Test 1',
+    place_id: 'gid-open',
+    identity_twins: [],
+  }
+}
+
+function researchBoard(candidates: ListicleCandidate[]): ListicleResearchBoard {
+  return {
+    run_id: 'abc123',
+    revision: 1,
+    topic: 'cevicherias',
+    topic_label: 'cevicherias',
+    exclusions: 'no chains',
+    active_attempt: null,
+    cards: candidates.map(candidate => {
+      const prep = PREP[candidate.candidate_id] ?? emptyPrep(candidate.candidate_id)
+      PREP[candidate.candidate_id] = prep
+      return {
+        candidate_id: candidate.candidate_id,
+        name: candidate.name,
+        district: candidate.district,
+        prep,
+        readiness: readinessFor(prep),
+        profile: null,
+        last_attempt: null,
+      }
+    }),
+  }
+}
+
+/** What the screen is showing, read off the mocks the test set up. The board
+ *  is loaded after the results are, so this is always answerable. */
+async function shownCandidates(): Promise<ListicleCandidate[]> {
+  const calls = [...runSearch.mock.results, ...loadSearch.mock.results]
+  for (let index = calls.length - 1; index >= 0; index -= 1) {
+    const call = calls[index]
+    if (call.type !== 'return') continue
+    const value = (await call.value) as ListicleSearchResults | null
+    if (value?.candidates) return value.candidates
+  }
+  return []
+}
+
 beforeEach(() => {
   startGrill.mockReset()
   answerGrill.mockReset()
@@ -233,6 +354,23 @@ beforeEach(() => {
     month_start: '2026-09-01T07:00:00+00:00',
     as_of: '2026-09-11T19:00:00+00:00',
   })
+  for (const key of Object.keys(PREP)) delete PREP[key]
+  loadResearchBoard
+    .mockReset()
+    .mockImplementation(async () => researchBoard(await shownCandidates()))
+  saveCandidatePrep
+    .mockReset()
+    .mockImplementation(async (_runId: string, candidateId: string, patch) => {
+      const prep = {
+        ...(PREP[candidateId] ?? emptyPrep(candidateId)),
+        ...patch,
+        version: (PREP[candidateId]?.version ?? 0) + 1,
+      }
+      PREP[candidateId] = prep
+      return { prep, readiness: readinessFor(prep) }
+    })
+  startPlaceResearch.mockReset()
+  loadProfileResearch.mockReset()
 })
 
 describe('getting back to a run', () => {
@@ -518,8 +656,8 @@ describe('the agreed order on screen', () => {
 
     // Flagged, never removed. The flag is research, so it lives in the
     // place's details rather than on the card.
-    await userEvent.click(await screen.findByRole('button', { name: 'Details for Maido' }))
-    const details = screen.getByRole('dialog', { name: 'Details for Maido' })
+    await userEvent.click(await screen.findByRole('button', { name: 'Discovery details for Maido' }))
+    const details = screen.getByRole('dialog', { name: 'Discovery details for Maido' })
     expect(within(details).getByText(/Looks like something you left out/)).toBeInTheDocument()
     expect(within(details).getByText(/Ceviche is one dish of many here/)).toBeInTheDocument()
   })
@@ -719,8 +857,8 @@ describe('reading the places', () => {
   it('opens what every search said about one place, and closes again', async () => {
     await openWings()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Details for Wingman' }))
-    const details = screen.getByRole('dialog', { name: 'Details for Wingman' })
+    await userEvent.click(screen.getByRole('button', { name: 'Discovery details for Wingman' }))
+    const details = screen.getByRole('dialog', { name: 'Discovery details for Wingman' })
     expect(within(details).getByText(/Found by 2 searches/)).toBeInTheDocument()
     expect(within(details).getByText(/especializado en alitas, shows fútbol/)).toBeInTheDocument()
     expect(within(details).getByText(/alitas a la brasa con ají verde/)).toBeInTheDocument()
@@ -745,17 +883,94 @@ describe('reading the places', () => {
 
     const wingman = await screen.findByRole('list', { name: 'Checklist for Wingman' })
     const juno = screen.getByRole('list', { name: 'Checklist for JUNO WINGS' })
-    // One box to tick by hand; the TripAdvisor item is a link, not a box.
-    expect(within(wingman).getAllByRole('checkbox')).toHaveLength(1)
-    expect(within(wingman).queryByText('Worth the trip')).not.toBeInTheDocument()
+    // Two boxes to tick by hand: which place this is, and whether it is open.
+    // The TripAdvisor link is optional and is not one of them.
+    expect(within(wingman).getAllByRole('checkbox')).toHaveLength(2)
 
     await userEvent.click(within(wingman).getByLabelText(STILL_OPEN))
 
-    expect(within(wingman).getByLabelText(STILL_OPEN)).toBeChecked()
+    await waitFor(() =>
+      expect(within(wingman).getByLabelText(STILL_OPEN)).toBeChecked(),
+    )
     expect(within(juno).getByLabelText(STILL_OPEN)).not.toBeChecked()
+    // Saved, not held in this screen. The card reload is what it reads back.
+    expect(saveCandidatePrep).toHaveBeenCalledWith('abc123', 'cand-wingman', {
+      open_confirmed: true,
+    })
   })
 
-  it('ticks TripAdvisor only for a real TripAdvisor place link', async () => {
+  it('will not offer research until both required checks are ticked', async () => {
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(order())
+    loadSearch.mockResolvedValue(results({ candidates: [WINGMAN] }))
+    renderAt('/listicle-pipeline/abc123')
+
+    const button = await screen.findByRole('button', { name: 'Research Wingman' })
+    expect(button).toBeDisabled()
+    // Disabled and said out loud: a button nobody can press and nothing
+    // explaining why is a screen that cannot be argued with.
+    expect(
+      screen.getByText('Confirm this is the right place and the right branch.'),
+    ).toBeInTheDocument()
+
+    const list = screen.getByRole('list', { name: 'Checklist for Wingman' })
+    await userEvent.click(within(list).getByLabelText(/Correct place and branch/))
+    await userEvent.click(within(list).getByLabelText(STILL_OPEN))
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Research Wingman' })).toBeEnabled(),
+    )
+    // Nothing was bought by ticking anything.
+    expect(startPlaceResearch).not.toHaveBeenCalled()
+  })
+
+  it('buys exactly one request when the button is pressed', async () => {
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(order())
+    loadSearch.mockResolvedValue(results({ candidates: [WINGMAN] }))
+    startPlaceResearch.mockResolvedValue({
+      attempt: {
+        attempt_id: 'att1',
+        run_id: 'abc123',
+        candidate_id: 'cand-wingman',
+        profile_id: 'prof1',
+        mode: 'initial',
+        state: 'completed',
+        reason_code: '',
+        reason: '',
+        findings_added: 4,
+        findings_seen: 4,
+        open_questions: [],
+        started_at: '2026-09-12T01:00:00+00:00',
+        finished_at: '2026-09-12T01:01:00+00:00',
+        model: 'gemini-2.5-flash',
+        running: false,
+      },
+      profile: null,
+    })
+    renderAt('/listicle-pipeline/abc123')
+
+    const list = await screen.findByRole('list', { name: 'Checklist for Wingman' })
+    await userEvent.click(within(list).getByLabelText(/Correct place and branch/))
+    await userEvent.click(within(list).getByLabelText(STILL_OPEN))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Research Wingman' })).toBeEnabled(),
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Research Wingman' }))
+
+    await waitFor(() => expect(startPlaceResearch).toHaveBeenCalledTimes(1))
+    const [runId, candidateId, body] = startPlaceResearch.mock.calls[0]
+    expect(runId).toBe('abc123')
+    expect(candidateId).toBe('cand-wingman')
+    // The key is what makes a lost answer free to ask about again, and the
+    // versions are what stop a click landing on a card that has moved.
+    expect(body.idempotency_key).toBeTruthy()
+    expect(body.expected_prep_version).toBe(2)
+    expect(body.expected_order_revision).toBe(1)
+  })
+
+  it('the optional link is saved on blur and blocks only when it is wrong', async () => {
     loadGrill.mockResolvedValue(AGREED)
     loadOrder.mockResolvedValue(order())
     loadSearch.mockResolvedValue(results({ candidates: [WINGMAN] }))
@@ -763,24 +978,31 @@ describe('reading the places', () => {
 
     const list = await screen.findByRole('list', { name: 'Checklist for Wingman' })
     const field = within(list).getByLabelText('TripAdvisor link')
-    const row = () => within(list).getByText('TripAdvisor link').closest('.lp-check')
 
     await userEvent.type(field, 'https://www.youtube.com/watch?v=abc')
-    expect(row()).not.toHaveClass('lp-check-done')
     expect(field).toHaveAttribute('aria-invalid', 'true')
     expect(within(list).getByText(/isn't a TripAdvisor page for a place/)).toBeInTheDocument()
 
     await userEvent.clear(field)
     // Empty is not an error: the item is optional.
     expect(field).toHaveAttribute('aria-invalid', 'false')
-    expect(within(list).getByText('Optional')).toBeInTheDocument()
+    expect(within(list).queryByText(/isn't a TripAdvisor page/)).not.toBeInTheDocument()
 
     await userEvent.type(
       field,
       'https://www.tripadvisor.com.pe/Restaurant_Review-g294316-d12345678-Reviews-Wingman-Lima.html',
     )
-    expect(row()).toHaveClass('lp-check-done')
-    expect(within(list).queryByText(/isn't a TripAdvisor page/)).not.toBeInTheDocument()
+    // Typing is not saving. The save happens when the box is left, so a
+    // half-typed URL is never stored.
+    expect(saveCandidatePrep).not.toHaveBeenCalled()
+    await userEvent.tab()
+    await waitFor(() =>
+      expect(saveCandidatePrep).toHaveBeenCalledWith('abc123', 'cand-wingman', {
+        tripadvisor_url:
+          'https://www.tripadvisor.com.pe/Restaurant_Review-g294316-d12345678-Reviews-Wingman-Lima.html',
+      }),
+    )
+    expect(within(list).getByText(/Nothing was fetched/)).toBeInTheDocument()
   })
 
   it('looks a place up on Google and Maps in one click, in the right city', async () => {

@@ -557,6 +557,89 @@ result is filed, so a process that lost the lease cannot spend on the run's
 behalf or publish over the work of whoever took it. A response it already
 bought is left as orphaned evidence rather than promoted to current work.
 
+## Listicle Pipeline (per-place research)
+
+The step after the board: one prepared card, one research request, and a
+profile that outlives the list that paid for it. Under
+`app/features/listicle_pipeline` beside the search order, and decided in
+[ADR 0039](./docs/adr/0039-one-place-one-request-one-profile.md).
+
+### Candidate Preparation
+Definition: what a person has confirmed about one card before it may be
+researched — that Google resolved it to the right place and branch, that it is
+still open, and that every warning standing against it has been settled. Stored
+per run and candidate, versioned, and stamped with a fingerprint of what each
+confirmation was made about.
+Boundary rule: preparation is not approval of the place. It answers only "do we
+know which building this is, and has a person dealt with every warning". A
+confirmation stops applying when the thing it was made about changes — the
+Google identity, the opening status, the cut warning — and editing an optional
+link never touches it.
+Do not confuse with: the Cut Check, which judges whether a place belongs on the
+list. Preparation never makes that judgement.
+
+### Readiness
+Definition: the server's answer to "may this place be researched", as a list of
+blockers with the screen that fixes each one.
+Boundary rule: one computation, read by the card and re-run by the request. A
+client-side second version is how a button comes back enabled over a board that
+has moved. An empty optional link is not a blocker and is not counted in
+required progress.
+
+### Place Profile
+Definition: one real place and everything that has been said about it, anchored
+on an internal id with the Google Place ID as a verified external reference.
+Holds findings, sources, sightings and possible angles across every list that
+has ever found it.
+Boundary rule: the internal id owns identity. A Place ID is evidence about
+which building this is, never a reason to merge two profiles, and two branches
+with one name are two profiles. Reading a profile costs nothing, from any list.
+Do not confuse with: **Research Profile**, the `editor_assist` blurb pipeline's
+per-blurb cited evidence bundle described above. Different pipeline, different
+lifetime — that one is built per run and thrown away, this one is the thing
+being accumulated.
+
+### Research Finding
+Definition: one concrete assertion about a place, with its category, its topic,
+its scope (this branch or the business), how it ages, its dates, where it came
+from, and what a person has decided about it.
+Boundary rule: three dates stay separate — when the source was published, when
+we read it, and when the thing happened. Re-reading a 2024 review today does not
+renew it. A finding with no source of its own is `incomplete` and says so; it is
+never handed the first URL the search happened to return. Curation
+(`unreviewed`, `kept`, `discarded`) hides material from the writing and deletes
+nothing.
+Do not confuse with: **Writer Brief** source facts, which are curated for one
+blurb in another pipeline. A finding is evidence in a store, not a payload.
+
+### Research Topic
+Definition: the stable key a finding is filed under, derived from what the
+interview agreed the list is about (`chicken wings` → `chicken-wings`).
+Boundary rule: a new topic is a new scope. Researching a restaurant's cocktails
+appends to the same profile and never replaces its wings evidence, and a
+profile's default view is filtered to the current list's topic with every other
+topic one click away.
+
+### Research Attempt
+Definition: one press of "Research this place" — `running`, `completed`,
+`completed_empty`, `failed`, `response_invalid` or `interrupted` — with the
+input snapshot it was made from, the directions it asked for, whatever the
+provider reported searching, the raw answer, and the usage.
+Boundary rule: five terminal states rather than a boolean, because "the call
+never ran", "nothing is published about this place" and "the answer could not
+be read" are three different facts and only one of them is about the place.
+Nothing retries on its own. A repeated idempotency key returns the same attempt
+and never buys a second call.
+
+### Possible Angle
+Definition: an editorial idea about how a place could be written, typed by a
+person and pointing at the findings behind it.
+Boundary rule: explicitly not a fact and never counted as evidence. "Excellent
+hidden gem" belongs here rather than among the findings, because nobody
+published it and it cannot be attributed.
+Do not confuse with: **Angle** on the search order, which is a literal web
+search this pipeline runs.
+
 ## AI Guidance
 
 When working in this context:

@@ -2,7 +2,13 @@ import { useEffect, useRef } from 'react'
 import type { ListicleCandidate, ListicleSighting } from '../types'
 
 /**
- * Everything the searches said about one place, opened on request.
+ * Everything the SEARCHES said about one place, opened on request.
+ *
+ * Discovery, not research. What is here is what a search reported on the way
+ * to finding this place -- a sentence written to justify returning it, never
+ * checked and never attributed. The research viewer is the other thing, and
+ * the two are named apart on purpose: one is a lead, the other is evidence
+ * somebody paid for and a person has judged.
  *
  * Kept off the card on purpose. The card is for scanning forty places and
  * seeing which ones keep coming up; the descriptions, the search that found
@@ -61,7 +67,7 @@ export function CandidateDetails({
         className="lp-modal"
         role="dialog"
         aria-modal="true"
-        aria-label={`Details for ${candidate.name}`}
+        aria-label={`Discovery details for ${candidate.name}`}
       >
         <header className="lp-modal-head">
           <div>
@@ -74,7 +80,7 @@ export function CandidateDetails({
             ref={closeButton}
             type="button"
             className="lp-modal-close"
-            aria-label="Close details"
+            aria-label="Close discovery details"
             onClick={onClose}
           >
             ×

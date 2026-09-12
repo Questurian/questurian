@@ -821,25 +821,6 @@
   transition: border-color 0.25s ease;
 }
 
-/* Every item ticked. The box itself says so, so a finished place can be
-   picked out of forty without reading any of them. */
-.lp-candidate-complete {
-  border-color: var(--lp-accent);
-}
-
-/* The one thing that moves: a line along the top edge that fills as the
-   checklist does. It answers a tick, and says nothing when nothing changed. */
-.lp-candidate-progress {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  background: var(--lp-accent);
-  transform-origin: left center;
-  transform: scaleX(var(--lp-progress, 0));
-  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
-  z-index: 1;
-}
-
 /* A soft fade at the bottom edge. With the scrollbar hidden it is the only
    sign a box holds more than it shows; over a box that fits, it lands on the
    white bottom padding and cannot be seen. */
@@ -1163,7 +1144,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lp-candidate-progress,
   .lp-check-box,
   .lp-check-box svg,
   .lp-tool {

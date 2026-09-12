@@ -4,13 +4,15 @@ import type {
   ListicleCandidate,
   ListicleSearchResults,
 } from '../types'
-import { CandidateCard } from './CandidateCard'
+import { CandidateCard, cardState } from './CandidateCard'
 import { GoogleIcon } from './LookupLinks'
 import { CandidateDetails } from './CandidateDetails'
 import { ConfirmRemove } from './ConfirmRemove'
 import { DuplicateReview } from './DuplicateReview'
 import { useCandidateBoard } from '../useCandidateBoard'
 import { useGoogleChecks } from '../useGoogleChecks'
+import { usePlaceResearch } from '../usePlaceResearch'
+import { ResearchViewer } from './ResearchViewer'
 
 /**
  * What the searches found.
@@ -120,17 +122,37 @@ export function SearchResults({
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const closeConfirm = useCallback(() => setConfirmId(null), [])
   const byId = new Map(results.candidates.map(candidate => [candidate.candidate_id, candidate]))
+  // Preparation, readiness and saved research for every place on this run.
+  // One read for the board: readiness is a property of the run, not of a card
+  // -- a duplicate settled on one card changes whether another can be
+  // researched -- and thirty-five cards each holding their own copy could not
+  // agree about it.
+  const research = usePlaceResearch(results.run_id)
+  const [researchId, setResearchId] = useState<string | null>(null)
+  const closeResearch = useCallback(() => setResearchId(null), [])
+  const researchCard = researchId ? research.cardFor(researchId) : undefined
+  const researchCandidate = researchId ? byId.get(researchId) : undefined
   const removedIds = new Set(board.removed.map(entry => entry.candidate_id))
   const distinct = new Set(board.distinct_pairs.map(([one, other]) => `${one}|${other}`))
   const judgedDifferent = (one: string, other: string) =>
     distinct.has(one < other ? `${one}|${other}` : `${other}|${one}`)
   // The duplicates still open against a place: flagged, still on the board,
   // and not already judged to be a different place.
-  const openDuplicates = (candidate: ListicleCandidate): ListicleCandidate[] =>
-    (candidate.possible_duplicate_ids ?? [])
+  //
+  // Two sources, and the second one matters more. Names flag rows that look
+  // alike; Google's Place ID flags rows that ARE the same building however
+  // they are spelled. On the wings board three rows -- "Wingman [Miraflores]",
+  // "Wigman Alitas Inc." and "Wingman [Barranco]" -- are one bar on Bolognesi
+  // 494, and no amount of name matching was ever going to pair them.
+  const openDuplicates = (candidate: ListicleCandidate): ListicleCandidate[] => {
+    const byName = candidate.possible_duplicate_ids ?? []
+    const byPlaceId =
+      research.cardFor(candidate.candidate_id)?.readiness.identity_twins ?? []
+    return [...new Set([...byName, ...byPlaceId])]
       .filter(id => !removedIds.has(id) && !judgedDifferent(candidate.candidate_id, id))
       .map(id => byId.get(id))
       .filter((other): other is ListicleCandidate => Boolean(other))
+  }
   const onBoard = results.candidates.filter(candidate => !removedIds.has(candidate.candidate_id))
   const removed = board.removed
     .map(entry => ({ entry, candidate: byId.get(entry.candidate_id) }))
@@ -293,6 +315,27 @@ export function SearchResults({
         {google.error && (
           <p className="lp-error" role="alert">
             {google.error}
+          </p>
+        )}
+        {/* How far through the board you are. Forty places is a long sitting,
+            and the one thing that makes it bearable is being able to see it
+            shrink. Counted over the places still on the list. */}
+        {research.board && onBoard.length > 0 && (
+          <BoardProgress
+            states={onBoard.map(candidate =>
+              cardState(research.cardFor(candidate.candidate_id)),
+            )}
+          />
+        )}
+        {research.error && (
+          <p className="lp-error" role="alert">
+            {research.error}
+          </p>
+        )}
+        {research.board?.active_attempt?.running && (
+          <p className="lp-muted" role="status">
+            One place is being researched. Nothing else can be started until it
+            finishes.
           </p>
         )}
         {boardError && !reviewing && (
@@ -492,6 +535,30 @@ export function SearchResults({
               google={google.checks[candidate.candidate_id]}
               onRemove={() => setConfirmId(candidate.candidate_id)}
               onRemoveNotAVenue={() => void remove(candidate.candidate_id, 'not_a_venue')}
+              research={(() => {
+                const card = research.cardFor(candidate.candidate_id)
+                if (!card) return undefined
+                return {
+                  card,
+                  saveState: research.saves[candidate.candidate_id],
+                  saveError: research.saveErrors[candidate.candidate_id],
+                  researching:
+                    research.waitingFor === candidate.candidate_id ||
+                    card.last_attempt?.state === 'running',
+                  onPrep: patch =>
+                    void research.savePrep(candidate.candidate_id, patch),
+                  onResearch: () => void research.research(candidate.candidate_id),
+                  onOpenResearch: () => setResearchId(candidate.candidate_id),
+                  onRecheckGoogle: () => {
+                    void google.recheck(candidate.candidate_id).then(done => {
+                      // The identity moved, so everything that was confirmed
+                      // against the old one has to be read again.
+                      if (done) void research.refresh()
+                    })
+                  },
+                  recheckingGoogle: google.checking,
+                }
+              })()}
             />
           )
         })}
@@ -550,6 +617,24 @@ export function SearchResults({
         />
       )}
 
+      {/* The research drawer sits over the board rather than replacing it, so
+          closing it returns to the same place in the same list. */}
+      {researchId && researchCard?.profile?.profile_id && (
+        <ResearchViewer
+          profileId={researchCard.profile.profile_id}
+          topic={research.board?.topic ?? ''}
+          topicLabel={research.board?.topic_label ?? ''}
+          placeName={researchCandidate?.name ?? researchCard.name}
+          branch={researchCard.readiness.google_address}
+          canResearch={researchCard.readiness.ready}
+          researching={research.waitingFor === researchId}
+          onGapResearch={question =>
+            void research.research(researchId, { mode: 'gap', gapText: question })
+          }
+          onClose={closeResearch}
+        />
+      )}
+
       {opened && (
         <CandidateDetails
           candidate={opened}
@@ -603,6 +688,39 @@ export function SearchResults({
   )
 }
 
+
+/** The board, as one line and one row of marks.
+ *
+ *  Every place is a tick on a rule: faint while it still needs something, solid
+ *  when it is ready to research, filled when it has been. It is the same
+ *  information as the cards below, in the one form you can take in at a glance
+ *  -- and it is the only thing on this screen that tells you how much is left.
+ */
+function BoardProgress({ states }: { states: ReturnType<typeof cardState>[] }) {
+  const ready = states.filter(state => state === 'ready').length
+  const done = states.filter(state => state === 'done').length
+  const left = states.length - done
+  return (
+    <div className="lp-board-progress">
+      <p className="lp-board-progress-line">
+        <strong>{done}</strong> of {states.length} researched
+        {ready > 0 && (
+          <span className="lp-muted"> · {ready} ready to go</span>
+        )}
+        {left === 0 && <span className="lp-board-done"> · every place done</span>}
+      </p>
+      <div
+        className="lp-board-ticks"
+        role="img"
+        aria-label={`${done} of ${states.length} places researched, ${ready} ready`}
+      >
+        {states.map((state, index) => (
+          <span key={index} className={`lp-tick lp-tick-${state}`} />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 /** What the cut check did, said as one of the several things it can be.
  *

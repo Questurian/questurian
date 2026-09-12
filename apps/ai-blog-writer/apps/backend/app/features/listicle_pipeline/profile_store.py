@@ -19,6 +19,7 @@ in three listicles a year apart.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import sqlite3
 import unicodedata
@@ -27,7 +28,16 @@ from datetime import datetime, timezone
 
 from app.core.database import get_db_connection
 
-from .profiles import Claim, PastBlurb, PlaceProfile, Sighting
+from .profiles import (
+    Claim,
+    FindingEvidence,
+    PastBlurb,
+    PlaceProfile,
+    PossibleAngle,
+    ResearchFinding,
+    ResearchSource,
+    Sighting,
+)
 
 _PROFILES = """
 CREATE TABLE IF NOT EXISTS listicle_place_profiles (
@@ -540,3 +550,803 @@ def add_blurb(profile_id: str, blurb: PastBlurb) -> bool:
         )
     _touch(profile_id)
     return bool(cursor.rowcount)
+
+
+# ---------------------------------------------------------------------------
+# Per-place research storage.
+#
+# Four new tables and a widened claims table. The claims table is widened
+# rather than replaced: a finding IS a claim with more said about it, and a
+# second table for the same kind of sentence would mean every reader has to
+# know which one to look in.
+#
+# Everything here is additive. A database that already holds claims keeps them,
+# unclassified and unreviewed, which is the truthful reading of a row nobody
+# has judged.
+# ---------------------------------------------------------------------------
+
+# Columns the research pass needs, added to the existing claims table. Name,
+# type and default, applied only when absent.
+_FINDING_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("categories", "TEXT NOT NULL DEFAULT '[]'"),
+    ("topics", "TEXT NOT NULL DEFAULT '[]'"),
+    ("scope", "TEXT NOT NULL DEFAULT 'unknown'"),
+    ("temporal_type", "TEXT NOT NULL DEFAULT 'unknown'"),
+    ("event_date", "TEXT NOT NULL DEFAULT ''"),
+    ("source_published_at", "TEXT NOT NULL DEFAULT ''"),
+    ("valid_until", "TEXT NOT NULL DEFAULT ''"),
+    # Unreviewed, not kept. A row nobody has looked at must never read as one
+    # somebody accepted -- that is the same mistake as an unchecked place
+    # reading as one that came back clean.
+    ("curation", "TEXT NOT NULL DEFAULT 'unreviewed'"),
+    ("origin", "TEXT NOT NULL DEFAULT 'unknown'"),
+    ("version", "INTEGER NOT NULL DEFAULT 1"),
+    ("attempt_id", "TEXT NOT NULL DEFAULT ''"),
+    ("author", "TEXT NOT NULL DEFAULT ''"),
+    ("observed_at", "TEXT NOT NULL DEFAULT ''"),
+    ("updated_at", "TEXT NOT NULL DEFAULT ''"),
+)
+
+# Something published, once per profile. Kept apart from the finding because
+# one article supports several findings and one finding may rest on several
+# articles -- and because a source has dates of its own that a finding must not
+# be allowed to invent.
+_SOURCES = """
+CREATE TABLE IF NOT EXISTS listicle_research_sources (
+    source_id    TEXT PRIMARY KEY,
+    profile_id   TEXT NOT NULL,
+    url          TEXT NOT NULL DEFAULT '',
+    publisher    TEXT NOT NULL DEFAULT '',
+    source_type  TEXT NOT NULL DEFAULT '',
+    title        TEXT NOT NULL DEFAULT '',
+    -- When it was published, as far as it says. A bare year is a real answer.
+    published_at TEXT NOT NULL DEFAULT '',
+    -- When we read it. Never used to fill in the line above: re-reading a 2024
+    -- review today does not make it current.
+    retrieved_at TEXT NOT NULL,
+    -- One row per (profile, url). The same newspaper article found twice is
+    -- one source with two findings hanging off it.
+    url_key      TEXT NOT NULL,
+    UNIQUE (profile_id, url_key)
+)
+"""
+
+_FINDING_SOURCES = """
+CREATE TABLE IF NOT EXISTS listicle_finding_sources (
+    finding_id        TEXT NOT NULL,
+    source_id         TEXT NOT NULL,
+    supporting_excerpt TEXT NOT NULL DEFAULT '',
+    evidence_scope    TEXT NOT NULL DEFAULT 'unknown',
+    attached_at       TEXT NOT NULL,
+    PRIMARY KEY (finding_id, source_id)
+)
+"""
+
+# What a finding used to say. Written on every edit, so a later research pass
+# cannot quietly overwrite something a person corrected -- and so "who changed
+# this and when" has an answer that is not "read the raw model output".
+_FINDING_REVISIONS = """
+CREATE TABLE IF NOT EXISTS listicle_finding_revisions (
+    revision_id TEXT PRIMARY KEY,
+    finding_id  TEXT NOT NULL,
+    profile_id  TEXT NOT NULL,
+    version     INTEGER NOT NULL,
+    editor      TEXT NOT NULL DEFAULT '',
+    origin      TEXT NOT NULL DEFAULT '',
+    changed_at  TEXT NOT NULL,
+    before      TEXT NOT NULL DEFAULT '{}',
+    after       TEXT NOT NULL DEFAULT '{}'
+)
+"""
+
+# An editorial idea, kept where it cannot be mistaken for a fact.
+_POSSIBLE_ANGLES = """
+CREATE TABLE IF NOT EXISTS listicle_possible_angles (
+    angle_id     TEXT PRIMARY KEY,
+    profile_id   TEXT NOT NULL,
+    label        TEXT NOT NULL,
+    topic        TEXT NOT NULL DEFAULT '',
+    finding_ids  TEXT NOT NULL DEFAULT '[]',
+    author       TEXT NOT NULL DEFAULT '',
+    archived     INTEGER NOT NULL DEFAULT 0,
+    created_at   TEXT NOT NULL
+)
+"""
+
+# Which profile a run's candidate is. Stored rather than looked up by name
+# every time: a candidate id is stable within a run, spelling is not, and the
+# viewer must be able to reopen the same profile after the name on the card has
+# been corrected.
+_CANDIDATE_PROFILES = """
+CREATE TABLE IF NOT EXISTS listicle_candidate_profiles (
+    run_id       TEXT NOT NULL,
+    candidate_id TEXT NOT NULL,
+    profile_id   TEXT NOT NULL,
+    -- What the place was called and where it was when the link was made. A
+    -- record of the identity the link was based on, not a second source of
+    -- truth about the place.
+    name         TEXT NOT NULL DEFAULT '',
+    district     TEXT NOT NULL DEFAULT '',
+    place_id     TEXT NOT NULL DEFAULT '',
+    address      TEXT NOT NULL DEFAULT '',
+    linked_at    TEXT NOT NULL,
+    PRIMARY KEY (run_id, candidate_id)
+)
+"""
+
+_RESEARCH_INDEXES = (
+    "CREATE INDEX IF NOT EXISTS listicle_finding_sources_source "
+    "ON listicle_finding_sources (source_id)",
+    "CREATE INDEX IF NOT EXISTS listicle_finding_revisions_finding "
+    "ON listicle_finding_revisions (finding_id)",
+    "CREATE INDEX IF NOT EXISTS listicle_possible_angles_profile "
+    "ON listicle_possible_angles (profile_id)",
+    "CREATE INDEX IF NOT EXISTS listicle_candidate_profiles_profile "
+    "ON listicle_candidate_profiles (profile_id)",
+)
+
+
+def ensure_research_tables() -> None:
+    """Create what per-place research needs, and widen what it extends.
+
+    Safe to call on a database that has none of it, on one that has all of it,
+    and on one that already holds claims from the earlier whole-run pass. The
+    last of those is the case that matters: those rows survive, keep their ids,
+    and read as unclassified and unreviewed, which is what they are.
+    """
+    ensure_tables()
+    with get_db_connection() as conn:
+        existing = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(listicle_profile_claims)")
+        }
+        for column, definition in _FINDING_COLUMNS:
+            if column not in existing:
+                conn.execute(
+                    f"ALTER TABLE listicle_profile_claims ADD COLUMN {column} "
+                    f"{definition}"
+                )
+        conn.execute(_SOURCES)
+        conn.execute(_FINDING_SOURCES)
+        conn.execute(_FINDING_REVISIONS)
+        conn.execute(_POSSIBLE_ANGLES)
+        conn.execute(_CANDIDATE_PROFILES)
+        for statement in _RESEARCH_INDEXES:
+            conn.execute(statement)
+
+
+def finding_text_key(text: str, scope: str = "unknown") -> str:
+    """A finding's identity: its words and whose place they are about.
+
+    The scope is part of it because "won Summum 2023" about the brand and the
+    same sentence about one branch are two different assertions, and merging
+    them is how a branch ends up wearing an award it never won.
+
+    Topics are deliberately NOT part of it. The same sentence found while
+    researching wings and again while researching cocktails is one thing
+    somebody said; the second pass adds its topic to the row it already has
+    rather than storing the sentence twice.
+    """
+    words = re.findall(r"[a-z0-9]+", unicodedata.normalize("NFKD", text.lower()))
+    return hashlib.sha1(
+        (" ".join(words) + "|" + (scope or "unknown")).encode("utf-8")
+    ).hexdigest()
+
+
+def _url_key(url: str) -> str:
+    return hashlib.sha1(url.strip().lower().encode("utf-8")).hexdigest()
+
+
+def _json(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _list(value: object) -> list[str]:
+    if not value:
+        return []
+    try:
+        parsed = json.loads(str(value))
+    except (TypeError, ValueError):
+        return []
+    return [str(item) for item in parsed] if isinstance(parsed, list) else []
+
+
+def _hydrate_finding(conn: sqlite3.Connection, row: sqlite3.Row) -> ResearchFinding:
+    evidence = [
+        FindingEvidence(
+            source_id=link["source_id"],
+            supporting_excerpt=link["supporting_excerpt"],
+            evidence_scope=link["evidence_scope"] or "unknown",
+        )
+        for link in conn.execute(
+            "SELECT * FROM listicle_finding_sources WHERE finding_id = ? "
+            "ORDER BY attached_at",
+            (row["claim_id"],),
+        )
+    ]
+    updated = row["updated_at"] or row["found_at"]
+    return ResearchFinding(
+        finding_id=row["claim_id"],
+        profile_id=row["profile_id"],
+        text=row["text"],
+        kind=row["kind"],
+        categories=_list(row["categories"]),
+        topics=_list(row["topics"]),
+        scope=row["scope"] or "unknown",
+        temporal_type=row["temporal_type"] or "unknown",
+        event_date=row["event_date"] or "",
+        source_published_at=row["source_published_at"] or "",
+        valid_until=row["valid_until"] or "",
+        curation=row["curation"] or "unreviewed",
+        origin=row["origin"] or "unknown",
+        version=int(row["version"] or 1),
+        attempt_id=row["attempt_id"] or "",
+        author=row["author"] or "",
+        observed_at=row["observed_at"] or "",
+        evidence=evidence,
+        created_at=_parse(row["found_at"]),
+        updated_at=_parse(updated),
+    )
+
+
+def findings(profile_id: str, *, topic: str = "") -> list[ResearchFinding]:
+    """Everything said about this place, oldest first.
+
+    `topic` filters to one list's material. Empty means every topic, which is
+    what makes a profile reusable: the cocktail list can read what the wings
+    list paid to find out.
+
+    Discarded findings come back too. Curation is a view, not a deletion, and a
+    caller that wants only the kept ones filters for them -- so that nothing can
+    quietly lose evidence by forgetting to ask for it.
+    """
+    ensure_research_tables()
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM listicle_profile_claims WHERE profile_id = ? "
+            "ORDER BY found_at, claim_id",
+            (profile_id,),
+        ).fetchall()
+        found = [_hydrate_finding(conn, row) for row in rows]
+    if not topic:
+        return found
+    return [item for item in found if topic in item.topics]
+
+
+def finding(finding_id: str) -> ResearchFinding | None:
+    ensure_research_tables()
+    with get_db_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM listicle_profile_claims WHERE claim_id = ?",
+            (finding_id,),
+        ).fetchone()
+        return None if row is None else _hydrate_finding(conn, row)
+
+
+def sources(profile_id: str) -> list[ResearchSource]:
+    ensure_research_tables()
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM listicle_research_sources WHERE profile_id = ? "
+            "ORDER BY retrieved_at, source_id",
+            (profile_id,),
+        ).fetchall()
+    return [
+        ResearchSource(
+            source_id=row["source_id"],
+            url=row["url"],
+            publisher=row["publisher"],
+            source_type=row["source_type"],
+            title=row["title"],
+            published_at=row["published_at"],
+            retrieved_at=_parse(row["retrieved_at"]),
+        )
+        for row in rows
+    ]
+
+
+def save_source(profile_id: str, source: ResearchSource) -> str:
+    """Record one publication, or find the one already recorded.
+
+    Returns the id it is stored under, which may not be the id handed in: the
+    same article found by two requests is one source, and the second request's
+    findings hang off the first request's row.
+    """
+    ensure_research_tables()
+    key = _url_key(source.url) if source.url else f"noturl:{source.source_id}"
+    with get_db_connection() as conn:
+        existing = conn.execute(
+            "SELECT source_id FROM listicle_research_sources WHERE profile_id = ? "
+            "AND url_key = ?",
+            (profile_id, key),
+        ).fetchone()
+        if existing is not None:
+            # The publisher and the date can arrive on the second sighting of a
+            # source that was anonymous on the first. Filled in, never
+            # overwritten with an emptier answer.
+            conn.execute(
+                "UPDATE listicle_research_sources SET "
+                "publisher = CASE WHEN publisher = '' THEN ? ELSE publisher END, "
+                "title = CASE WHEN title = '' THEN ? ELSE title END, "
+                "source_type = CASE WHEN source_type = '' THEN ? ELSE source_type END, "
+                "published_at = CASE WHEN published_at = '' THEN ? ELSE published_at END "
+                "WHERE source_id = ?",
+                (
+                    source.publisher,
+                    source.title,
+                    source.source_type,
+                    source.published_at,
+                    existing["source_id"],
+                ),
+            )
+            return str(existing["source_id"])
+        conn.execute(
+            "INSERT INTO listicle_research_sources (source_id, profile_id, url, "
+            "publisher, source_type, title, published_at, retrieved_at, url_key) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                source.source_id,
+                profile_id,
+                source.url,
+                source.publisher,
+                source.source_type,
+                source.title,
+                source.published_at,
+                _iso(source.retrieved_at),
+                key,
+            ),
+        )
+    return source.source_id
+
+
+def attach_evidence(finding_id: str, evidence: FindingEvidence) -> bool:
+    """Hang one source under one finding. False when it was already there."""
+    ensure_research_tables()
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            "INSERT OR IGNORE INTO listicle_finding_sources (finding_id, "
+            "source_id, supporting_excerpt, evidence_scope, attached_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (
+                finding_id,
+                evidence.source_id,
+                evidence.supporting_excerpt,
+                evidence.evidence_scope,
+                _iso(datetime.now(timezone.utc)),
+            ),
+        )
+    return bool(cursor.rowcount)
+
+
+def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
+    """Write one finding, or recognise the one already held.
+
+    Returns (id, is_new). A finding whose words and scope match one already on
+    the profile is not stored twice: the existing row gains this pass's topics,
+    categories and provenance, and keeps the date it was first found. Two
+    requests finding the same sentence is not two pieces of evidence.
+
+    A manual edit is never overwritten this way. The merge only ever ADDS
+    topics, categories and sources -- it cannot change the text, the dates or
+    the curation state of a row somebody has already worked on.
+    """
+    ensure_research_tables()
+    key = finding_text_key(finding_to_save.text, finding_to_save.scope)
+    now = _iso(datetime.now(timezone.utc))
+    with get_db_connection() as conn:
+        existing = conn.execute(
+            "SELECT * FROM listicle_profile_claims WHERE profile_id = ? "
+            "AND text_key = ?",
+            (finding_to_save.profile_id, key),
+        ).fetchone()
+        if existing is not None:
+            topics = sorted(
+                {*_list(existing["topics"]), *finding_to_save.topics}
+            )
+            categories = sorted(
+                {*_list(existing["categories"]), *finding_to_save.categories}
+            )
+            conn.execute(
+                "UPDATE listicle_profile_claims SET topics = ?, categories = ?, "
+                "updated_at = ? WHERE claim_id = ?",
+                (_json(topics), _json(categories), now, existing["claim_id"]),
+            )
+            found_id = str(existing["claim_id"])
+        else:
+            found_id = finding_to_save.finding_id
+            conn.execute(
+                "INSERT INTO listicle_profile_claims (claim_id, profile_id, kind, "
+                "text, source_name, source_url, found_at, about_year, text_key, "
+                "categories, topics, scope, temporal_type, event_date, "
+                "source_published_at, valid_until, curation, origin, version, "
+                "attempt_id, author, observed_at, updated_at) VALUES "
+                "(?, ?, ?, ?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    found_id,
+                    finding_to_save.profile_id,
+                    finding_to_save.kind,
+                    finding_to_save.text,
+                    _iso(finding_to_save.created_at),
+                    _year_of(finding_to_save.event_date),
+                    key,
+                    _json(finding_to_save.categories),
+                    _json(finding_to_save.topics),
+                    finding_to_save.scope,
+                    finding_to_save.temporal_type,
+                    finding_to_save.event_date,
+                    finding_to_save.source_published_at,
+                    finding_to_save.valid_until,
+                    finding_to_save.curation,
+                    finding_to_save.origin,
+                    finding_to_save.version,
+                    finding_to_save.attempt_id,
+                    finding_to_save.author,
+                    finding_to_save.observed_at,
+                    now,
+                ),
+            )
+    for item in finding_to_save.evidence:
+        attach_evidence(found_id, item)
+    _touch(finding_to_save.profile_id)
+    return found_id, existing is None
+
+
+def _year_of(value: str) -> int | None:
+    """The year in a date, for the `about_year` column the gate already reads.
+
+    Kept in step so the earlier pass's counting still works over findings the
+    new one wrote. It is a convenience column, not the record: `event_date`
+    holds whatever precision the source actually gave.
+    """
+    match = re.search(r"\b(1[6-9]\d{2}|20\d{2})\b", value or "")
+    return int(match.group(1)) if match else None
+
+
+# What an edit is allowed to change. Everything else about a finding -- its id,
+# its profile, when it was first found, which attempt produced it -- is a
+# record of what happened and is not editable.
+EDITABLE_FINDING_FIELDS = (
+    "text",
+    "kind",
+    "categories",
+    "topics",
+    "scope",
+    "temporal_type",
+    "event_date",
+    "source_published_at",
+    "valid_until",
+    "curation",
+    "observed_at",
+)
+
+
+class FindingConflict(RuntimeError):
+    """An edit written against a version of a finding that has since moved."""
+
+    def __init__(self, finding_id: str, current_version: int) -> None:
+        super().__init__(
+            "This finding changed while you were editing it. Re-read it and "
+            "make the change again."
+        )
+        self.finding_id = finding_id
+        self.current_version = current_version
+
+
+def update_finding(
+    finding_id: str,
+    changes: dict,
+    *,
+    expected_version: int | None = None,
+    editor: str = "",
+    origin: str = "operator",
+) -> ResearchFinding:
+    """Change one finding, keeping what it said before.
+
+    Optimistic: an edit written against a version that has moved is refused
+    rather than applied over whatever happened in between. Every change writes
+    a revision row, so a later research pass cannot silently replace something
+    a person corrected and there is always an answer to "who changed this".
+    """
+    ensure_research_tables()
+    current = finding(finding_id)
+    if current is None:
+        raise LookupError(f"No finding {finding_id}.")
+    if expected_version is not None and expected_version != current.version:
+        raise FindingConflict(finding_id, current.version)
+
+    applied = {
+        key: value
+        for key, value in changes.items()
+        if key in EDITABLE_FINDING_FIELDS and value is not None
+    }
+    if not applied:
+        return current
+
+    before = {key: getattr(current, key) for key in applied}
+    now = _iso(datetime.now(timezone.utc))
+    version = current.version + 1
+    assignments = []
+    values: list[object] = []
+    for key, value in applied.items():
+        assignments.append(f"{key} = ?")
+        values.append(_json(value) if isinstance(value, list) else value)
+    if "text" in applied or "scope" in applied:
+        # The identity of a finding is its words and its scope, so an edit to
+        # either has to move the key with it -- otherwise the next research
+        # pass would find the old wording still occupying the row.
+        assignments.append("text_key = ?")
+        values.append(
+            finding_text_key(
+                str(applied.get("text", current.text)),
+                str(applied.get("scope", current.scope)),
+            )
+        )
+    if "event_date" in applied:
+        assignments.append("about_year = ?")
+        values.append(_year_of(str(applied["event_date"])))
+    assignments.extend(["version = ?", "updated_at = ?"])
+    values.extend([version, now, finding_id])
+
+    with get_db_connection() as conn:
+        conn.execute(
+            f"UPDATE listicle_profile_claims SET {', '.join(assignments)} "
+            "WHERE claim_id = ?",
+            values,
+        )
+        conn.execute(
+            "INSERT INTO listicle_finding_revisions (revision_id, finding_id, "
+            "profile_id, version, editor, origin, changed_at, before, after) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                uuid.uuid4().hex[:12],
+                finding_id,
+                current.profile_id,
+                version,
+                editor,
+                origin,
+                now,
+                _json(_plain(before)),
+                _json(_plain(applied)),
+            ),
+        )
+    _touch(current.profile_id)
+    updated = finding(finding_id)
+    assert updated is not None
+    return updated
+
+
+def _plain(values: dict) -> dict:
+    """Revision values as JSON can hold them."""
+    return {
+        key: list(value) if isinstance(value, (list, tuple)) else value
+        for key, value in values.items()
+    }
+
+
+def revisions(finding_id: str) -> list[dict]:
+    """Every edit to one finding, newest last."""
+    ensure_research_tables()
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM listicle_finding_revisions WHERE finding_id = ? "
+            "ORDER BY changed_at, version",
+            (finding_id,),
+        ).fetchall()
+    return [
+        {
+            "revision_id": row["revision_id"],
+            "version": row["version"],
+            "editor": row["editor"],
+            "origin": row["origin"],
+            "changed_at": row["changed_at"],
+            "before": json.loads(row["before"]),
+            "after": json.loads(row["after"]),
+        }
+        for row in rows
+    ]
+
+
+def edited_finding_ids(profile_id: str) -> set[str]:
+    """Findings a person has changed.
+
+    Read before a refresh writes anything, because a manual correction is the
+    one thing a later model pass must never overwrite.
+    """
+    ensure_research_tables()
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT finding_id FROM listicle_finding_revisions "
+            "WHERE profile_id = ? AND origin = 'operator'",
+            (profile_id,),
+        ).fetchall()
+    return {row["finding_id"] for row in rows}
+
+
+def add_angle(angle: PossibleAngle) -> PossibleAngle:
+    ensure_research_tables()
+    with get_db_connection() as conn:
+        conn.execute(
+            "INSERT INTO listicle_possible_angles (angle_id, profile_id, label, "
+            "topic, finding_ids, author, archived, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                angle.angle_id,
+                angle.profile_id,
+                angle.label,
+                angle.topic,
+                _json(angle.supporting_finding_ids),
+                angle.author,
+                int(angle.archived),
+                _iso(angle.created_at),
+            ),
+        )
+    _touch(angle.profile_id)
+    return angle
+
+
+def update_angle(angle_id: str, changes: dict) -> PossibleAngle:
+    ensure_research_tables()
+    fields = {
+        key: value
+        for key, value in changes.items()
+        if key in {"label", "topic", "supporting_finding_ids", "archived"}
+        and value is not None
+    }
+    column = {"supporting_finding_ids": "finding_ids"}
+    with get_db_connection() as conn:
+        if fields:
+            assignments = ", ".join(
+                f"{column.get(key, key)} = ?" for key in fields
+            )
+            values = [
+                _json(value)
+                if isinstance(value, list)
+                else int(value)
+                if isinstance(value, bool)
+                else value
+                for value in fields.values()
+            ]
+            conn.execute(
+                f"UPDATE listicle_possible_angles SET {assignments} "
+                "WHERE angle_id = ?",
+                [*values, angle_id],
+            )
+        row = conn.execute(
+            "SELECT * FROM listicle_possible_angles WHERE angle_id = ?",
+            (angle_id,),
+        ).fetchone()
+    if row is None:
+        raise LookupError(f"No possible angle {angle_id}.")
+    return _hydrate_angle(row)
+
+
+def _hydrate_angle(row: sqlite3.Row) -> PossibleAngle:
+    return PossibleAngle(
+        angle_id=row["angle_id"],
+        profile_id=row["profile_id"],
+        label=row["label"],
+        topic=row["topic"],
+        supporting_finding_ids=_list(row["finding_ids"]),
+        author=row["author"],
+        archived=bool(row["archived"]),
+        created_at=_parse(row["created_at"]),
+    )
+
+
+def angles(profile_id: str) -> list[PossibleAngle]:
+    ensure_research_tables()
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM listicle_possible_angles WHERE profile_id = ? "
+            "ORDER BY created_at",
+            (profile_id,),
+        ).fetchall()
+    return [_hydrate_angle(row) for row in rows]
+
+
+def link_candidate(
+    run_id: str,
+    candidate_id: str,
+    profile_id: str,
+    *,
+    name: str = "",
+    district: str = "",
+    place_id: str = "",
+    address: str = "",
+) -> None:
+    """Record which profile a run's candidate is."""
+    ensure_research_tables()
+    with get_db_connection() as conn:
+        conn.execute(
+            "INSERT INTO listicle_candidate_profiles (run_id, candidate_id, "
+            "profile_id, name, district, place_id, address, linked_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(run_id, candidate_id) DO UPDATE SET "
+            "profile_id=excluded.profile_id, name=excluded.name, "
+            "district=excluded.district, place_id=excluded.place_id, "
+            "address=excluded.address, linked_at=excluded.linked_at",
+            (
+                run_id,
+                candidate_id,
+                profile_id,
+                name,
+                district,
+                place_id,
+                address,
+                _iso(datetime.now(timezone.utc)),
+            ),
+        )
+
+
+def linked_profiles(run_id: str) -> dict[str, dict]:
+    """Every candidate on this run that has a profile, by candidate id."""
+    ensure_research_tables()
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM listicle_candidate_profiles WHERE run_id = ?",
+            (run_id,),
+        ).fetchall()
+    return {
+        row["candidate_id"]: {
+            "profile_id": row["profile_id"],
+            "name": row["name"],
+            "district": row["district"],
+            "place_id": row["place_id"],
+            "address": row["address"],
+            "linked_at": row["linked_at"],
+        }
+        for row in rows
+    }
+
+
+def runs_linking(profile_id: str) -> list[dict]:
+    """Every list that has pointed at this profile.
+
+    What makes "saved research available" a true statement on a card in a
+    second list, and what gives the viewer a way back to the run a finding was
+    bought for -- including a run whose candidate has since been removed.
+    """
+    ensure_research_tables()
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM listicle_candidate_profiles WHERE profile_id = ? "
+            "ORDER BY linked_at",
+            (profile_id,),
+        ).fetchall()
+    return [
+        {
+            "run_id": row["run_id"],
+            "candidate_id": row["candidate_id"],
+            "name": row["name"],
+            "linked_at": row["linked_at"],
+        }
+        for row in rows
+    ]
+
+
+def by_id(profile_id: str) -> PlaceProfile | None:
+    """One profile by its own id, whatever it is called now."""
+    ensure_tables()
+    with get_db_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM listicle_place_profiles WHERE profile_id = ?",
+            (profile_id,),
+        ).fetchone()
+        return None if row is None else _hydrate(conn, row)
+
+
+def profiles_with_place_id(place_id: str) -> list[str]:
+    """Every profile anchored to one Google Place ID.
+
+    Normally one. More than one is a conflict worth refusing to research
+    through, because it means two cards on a board claim the same building.
+    """
+    if not place_id:
+        return []
+    ensure_tables()
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT profile_id FROM listicle_place_profiles WHERE place_id = ?",
+            (place_id,),
+        ).fetchall()
+    return [row["profile_id"] for row in rows]

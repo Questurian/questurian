@@ -133,3 +133,42 @@ def test_invoke_google_grounded_text_uses_fallback_model_after_non_ok_response(m
     assert fake_session.calls[1]["url"].endswith(
         "/publishers/google/models/gemini-2.5-flash-lite:generateContent"
     )
+
+
+def test_the_searches_the_provider_reports_are_read_off_the_response():
+    """What a grounded call says it searched, kept apart from what it was asked
+    to search.
+
+    A prompt naming four search directions is an instruction. This is the only
+    evidence about what was actually run, and a screen that prints the first as
+    though it were the second claims coverage nobody proved.
+    """
+    response = {
+        "candidates": [
+            {
+                "groundingMetadata": {
+                    "webSearchQueries": [
+                        '"BarBarian" alitas carta',
+                        '"BarBarian" alitas reseña',
+                        '"BarBarian" alitas carta',
+                    ]
+                }
+            }
+        ]
+    }
+    assert google_grounding.extract_grounded_search_queries(response) == [
+        '"BarBarian" alitas carta',
+        '"BarBarian" alitas reseña',
+    ]
+
+
+def test_a_response_that_names_no_searches_says_nothing_rather_than_guessing():
+    assert google_grounding.extract_grounded_search_queries({"candidates": [{}]}) == []
+    assert google_grounding.extract_grounded_search_queries(None) == []
+
+
+def test_the_snake_case_spelling_is_read_too():
+    """The REST and SDK shapes disagree about the spelling, and a field read
+    under only one of them is a field that silently disappears."""
+    response = {"grounding_metadata": {"web_search_queries": ["alitas lima"]}}
+    assert google_grounding.extract_grounded_search_queries(response) == ["alitas lima"]
