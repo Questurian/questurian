@@ -628,21 +628,26 @@ def readiness_of(
         and (min(candidate_id, other), max(candidate_id, other)) not in ctx.distinct
         and other in ctx.candidates
     ]
-    if open_pairs:
+    if candidate.get("possible_duplicate_ids"):
+        # A card with a duplicate beside it has one more thing to settle than a
+        # card without one, whether or not it has been settled yet. Counting
+        # the settled case as a completed check but NOT as a required one let
+        # a card read "3 of 3 checked" while a blocker was still standing --
+        # the count promised a completion the card did not have.
         required_total += 1
-        names = ", ".join(
-            ctx.candidates[other].get("name", other) for other in open_pairs
-        )
-        blockers.append(
-            Blocker(
-                "duplicates_open",
-                f"Settle whether this is the same place as {names} before "
-                "researching either of them.",
-                "board",
+        if open_pairs:
+            names = ", ".join(
+                ctx.candidates[other].get("name", other) for other in open_pairs
             )
-        )
-    else:
-        if candidate.get("possible_duplicate_ids"):
+            blockers.append(
+                Blocker(
+                    "duplicates_open",
+                    f"Settle whether this is the same place as {names} before "
+                    "researching either of them.",
+                    "board",
+                )
+            )
+        else:
             required_done += 1
 
     # Two cards on the board resolved to ONE Google Place ID. Name-based

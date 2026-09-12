@@ -1254,3 +1254,25 @@ def test_a_source_the_reply_could_not_read_is_recorded_as_that(client, ready, mo
     # A place nothing could be read about is not a place with nothing written
     # about it, and the attempt state says which of the two this is.
     assert body["attempt"]["state"] == "completed_empty"
+
+
+def test_the_count_never_says_finished_while_something_is_blocking(client, run):
+    """A card that reads "3 of 3 checked" and cannot be researched is lying to
+    whoever is working down the board.
+
+    It happened for real: a settled duplicate counted as a completed check
+    without counting as a required one, so a card with an unresolved identity
+    conflict still showed every pip filled.
+    """
+    cards = list(_cards(client, run).values())
+    first, second = cards[0], cards[1]
+    # Two cards, one Google place: an identity conflict nobody can tick away.
+    stored = store.load_google_checks(run)
+    twin = dict(stored[first["candidate_id"]])
+    twin["place_id"] = stored[second["candidate_id"]]["place_id"]
+    store.save_google_check(run, first["candidate_id"], twin)
+    _prepare(client, run, first["candidate_id"])
+
+    readiness = _cards(client, run)[first["name"]]["readiness"]
+    assert readiness["ready"] is False
+    assert readiness["required_done"] < readiness["required_total"]

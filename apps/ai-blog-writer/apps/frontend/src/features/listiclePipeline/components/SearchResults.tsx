@@ -4,7 +4,7 @@ import type {
   ListicleCandidate,
   ListicleSearchResults,
 } from '../types'
-import { CandidateCard } from './CandidateCard'
+import { CandidateCard, cardState } from './CandidateCard'
 import { GoogleIcon } from './LookupLinks'
 import { CandidateDetails } from './CandidateDetails'
 import { ConfirmRemove } from './ConfirmRemove'
@@ -306,6 +306,16 @@ export function SearchResults({
           <p className="lp-error" role="alert">
             {google.error}
           </p>
+        )}
+        {/* How far through the board you are. Forty places is a long sitting,
+            and the one thing that makes it bearable is being able to see it
+            shrink. Counted over the places still on the list. */}
+        {research.board && onBoard.length > 0 && (
+          <BoardProgress
+            states={onBoard.map(candidate =>
+              cardState(research.cardFor(candidate.candidate_id)),
+            )}
+          />
         )}
         {research.error && (
           <p className="lp-error" role="alert">
@@ -660,6 +670,39 @@ export function SearchResults({
   )
 }
 
+
+/** The board, as one line and one row of marks.
+ *
+ *  Every place is a tick on a rule: faint while it still needs something, solid
+ *  when it is ready to research, filled when it has been. It is the same
+ *  information as the cards below, in the one form you can take in at a glance
+ *  -- and it is the only thing on this screen that tells you how much is left.
+ */
+function BoardProgress({ states }: { states: ReturnType<typeof cardState>[] }) {
+  const ready = states.filter(state => state === 'ready').length
+  const done = states.filter(state => state === 'done').length
+  const left = states.length - done
+  return (
+    <div className="lp-board-progress">
+      <p className="lp-board-progress-line">
+        <strong>{done}</strong> of {states.length} researched
+        {ready > 0 && (
+          <span className="lp-muted"> · {ready} ready to go</span>
+        )}
+        {left === 0 && <span className="lp-board-done"> · every place done</span>}
+      </p>
+      <div
+        className="lp-board-ticks"
+        role="img"
+        aria-label={`${done} of ${states.length} places researched, ${ready} ready`}
+      >
+        {states.map((state, index) => (
+          <span key={index} className={`lp-tick lp-tick-${state}`} />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 /** What the cut check did, said as one of the several things it can be.
  *

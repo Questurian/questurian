@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { handOffWheel } from '../scrollHandoff'
 import { LookupLinks } from './LookupLinks'
 import { isTripAdvisorPlaceLink } from '../tripadvisor'
@@ -182,20 +182,15 @@ export function CandidateCard({
   // Required checks only. The optional link is not part of it, so a place with
   // no TripAdvisor page is not held back by it and the bar does not imply that
   // something is unfinished.
-  const progress = readiness?.progress ?? 0
-  const complete = Boolean(readiness?.ready)
   const blockers = readiness?.blockers ?? []
+  const state = cardState(research?.card)
   const has = (code: string) => blockers.some(blocker => blocker.code === code)
   const prepBlockers = blockers.filter(blocker => blocker.where !== 'execution')
   const line = research ? attemptLine(research.card) : ''
   const saving = research?.saveState === 'saving'
 
   return (
-    <li
-      className={complete ? 'lp-candidate lp-candidate-complete' : 'lp-candidate'}
-      style={{ '--lp-progress': progress } as CSSProperties}
-    >
-      <span className="lp-candidate-progress" aria-hidden="true" />
+    <li className={`lp-candidate lp-candidate-${state}`}>
       <div className="lp-candidate-scroll" ref={scroller}>
         <div className="lp-candidate-main">
           {/* In the corner, apart from the lookups: removing is a decision
@@ -211,6 +206,14 @@ export function CandidateCard({
             </button>
           )}
           <header className="lp-candidate-head">
+            {readiness && (
+              <StateMark
+                state={state}
+                done={readiness.required_done}
+                total={readiness.required_total}
+                findings={research?.card.profile?.findings_this_topic ?? 0}
+              />
+            )}
             <h3 className="lp-candidate-name">
               {candidate.name}
               {closedForGood && <span className="lp-candidate-closed">Permanently closed</span>}
@@ -590,6 +593,67 @@ function ResearchAction({
           </p>
         )}
     </div>
+  )
+}
+
+/** Where one place has got to, as one word.
+ *
+ *  Three states rather than a percentage, because they are three different
+ *  things to do: something is still missing, nothing is missing and the button
+ *  is live, or the work is done and this card can be left alone. A bar that
+ *  creeps from 40% to 70% says none of that.
+ */
+export type CardState = 'open' | 'ready' | 'done'
+
+export function cardState(card?: ListicleResearchCard): CardState {
+  if (!card) return 'open'
+  // Done means this list has material from this place. A request that ran and
+  // found nothing is not done -- there is still a decision to make about it,
+  // and the card should keep offering to help make it.
+  if ((card.profile?.findings_this_topic ?? 0) > 0) return 'done'
+  return card.readiness.ready ? 'ready' : 'open'
+}
+
+/** The mark in the corner: how many required checks are in, and what that
+ *  adds up to.
+ *
+ *  One pip per required check, and the number of pips is itself information --
+ *  a card with a duplicate to settle has more to do than one without, and it
+ *  shows that before you read a word.
+ */
+function StateMark({
+  state,
+  done,
+  total,
+  findings,
+}: {
+  state: CardState
+  done: number
+  total: number
+  findings: number
+}) {
+  const label =
+    state === 'done'
+      ? `${findings} ${findings === 1 ? 'finding' : 'findings'}`
+      : state === 'ready'
+        ? 'Ready to research'
+        : `${done} of ${total} checked`
+  return (
+    <p className="lp-candidate-state">
+      <span className="lp-candidate-pips" aria-hidden="true">
+        {Array.from({ length: Math.max(total, 1) }, (_, index) => (
+          <span
+            key={index}
+            className={
+              state === 'done' || index < done
+                ? 'lp-pip lp-pip-on'
+                : 'lp-pip'
+            }
+          />
+        ))}
+      </span>
+      <span className="lp-candidate-state-text">{label}</span>
+    </p>
   )
 }
 
