@@ -59,6 +59,13 @@ class ResolvedPlace:
     # resolve at all is the junk the search runner could not filter by name.
     types: tuple[str, ...] = ()
     permanently_closed: bool = False
+    # Carried on the same text-search reply at no extra cost. `OPERATIONAL`,
+    # `CLOSED_TEMPORARILY`, `CLOSED_PERMANENTLY`, or empty when Google did not
+    # say -- which is not the same as open.
+    business_status: str = ""
+    rating: float | None = None
+    rating_count: int | None = None
+    price_level: int | None = None
 
     @property
     def is_venue(self) -> bool:
@@ -76,14 +83,34 @@ def api_key() -> str:
     return os.getenv("GOOGLE_MAPS_API_KEY", "").strip()
 
 
+@dataclass(frozen=True)
+class Lookup:
+    """One text search, and which of three things happened.
+
+    `found` carries the place. `not_found` means Google answered and nothing
+    matched -- a finding about the row. `failed` means there was no answer at
+    all: no key, a network error, a refused quota. The last two must never be
+    shown the same way, or a timeout reads as "this bar does not exist".
+    """
+
+    status: str  # "found" | "not_found" | "failed"
+    place: ResolvedPlace | None = None
+    reason: str = ""
+
+
 def resolve(name: str, city: str, district: str = "") -> ResolvedPlace | None:
     """Find the one real place this name refers to, or nothing.
 
     Returns None when there is no key, when nothing matches, or when the call
-    fails. All three mean the same thing to the caller -- carry on unanchored
-    -- and are distinguished only in the log, because a missing key is a
-    setting and a failed call is a network.
+    fails. All three mean the same thing to a caller that only wants to anchor
+    a profile -- carry on unanchored. A caller that has to say which one it
+    was uses `lookup`.
     """
+    return lookup(name, city, district).place
+
+
+def lookup(name: str, city: str, district: str = "") -> Lookup:
+    """The text search behind `resolve`, reporting what actually happened."""
     key = api_key()
     if not key:
         logger.info(
@@ -91,7 +118,7 @@ def resolve(name: str, city: str, district: str = "") -> ResolvedPlace | None:
             "Location Manager's environment.",
             name,
         )
-        return None
+        return Lookup("failed", reason="no GOOGLE_MAPS_API_KEY")
 
     import requests  # imported here so the module loads without the dependency
 
@@ -118,21 +145,42 @@ def resolve(name: str, city: str, district: str = "") -> ResolvedPlace | None:
             observed.add_metadata(status=body.get("status"))
     except Exception as exc:  # pragma: no cover -- network dependent
         logger.warning("Place lookup failed for %r: %s", query, exc)
-        return None
+        return Lookup("failed", reason=type(exc).__name__)
 
+    status = str(body.get("status") or "")
     results = body.get("results") or []
+    if status not in ("OK", "ZERO_RESULTS", ""):
+        # OVER_QUERY_LIMIT, REQUEST_DENIED, INVALID_REQUEST: Google did not
+        # look, so nothing was learned about the place.
+        logger.warning("Place lookup for %r returned %s", query, status)
+        return Lookup("failed", reason=status)
     if not results:
         # Not an error. A name nothing matches is a finding about the row: it
         # is probably not one named business, which is exactly what the list
         # needs to know before anyone writes about it.
         logger.info("No place matched %r", query)
-        return None
+        return Lookup("not_found")
 
     top = results[0]
-    return ResolvedPlace(
-        place_id=str(top.get("place_id") or ""),
-        name=str(top.get("name") or name),
-        address=str(top.get("formatted_address") or ""),
-        types=tuple(str(t) for t in (top.get("types") or [])),
-        permanently_closed=str(top.get("business_status") or "") == "CLOSED_PERMANENTLY",
+    business_status = str(top.get("business_status") or "")
+    return Lookup(
+        "found",
+        ResolvedPlace(
+            place_id=str(top.get("place_id") or ""),
+            name=str(top.get("name") or name),
+            address=str(top.get("formatted_address") or ""),
+            types=tuple(str(t) for t in (top.get("types") or [])),
+            permanently_closed=business_status == "CLOSED_PERMANENTLY",
+            business_status=business_status,
+            rating=_number(top.get("rating"), float),
+            rating_count=_number(top.get("user_ratings_total"), int),
+            price_level=_number(top.get("price_level"), int),
+        ),
     )
+
+
+def _number(value, kind):
+    """A number Google sent, or None -- never a guessed zero."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return kind(value)

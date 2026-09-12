@@ -23,11 +23,16 @@ export function lookupQuery(candidate: ListicleCandidate, place: string): string
 export function LookupLinks({
   candidate,
   place,
+  placeId,
 }: {
   candidate: ListicleCandidate
   place: string
+  /** Set once Google has resolved the place. Maps then opens that exact
+   *  place rather than a search that might land on another branch. */
+  placeId?: string
 }) {
   const query = encodeURIComponent(lookupQuery(candidate, place))
+  const mapsPlace = placeId ? `&query_place_id=${encodeURIComponent(placeId)}` : ''
   return (
     <>
       <a
@@ -42,7 +47,7 @@ export function LookupLinks({
       </a>
       <a
         className="lp-tool"
-        href={`https://www.google.com/maps/search/?api=1&query=${query}`}
+        href={`https://www.google.com/maps/search/?api=1&query=${query}${mapsPlace}`}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`Find ${candidate.name} on Google Maps`}
@@ -55,7 +60,7 @@ export function LookupLinks({
 }
 
 /** Google's own mark, so the button is recognised before it is read. */
-function GoogleIcon() {
+export function GoogleIcon() {
   return (
     <svg viewBox="0 0 48 48" width="16" height="16" aria-hidden="true">
       <path

@@ -244,6 +244,21 @@ CREATE TABLE IF NOT EXISTS listicle_board_distinct (
 )
 """
 
+# What Google said about each place on a run's board. Stored so a check is
+# bought once and read many times: every lookup is billed on the owner's
+# Google Cloud account, and a screen that re-asked on every load would spend
+# on every reload. Keyed on candidate id, like the board decisions.
+_GOOGLE_CHECKS_TABLE = """
+CREATE TABLE IF NOT EXISTS listicle_google_checks (
+    run_id       TEXT NOT NULL,
+    candidate_id TEXT NOT NULL,
+    status       TEXT NOT NULL,
+    payload      TEXT NOT NULL,
+    checked_at   TEXT NOT NULL,
+    PRIMARY KEY (run_id, candidate_id)
+)
+"""
+
 _MIGRATIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS listicle_migrations (
     name       TEXT PRIMARY KEY,
@@ -291,11 +306,29 @@ def ensure_tables() -> None:
         conn.execute(_HIDDEN_RUNS_TABLE)
         conn.execute(_BOARD_REMOVALS_TABLE)
         conn.execute(_BOARD_DISTINCT_TABLE)
+        conn.execute(_GOOGLE_CHECKS_TABLE)
         conn.execute(_MIGRATIONS_TABLE)
         for statement in _ATTEMPT_INDEXES:
             conn.execute(statement)
         _add_lock_columns(conn)
+        _add_removal_reason(conn)
     _migrate_attempts()
+
+
+def _add_removal_reason(conn) -> None:
+    """Why a place came off the board, on a removals table that predates it.
+
+    Every row written before this was a duplicate decision, so that is the
+    default the old rows take.
+    """
+    columns = {row["name"] for row in conn.execute(
+        "PRAGMA table_info(listicle_board_removals)"
+    )}
+    if "reason" not in columns:
+        conn.execute(
+            "ALTER TABLE listicle_board_removals ADD COLUMN reason "
+            "TEXT NOT NULL DEFAULT 'duplicate'"
+        )
 
 
 def _add_lock_columns(conn) -> None:
@@ -519,7 +552,8 @@ def load_board(run_id: str) -> dict:
     ensure_tables()
     with get_db_connection() as conn:
         removed = conn.execute(
-            "SELECT candidate_id, kept_id, removed_at FROM listicle_board_removals "
+            "SELECT candidate_id, kept_id, removed_at, reason "
+            "FROM listicle_board_removals "
             "WHERE run_id = ? ORDER BY removed_at, candidate_id",
             (run_id,),
         ).fetchall()
@@ -534,6 +568,7 @@ def load_board(run_id: str) -> dict:
                 "candidate_id": row["candidate_id"],
                 "kept_id": row["kept_id"],
                 "removed_at": row["removed_at"],
+                "reason": row["reason"],
             }
             for row in removed
         ],
@@ -575,15 +610,130 @@ def record_duplicates(
             )
 
 
-def restore_candidate(run_id: str, candidate_id: str) -> None:
-    """Put a removed place back on the board. Touches nothing else."""
+def restore_candidate(run_id: str, candidate_id: str) -> str:
+    """Put a removed place back on the board, and say why it had been off.
+
+    Returns the removal's reason ("" when it was not removed), so a caller can
+    undo whatever took it off -- a place Google called closed has to stop
+    being called closed, or the next check would take it straight off again.
+    """
     ensure_tables()
-    with get_db_connection() as conn:
+    with transaction() as conn:
+        row = conn.execute(
+            "SELECT reason FROM listicle_board_removals WHERE run_id = ? "
+            "AND candidate_id = ?",
+            (run_id, candidate_id),
+        ).fetchone()
         conn.execute(
             "DELETE FROM listicle_board_removals WHERE run_id = ? "
             "AND candidate_id = ?",
             (run_id, candidate_id),
         )
+    return "" if row is None else str(row["reason"])
+
+
+def remove_closed(run_id: str, candidate_ids: list[str]) -> None:
+    """Take places Google calls permanently closed off the board.
+
+    A place already off the board keeps its existing row: a duplicate that is
+    also closed stays filed as the duplicate the operator decided it was.
+    """
+    if not candidate_ids:
+        return
+    ensure_tables()
+    now = _now()
+    with transaction() as conn:
+        for candidate_id in candidate_ids:
+            conn.execute(
+                "INSERT INTO listicle_board_removals (run_id, candidate_id, "
+                "kept_id, removed_at, reason) VALUES (?, ?, '', ?, 'closed') "
+                "ON CONFLICT(run_id, candidate_id) DO NOTHING",
+                (run_id, candidate_id, now),
+            )
+
+
+def remove_by_operator(run_id: str, candidate_id: str, reason: str) -> None:
+    """Take one place off the board because the operator said so.
+
+    `reason` is `not_a_venue` (Google lists it as something nobody can sit
+    down in) or `by_hand` (the operator's own call). A place already off the
+    board keeps the row it has: a duplicate stays filed as the duplicate the
+    operator decided it was.
+    """
+    ensure_tables()
+    with transaction() as conn:
+        conn.execute(
+            "INSERT INTO listicle_board_removals (run_id, candidate_id, "
+            "kept_id, removed_at, reason) VALUES (?, ?, '', ?, ?) "
+            "ON CONFLICT(run_id, candidate_id) DO NOTHING",
+            (run_id, candidate_id, _now(), reason),
+        )
+
+
+def dismiss_closed(run_id: str, candidate_id: str) -> None:
+    """The operator says Google is wrong that this place is closed.
+
+    Recorded on the stored check rather than by deleting it: the rating and the
+    rest of what Google said are still true and still shown, and a later check
+    of the run must not take the place off again.
+    """
+    _dismiss_on_check(run_id, candidate_id, "closed_dismissed")
+
+
+def dismiss_not_a_venue(run_id: str, candidate_id: str) -> None:
+    """The operator says Google matched the wrong thing, or is wrong about
+    what kind of place this is. The note stops showing."""
+    _dismiss_on_check(run_id, candidate_id, "venue_dismissed")
+
+
+def _dismiss_on_check(run_id: str, candidate_id: str, flag: str) -> None:
+    ensure_tables()
+    with transaction() as conn:
+        row = conn.execute(
+            "SELECT payload FROM listicle_google_checks WHERE run_id = ? "
+            "AND candidate_id = ?",
+            (run_id, candidate_id),
+        ).fetchone()
+        if row is None:
+            return
+        stored = json.loads(row["payload"])
+        stored[flag] = True
+        conn.execute(
+            "UPDATE listicle_google_checks SET payload = ? WHERE run_id = ? "
+            "AND candidate_id = ?",
+            (json.dumps(stored, ensure_ascii=False), run_id, candidate_id),
+        )
+
+
+def save_google_check(run_id: str, candidate_id: str, check: dict) -> None:
+    ensure_tables()
+    with get_db_connection() as conn:
+        conn.execute(
+            "INSERT INTO listicle_google_checks (run_id, candidate_id, status, "
+            "payload, checked_at) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(run_id, candidate_id) DO UPDATE SET "
+            "status=excluded.status, payload=excluded.payload, "
+            "checked_at=excluded.checked_at",
+            (
+                run_id,
+                candidate_id,
+                check["status"],
+                json.dumps(check, ensure_ascii=False),
+                check["checked_at"],
+            ),
+        )
+
+
+def load_google_checks(run_id: str) -> dict[str, dict]:
+    """Every stored Google check for one run, by candidate id."""
+    ensure_tables()
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT candidate_id, payload FROM listicle_google_checks "
+            "WHERE run_id = ?",
+            (run_id,),
+        ).fetchall()
+    return {row["candidate_id"]: json.loads(row["payload"]) for row in rows}
 
 
 def save_results(run_id: str, payload: dict) -> None:

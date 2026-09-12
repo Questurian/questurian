@@ -5,9 +5,12 @@ import type {
   ListicleSearchResults,
 } from '../types'
 import { CandidateCard } from './CandidateCard'
+import { GoogleIcon } from './LookupLinks'
 import { CandidateDetails } from './CandidateDetails'
+import { ConfirmRemove } from './ConfirmRemove'
 import { DuplicateReview } from './DuplicateReview'
 import { useCandidateBoard } from '../useCandidateBoard'
+import { useGoogleChecks } from '../useGoogleChecks'
 
 /**
  * What the searches found.
@@ -37,6 +40,30 @@ interface SearchResultsProps {
   /** Buy the part of the cut review nobody has done. One call per unjudged
    *  chunk; nothing at all when the pool is already covered. */
   onRecheck?: () => void
+}
+
+/** Past the free allowance, a legacy text search is billed as four SKUs:
+ *  Text Search $32, Contact $3 and Atmosphere $5 per 1,000 (Basic is free),
+ *  so about four cents a lookup. Checked against Google's pricing pages on
+ *  2026-09-11. How much of the allowance is left comes from Google's own
+ *  count -- see places_allowance.py. */
+const GOOGLE_LOOKUP_USD_AFTER_FREE = 0.04
+
+/** Why a removed place is off the list, said on its row. */
+function removedBecause(
+  entry: { reason?: string; kept_id: string },
+  labelOf: Map<string, string>,
+): string {
+  switch (entry.reason) {
+    case 'closed':
+      return 'Google says permanently closed. Put it back if Google is wrong.'
+    case 'not_a_venue':
+      return "Google doesn't list it as a restaurant or bar."
+    case 'by_hand':
+      return 'Removed by you.'
+    default:
+      return `Same place as ${labelOf.get(entry.kept_id) ?? 'a place no longer on the list'}`
+  }
 }
 
 const STATE_LABEL: Record<string, string> = {
@@ -81,9 +108,17 @@ export function SearchResults({
   const closeReview = useCallback(() => setReviewId(null), [])
   // What the operator decided about duplicates, laid over what the searches
   // found. The results themselves never change because of it.
-  const { board, saving, error: boardError, resolve, restore } = useCandidateBoard(
-    results.run_id,
-  )
+  const {
+    board,
+    saving,
+    error: boardError,
+    resolve,
+    restore,
+    remove,
+    replace: replaceBoard,
+  } = useCandidateBoard(results.run_id)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const closeConfirm = useCallback(() => setConfirmId(null), [])
   const byId = new Map(results.candidates.map(candidate => [candidate.candidate_id, candidate]))
   const removedIds = new Set(board.removed.map(entry => entry.candidate_id))
   const distinct = new Set(board.distinct_pairs.map(([one, other]) => `${one}|${other}`))
@@ -104,6 +139,44 @@ export function SearchResults({
         Boolean(item.candidate),
     )
   const reviewing = reviewId ? byId.get(reviewId) : undefined
+  // What Google said. Only places still on the board are worth paying to
+  // look up, and only those Google has not already answered for.
+  const google = useGoogleChecks(results.run_id)
+  const answered = (id: string) => ['found', 'not_found'].includes(google.checks[id]?.status ?? '')
+  const toCheck = onBoard.filter(candidate => !answered(candidate.candidate_id))
+  const onBoardChecks = onBoard.map(candidate => google.checks[candidate.candidate_id]).filter(Boolean)
+  const closedCount = onBoardChecks.filter(check => check?.business_status === 'CLOSED_PERMANENTLY').length
+  const notFoundCount = onBoardChecks.filter(check => check?.status === 'not_found').length
+  const failedCount = onBoardChecks.filter(check => check?.status === 'failed').length
+  // A check can take permanently closed places off the board, so the board
+  // the check returns replaces the one on screen.
+  const runGoogleCheck = async () => {
+    const updated = await google.check()
+    if (updated) replaceBoard(updated)
+  }
+  const putBack = async (candidateId: string, reason?: string) => {
+    const restored = await restore(candidateId)
+    // Putting back a place Google flagged overrules Google; the server has
+    // recorded that, and the card follows without another read.
+    if (restored && reason === 'closed') google.dismiss(candidateId, 'closed_dismissed')
+    if (restored && reason === 'not_a_venue') google.dismiss(candidateId, 'venue_dismissed')
+  }
+  const confirming = confirmId ? byId.get(confirmId) : undefined
+  const removeByHand = async () => {
+    if (!confirmId) return
+    if (await remove(confirmId, 'by_hand')) setConfirmId(null)
+  }
+  const countOf = (reason: string) =>
+    removed.filter(({ entry }) => (entry.reason ?? 'duplicate') === reason).length
+  const removedSummary = [
+    [countOf('duplicate'), 'duplicate', 'duplicates'],
+    [countOf('closed'), 'permanently closed on Google', 'permanently closed on Google'],
+    [countOf('not_a_venue'), 'not a restaurant or bar', 'not restaurants or bars'],
+    [countOf('by_hand'), 'removed by you', 'removed by you'],
+  ]
+    .filter(([count]) => (count as number) > 0)
+    .map(([count, one, many]) => `${count} ${count === 1 ? one : many}`)
+    .join(', ')
   const short = results.shortfall > 0
   const rerunnable = results.angles.filter(isRerunnable)
   // Work that stands under a refresh that did not. Both facts are true at
@@ -147,8 +220,79 @@ export function SearchResults({
         </p>
         {removed.length > 0 && (
           <p className="lp-muted lp-results-sub">
-            {removed.length} removed as {removed.length === 1 ? 'a duplicate' : 'duplicates'}.
-            They are at the bottom of the list and can be put back.
+            {removed.length} taken off the list: {removedSummary}. They are at the bottom
+            of the list and can be put back.
+          </p>
+        )}
+        {/* Google, on request. Billed per place, so the button says how
+            many and roughly what it costs before anything is asked. */}
+        <div className="lp-google-bar">
+          {toCheck.length > 0 ? (
+            <>
+              <button
+                type="button"
+                className="lp-tool"
+                disabled={google.checking}
+                onClick={() => void runGoogleCheck()}
+              >
+                <GoogleIcon />
+                {google.checking
+                  ? `Checking ${toCheck.length} places on Google…`
+                  : `Check ${toCheck.length} ${toCheck.length === 1 ? 'place' : 'places'} on Google`}
+              </button>
+              <span className="lp-muted">Is it open, what kind of place, rating and price.</span>
+            </>
+          ) : (
+            <span className="lp-muted">Every place on the list has been checked on Google.</span>
+          )}
+          {onBoardChecks.length > 0 && (closedCount > 0 || notFoundCount > 0 || failedCount > 0) && (
+            <span className="lp-google-summary">
+              {[
+                closedCount > 0 && `${closedCount} permanently closed`,
+                notFoundCount > 0 && `${notFoundCount} not found on Google`,
+                failedCount > 0 && `${failedCount} couldn't be checked`,
+              ]
+                .filter(Boolean)
+                .join(', ')}
+            </span>
+          )}
+        </div>
+        {/* The countdown. Google's count, across every app on the key, so it
+            is the number that decides whether a check is free. */}
+        {google.allowance && (
+          <p className="lp-allowance">
+            {google.allowance.available && google.allowance.left !== undefined ? (
+              <>
+                <strong>{google.allowance.left.toLocaleString()}</strong> of{' '}
+                {google.allowance.free.toLocaleString()} free Google lookups left this month
+                <span className="lp-muted">
+                  {' '}
+                  (all your apps count; Google's number runs a few minutes behind)
+                </span>
+              </>
+            ) : (
+              <span className="lp-muted">
+                {google.allowance.reason ?? "Google's count could not be read."} Don't
+                assume the check is free.
+              </span>
+            )}
+          </p>
+        )}
+        {google.allowance?.available &&
+          google.allowance.left !== undefined &&
+          toCheck.length > google.allowance.left && (
+            <p className="lp-results-short" role="status">
+              Checking {toCheck.length} places uses more than the{' '}
+              {google.allowance.left.toLocaleString()} free lookups left. The other{' '}
+              {toCheck.length - google.allowance.left} cost about $
+              {GOOGLE_LOOKUP_USD_AFTER_FREE.toFixed(2)} each, about $
+              {((toCheck.length - google.allowance.left) * GOOGLE_LOOKUP_USD_AFTER_FREE).toFixed(2)}{' '}
+              in all.
+            </p>
+          )}
+        {google.error && (
+          <p className="lp-error" role="alert">
+            {google.error}
           </p>
         )}
         {boardError && !reviewing && (
@@ -345,6 +489,9 @@ export function SearchResults({
               onReviewDuplicates={
                 open.length > 0 ? () => setReviewId(candidate.candidate_id) : undefined
               }
+              google={google.checks[candidate.candidate_id]}
+              onRemove={() => setConfirmId(candidate.candidate_id)}
+              onRemoveNotAVenue={() => void remove(candidate.candidate_id, 'not_a_venue')}
             />
           )
         })}
@@ -364,7 +511,7 @@ export function SearchResults({
                   </span>
                   <span className="lp-muted">
                     {' '}
-                    Same place as {labelOf.get(entry.kept_id) ?? 'a place no longer on the list'}
+                    {removedBecause(entry, labelOf)}
                   </span>
                 </span>
                 <button
@@ -372,7 +519,7 @@ export function SearchResults({
                   className="lp-tool lp-tool-quiet"
                   disabled={saving}
                   aria-label={`Put back ${candidate.name}`}
-                  onClick={() => void restore(entry.candidate_id)}
+                  onClick={() => void putBack(entry.candidate_id, entry.reason)}
                 >
                   Put back
                 </button>
@@ -380,6 +527,15 @@ export function SearchResults({
             ))}
           </ul>
         </details>
+      )}
+
+      {confirming && (
+        <ConfirmRemove
+          candidate={confirming}
+          saving={saving}
+          onConfirm={() => void removeByHand()}
+          onClose={closeConfirm}
+        />
       )}
 
       {reviewing && (

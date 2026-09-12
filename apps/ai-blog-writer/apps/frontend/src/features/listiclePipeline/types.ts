@@ -333,6 +333,59 @@ export interface ListicleRunSummary {
  *  and can be put back. A distinct pair is two flagged places judged to be
  *  different, so the warning between them stops showing. */
 export interface ListicleBoard {
-  removed: { candidate_id: string; kept_id: string; removed_at: string }[]
+  /** `duplicate`: the operator said it is the same place as `kept_id`.
+   *  `closed`: Google calls it permanently closed.
+   *  `not_a_venue`: Google lists it as something that is not a restaurant or
+   *  bar, and the operator took it off.
+   *  `by_hand`: the operator's own call. `kept_id` is empty for all but
+   *  `duplicate`. */
+  removed: {
+    candidate_id: string
+    kept_id: string
+    removed_at: string
+    reason?: 'duplicate' | 'closed' | 'not_a_venue' | 'by_hand'
+  }[]
   distinct_pairs: [string, string][]
+}
+
+/** What Google said about one place on the board.
+ *
+ *  `not_found` means Google answered and nothing matched; `failed` means
+ *  there was no answer (no key, a timeout, a refused quota) and the place can
+ *  be checked again. The two are never shown the same way. */
+export interface ListicleGoogleCheck {
+  status: 'found' | 'not_found' | 'failed'
+  reason: string
+  checked_at: string
+  place_id?: string
+  google_name?: string
+  address?: string
+  types?: string[]
+  is_venue?: boolean
+  /** `OPERATIONAL`, `CLOSED_TEMPORARILY`, `CLOSED_PERMANENTLY`, or empty when
+   *  Google did not say — which is not the same as open. */
+  business_status?: string
+  rating?: number | null
+  rating_count?: number | null
+  price_level?: number | null
+  /** The operator put the place back after Google called it permanently
+   *  closed: Google is overruled, and the closure is no longer shown or acted
+   *  on. The rest of what Google said still stands. */
+  closed_dismissed?: boolean
+  /** The operator put the place back after removing it as "not a restaurant
+   *  or bar": Google matched the wrong thing, so the note stops showing. */
+  venue_dismissed?: boolean
+}
+
+/** Free Google place lookups left this month, as Google counts them across
+ *  every app on the Maps key. `available` false means the count could not be
+ *  read, and nothing should be assumed about what is left. */
+export interface ListiclePlacesAllowance {
+  available: boolean
+  free: number
+  used?: number
+  left?: number
+  month_start: string
+  as_of: string
+  reason?: string
 }

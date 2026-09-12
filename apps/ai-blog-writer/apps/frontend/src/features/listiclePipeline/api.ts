@@ -2,6 +2,8 @@ import { apiFetch } from '../../shared/api/client/apiFetch'
 import type {
   ListicleAngleSelection,
   ListicleBoard,
+  ListicleGoogleCheck,
+  ListiclePlacesAllowance,
   ListicleGrillState,
   ListicleOrder,
   ListicleRunSummary,
@@ -214,6 +216,22 @@ export async function resolveDuplicates(
   return (await response.json()) as ListicleBoard
 }
 
+/** Take a place off the board. `not_a_venue` only when Google said so;
+ *  `by_hand` for the operator's own reasons. Reversible with Put back. */
+export async function removeCandidate(
+  runId: string,
+  candidateId: string,
+  reason: 'not_a_venue' | 'by_hand',
+): Promise<ListicleBoard> {
+  const response = await apiFetch(`${BASE}/board/${runId}/remove`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ candidate_id: candidateId, reason }),
+  })
+  if (!response.ok) throw await readError(response, 'That place could not be removed.')
+  return (await response.json()) as ListicleBoard
+}
+
 /** Put a removed place back on the board. */
 export async function restoreCandidate(runId: string, candidateId: string): Promise<ListicleBoard> {
   const response = await apiFetch(`${BASE}/board/${runId}/restore`, {
@@ -223,6 +241,43 @@ export async function restoreCandidate(runId: string, candidateId: string): Prom
   })
   if (!response.ok) throw await readError(response, 'That place could not be put back.')
   return (await response.json()) as ListicleBoard
+}
+
+/** What Google has already said about this run's places. Never looks
+ *  anything up. */
+export async function loadGoogleChecks(
+  runId: string,
+): Promise<{ checks: Record<string, ListicleGoogleCheck>; running: boolean }> {
+  const response = await apiFetch(`${BASE}/google/${runId}`)
+  if (!response.ok) throw await readError(response, 'The Google checks could not be read.')
+  return (await response.json()) as { checks: Record<string, ListicleGoogleCheck>; running: boolean }
+}
+
+/** Look up every place on the board Google has not answered for. Billed per
+ *  place on the owner's Google Cloud account; a place already answered for is
+ *  never asked again. */
+export async function checkOnGoogle(
+  runId: string,
+): Promise<{ checks: Record<string, ListicleGoogleCheck>; asked: number; board?: ListicleBoard }> {
+  const response = await apiFetch(`${BASE}/google/${runId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  if (!response.ok) throw await readError(response, 'The places could not be checked on Google.')
+  // `board` comes back because a check can take permanently closed places
+  // off it, and the screen has to show that without a second read.
+  return (await response.json()) as {
+    checks: Record<string, ListicleGoogleCheck>
+    asked: number
+    board?: ListicleBoard
+  }
+}
+
+/** Free Google place lookups left this month. Reading it is free. */
+export async function loadPlacesAllowance(refresh = false): Promise<ListiclePlacesAllowance> {
+  const response = await apiFetch(`${BASE}/google-allowance${refresh ? '?refresh=true' : ''}`)
+  if (!response.ok) throw await readError(response, "Google's count could not be read.")
+  return (await response.json()) as ListiclePlacesAllowance
 }
 
 export async function loadSearch(runId: string): Promise<ListicleSearchResults | null> {

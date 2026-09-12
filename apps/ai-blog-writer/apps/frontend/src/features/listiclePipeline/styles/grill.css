@@ -1061,6 +1061,85 @@
   color: var(--lp-accent);
 }
 
+/* The TripAdvisor row: its square is ticked by the link being right, not by
+   a click, so it is drawn without a pointer and fills from the row's class. */
+.lp-check-auto {
+  cursor: default;
+}
+
+.lp-check-auto:hover .lp-check-box {
+  border-color: rgba(45, 42, 38, 0.32);
+}
+
+.lp-check-done .lp-check-box {
+  background: var(--lp-accent);
+  border-color: var(--lp-accent);
+}
+
+.lp-check-done .lp-check-box svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.lp-check-done .lp-check-text {
+  color: var(--lp-accent);
+}
+
+.lp-check-optional {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.lp-check-link {
+  padding-bottom: var(--space-2);
+}
+
+.lp-check-link .lp-check {
+  padding-bottom: 0.5rem;
+}
+
+.lp-link-input {
+  width: 100%;
+  height: 2.25rem;
+  padding: 0 0.7rem;
+  border: 1px solid rgba(45, 42, 38, 0.24);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--lp-card-ink);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.lp-link-input::placeholder {
+  color: var(--muted);
+}
+
+.lp-link-input:focus {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 1px;
+  border-color: var(--lp-accent);
+}
+
+.lp-link-input[aria-invalid='true'] {
+  border-color: #b42318;
+}
+
+.lp-link-input[aria-invalid='true']:focus {
+  outline-color: #b42318;
+}
+
+.lp-check-done ~ .lp-link-input {
+  border-color: rgba(15, 118, 110, 0.45);
+}
+
+.lp-link-why {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #b42318;
+}
+
 .lp-check-input:focus-visible + .lp-check-box {
   outline: 2px solid var(--lp-accent);
   outline-offset: 2px;
@@ -1513,4 +1592,183 @@
 .lp-removed-name {
   font-weight: 600;
   color: var(--ink);
+}
+
+/* ---------- what Google said ---------- */
+
+.lp-google-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-4);
+  font-size: 0.8125rem;
+}
+
+.lp-google-summary {
+  color: #9a3412;
+  font-weight: 600;
+}
+
+.lp-candidate-closed {
+  display: inline-block;
+  margin-left: var(--space-3);
+  padding: 0.15rem 0.55rem;
+  border: 1px solid rgba(180, 35, 24, 0.35);
+  border-radius: 6px;
+  background: #fef3f2;
+  color: #b42318;
+  font-family: var(--font-body, inherit);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+
+.lp-candidate-google {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: 0.875rem;
+  color: var(--lp-card-ink);
+}
+
+.lp-candidate-rating [aria-hidden='true'] {
+  color: #e8a317;
+}
+
+.lp-candidate-price {
+  color: var(--ink-light, #5a544c);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* Google says this is not somewhere to eat or drink. The note carries its
+   own Remove, because the note is the reason. */
+.lp-candidate-notvenue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-1);
+  padding: 0.45rem 0.45rem 0.45rem 0.75rem;
+  border-left: 3px solid #c2410c;
+  border-radius: 0 8px 8px 0;
+  background: #fff4ed;
+  font-size: 0.8125rem;
+  color: #9a3412;
+}
+
+.lp-notvenue-remove {
+  margin-left: auto;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid rgba(154, 52, 18, 0.45);
+  border-radius: 6px;
+  background: #ffffff;
+  color: #9a3412;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lp-notvenue-remove:hover {
+  background: #9a3412;
+  border-color: #9a3412;
+  color: #ffffff;
+}
+
+.lp-notvenue-remove:focus-visible {
+  outline: 2px solid #c2410c;
+  outline-offset: 2px;
+}
+
+/* Google's opinion on "Still open", at the end of the row it informs. */
+.lp-check-google {
+  margin-left: auto;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.lp-check-google-good {
+  color: var(--lp-accent);
+}
+
+.lp-check-google-warn {
+  color: #9a6b12;
+}
+
+.lp-check-google-bad {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.lp-check-google-muted {
+  color: var(--muted);
+}
+
+/* The free-lookup countdown, under the Google button it decides the cost of. */
+.lp-allowance {
+  margin: var(--space-2) 0 0;
+  font-size: 0.8125rem;
+  color: var(--ink);
+}
+
+.lp-allowance strong {
+  font-size: 0.9375rem;
+  color: var(--lp-accent);
+}
+
+/* Remove by hand: in the card's corner, quiet until pointed at, and red only
+   then -- it is a decision, not a lookup. */
+.lp-candidate-main {
+  position: relative;
+}
+
+.lp-candidate-main .lp-candidate-head {
+  padding-right: 5.5rem;
+}
+
+.lp-tool.lp-tool-remove {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  height: 2rem;
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.lp-tool.lp-tool-remove:hover {
+  border-color: rgba(180, 35, 24, 0.35);
+  background: #fef3f2;
+  color: #b42318;
+  box-shadow: none;
+}
+
+.lp-confirm-modal {
+  width: min(28rem, 100%);
+}
+
+.lp-confirm-body {
+  margin: var(--space-3) 0 0;
+  color: var(--ink-light, #5a544c);
+  line-height: 1.5;
+}
+
+.lp-confirm-actions {
+  margin-top: var(--space-5);
+}
+
+.lp-actions .lp-danger {
+  background: #b42318;
+}
+
+.lp-actions .lp-danger:hover:not(:disabled) {
+  background: #912018;
 }

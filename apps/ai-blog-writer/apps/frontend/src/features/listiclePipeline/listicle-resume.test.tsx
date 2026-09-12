@@ -15,6 +15,10 @@ const setRunHidden = vi.fn()
 const loadBoard = vi.fn()
 const resolveDuplicates = vi.fn()
 const restoreCandidate = vi.fn()
+const removeCandidate = vi.fn()
+const loadGoogleChecks = vi.fn()
+const checkOnGoogle = vi.fn()
+const loadPlacesAllowance = vi.fn()
 
 vi.mock('./api', async importOriginal => {
   const actual = await importOriginal<typeof import('./api')>()
@@ -32,11 +36,15 @@ vi.mock('./api', async importOriginal => {
     loadBoard: (...args: unknown[]) => loadBoard(...args),
     resolveDuplicates: (...args: unknown[]) => resolveDuplicates(...args),
     restoreCandidate: (...args: unknown[]) => restoreCandidate(...args),
+    removeCandidate: (...args: unknown[]) => removeCandidate(...args),
+    loadGoogleChecks: (...args: unknown[]) => loadGoogleChecks(...args),
+    checkOnGoogle: (...args: unknown[]) => checkOnGoogle(...args),
+    loadPlacesAllowance: (...args: unknown[]) => loadPlacesAllowance(...args),
   }
 })
 
 import { NotFoundError } from './api'
-import { CANDIDATE_CHECKLIST } from './components/CandidateCard'
+import { STILL_OPEN } from './components/CandidateCard'
 import { ListiclePipelinePage } from './pages/ListiclePipelinePage'
 import type {
   ListicleGrillState,
@@ -214,6 +222,17 @@ beforeEach(() => {
   loadBoard.mockReset().mockResolvedValue({ removed: [], distinct_pairs: [] })
   resolveDuplicates.mockReset()
   restoreCandidate.mockReset()
+  removeCandidate.mockReset()
+  loadGoogleChecks.mockReset().mockResolvedValue({ checks: {}, running: false })
+  checkOnGoogle.mockReset()
+  loadPlacesAllowance.mockReset().mockResolvedValue({
+    available: true,
+    free: 1000,
+    used: 28,
+    left: 972,
+    month_start: '2026-09-01T07:00:00+00:00',
+    as_of: '2026-09-11T19:00:00+00:00',
+  })
 })
 
 describe('getting back to a run', () => {
@@ -726,13 +745,42 @@ describe('reading the places', () => {
 
     const wingman = await screen.findByRole('list', { name: 'Checklist for Wingman' })
     const juno = screen.getByRole('list', { name: 'Checklist for JUNO WINGS' })
-    const boxes = within(wingman).getAllByRole('checkbox')
-    expect(boxes).toHaveLength(CANDIDATE_CHECKLIST.length)
+    // One box to tick by hand; the TripAdvisor item is a link, not a box.
+    expect(within(wingman).getAllByRole('checkbox')).toHaveLength(1)
+    expect(within(wingman).queryByText('Worth the trip')).not.toBeInTheDocument()
 
-    await userEvent.click(within(wingman).getByLabelText(CANDIDATE_CHECKLIST[0]))
+    await userEvent.click(within(wingman).getByLabelText(STILL_OPEN))
 
-    expect(within(wingman).getByLabelText(CANDIDATE_CHECKLIST[0])).toBeChecked()
-    expect(within(juno).getByLabelText(CANDIDATE_CHECKLIST[0])).not.toBeChecked()
+    expect(within(wingman).getByLabelText(STILL_OPEN)).toBeChecked()
+    expect(within(juno).getByLabelText(STILL_OPEN)).not.toBeChecked()
+  })
+
+  it('ticks TripAdvisor only for a real TripAdvisor place link', async () => {
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(order())
+    loadSearch.mockResolvedValue(results({ candidates: [WINGMAN] }))
+    renderAt('/listicle-pipeline/abc123')
+
+    const list = await screen.findByRole('list', { name: 'Checklist for Wingman' })
+    const field = within(list).getByLabelText('TripAdvisor link')
+    const row = () => within(list).getByText('TripAdvisor link').closest('.lp-check')
+
+    await userEvent.type(field, 'https://www.youtube.com/watch?v=abc')
+    expect(row()).not.toHaveClass('lp-check-done')
+    expect(field).toHaveAttribute('aria-invalid', 'true')
+    expect(within(list).getByText(/isn't a TripAdvisor page for a place/)).toBeInTheDocument()
+
+    await userEvent.clear(field)
+    // Empty is not an error: the item is optional.
+    expect(field).toHaveAttribute('aria-invalid', 'false')
+    expect(within(list).getByText('Optional')).toBeInTheDocument()
+
+    await userEvent.type(
+      field,
+      'https://www.tripadvisor.com.pe/Restaurant_Review-g294316-d12345678-Reviews-Wingman-Lima.html',
+    )
+    expect(row()).toHaveClass('lp-check-done')
+    expect(within(list).queryByText(/isn't a TripAdvisor page/)).not.toBeInTheDocument()
   })
 
   it('looks a place up on Google and Maps in one click, in the right city', async () => {
@@ -841,7 +889,7 @@ describe('settling a possible duplicate', () => {
     })
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(screen.queryByRole('list', { name: 'Checklist for Wingman Alitas Inc.' })).not.toBeInTheDocument()
-    expect(screen.getByText(/1 removed as a duplicate/)).toBeInTheDocument()
+    expect(screen.getByText(/1 taken off the list: 1 duplicate/)).toBeInTheDocument()
     expect(screen.getByText('Removed places (1)')).toBeInTheDocument()
 
     restoreCandidate.mockResolvedValue({ removed: [], distinct_pairs: [] })
@@ -877,6 +925,282 @@ describe('settling a possible duplicate', () => {
     expect(within(miraflores).getByText(/Might be the same place as Wingman \(Miraflores\)/)).toBeInTheDocument()
     // Nothing was removed.
     expect(screen.queryByText(/Removed places/)).not.toBeInTheDocument()
+  })
+})
+
+describe('checking places on Google', () => {
+  const place = (id: string, name: string): ListicleCandidate => ({
+    candidate_id: id,
+    name,
+    district: 'Miraflores',
+    evidence: '',
+    found_by: ['wings in Lima'],
+    overlap: 1,
+    possible_duplicates: [],
+    sightings: [],
+  })
+  const OPEN = place('p-open', 'Wingman')
+  const CLOSED = place('p-closed', 'Juno Wings')
+  const MISSING = place('p-missing', 'Alas Fantasma')
+
+  function openBoard(checks = {}) {
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(order())
+    loadSearch.mockResolvedValue(results({ found: 3, candidates: [OPEN, CLOSED, MISSING] }))
+    loadGoogleChecks.mockResolvedValue({ checks, running: false })
+    renderAt('/listicle-pipeline/abc123')
+  }
+
+  const ANSWERS = {
+    'p-open': {
+      status: 'found',
+      reason: '',
+      checked_at: '2026-09-11T18:00:00+00:00',
+      place_id: 'gid-open',
+      business_status: 'OPERATIONAL',
+      is_venue: true,
+      types: ['restaurant'],
+      rating: 4.4,
+      rating_count: 1203,
+      price_level: 2,
+    },
+    'p-closed': {
+      status: 'found',
+      reason: '',
+      checked_at: '2026-09-11T18:00:00+00:00',
+      place_id: 'gid-closed',
+      business_status: 'CLOSED_PERMANENTLY',
+      is_venue: true,
+      types: ['bar'],
+    },
+    'p-missing': { status: 'not_found', reason: '', checked_at: '2026-09-11T18:00:00+00:00' },
+  }
+
+  it('says how many places and what it costs before anything is asked', async () => {
+    openBoard()
+
+    const button = await screen.findByRole('button', { name: 'Check 3 places on Google' })
+    // The countdown is Google's own count, across every app on the key.
+    expect(await screen.findByText('972')).toBeInTheDocument()
+    expect(screen.getByText(/of 1,000 free Google lookups left this month/)).toBeInTheDocument()
+    expect(screen.queryByText(/uses more than the/)).not.toBeInTheDocument()
+    // Opening the screen reads; it never looks anything up.
+    expect(checkOnGoogle).not.toHaveBeenCalled()
+    expect(button).toBeEnabled()
+  })
+
+  it('shows what Google said on each card, without ticking anything', async () => {
+    openBoard()
+    checkOnGoogle.mockResolvedValue({ checks: ANSWERS, asked: 3 })
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Check 3 places on Google' }))
+
+    expect(checkOnGoogle).toHaveBeenCalledWith('abc123')
+    const open = screen.getByRole('list', { name: 'Checklist for Wingman' })
+    expect(within(open).getByText('Google says open')).toBeInTheDocument()
+    // Google's "open" is evidence; the person still ticks the box.
+    expect(within(open).getByLabelText(/Still open/)).not.toBeChecked()
+    expect(screen.getByText('4.4')).toBeInTheDocument()
+    expect(screen.getByText(/1,203 reviews/)).toBeInTheDocument()
+
+    const closed = screen.getByRole('list', { name: 'Checklist for Juno Wings' })
+    expect(within(closed).getByText('Google says permanently closed')).toBeInTheDocument()
+    expect(screen.getByText('Permanently closed')).toBeInTheDocument()
+
+    const missing = screen.getByRole('list', { name: 'Checklist for Alas Fantasma' })
+    expect(within(missing).getByText('Not found on Google')).toBeInTheDocument()
+
+    expect(screen.getByText('1 permanently closed, 1 not found on Google')).toBeInTheDocument()
+    expect(screen.getByText(/Every place on the list has been checked on Google/)).toBeInTheDocument()
+  })
+
+  it('warns before a check would go past the free lookups left', async () => {
+    loadPlacesAllowance.mockResolvedValue({
+      available: true,
+      free: 1000,
+      used: 999,
+      left: 1,
+      month_start: '2026-09-01T07:00:00+00:00',
+      as_of: '2026-09-11T19:00:00+00:00',
+    })
+    openBoard()
+
+    expect(
+      await screen.findByText(/Checking 3 places uses more than the 1 free lookups left/),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/The other 2 cost about \$0\.04 each, about \$0\.08 in all/)).toBeInTheDocument()
+  })
+
+  it("does not call the check free when Google's count cannot be read", async () => {
+    loadPlacesAllowance.mockResolvedValue({
+      available: false,
+      free: 1000,
+      month_start: '',
+      as_of: '',
+      reason: "Google's count could not be read (RefreshError).",
+    })
+    openBoard()
+
+    expect(await screen.findByText(/Don't\s+assume the check is free/)).toBeInTheDocument()
+  })
+
+  it('reads the count again after a check', async () => {
+    openBoard()
+    checkOnGoogle.mockResolvedValue({ checks: ANSWERS, asked: 3 })
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Check 3 places on Google' }))
+
+    await waitFor(() => expect(loadPlacesAllowance).toHaveBeenCalledWith(true))
+  })
+
+  it('takes a permanently closed place off the list, and says why', async () => {
+    openBoard()
+    checkOnGoogle.mockResolvedValue({
+      checks: ANSWERS,
+      asked: 3,
+      board: {
+        removed: [
+          { candidate_id: 'p-closed', kept_id: '', removed_at: '2026-09-11T19:00:00+00:00', reason: 'closed' },
+        ],
+        distinct_pairs: [],
+      },
+    })
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Check 3 places on Google' }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('list', { name: 'Checklist for Juno Wings' })).not.toBeInTheDocument(),
+    )
+    expect(screen.getByText(/1 taken off the list: 1 permanently closed on Google/)).toBeInTheDocument()
+    expect(screen.getByText(/Google says permanently closed\. Put it back if Google is wrong/)).toBeInTheDocument()
+  })
+
+  it('putting a closed place back clears the closed label', async () => {
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(order())
+    loadSearch.mockResolvedValue(results({ found: 3, candidates: [OPEN, CLOSED, MISSING] }))
+    loadGoogleChecks.mockResolvedValue({ checks: ANSWERS, running: false })
+    loadBoard.mockResolvedValue({
+      removed: [
+        { candidate_id: 'p-closed', kept_id: '', removed_at: '2026-09-11T19:00:00+00:00', reason: 'closed' },
+      ],
+      distinct_pairs: [],
+    })
+    restoreCandidate.mockResolvedValue({ removed: [], distinct_pairs: [] })
+    renderAt('/listicle-pipeline/abc123')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Put back Juno Wings' }))
+
+    expect(restoreCandidate).toHaveBeenCalledWith('abc123', 'p-closed')
+    const card = await screen.findByRole('list', { name: 'Checklist for Juno Wings' })
+    expect(within(card).queryByText(/permanently closed/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Permanently closed')).not.toBeInTheDocument()
+  })
+
+  const NOT_A_VENUE = {
+    'p-missing': {
+      status: 'found',
+      reason: '',
+      checked_at: '2026-09-11T18:00:00+00:00',
+      place_id: 'gid-grove',
+      google_name: 'Lima Grove Tv',
+      business_status: 'OPERATIONAL',
+      is_venue: false,
+      types: ['establishment', 'point_of_interest'],
+    },
+  }
+
+  it('removes a place Google says is not a restaurant or bar in one click', async () => {
+    openBoard(NOT_A_VENUE)
+    removeCandidate.mockResolvedValue({
+      removed: [
+        { candidate_id: 'p-missing', kept_id: '', removed_at: '2026-09-11T19:00:00+00:00', reason: 'not_a_venue' },
+      ],
+      distinct_pairs: [],
+    })
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Remove Alas Fantasma: not a restaurant or bar' }),
+    )
+
+    // No "are you sure?": it obviously has to go.
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(removeCandidate).toHaveBeenCalledWith('abc123', 'p-missing', 'not_a_venue')
+    await waitFor(() =>
+      expect(screen.queryByRole('list', { name: 'Checklist for Alas Fantasma' })).not.toBeInTheDocument(),
+    )
+    expect(screen.getByText(/1 taken off the list: 1 not a restaurant or bar/)).toBeInTheDocument()
+    expect(screen.getByText("Google doesn't list it as a restaurant or bar.")).toBeInTheDocument()
+  })
+
+  it('asks before removing a place for your own reasons, and Keep it keeps it', async () => {
+    openBoard()
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove Wingman' }))
+
+    const ask = screen.getByRole('alertdialog', { name: 'Remove Wingman?' })
+    expect(within(ask).getByText(/You can\s+put it back from there/)).toBeInTheDocument()
+    await userEvent.click(within(ask).getByRole('button', { name: 'Keep it' }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(removeCandidate).not.toHaveBeenCalled()
+    expect(screen.getByRole('list', { name: 'Checklist for Wingman' })).toBeInTheDocument()
+  })
+
+  it('removes a place for your own reasons once you confirm', async () => {
+    openBoard()
+    removeCandidate.mockResolvedValue({
+      removed: [
+        { candidate_id: 'p-open', kept_id: '', removed_at: '2026-09-11T19:00:00+00:00', reason: 'by_hand' },
+      ],
+      distinct_pairs: [],
+    })
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove Wingman' }))
+    await userEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Remove' }),
+    )
+
+    expect(removeCandidate).toHaveBeenCalledWith('abc123', 'p-open', 'by_hand')
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
+    expect(screen.queryByRole('list', { name: 'Checklist for Wingman' })).not.toBeInTheDocument()
+    expect(screen.getByText('Removed by you.')).toBeInTheDocument()
+  })
+
+  it('putting back a place removed as not a venue clears the note', async () => {
+    loadGrill.mockResolvedValue(AGREED)
+    loadOrder.mockResolvedValue(order())
+    loadSearch.mockResolvedValue(results({ found: 3, candidates: [OPEN, CLOSED, MISSING] }))
+    loadGoogleChecks.mockResolvedValue({ checks: NOT_A_VENUE, running: false })
+    loadBoard.mockResolvedValue({
+      removed: [
+        { candidate_id: 'p-missing', kept_id: '', removed_at: '2026-09-11T19:00:00+00:00', reason: 'not_a_venue' },
+      ],
+      distinct_pairs: [],
+    })
+    restoreCandidate.mockResolvedValue({ removed: [], distinct_pairs: [] })
+    renderAt('/listicle-pipeline/abc123')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Put back Alas Fantasma' }))
+
+    await screen.findByRole('list', { name: 'Checklist for Alas Fantasma' })
+    expect(screen.queryByText(/not a\s+restaurant or bar/)).not.toBeInTheDocument()
+  })
+
+  it('opens the exact place on Maps once Google has found it', async () => {
+    openBoard(ANSWERS)
+
+    const maps = await screen.findByRole('link', { name: 'Find Wingman on Google Maps' })
+    expect(maps.getAttribute('href')).toContain('query_place_id=gid-open')
+  })
+
+  it('offers to retry only the places whose check failed', async () => {
+    openBoard({
+      ...ANSWERS,
+      'p-missing': { status: 'failed', reason: 'Timeout', checked_at: '2026-09-11T18:00:00+00:00' },
+    })
+
+    expect(await screen.findByRole('button', { name: 'Check 1 place on Google' })).toBeInTheDocument()
+    const missing = screen.getByRole('list', { name: 'Checklist for Alas Fantasma' })
+    expect(within(missing).getByText(/check didn't go through/)).toBeInTheDocument()
   })
 })
 

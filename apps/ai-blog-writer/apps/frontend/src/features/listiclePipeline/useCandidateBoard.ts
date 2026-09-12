@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { loadBoard, resolveDuplicates, restoreCandidate } from './api'
+import { loadBoard, removeCandidate, resolveDuplicates, restoreCandidate } from './api'
 import type { ListicleBoard } from './types'
 
 /**
@@ -60,5 +60,11 @@ export function useCandidateBoard(runId: string) {
     [runId, save],
   )
 
-  return { board, saving, error, resolve, restore }
+  const remove = useCallback(
+    (candidateId: string, reason: 'not_a_venue' | 'by_hand') =>
+      save(() => removeCandidate(runId, candidateId, reason)),
+    [runId, save],
+  )
+
+  return { board, saving, error, resolve, restore, remove, replace: setBoard }
 }

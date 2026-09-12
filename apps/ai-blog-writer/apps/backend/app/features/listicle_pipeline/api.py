@@ -484,6 +484,12 @@ class RestoreRequest(BaseModel):
     candidate_id: str = Field(min_length=1, max_length=64)
 
 
+class RemoveRequest(BaseModel):
+    candidate_id: str = Field(min_length=1, max_length=64)
+    # `not_a_venue` (Google says so) or `by_hand` (the operator's own call).
+    reason: str = Field(min_length=1, max_length=32)
+
+
 @router.get("/board/{run_id}")
 def get_listicle_board(run_id: str, _staff=Depends(require_staff)):
     """What was removed as a duplicate, and which pairs are different places."""
@@ -506,11 +512,47 @@ def resolve_listicle_duplicates(
     )
 
 
+@router.post("/board/{run_id}/remove")
+def remove_listicle_candidate(
+    run_id: str, req: RemoveRequest, _staff=Depends(require_staff)
+):
+    """Take a place off the list. Reversible: Put back returns it."""
+    return _report(service.remove_candidate, run_id, req.candidate_id, req.reason)
+
+
 @router.post("/board/{run_id}/restore")
 def restore_listicle_candidate(
     run_id: str, req: RestoreRequest, _staff=Depends(require_staff)
 ):
     return _report(service.restore_candidate, run_id, req.candidate_id)
+
+
+@router.get("/google/{run_id}")
+def get_listicle_google_checks(run_id: str, _staff=Depends(require_staff)):
+    """What Google has already said about this run's places. Never looks
+    anything up."""
+    return _report(service.google_checks, run_id)
+
+
+@router.post("/google/{run_id}")
+def check_listicle_places_on_google(run_id: str, _staff=Depends(require_staff)):
+    """Look up the places on the board that Google has not answered for.
+
+    Billed per place on the owner's Google Cloud account, so it is a POST the
+    operator presses, and a place already answered for is never asked again.
+    """
+    return _report(service.check_on_google, run_id)
+
+
+@router.get("/google-allowance")
+def get_places_allowance(refresh: bool = False, _staff=Depends(require_staff)):
+    """Free Google place lookups left this month, as Google counts them.
+
+    Covers every app on the Maps key, not just this one. Reading it is free.
+    """
+    from .places_allowance import allowance
+
+    return allowance(refresh=refresh)
 
 
 @router.get("/shapes")

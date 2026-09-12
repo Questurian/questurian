@@ -1048,11 +1048,166 @@ def resolve_duplicates(
 
 
 def restore_candidate(run_id: str, candidate_id: str) -> dict:
-    """Put a removed place back on the board."""
+    """Put a removed place back on the board.
+
+    A place that came off because Google called it permanently closed comes
+    back with that status dismissed: putting it back IS the operator saying
+    Google is wrong, and without the dismissal the next check would remove it
+    again.
+    """
     if not store.run_exists(run_id):
         raise LookupError(f"No listicle run {run_id}.")
-    store.restore_candidate(run_id, candidate_id)
+    reason = store.restore_candidate(run_id, candidate_id)
+    if reason == "closed":
+        store.dismiss_closed(run_id, candidate_id)
+    elif reason == "not_a_venue":
+        # Same logic: putting it back says Google got this one wrong -- most
+        # often by matching a different place of the same name.
+        store.dismiss_not_a_venue(run_id, candidate_id)
     return store.load_board(run_id)
+
+
+OPERATOR_REMOVAL_REASONS = ("not_a_venue", "by_hand")
+
+
+def remove_candidate(run_id: str, candidate_id: str, reason: str) -> dict:
+    """Take a place off the board because the operator said so. Reversible:
+    it goes to Removed places, and Put back returns it.
+
+    `not_a_venue` is only accepted when Google did say so about this place,
+    so the reason shown on the removed row is never one nobody gave.
+    """
+    if reason not in OPERATOR_REMOVAL_REASONS:
+        raise ValueError(f"Unknown reason {reason!r} for removing a place.")
+    if candidate_id not in _current_candidate_ids(run_id):
+        raise ValueError(
+            f"Not a place on this run's list: {candidate_id}. "
+            "Reload the results and try again."
+        )
+    if reason == "not_a_venue":
+        check = store.load_google_checks(run_id).get(candidate_id, {})
+        if check.get("status") != "found" or check.get("is_venue") is not False:
+            raise ValueError(
+                "Google has not said this place is something other than a "
+                "restaurant or bar."
+            )
+    store.remove_by_operator(run_id, candidate_id, reason)
+    return store.load_board(run_id)
+
+
+def remove_closed_places(run_id: str) -> list[str]:
+    """Take every place Google calls permanently closed off the board.
+
+    Only permanently closed: temporarily closed is a reason to look, not to
+    remove. A closure the operator dismissed by putting the place back is
+    never acted on again. Safe to run any number of times.
+    """
+    closed = [
+        candidate_id
+        for candidate_id, check in store.load_google_checks(run_id).items()
+        if check.get("business_status") == "CLOSED_PERMANENTLY"
+        and not check.get("closed_dismissed")
+    ]
+    store.remove_closed(run_id, closed)
+    return closed
+
+
+_google_checking: set[str] = set()
+_google_checking_lock = threading.Lock()
+
+
+def google_checks(run_id: str) -> dict:
+    """What Google has already said about this run's places. A read."""
+    if not store.run_exists(run_id):
+        raise LookupError(f"No listicle run {run_id}.")
+    return {
+        "checks": store.load_google_checks(run_id),
+        "running": run_id in _google_checking,
+    }
+
+
+def check_on_google(run_id: str, lookup=None) -> dict:
+    """Look up every place still on the board that Google has not answered for.
+
+    One text search per place, billed on the owner's Google Cloud account. A
+    place Google has already answered for -- found, or found nothing -- is not
+    asked again; only a lookup that failed is retried. Removed places are
+    skipped: nobody is going to write about them.
+
+    Refused when there is no key rather than recording forty failures, and
+    refused while a check of the same run is already going, so two clicks do
+    not buy the same forty lookups twice. The guard is this process's, which is
+    what the app runs as; it is not a lease across machines.
+    """
+    from . import identity
+
+    if lookup is None:
+        if not identity.api_key():
+            raise ValueError(
+                "No Google Maps key is set for the blog writer "
+                "(GOOGLE_MAPS_API_KEY), so nothing was checked."
+            )
+        lookup = identity.lookup
+    current = store.load_order(run_id)
+    found = progress(run_id)
+    if current is None or found is None:
+        raise LookupError("This run has no search results to check yet.")
+
+    with _google_checking_lock:
+        if run_id in _google_checking:
+            raise ValueError("Google is already checking this list.")
+        _google_checking.add(run_id)
+    try:
+        removed = {entry["candidate_id"] for entry in store.load_board(run_id)["removed"]}
+        stored = store.load_google_checks(run_id)
+        asked = 0
+        for candidate in found.get("candidates", []):
+            candidate_id = candidate["candidate_id"]
+            if candidate_id in removed:
+                continue
+            if stored.get(candidate_id, {}).get("status") in ("found", "not_found"):
+                continue
+            result = lookup(candidate["name"], current.place, candidate.get("district", ""))
+            asked += 1
+            store.save_google_check(run_id, candidate_id, _google_check_of(result))
+        # Closed places come off the board as soon as Google has said so --
+        # including ones checked before this rule existed, which is why it
+        # sweeps every stored check and not only the ones just made.
+        remove_closed_places(run_id)
+    finally:
+        with _google_checking_lock:
+            _google_checking.discard(run_id)
+    return {
+        "checks": store.load_google_checks(run_id),
+        "running": False,
+        "asked": asked,
+        "board": store.load_board(run_id),
+    }
+
+
+def _google_check_of(result) -> dict:
+    """One lookup, as stored and as the card reads it."""
+    place = result.place
+    check = {
+        "status": result.status,
+        "reason": result.reason,
+        "checked_at": _now(),
+    }
+    if place is not None:
+        check.update(
+            {
+                "place_id": place.place_id,
+                "google_name": place.name,
+                "address": place.address,
+                "types": list(place.types),
+                "is_venue": place.is_venue,
+                "business_status": place.business_status,
+                "rating": place.rating,
+                "rating_count": place.rating_count,
+                "price_level": place.price_level,
+            }
+        )
+    return check
 
 
 def set_hidden(run_id: str, hidden: bool) -> None:
