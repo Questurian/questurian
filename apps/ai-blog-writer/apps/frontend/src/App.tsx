@@ -89,8 +89,12 @@ export default function App() {
               {/* Itineraries Pipeline */}
               <Route path="itineraries-pipeline" element={<ItinerariesPipelinePage />} />
 
-              {/* Listicle Pipeline */}
+              {/* Listicle Pipeline. The run id is in the address so a run can
+                  be reopened, linked and bookmarked: the interview and the
+                  searches were always stored server-side, and the only thing
+                  missing was the operator's way back to them. */}
               <Route path="listicle-pipeline" element={<ListiclePipelinePage />} />
+              <Route path="listicle-pipeline/:runId" element={<ListiclePipelinePage />} />
 
               {/* Location Images */}
               <Route path="location-documents" element={<LocationDocumentsPage />} />

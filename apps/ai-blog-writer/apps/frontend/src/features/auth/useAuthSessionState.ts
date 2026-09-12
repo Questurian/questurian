@@ -4,6 +4,7 @@ import { EXPIRY_BUFFER_MS } from './auth.constants';
 import { hasActiveSession } from './auth-state';
 import { clearPermissionsCache } from './usePermissions';
 import { getLiveAuthState, setLiveAuthState } from './auth-session-store';
+import { offlineDevSession } from './dev-session';
 import {
   checkPayloadHealth,
   hydratePayloadSession,
@@ -40,8 +41,14 @@ export function useAuthSessionState(): AuthContextValue {
         return;
       }
 
-      applyAuthState(nextState);
-      if (nextState) {
+      // Null covers both "Payload is unreachable" and "Payload says you are
+      // signed out", and the fallback does not tell them apart -- see
+      // `dev-session`. It returns null unless a development build has been
+      // explicitly told to stand in for a Payload that is not running.
+      const resolved = nextState ?? offlineDevSession();
+
+      applyAuthState(resolved);
+      if (resolved) {
         setIsConnected(true);
       }
       setIsRestoringSession(false);

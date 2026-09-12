@@ -1,0 +1,167 @@
+{
+  "commit": "f344970843afc0208dad0b03025257bf08a9206d",
+  "source_sha256": {
+    "__init__.py": "c4655c88ada3a468da0b67082cd80b52223d0575c0a16f150e34850c2ab192f7",
+    "api.py": "f3111659ca7b894c88da823a7ff68caa49ca59905e6d74f2515f21b335e255e1",
+    "contracts.py": "17a1aa40325306c5c810ec1da087b24fee412e0655c0c7b5063bc896a7c366f8",
+    "cut_review.py": "21c421875671547666d7e2005abd7c517a0f2507a98b24f845099b4630eeb1f2",
+    "evaluation.py": "ce7d4eb562536dc5d33de1efc3ff0f880f4f40c00f7954790136e2146148e200",
+    "gate.py": "a68bbc37f6e678c20648ab1e367d4c757c80c0c2dbfc3a4558b563dfcbc418db",
+    "identity.py": "d779fa12b615e41516e423d7ec859f6a15dd0f67439adcfb1ad73da6c9913e28",
+    "places.py": "6e36a1918c0b8c0141b987f8eee48f370d85eba15d34a3f02efc90eaa96b7871",
+    "profile_research.py": "88215d5f0dec0e2d675b01f2fcfd56671d2c479a12384b3b93a2286e983fb868",
+    "profile_store.py": "32e4b425595dd97af53c92d5ba1812ec8fced99ac4dac95e3586926ebeedd1c7",
+    "profiles.py": "90c2440514672bd7a84619ec9d6149068cb0e8ef36e0afa4bce1d6e98827a28a",
+    "prompts.py": "28d3de1ad3dcdbaa8eb2b18c844cb0dcf9a0c4bf10823602ebf0b2d7fb98ecd4",
+    "runner.py": "57d169060f3bc831031f1263bcceffc8f105f2a85768149f08ab1af7b641319e",
+    "search.py": "5a85e40df16a89b434963db5d3653b814833e8c2f5b65e5933c0cfd32ffd4dcb",
+    "service.py": "1406687fb43fca9a5313d687ed0532b9f4440dc891830d3ab7978a066cb2ce1d",
+    "shapes.py": "af915b4f6745c880b1891281b316f726d165c14b933b043ba9b5e179fbe65f4c",
+    "spec.py": "dab8c95f77ffeae81109daa9be80562ad4547b8f039cb7ba0565474fa3e958d1",
+    "store.py": "8f425e3597f4122863bf601ea4a87099e5e4760b95466b5d838122731d53a967"
+  },
+  "method": "Actual listicle source and real disposable SQLite; fake research responses; external grill engine stubbed; no suite or live calls",
+  "findings": [
+    {
+      "id": "R1",
+      "observed": {
+        "resolved_transcript_count": 20,
+        "stored_order_count": 40
+      },
+      "expected": "Both counts 20 after explicit re-agreement",
+      "reproduces": true
+    },
+    {
+      "id": "R2",
+      "observed": {
+        "before": 2,
+        "after": 0,
+        "stored_attempts": 1,
+        "successful_attempts_remaining": 0
+      },
+      "expected": "Keep last successful result and separate failed refresh",
+      "reproduces": true
+    },
+    {
+      "id": "R3",
+      "observed": [
+        true,
+        true
+      ],
+      "expected": "Exactly one True",
+      "reproduces": true
+    },
+    {
+      "id": "R4",
+      "observed": [
+        {
+          "name": "Hotel Sol Palace",
+          "sightings": 2,
+          "possible_duplicates": []
+        }
+      ],
+      "expected": "Two candidates, linked as possible duplicates",
+      "reproduces": true
+    },
+    {
+      "id": "R5",
+      "observed": [
+        {
+          "why": "Inside a hotel",
+          "confidence": "clear"
+        },
+        {
+          "why": "Inside a hotel",
+          "confidence": "clear"
+        }
+      ],
+      "expected": "Only row 1 flagged",
+      "reproduces": true
+    },
+    {
+      "id": "R6",
+      "observed": {
+        "names": [
+          "New Venue"
+        ],
+        "cut_checked": true,
+        "barred_count": 0
+      },
+      "expected": "New pool is unchecked after review failure",
+      "reproduces": true
+    },
+    {
+      "id": "R7",
+      "observed": {
+        "pool_count": 121,
+        "last_candidate_sent": false,
+        "cut_checked": true
+      },
+      "expected": "All 121 reviewed or partial coverage explicit",
+      "reproduces": true
+    },
+    {
+      "id": "R8",
+      "observed": {
+        "cevicherias": "restaurants",
+        "cevicherías": "",
+        "hotels": "hotels",
+        "hotels with rooftop bars": "bars",
+        "hotel bars": "bars"
+      },
+      "expected": "Accented cevicherías -> restaurants; hotels with bars -> hotels; hotel bars -> bars",
+      "reproduces": true
+    },
+    {
+      "id": "R9",
+      "observed": {
+        "same_profile": true,
+        "requested_second_id": "place-B",
+        "returned_second_id": "place-A"
+      },
+      "expected": "Distinct IDs produce distinct profiles",
+      "reproduces": true
+    },
+    {
+      "id": "R10",
+      "observed": {
+        "provider_calls": 1,
+        "note": "The last time this search ran here it returned 30 rows and 30 places nothing else found."
+      },
+      "expected": "History counts one execution: ten rows",
+      "reproduces": true
+    },
+    {
+      "id": "S1",
+      "observed": {
+        "review_calls": 2
+      },
+      "expected": "One review for identical evidence",
+      "reproduces": true
+    },
+    {
+      "id": "S2",
+      "observed": {
+        "before_bar_cut": {
+          "words": 1173,
+          "full_menu": true
+        },
+        "agreement": {
+          "words": 1173,
+          "full_menu": true
+        },
+        "menu_words": {
+          "restaurants": 1072,
+          "bars": 1151,
+          "hotels": 989
+        }
+      },
+      "expected": "Outline before bar/cut; full only for menu; no full menu at agreement",
+      "reproduces": true
+    }
+  ],
+  "controls": {
+    "conflicting_rooms_already_separate": true,
+    "hotel_bars_already_classified_as_bars": true
+  }
+}

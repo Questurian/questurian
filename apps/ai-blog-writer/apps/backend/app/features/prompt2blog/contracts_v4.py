@@ -272,6 +272,15 @@ class GrillOption(V4ContractModel):
     text: str = Field(min_length=1)
     recommended: bool = False
     group: str = ""
+    # Which catalogue entry this option was written from, and what job it is
+    # meant to do. Both belong to the listicle grill, where an option is a
+    # search rather than a sentence: without the key, an option that the
+    # operator edits loses every fact the catalogue held about it, and the
+    # pipeline is back to inferring a shape from a rewritten sentence. Empty
+    # everywhere else, including the article grill, which does not use options
+    # at all.
+    shape: str = ""
+    role: str = ""
 
 
 class GrillQuestion(V4ContractModel):

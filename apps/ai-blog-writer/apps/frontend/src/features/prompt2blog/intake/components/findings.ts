@@ -49,7 +49,9 @@ export function comparable(text: string): string {
     .replace(/[‘’ʼ]/g, "'")
     .replace(/[“”]/g, '"')
     .replace(/[–—]/g, '-')
-    .replace(/ /g, ' ')
+    // Written as the escape, not the character: a literal non-breaking space
+    // in source is invisible, and eslint refuses it for that reason.
+    .replace(/\u00a0/g, ' ')
     // Link text survives, the URL does not: the editor quotes what it read.
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/[*_`#>]/g, '')

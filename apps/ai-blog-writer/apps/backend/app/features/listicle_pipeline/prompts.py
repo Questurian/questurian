@@ -4,6 +4,28 @@ The loop, the retry, the lookup budget, the pushback and the stop condition
 all come from `prompt2blog.grill_v4` unchanged. This file is the only thing
 that makes the interview about a list, which is why it is the only thing that
 had to be written.
+
+Three changes from the improvement plan of 2026-09-08:
+
+**The requirements come before the menu.** A requirement applies to every place
+on the list; an angle is one route into the places that already satisfy it.
+"Rooftop bars in Lima" already requires a rooftop, and a second rooftop angle
+adds no route -- while a family-friendly commission whose family requirement is
+demoted to one optional angle has quietly stopped being the list that was
+commissioned.
+
+**The catalogue belongs to the subject, and only arrives when it is needed.**
+A hotel commission was being shown market stalls and cuisine fusions because
+the catalogue was written for restaurants and shown to everything. It is now
+filtered, and it is only spelled out in full on the turn that can use it --
+which is the turn after `count` is settled, since the prompt already refuses to
+ask about angles before then.
+
+**Overlap is explained, not forbidden.** Four shapes shared a `prestige` group
+and at most one could be chosen. Award-listed and expensive are not the same
+places in most cities, and family-run and longstanding often are while sharing
+no group at all. The catalogue now says which pairs tend to collide and the
+operator decides.
 """
 
 from __future__ import annotations
@@ -11,7 +33,93 @@ from __future__ import annotations
 from ..prompt2blog.contracts_v4 import GrillState
 from ..prompt2blog.grill_v4 import _lookups_left, _marker_status, _transcript
 from .contracts import LISTICLE_MARKERS
-from .shapes import collision_groups, shape_menu
+from .shapes import (
+    angle_count_guidance,
+    overlap_notes,
+    roles_note,
+    shape_menu,
+    shape_outline,
+    subject_of,
+)
+from .spec import count_from, kind_from
+
+
+# What has to be settled before the catalogue can be used at all.
+#
+# `angles` is built FROM these: how many comes from the count, the wording from
+# the kind and the place, and what every place must satisfy from the bar and
+# the cut. The prompt already refuses to ask about angles until they are
+# settled, so a full catalogue before then is three hundred lines the model is
+# forbidden to act on.
+_ANGLE_PREREQUISITES: tuple[str, ...] = ("kind", "place", "count", "bar", "cut")
+
+
+def _catalogue_block(state: GrillState) -> str:
+    """The catalogue, in as much detail as this turn can use.
+
+    Three phases, and the middle one is the only turn that can act on it.
+
+    **Before the prerequisites are settled** the model needs to know what
+    exists -- so that it does not settle a count the catalogue cannot serve --
+    and needs nothing else. It gets the names.
+
+    **On the turn that asks about angles** it gets the whole thing: every
+    shape, every pair that tends to collide, what the roles mean, and how many
+    angles a list this long wants.
+
+    **Once the angles are agreed** it gets neither. The full menu was still
+    being sent on the turn that writes the consensus, where there is nothing
+    left to choose -- 1,173 words of wording rules attached to a reply that
+    says "done". What it gets instead is the lines that were approved, because
+    the consensus has to read them back.
+
+    Every option stays on the menu at the menu turn. Nothing is trimmed for
+    size: an operator shown only the six the model picked has nothing to swap
+    in, which is the whole reason the menu exists.
+    """
+    subject = subject_of(kind_from(state))
+    named = subject or "no specialised subject; the shared catalogue only"
+    covered = set(state.markers_covered)
+
+    if not set(_ANGLE_PREREQUISITES) <= covered:
+        return f"""THE SHAPE CATALOGUE ({named}), in outline. You will be shown it in full
+on the turn you ask about angles, which is after the kind, the place, the
+count, the bar and the cut are settled:
+{shape_outline(subject)}"""
+
+    if "angles" in covered:
+        approved = _approved_angles(state)
+        return f"""THE ANGLES ALREADY AGREED. The catalogue is not repeated here; there is
+nothing left to choose from it. Read these back in the consensus exactly as
+they are written:
+{approved}
+
+If the menu genuinely has to be reopened -- they asked to change which searches
+run -- leave `angles` OUT of `markers_covered` and you will be shown the whole
+catalogue again on the next turn."""
+
+    return f"""THE SHAPE CATALOGUE ({named}). These are the only shapes this commission
+gets. A shape not listed here does not apply to this subject -- do not reach
+for one, and do not invent a category so that the catalogue has something to
+offer:
+{shape_menu(subject)}
+
+PAIRS THAT TEND TO RETURN THE SAME PLACES (a warning, not a rule -- you may
+choose both if you can say why this city is different):
+{overlap_notes(subject) or "- none in this catalogue"}
+
+WHAT AN ANGLE IS FOR (`role`, one per angle):
+{roles_note()}
+
+{angle_count_guidance(count_from(state))}"""
+
+
+def _approved_angles(state: GrillState) -> str:
+    """The lines the operator agreed to, read off the interview."""
+    from .spec import angle_lines
+
+    lines = angle_lines(state)
+    return "\n".join(f"  - {line}" for line in lines) or "  (none recorded)"
 
 
 def build_listicle_turn_prompt(state: GrillState) -> str:
@@ -44,6 +152,14 @@ promises nothing about method and you must NEVER treat it as a stated
 criterion. The title usually carries the kind of place, the location and the
 count, and nothing else.
 
+Everything ELSE the title says is a REQUIREMENT, and requirements are not
+angles. "Rooftop bars in Lima" requires a rooftop of every place on the list.
+"Independent hotels" bars the chains. "Family-friendly hotels" requires
+somewhere a family can actually stay. Carry those into `bar` and `cut` where
+they belong, and never demote one into an optional angle -- a list that only
+checks its own title in one of six searches is not the list that was
+commissioned.
+
 WHAT YOU ALREADY LOOKED UP (never ask about anything in here):
 {state.research_digest or "Nothing; you could not look anything up."}
 
@@ -64,13 +180,14 @@ listed as missing above, and the markers have an order:
     angles               LAST, and never before `count` is covered
 
 `angles` is last because it is built FROM the others: the number of angles
-comes from the count, and their wording comes from the kind and the place. A
-live run asked about angles on turn four with the count still unsettled,
-learned the count two turns later, and had to ask the whole angle question
-again -- the most expensive question in the interview, asked twice. If every marker is covered, you are done -- say so and
-write the consensus. A live run asked the same `count` question twice in a row
-because it chose a marker it had already settled, and an interview that repeats
-itself is not one.
+comes from the count, their wording comes from the kind and the place, and what
+every place must satisfy comes from `bar` and `cut`. A live run asked about
+angles on turn four with the count still unsettled, learned the count two turns
+later, and had to ask the whole angle question again -- the most expensive
+question in the interview, asked twice. If every marker is covered, you are
+done -- say so and write the consensus. A live run asked the same `count`
+question twice in a row because it chose a marker it had already settled, and
+an interview that repeats itself is not one.
 
 If a marker is plainly answered by the title and you have nothing to warn them
 about, do NOT spend a turn confirming it: put it straight into
@@ -117,13 +234,23 @@ Now the part that matters.
   anyway. A number that reality cannot fill is the most expensive mistake this
   interview can make, because every later search inherits it.
 
+  Put the number you are recommending in `recommendation` as a plain number, on
+  its own or at the start. "Yes" is a normal answer to this question and the
+  number it agrees to has to be readable from what you proposed.
+
 - `bar` is what earns a place, beyond the angle that found it -- awards, local
   critics, customer reviews, what locals say, or their own judgement. Ask it
-  plainly and do not accept "the best", which is the question restated.
+  plainly and do not accept "the best", which is the question restated. Fold in
+  any requirement the title stated: if they asked for independent hotels,
+  independence is part of the bar or part of the cut, not an angle.
 
 - `cut` is what is barred no matter how good it is -- chains, delivery-only,
   hotel restaurants, anywhere they simply refuse to send a reader. People find
   this easier to answer than the bar, so it is a good question to ask second.
+
+  `bar` and `cut` are attached to EVERY search that runs, whatever angle found
+  the place. So they are worth getting right once, and worth never repeating
+  inside an angle.
 
 - `angles` is the search order itself, and it is the question this whole
   interview exists to reach.
@@ -133,38 +260,35 @@ Now the part that matters.
   will find nine. So the list is filled from several angles at once, each
   searched separately.
 
-  Roughly SEVEN items per angle. Work out the number of angles from the count
-  they settled on: about 40 items wants 6 angles, about 24 wants 4, about 15
-  wants 3, 8 or fewer wants 2.
-
-  That is how many to RECOMMEND. It is not a quota to hold them to. If they
-  send back more angles than you suggested, or fewer, that is their answer and
-  the marker is settled -- take it and move on. A live run recommended six,
-  was given seven, and asked the whole question again to get back to six; an
-  interview that re-asks a question it has already been answered is broken,
-  and more angles than planned is not a problem in the first place.
+  An angle must add a distinct ROUTE into the places that already satisfy the
+  requirements. It is not a restatement of the commission: for "rooftop bars",
+  "bars with rooftop terraces" is the commission with different words and one
+  wasted search. Ask yourself what each angle finds that the others would miss,
+  and if the answer is "nothing", it is not an angle.
 
   You do not invent angles freely and you do not pick finished ones off a
   list. You choose SHAPES from the catalogue below and write each one's version
   for THIS topic.
 
-THE SHAPE CATALOGUE:
-{shape_menu()}
+{_catalogue_block(state)}
 
   Rules for writing an angle from a shape, in order of how badly each one bites:
 
-  ADD NOTHING THE SHAPE DID NOT ASK FOR. The shape sets how tight the search
-  is. Every extra condition you volunteer empties it. Asked for "opened in the
-  last year" a previous run wrote "opened in the last 1-3 years AND has
-  significant buzz" and found one place instead of eight. No "AND". No quality
-  clause. No number of years where the shape says "decades".
+  ADD NOTHING THE SHAPE DID NOT ASK FOR. The shape's `means` line is the whole
+  condition. Every extra condition you volunteer empties the search. Asked for
+  "opened in the last year" a previous run wrote "opened in the last 1-3 years
+  AND has significant buzz" and found one place instead of eight. No "AND". No
+  quality clause. No number of years where the shape says "decades". No
+  requirement that a specialist sells nothing else.
 
-  NEVER CHOOSE TWO SHAPES FROM THE SAME GROUP. Shapes in a group return the
-  same places for the same reason. These are the groups:
-{collision_groups()}
-  A previous run picked three prestige-shaped angles and all three returned the
-  same three restaurants; a third of the list was wasted. At most one per
-  group. Everything outside a group may be combined freely.
+  DO NOT REPEAT THE REQUIREMENTS. `bar` and `cut` are attached to every search
+  already. An angle that restates them spends a search on a filter that was
+  going to be applied anyway.
+
+  SAY WHAT THE ANGLE IS FOR. Every option carries a `role`. Be honest about it:
+  an angle that can only ever return one or two places is `specific`, and
+  labelling it `broad` is how it gets asked for twelve and answers with twelve,
+  nine of which do not belong.
 
   MAKE IT SPECIFIC TO THE TOPIC. This is the whole reason you write the angle
   instead of reading it. "Tiny plain places where the food is the whole point"
@@ -173,45 +297,52 @@ THE SHAPE CATALOGUE:
   looked up: the local words, the local formats, the local neighbourhoods.
 
   WRITE IT AS A SEARCH, NOT A LABEL. It is sent to a web search almost
-  verbatim. "Hidden gem" is a label. "Unmarked huariques serving ceviche that
-  locals know by word of mouth" is a search. It must include the kind of place
-  and be a plain description of what to look for.
+  verbatim. "Hidden gem" is a label. "Huariques Lima residents recommend that
+  the visitor guides miss" is a search. It must include the kind of place and
+  be a plain description of what to look for. Never describe a place as having
+  no online presence: a web search cannot find what you have just called
+  unfindable.
 
   When and only when you ask about `angles`, fill `options` with a MENU, not
-  just your picks. Each entry is `{{text, recommended, group}}`:
+  just your picks. Each entry is `{{text, recommended, shape, role}}`:
 
     text         the finished search line, standing alone -- no numbering, no
                  shape name, no commentary
     recommended  true for the ones you are proposing, false for the rest
-    group        the shape's collision group, or "" if it has none
+    shape        the catalogue key you wrote it from, or "" if it is your own
+    role         broad, distinctive or specific
 
   The menu has three parts, and all three go in the same list:
 
-    1. YOUR PICKS, `recommended` true. As many as the count needs.
+    1. YOUR PICKS, `recommended` true. As many as the count needs. Two or three
+       `broad` ones at most; the rest earn their place by finding something the
+       broad ones miss.
 
-    2. EVERY OTHER SHAPE IN THE CATALOGUE, `recommended` false, each written
-       for this topic exactly as carefully as your picks. This is the part
-       that makes the question answerable: an operator shown only the six you
-       chose has nothing to swap in, and a shape written badly because it was
-       not going to be chosen is a trap for whoever ticks it.
+    2. EVERY OTHER SHAPE IN THIS COMMISSION'S CATALOGUE, `recommended` false,
+       each written for this topic exactly as carefully as your picks. This is
+       the part that makes the question answerable: an operator shown only the
+       six you chose has nothing to swap in, and a shape written badly because
+       it was not going to be chosen is a trap for whoever ticks it.
 
        Skip a shape only when it genuinely does not exist for this topic, and
        skip it silently.
 
-    3. ANGLES THE CATALOGUE HAS NO SHAPE FOR, `recommended` false, `group` "".
-       Up to four. These are the reasons a place makes THIS list that no
-       general pattern could have anticipated -- what you know about this
-       topic in this city that a catalogue written for restaurants, bars,
-       hotels and sights could never contain. Ceviche in Lima has places by
-       the fishing landings serving what came off the boat that morning;
-       nothing in the catalogue is that. Find that kind of thing.
+    3. ANGLES THE CATALOGUE HAS NO SHAPE FOR, `recommended` false, `shape` "",
+       `group` "". Up to four. These are the reasons a place makes THIS list
+       that no general pattern could have anticipated -- what you know about
+       this topic in this city that a catalogue written for restaurants, bars
+       and hotels could never contain. Ceviche in Lima has places by the
+       fishing landings serving what came off the boat that morning; nothing in
+       the catalogue is that. Find that kind of thing.
 
        They obey every other rule: one idea, no "AND", searchable, worded as
        a search. Do not restate a shape you have already written under a new
        name -- if it answers a shape, it IS that shape.
 
-  Put only the recommended lines in `recommendation`, one per line, so an
-  operator answering in plain text gets your picks and nothing else.
+  Leave `recommendation` EMPTY on this question. Your recommended lines are
+  already in `options`, and writing them out a second time is the same text
+  paid for twice -- the pipeline builds the recommendation from the options you
+  marked, in the order you sent them.
 
 - Push back when an answer contradicts the title or an earlier answer.
 
@@ -233,8 +364,10 @@ THE SHAPE CATALOGUE:
   true.
 
   `consensus` is the search order read back plainly -- the kind of place, the
-  location, the number of items, what earns a place, what is barred, how many
-  each search should aim to return, and then every angle on its own line
-  exactly as it will be searched. They should
-  be able to read it and know exactly what is about to be looked for.
+  location, the number of items, what earns a place, what is barred, and then
+  every angle on its own line exactly as it will be searched. They should be
+  able to read it and know exactly what is about to be looked for. Do not work
+  out how many results each search should ask for; that is decided from the
+  count and the roles after you agree, and an arithmetic you do here is one
+  more thing that can disagree with what actually runs.
 """

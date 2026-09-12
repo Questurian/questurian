@@ -409,6 +409,154 @@ Do not confuse with: the v3 `questurian-default` brand-voice file, which was a r
 - **SQLite for run storage** because runs are local-only and replayable; not a multi-tenant store.
 - → **Suggest ADR**: the LexicalJSON ↔ Payload sync protocol has no formal spec; this is hard-to-reverse and crosses a context boundary.
 
+## Listicle Pipeline (search order)
+
+The newer pipeline under `app/features/listicle_pipeline`, distinct from the
+`editor_assist` listicle blurb pipeline whose vocabulary is above. It runs an
+interview, executes the searches it settles on, and pools candidate places.
+Decisions in [ADR 0037](./docs/adr/0037-the-search-order-is-the-source-of-truth.md)
+and [ADR 0038](./docs/adr/0038-the-record-says-what-actually-happened.md).
+
+### Search Order
+Definition: the agreement in the form the searches run from — kind, place,
+target count, standard, exclusions, and the selected angles. Built once at
+agreement, versioned, stored. The displayed summary is generated from it.
+Boundary rule: nothing downstream re-reads the interview transcript. The count
+that is shown and the count that is executed are one field.
+
+### Angle
+Definition: one reason a place is on the list, and one literal web search.
+Carries a stable id, the shape it was written from, its role, the wording the
+operator approved, and whether they edited it.
+Boundary rule: an angle is a route into the pool, never a requirement. What
+every place must satisfy lives on the order and is composed into every search.
+
+### Shape
+Definition: the pattern an angle is written from, with the topic left blank.
+Declares its `core` meaning separately from the `instruction` given to the
+model, the subjects it applies to, its discovery role, and the shapes it tends
+to return the same places as.
+Boundary rule: overlap is explained, never enforced.
+
+### Discovery Role
+Definition: what an angle is for — `broad`, `distinctive` or `specific` — and
+therefore how many places it may be asked for.
+Mechanism: `search.role_allowances` spreads the overshoot across the roles. A
+`specific` angle may succeed with one result and is never asked to fill a quota.
+
+### Sighting
+Definition: one row exactly as one search returned it — angle, name, district,
+evidence — named by the attempt it came from and its position in that attempt's
+reply. Every sighting appears in exactly one candidate's membership.
+Boundary rule: the id is what makes pooling order-independent. A sighting that
+reaches pooling without one is named from its content, never from its position.
+
+### Candidate
+Definition: one place as this run knows it, made of the sightings that agree on
+the folded full name, the district as stated, and the bracketed qualifier.
+Identified by a hash of its member sighting ids plus the pooling version.
+Mechanism: `search.pool_sightings`. Grouping is exact; everything looser —
+containment, strong word overlap, a shared name across districts — attaches a
+possible-duplicate link and merges nothing.
+Boundary rule: a name is not an identity. Two candidates may display one name
+and never share an id, and anything filed against a candidate keys on the id.
+Changed membership is a different candidate, which is what stops a stale
+verdict landing on new evidence.
+
+### Marker Resolution
+Definition: what one interview marker is worth once every turn that answered
+it has been read. `restated` (a later answer said everything the earlier one
+said), `combined` (two answers said different things and both are used) or
+`replaced` (a marker that only ever takes one value was answered twice).
+Mechanism: `spec.resolve_answer`. The bar and the cut accumulate; the kind,
+the place and the angles replace, because the picker sends the whole selection
+and un-ticking a box is already the explicit replace.
+Boundary rule: last-write-wins is not a resolution. A marker answered twice is
+resolved from the answers, and the resolution reaches the order as an
+`answer_note` the operator can act on.
+
+### Pool Snapshot
+Definition: one pooling of one run's evidence, and what each attempt
+contributed to it — rows returned, how many of those the other searches also
+returned, and how many nothing else found.
+Mechanism: written after every batch and rewritten after a retry, because a
+retry changes the pool and therefore changes what every other angle turns out
+to have contributed.
+Boundary rule: contribution is a measurement against peers, not a property of
+an execution. Search history reads one snapshot per prior run and counts each
+attempt once inside it; summing across snapshots counts the same evidence
+repeatedly, which is how one paid search reported itself as three.
+
+### Contribution
+Definition: one attempt's line in a pool snapshot.
+Boundary rule: reported, never acted on. A search with nothing exclusive may be
+the coverage everything else is being checked against; no angle is dropped,
+reordered or discouraged by its history.
+
+### Subject
+Definition: kind and place, folded — what two runs must share before one run's
+contribution says anything about the other's. The count, the bar and the cut
+change what a search asks for; none of them changes whether a shape finds
+places nobody else finds.
+Boundary rule: an angle is identified across runs by its SHAPE, not its
+wording. The model rewrites the sentence every run. An operator's own angle has
+no shape, so it matches on exact wording or not at all.
+
+### Cut Check
+Definition: the two moments something asks "does this break what the operator
+barred" -- once over the approved angles, before the searches run, and once
+over the returned places, after.
+Mechanism: `cut_review`. Rows are identified to the model by NUMBER within a
+chunk, verdicts are stored by candidate id, and the whole review is stored
+under the fingerprint of the material the reviewer was actually shown.
+Boundary rule: both only FLAG. Nothing is removed, reworded or reordered.
+Unchecked is not clean, and neither is uncovered.
+
+### Review Coverage
+Definition: which candidates a cut review actually judged. `complete` means
+every expected candidate id was covered by a chunk that finished; `partial`
+means some were not; `failed` means none were; `not_needed` means there were no
+exclusions to check against.
+Mechanism: the pool is chunked deterministically, each chunk records the exact
+ids it was sent, and a retry buys only the chunks that are still missing.
+Boundary rule: an unjudged row carries no flag, and the absence of a flag is
+what "this place is fine" looks like — so the screen says which rows nobody
+looked at rather than letting them read as clean.
+
+### Search Attempt Selection
+Definition: which stored attempt one angle is showing at one revision, and
+which attempt was the most recent.
+Boundary rule: they come apart exactly when it matters. A refresh that fails
+leaves the earlier success selected and the failure latest, and the screen has
+to be able to say both. Reuse writes a reference here; it never copies the
+execution.
+
+### Interview Baseline
+Definition: what the interview had settled the last time an order was written
+from it.
+Boundary rule: a re-agreement is resolved against this, not against the order.
+A field the interview changed its mind about wins; a field it did not is left
+exactly as the order has it, direct correction included.
+
+### Search Attempt
+Definition: one invocation of one angle's search — `not_started`, `running`,
+`completed`, `failed` or `interrupted` — with the request fingerprint it was
+made under, its own id, and a receipt for every request that reached the
+provider inside it.
+Boundary rule: a terminal attempt is frozen. A second search of the same angle
+is a new attempt, so a failed refresh cannot overwrite the result it was meant
+to replace. `interrupted` is not `failed`: nobody knows whether the provider
+answered, and retrying may be charged again. One invocation is not one billable
+call — the receipts are what a cost figure is built from.
+
+### Batch Lease
+Definition: ownership of a run while its searches are being bought — a token,
+taken atomically, renewed on a heartbeat while the batch runs.
+Boundary rule: the token is checked before every dispatch and again before a
+result is filed, so a process that lost the lease cannot spend on the run's
+behalf or publish over the work of whoever took it. A response it already
+bought is left as orphaned evidence rather than promoted to current work.
+
 ## AI Guidance
 
 When working in this context:

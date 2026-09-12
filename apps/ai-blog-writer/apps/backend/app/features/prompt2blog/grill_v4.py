@@ -120,6 +120,12 @@ NEXT_TURN_SCHEMA = require_non_empty({
                     "text": {"type": "string"},
                     "recommended": {"type": "boolean"},
                     "group": {"type": "string"},
+                    # Not required. The article grill sends no options at all,
+                    # and a listicle option that arrives without them is still
+                    # a usable search -- it just costs the pipeline the shape's
+                    # opinion about what it overlaps with.
+                    "shape": {"type": "string"},
+                    "role": {"type": "string"},
                 },
                 "required": ["text", "recommended"],
             },
@@ -479,12 +485,18 @@ def _options_from(raw: Any) -> list[GrillOption]:
     options: list[GrillOption] = []
     seen: set[str] = set()
     for item in raw:
+        shape, role = "", ""
         if isinstance(item, str):
             text, recommended, group = _safe_str(item), True, ""
         elif isinstance(item, dict):
             text = _safe_str(item.get("text")) or _safe_str(item.get("angle"))
             recommended = item.get("recommended") is True
             group = _safe_str(item.get("group"))
+            # Carried through rather than required. An option that arrives
+            # without them is still a search; it has just lost the catalogue's
+            # opinion about what it overlaps with and how hard to ask it.
+            shape = _safe_str(item.get("shape")) or _safe_str(item.get("shape_key"))
+            role = _safe_str(item.get("role"))
         else:
             continue
         # Duplicates are the failure this question exists to avoid: the same
@@ -493,7 +505,15 @@ def _options_from(raw: Any) -> list[GrillOption]:
         if not text or key in seen:
             continue
         seen.add(key)
-        options.append(GrillOption(text=text, recommended=recommended, group=group))
+        options.append(
+            GrillOption(
+                text=text,
+                recommended=recommended,
+                group=group,
+                shape=shape,
+                role=role,
+            )
+        )
     return options
 
 
@@ -519,11 +539,30 @@ def _markers_from(
 
     Unknown names in the claim are dropped rather than refused: a model
     inventing a seventh marker has still told us about the six real ones.
+
+    **Covered is sticky.** The prompt asks for "the full list of markers you
+    can now fill" every turn, and a model that simply forgets one un-covers it.
+    Listicle run abb7004b (2026-09-10) covered `count` on turns one and two,
+    omitted it from turn three's list, and was sent back to ask a question it
+    had already settled -- the exact repetition the prompt spends a paragraph
+    warning against, arriving through the one route the prompt cannot close.
+
+    Markers reached by being ASKED about were already permanent, through
+    `answered`. This makes the ones claimed without asking permanent too, which
+    is the same rule applied to both roads to the same place. Mid-interview, an
+    omission is a slip and not a decision: the grill has no way to say "I was
+    wrong about that" other than by dropping it silently, which is precisely
+    what must not be trusted.
+
+    There is exactly one deliberate un-covering, and it does not come through
+    here. `reopen_grill` empties `markers_covered` itself, because going back
+    to rethink an agreed brief is a decision someone made rather than a list
+    someone forgot to retype.
     """
     raw = payload.get("markers_covered")
     claimed = {_safe_str(item) for item in raw} if isinstance(raw, list) else set()
     answered = {turn.question.asks_about for turn in state.turns}
-    settled = claimed | answered
+    settled = claimed | answered | set(state.markers_covered)
     keys = marker_keys if marker_keys is not None else state.marker_keys
     return [key for key in keys if key in settled]
 
@@ -587,6 +626,35 @@ class GrillUnusableResponse(RuntimeError):
         self.state = state
 
 
+class _WastedTurn(Exception):
+    """The grill asked a question it had already been answered.
+
+    Not an unusable reply -- the question is well formed and could be shown.
+    It is simply about a marker that is already settled, or about anything at
+    all when nothing is left to settle, and both of those cost an operator a
+    turn and a model call to learn nothing.
+
+    Worse than the waste: a marker's value is read from the LAST turn that
+    settled it, so a second, additive question about the same marker silently
+    replaces the first answer. A live listicle run on 2026-09-08 asked "what
+    else should be excluded?" after exclusions were settled; answering it
+    plainly would have thrown away the chains, delivery-only and
+    ceviche-not-primary rules and left "no hotel restaurants" as the entire
+    cut.
+
+    Carries the question anyway. One repeat is much better than a dead run, so
+    a retry that does not correct it is accepted rather than raised.
+    """
+
+    def __init__(self, before: GrillState, result: GrillState, why: str) -> None:
+        super().__init__(why)
+        # The state as the attempt left it, so a lookup already paid for is not
+        # bought again by the retry.
+        self.before = before
+        self.result = result
+        self.why = why
+
+
 def advance_grill(
     state: GrillState,
     dependencies: GrillDependencies,
@@ -605,9 +673,21 @@ def advance_grill(
     # Carried across attempts, so a lookup the first attempt paid for is not
     # bought again by the second.
     working = state
+    repeated: _WastedTurn | None = None
     for attempt in range(2):
         try:
             return _advance_once(working, dependencies)
+        except _WastedTurn as wasted:
+            # Retried once, for the same reason an unusable reply is: this is a
+            # flash model choosing one question, and it usually chooses a
+            # better one when asked again.
+            repeated = wasted
+            working = wasted.before
+            logger.warning(
+                "Grill re-asked a settled marker (attempt %s): %s",
+                attempt + 1,
+                wasted.why,
+            )
         except GrillUnusableResponse as error:
             attempts.append(error.raw)
             if error.state is not None:
@@ -617,6 +697,12 @@ def advance_grill(
                 attempt + 1,
                 error.raw[:500],
             )
+    if repeated is not None and not attempts:
+        # It repeated itself twice. Showing the question again wastes one turn;
+        # refusing to continue loses the whole interview, and the operator has
+        # no way to get past it.
+        logger.warning("Grill repeated itself twice; showing the question anyway")
+        return repeated.result
     raise GrillUnusableResponse("\n---\n".join(attempts), working)
 
 
@@ -684,7 +770,7 @@ def _advance_once(
     )
     if question is None:
         raise GrillUnusableResponse(raw or _json_or_repr(payload), state)
-    return state.model_copy(
+    asking = state.model_copy(
         update={
             "status": "asking",
             "pending": question,
@@ -692,6 +778,27 @@ def _advance_once(
             "location": location,
         }
     )
+
+    # The prompt says to ask about a marker that is still missing, and says it
+    # twice. A live run ignored it twice in six turns. A rule that is only
+    # written down is not enforced, so it is enforced here.
+    missing = [key for key in state.marker_keys if key not in covered]
+    # Claiming `done` and failing to say what was agreed is a different fault
+    # with a different remedy: the checklist is full, the playback is missing,
+    # and asking again is how the playback gets written. Retrying that as a
+    # repeated question would spend the budget refusing the one move that
+    # recovers it.
+    if not missing and payload.get("done") is not True:
+        raise _WastedTurn(
+            state, asking, "every marker is covered and it asked instead of agreeing"
+        )
+    if question.asks_about and question.asks_about in covered:
+        raise _WastedTurn(
+            state,
+            asking,
+            f"{question.asks_about} is settled while {', '.join(missing)} is not",
+        )
+    return asking
 
 
 def start_grill(
@@ -757,7 +864,21 @@ def reopen_grill(state: GrillState, dependencies: GrillDependencies) -> GrillSta
     dossier, or a brief the operator no longer wants all come back here. What
     was learned stays in the transcript; the agreement does not.
     """
-    reopened = state.model_copy(update={"status": "asking", "consensus": "", "pending": None})
+    reopened = state.model_copy(
+        update={
+            "status": "asking",
+            "consensus": "",
+            "pending": None,
+            # Reopening is the one deliberate un-covering, and it has to be
+            # explicit now that a marker no longer un-covers itself by being
+            # left out of a claim. What was LEARNED survives -- the transcript
+            # is untouched, and every marker an actual question was asked about
+            # is restored from it on the next turn. What is dropped is the
+            # bookkeeping that says the brief is settled, which is the whole
+            # point of coming back here.
+            "markers_covered": [],
+        }
+    )
     return advance_grill(reopened, dependencies)
 
 
