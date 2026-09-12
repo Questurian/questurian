@@ -20,6 +20,11 @@ import { StandardArticleStageHero } from './standard-article-stage/StandardArtic
 import { StandardArticleStatusBanners } from './standard-article-stage/StandardArticleStatusBanners'
 import '../../singleTypeListicles/styles.css'
 import './standard-article-stage-builder.css'
+// Last on purpose. In the original bundle these rules loaded after both of the
+// above (the youtube2blog barrel imported its page exports before its
+// stylesheet), so they win the same conflicts they have always won -- the
+// block toolbar and preview classes the two share.
+import '../styles/stage-article.css'
 
 type StandardArticleStageBuilderProps = {
   storageKey: string

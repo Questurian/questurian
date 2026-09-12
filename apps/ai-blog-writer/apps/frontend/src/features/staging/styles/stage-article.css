@@ -1,0 +1,23 @@
+/*
+ * The staging editor's stylesheet.
+ *
+ * These rules used to live in `features/youtube2blog/styles/`, loaded globally
+ * as a side effect of that feature's barrel. The editor itself was always
+ * shared -- prompt2blog, url2blog and youtube2blog all render the same
+ * `StandardArticleStageBuilder` -- so when the retired pipelines were removed
+ * (abf069d7, 2026-08-29) the shared editor lost its entire appearance and
+ * rendered as unstyled HTML: naked buttons, no block cards, no spacing.
+ *
+ * They live with the editor now. A stylesheet that only survives because some
+ * unrelated feature happens to be routed is not owned by anybody, and this is
+ * what that costs.
+ *
+ * Keep these imports in source order: the partials are a structural split of
+ * one original cascade, and later files deliberately override earlier ones.
+ */
+@import './stage-article-page.css';
+@import './stage-article-preview.css';
+@import './stage-article-upload-cropper.css';
+@import './stage-article-block-editor.css';
+@import './stage-article-block-media-actions.css';
+@import './stage-article-responsive.css';

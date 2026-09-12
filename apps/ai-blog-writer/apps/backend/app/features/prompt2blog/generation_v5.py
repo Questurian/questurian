@@ -24,6 +24,7 @@ from .support import _safe_dict, _safe_str
 from .writer_prompt import WriterPrompt
 from .writer_v5 import (
     ResearchWriter,
+    WriterDraft,
     WriterRefused,
     parse_writer_output,
     write_article,
@@ -252,48 +253,55 @@ class NothingToPaste(ValueError):
     """The pasted text carries no article."""
 
 
-def record_pasted_draft(
+# What the operator is told when the box held no article. One sentence, in both
+# places text can be pasted, because it is the same mistake either way.
+NO_ARTICLE = (
+    "There is no article in that text. Paste the whole thing, headline and all."
+)
+
+
+def parse_pasted_article(markdown: str) -> WriterDraft:
+    """Split pasted text the way the writer's own reply is split.
+
+    The same parser, so a pasted article comes apart exactly like a written one
+    and everything downstream sees a single shape. Its refusal is re-raised as
+    this module's, because "the writer refused" is a sentence about a call that
+    was never made.
+    """
+    try:
+        draft = parse_writer_output(markdown)
+    except WriterRefused as error:
+        raise NothingToPaste(NO_ARTICLE) from error
+    if not draft.article_markdown.strip():
+        raise NothingToPaste(NO_ARTICLE)
+    return draft
+
+
+def _keep_pasted(
     run_id: str,
-    markdown: str,
-    prompt: WriterPrompt,
+    draft: WriterDraft,
     recorder: Any,
     *,
-    written_by: str = "",
+    written_by: str,
+    prompt_fingerprint: str,
+    brief_fingerprint: str,
+    form_label: str,
 ) -> str:
-    """File an article somebody wrote elsewhere as this run's draft.
-
-    The operator takes the frozen prompt to whatever model they like and brings
-    the result back. Everything downstream of the draft -- the detector, Saved
-    Articles, staging into Payload -- then works on it unchanged, because all of
-    those read the draft rather than the call that produced it.
+    """Store a parsed pasted article as this run's newest draft.
 
     It lands as an ordinary attempt in the same accumulating list, so pasting
-    never destroys an article the run already had, and the prompt fingerprint is
-    recorded because a draft filed against an assignment nobody can identify is
-    not evidence of anything.
+    never destroys an article the run already had.
 
     What it deliberately does not do is pretend. There is no served model, no
     turn count, no cost and no elapsed time, because this app measured none of
     them; `written_by` is whatever the operator typed and is labelled as their
     word, not a reading. A receipt that reported a model here would be the same
     lie as the v4 receipts that named Opus while Flash wrote the article.
+
+    The two fingerprints are empty for an article that arrived with no run
+    behind it, and that is the honest record: there was no assignment to match
+    it against. They are never filled in with something plausible.
     """
-    # The same parser the writer's own replies go through, so a pasted article
-    # is split exactly the way a written one is and everything downstream sees
-    # one shape. Its refusal is re-raised as this module's, because "the writer
-    # refused" is a sentence about a call that was never made.
-    try:
-        draft = parse_writer_output(markdown)
-    except WriterRefused as error:
-        raise NothingToPaste(
-            "There is no article in that text. Paste the whole reply, "
-            "headline and all."
-        ) from error
-    if not draft.article_markdown.strip():
-        raise NothingToPaste(
-            "There is no article in that text. Paste the whole reply, "
-            "headline and all."
-        )
     attempt_id = str(uuid4())
     attempts = _attempts(run_id)
     now = _now()
@@ -305,8 +313,8 @@ def record_pasted_draft(
             # The operator's own words for where it came from. Never a model
             # name this app resolved, because it resolved none.
             "written_by": _safe_str(written_by),
-            "prompt_fingerprint": prompt.prompt_fingerprint,
-            "brief_fingerprint": prompt.brief_fingerprint,
+            "prompt_fingerprint": prompt_fingerprint,
+            "brief_fingerprint": brief_fingerprint,
             "started_at": now,
             "finished_at": now,
             "draft": {
@@ -328,10 +336,10 @@ def record_pasted_draft(
             "markdown": draft.article_markdown,
             "prompt2blog_v5": {
                 "final_title": draft.headline,
-                "form": {"label": prompt.form_label},
+                "form": {"label": form_label},
                 "research_note": draft.research_note,
-                "prompt_fingerprint": prompt.prompt_fingerprint,
-                "brief_fingerprint": prompt.brief_fingerprint,
+                "prompt_fingerprint": prompt_fingerprint,
+                "brief_fingerprint": brief_fingerprint,
                 "source": SOURCE_PASTED,
                 "written_by": _safe_str(written_by),
                 "parse_issue": draft.parse_issue,
@@ -340,6 +348,76 @@ def record_pasted_draft(
     )
     recorder.complete(run_id)
     return attempt_id
+
+
+def record_pasted_draft(
+    run_id: str,
+    markdown: str,
+    prompt: WriterPrompt,
+    recorder: Any,
+    *,
+    written_by: str = "",
+) -> str:
+    """File an article somebody wrote elsewhere as this run's draft.
+
+    The operator takes the frozen prompt to whatever model they like and brings
+    the result back. Everything downstream of the draft -- the detector, Saved
+    Articles, staging into Payload -- then works on it unchanged, because all of
+    those read the draft rather than the call that produced it.
+
+    The prompt fingerprint is recorded because a draft filed against an
+    assignment nobody can identify is not evidence of anything.
+    """
+    return _keep_pasted(
+        run_id,
+        parse_pasted_article(markdown),
+        recorder,
+        written_by=written_by,
+        prompt_fingerprint=prompt.prompt_fingerprint,
+        brief_fingerprint=prompt.brief_fingerprint,
+        form_label=prompt.form_label,
+    )
+
+
+def record_pasted_article(
+    run_id: str,
+    draft: WriterDraft,
+    recorder: Any,
+    *,
+    written_by: str = "",
+) -> str:
+    """Keep an article that arrived with no run behind it at all.
+
+    `record_pasted_draft` is the way back for an article written from this
+    app's own frozen prompt. This is for the other case, and it is the common
+    one: an article written somewhere else entirely, which this app never
+    briefed and holds no prompt for.
+
+    Without it those articles were stranded. Saved Articles, the Payload
+    staging editor and every article read are keyed to a run, so an article
+    with no run could not be staged at all -- the operator's only route was to
+    retype it into the editor by hand.
+
+    The run it lands on is real but empty: no grill, no brief, no prompt, and
+    nothing spent. That empties one thing downstream, and it is worth saying
+    out loud rather than discovering: the detector reads an article against its
+    brief, so an article with no brief cannot be reviewed here. It can be
+    staged, listed and edited like any other.
+
+    Takes an already-parsed draft rather than the raw text, because the run has
+    to exist before this is called and a run must not be created for text that
+    turns out to hold no article. `parse_pasted_article` is the gate, and it
+    runs first, with nothing written yet.
+    """
+    return _keep_pasted(
+        run_id,
+        draft,
+        recorder,
+        written_by=written_by,
+        prompt_fingerprint="",
+        brief_fingerprint="",
+        form_label="",
+    )
 
 
 def _content_hash(article: str) -> str:

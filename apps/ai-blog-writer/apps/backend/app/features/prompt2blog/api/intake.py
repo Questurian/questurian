@@ -68,6 +68,7 @@ from ..intake_v4 import (
     intake_state,
     generate_prompt,
     plan_research,
+    paste_article,
     paste_draft,
     start_generation,
     start_review,
@@ -438,6 +439,41 @@ def open_intake(
         owner_staff_id=staff_user_id(staff_user),
     )
     return JSONResponse(intake_state(state.run_id), status_code=201)
+
+
+class PastedArticleRequest(BaseModel):
+    """An article written somewhere else, with no run behind it."""
+
+    markdown: str = Field(min_length=1)
+    # Whatever the operator says wrote it. Recorded as their word and shown as
+    # their word; nothing here resolves a model.
+    written_by: str = ""
+
+
+@router.post("/pasted", status_code=201)
+def paste_an_article(
+    request: PastedArticleRequest, staff_user=Depends(require_staff)
+) -> JSONResponse:
+    """Take in a finished article and give it somewhere to be staged from.
+
+    For work this app never briefed. Everything that stages, lists or edits an
+    article is keyed to a run, so an article written elsewhere had no way in at
+    all short of retyping it into the Payload editor.
+
+    Declared above `/{run_id}` because FastAPI matches in declaration order and
+    a path parameter would otherwise swallow the literal "pasted" and try to
+    read a run by that name.
+
+    Costs nothing and calls nothing: no model is asked anything on this path.
+    """
+    run_id = _handle(
+        paste_article,
+        request.markdown,
+        _services(),
+        written_by=request.written_by,
+        owner_staff_id=staff_user_id(staff_user),
+    )
+    return JSONResponse(intake_state(run_id), status_code=201)
 
 
 @router.get("/runs")

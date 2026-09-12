@@ -7,7 +7,7 @@ import {
   getStagedArticleMissingFields,
   getStagedArticleStatusBadge,
 } from '../utils/staged-article-status'
-import '../../youtube2blog/styles/stage.css'
+import '../styles/stage-list.css'
 
 type StageListPageProps = {
   storageKey: string

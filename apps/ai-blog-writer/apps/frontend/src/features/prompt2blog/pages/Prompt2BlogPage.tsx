@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { buildStageArticleUrl } from '../../blogArticles'
 import { BriefScreen } from '../intake/components/BriefScreen'
 import { GateScreen } from '../intake/components/GateScreen'
 import { GrillScreen } from '../intake/components/GrillScreen'
@@ -35,6 +36,33 @@ const STEP_LABELS: Record<string, string> = {
 
 export function Prompt2BlogPage() {
   const intake = useIntake()
+  const navigate = useNavigate()
+
+  /**
+   * Take in a finished article and go where it is actually wanted.
+   *
+   * Everything that stages, lists or edits an article is keyed to a run, so
+   * pasting one has to make a run before it can go anywhere. What the operator
+   * wants next is the Payload editor with the article in it, so this does not
+   * stop on an intermediate screen to tell them it worked.
+   *
+   * On a refusal it stays put. `pasteArticle` answers with null and the error
+   * is already on screen, which is the whole reason it returns a run id rather
+   * than nothing.
+   */
+  const stagePastedArticle = async (markdown: string, writtenBy: string) => {
+    const pasted = await intake.pasteArticle(markdown, writtenBy)
+    if (!pasted) return
+    navigate(
+      buildStageArticleUrl('prompt2blog', {
+        run_id: pasted.run_id,
+        // The headline the parser found, so the editor opens named rather than
+        // as "Untitled". An article pasted without one has no title to carry.
+        title: pasted.generation?.headline ?? '',
+        article_type: '',
+      }),
+    )
+  }
   const state = intake.state
   const step = state?.step ?? 'seed'
   const writing = state?.writing ?? null
@@ -131,7 +159,13 @@ export function Prompt2BlogPage() {
           <>
         {step === 'seed' && (
           <>
-            <SeedScreen busy={intake.busy} onStart={intake.start} />
+            <SeedScreen
+              busy={intake.busy}
+              onStart={intake.start}
+              onPasteArticle={(markdown, writtenBy) => {
+                void stagePastedArticle(markdown, writtenBy)
+              }}
+            />
             {/* Only with no run open: this is the way back in, not a thing to
                 offer somebody who is already mid-article. */}
             {!state && <RunList onResume={intake.resume} />}

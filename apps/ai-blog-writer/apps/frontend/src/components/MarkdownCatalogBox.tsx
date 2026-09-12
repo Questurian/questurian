@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import './markdown-catalog-box.css'
 
 export type MarkdownCatalogItem = {
   id: string | number
