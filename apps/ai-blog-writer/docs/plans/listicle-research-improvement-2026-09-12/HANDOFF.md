@@ -1,5 +1,11 @@
 # Listicle research — handoff, 2026-09-12
 
+> **The reviews half of this document is superseded.** Read
+> `HANDOFF-reviews-api.md` beside this file first: reviews now come from
+> RapidAPI under a hard 500-object cap, and something now chooses which of them
+> reach the extraction. Everything below about the pilot, the preserved
+> baselines and the research sequence still holds.
+
 The work in `IMPLEMENTATION.md` beside this file is **done and merged into the
 branch**. This document is what is left, and what a new session needs to know
 before touching any of it.
