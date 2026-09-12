@@ -221,6 +221,14 @@
       "defaultModel": "gemini-2.5-flash"
     },
     {
+      "id": "listicle.evidence_extract",
+      "app": "ai-blog-writer",
+      "call": "structured",
+      "summary": "Read the pages one research action collected and write down what they say, each claim with the passage that carries it.",
+      "site": "features/listicle_pipeline/api.py",
+      "defaultModel": "gemini-2.5-pro"
+    },
+    {
       "id": "listicle.resolve_place",
       "app": "ai-blog-writer",
       "call": "places",

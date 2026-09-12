@@ -585,6 +585,19 @@ _FINDING_COLUMNS: tuple[tuple[str, str], ...] = (
     ("author", "TEXT NOT NULL DEFAULT ''"),
     ("observed_at", "TEXT NOT NULL DEFAULT ''"),
     ("updated_at", "TEXT NOT NULL DEFAULT ''"),
+    # What the checks made of it, and why. `not_checked` is the honest default
+    # for every row written before checking existed and for every row somebody
+    # typed: neither has been checked, and reading either as passing would be
+    # the same mistake as an unchecked place reading as one that came back
+    # clean.
+    ("validation", "TEXT NOT NULL DEFAULT 'not_checked'"),
+    ("validation_notes", "TEXT NOT NULL DEFAULT '[]'"),
+    # Who is behind the claim, and -- for a price -- which channel it was seen
+    # on. Both were absent, and both were being lost: a menu's own description
+    # read as a customer observation, and a delivery price read as the price.
+    ("who_said_it", "TEXT NOT NULL DEFAULT 'unknown'"),
+    ("who_name", "TEXT NOT NULL DEFAULT ''"),
+    ("channel", "TEXT NOT NULL DEFAULT 'unknown'"),
 )
 
 # Something published, once per profile. Kept apart from the finding because
@@ -783,6 +796,11 @@ def _hydrate_finding(conn: sqlite3.Connection, row: sqlite3.Row) -> ResearchFind
         attempt_id=row["attempt_id"] or "",
         author=row["author"] or "",
         observed_at=row["observed_at"] or "",
+        validation=row["validation"] or "not_checked",
+        validation_notes=_list(row["validation_notes"]),
+        who_said_it=row["who_said_it"] or "unknown",
+        who_name=row["who_name"] or "",
+        channel=row["channel"] or "unknown",
         evidence=evidence,
         created_at=_parse(row["found_at"]),
         updated_at=_parse(updated),
@@ -951,6 +969,34 @@ def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
                 "updated_at = ? WHERE claim_id = ?",
                 (_json(topics), _json(categories), now, existing["claim_id"]),
             )
+            # A later pass re-checked the same sentence. Its verdict replaces
+            # the old one ONLY on a row nobody has touched: `version` is bumped
+            # by every hand edit, so version 1 and origin `research` together
+            # mean "written by a request, never corrected". A row somebody has
+            # worked on keeps what they left, and the new pass's provenance is
+            # attached above either way.
+            if (
+                int(existing["version"] or 1) == 1
+                and (existing["origin"] or "") == "research"
+                and finding_to_save.validation != "not_checked"
+            ):
+                conn.execute(
+                    "UPDATE listicle_profile_claims SET validation = ?, "
+                    "validation_notes = ?, who_said_it = ?, who_name = ?, "
+                    "channel = ?, scope = ?, temporal_type = ?, "
+                    "source_published_at = ? WHERE claim_id = ?",
+                    (
+                        finding_to_save.validation,
+                        _json(finding_to_save.validation_notes),
+                        finding_to_save.who_said_it,
+                        finding_to_save.who_name,
+                        finding_to_save.channel,
+                        finding_to_save.scope,
+                        finding_to_save.temporal_type,
+                        finding_to_save.source_published_at,
+                        existing["claim_id"],
+                    ),
+                )
             found_id = str(existing["claim_id"])
         else:
             found_id = finding_to_save.finding_id
@@ -959,8 +1005,10 @@ def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
                 "text, source_name, source_url, found_at, about_year, text_key, "
                 "categories, topics, scope, temporal_type, event_date, "
                 "source_published_at, valid_until, curation, origin, version, "
-                "attempt_id, author, observed_at, updated_at) VALUES "
-                "(?, ?, ?, ?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "attempt_id, author, observed_at, updated_at, validation, "
+                "validation_notes, who_said_it, who_name, channel) VALUES "
+                "(?, ?, ?, ?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+                "?, ?, ?, ?, ?)",
                 (
                     found_id,
                     finding_to_save.profile_id,
@@ -983,6 +1031,11 @@ def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
                     finding_to_save.author,
                     finding_to_save.observed_at,
                     now,
+                    finding_to_save.validation,
+                    _json(finding_to_save.validation_notes),
+                    finding_to_save.who_said_it,
+                    finding_to_save.who_name,
+                    finding_to_save.channel,
                 ),
             )
     for item in finding_to_save.evidence:

@@ -7,6 +7,7 @@ the event loop freezes the whole server for the length of it.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -789,7 +790,60 @@ def _research_call(prompt: str):
         # asked for: those are stored separately and are not evidence that
         # anything was searched.
         actual_queries=list(getattr(result, "search_queries", []) or []),
+        # Why it stopped. A reply cut off at the token ceiling and a reply that
+        # finished look identical from their text, and one of the two failures
+        # this pipeline has actually seen was exactly that.
+        finish_reason=str(getattr(result, "finish_reason", "") or ""),
     )
+
+
+def _extract_call(prompt: str):
+    """Collected page text in, checkable claims out. No search tool.
+
+    Its own job id, so the reading half of a research action is legible beside
+    the searching half -- they run on different models for different reasons and
+    a single number over both hides which one is expensive.
+
+    A forced schema rather than free text. Two of the five real calls this work
+    is measured against came back as unparseable JSON after spending their whole
+    output budget; a provider that guarantees the shape removes that failure
+    rather than handling it.
+    """
+    from app.shared.model_calls import structured
+
+    from .evidence import EXTRACTION_MAX_TOKENS, EXTRACTION_SCHEMA
+    from .profile_service import TransportResult
+
+    result = structured(
+        "listicle.evidence_extract",
+        prompt=prompt,
+        tool_name="record_evidence",
+        tool_description=(
+            "Record what the supplied pages say, each claim with the passage "
+            "in the page that carries it."
+        ),
+        input_schema=EXTRACTION_SCHEMA,
+        max_tokens=EXTRACTION_MAX_TOKENS,
+        endpoint="evidence_extract",
+    )
+    return TransportResult(
+        text=json.dumps(getattr(result, "payload", {}) or {}, ensure_ascii=False),
+        model=str(getattr(result, "model_name", "") or ""),
+        usage=dict(getattr(result, "usage", {}) or {}),
+    )
+
+
+def _read_pages(urls, *, budget, already_read=None):
+    """The pages one research action opens.
+
+    Named here, beside the two provider calls, because it is the third thing
+    this feature does to the outside world and it belongs where the other two
+    are replaced. A test that cannot stand in front of it is a test that reaches
+    the real web.
+    """
+    from .source_reader import read_pages
+
+    return read_pages(urls, budget=budget, already_read=already_read)
 
 
 def _staff_name(staff) -> str:
@@ -912,6 +966,8 @@ def research_one_listicle_place(
         candidate_id,
         idempotency_key=req.idempotency_key,
         transport=_research_call,
+        extract=_extract_call,
+        reader=_read_pages,
         mode=req.mode,
         gap_text=req.gap_text,
         expected_prep_version=req.expected_prep_version,

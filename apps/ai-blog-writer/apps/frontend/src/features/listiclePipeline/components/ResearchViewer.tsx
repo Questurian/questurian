@@ -63,6 +63,41 @@ const CURATION_LABELS: Record<string, string> = {
   discarded: 'Discarded',
 }
 
+/** What the checks made of a finding. Deliberately not worded as truth:
+ *  "checks out" means somebody can open the page and find the sentence, which
+ *  is the only thing this pipeline verified. */
+const VALIDATION_LABELS: Record<string, string> = {
+  evidence_ready: 'Checks out',
+  review_needed: 'Needs a look',
+  unsupported: 'Nothing backs it',
+  not_checked: 'Unchecked',
+}
+
+const VALIDATION_WHY: Record<string, string> = {
+  evidence_ready:
+    'Every source cited was read, and the quoted passage is in it. That is not the same as true.',
+  review_needed:
+    'Something is off with the citation, the branch or the price. Open it to see what.',
+  unsupported:
+    'No source this request read carries the passage it was credited to.',
+  not_checked:
+    'Nothing has checked this — somebody typed it, or it was stored before checking existed.',
+}
+
+const SPEAKER_LABELS: Record<string, string> = {
+  business: 'the business itself',
+  publication: 'a publication',
+  named_reviewer: 'a named reviewer',
+  anonymous_customer: 'an unnamed customer',
+  aggregator: 'a listings platform',
+}
+
+const CHANNEL_LABELS: Record<string, string> = {
+  dine_in: 'at the table',
+  delivery: 'on a delivery platform',
+  takeaway: 'for takeaway',
+}
+
 interface ResearchViewerProps {
   profileId: string
   /** This list's topic key and how to print it. The filter's default. */
@@ -161,6 +196,17 @@ export function ResearchViewer({
   const unattributed = findings.filter(
     finding => finding.attribution === 'incomplete',
   ).length
+  // Counted here rather than taken from the attempt, because this table can be
+  // filtered to one topic and the attempt's number is about the whole packet.
+  const ready = findings.filter(
+    finding => finding.validation === 'evidence_ready',
+  ).length
+  const needsLook = findings.filter(
+    finding => finding.validation === 'review_needed',
+  ).length
+  const unsupported = findings.filter(
+    finding => finding.validation === 'unsupported',
+  ).length
 
   return (
     <div
@@ -226,6 +272,11 @@ export function ResearchViewer({
           <>
             <p className="lp-muted lp-research-count">
               {findings.length} {findings.length === 1 ? 'finding' : 'findings'}
+              {' · '}
+              <strong>{ready}</strong>{' '}
+              {ready === 1 ? 'checks out' : 'check out'}
+              {needsLook > 0 && <> · {needsLook} need a look</>}
+              {unsupported > 0 && <> · {unsupported} unsupported</>}
               {unattributed > 0 && (
                 <>
                   {' · '}
@@ -236,7 +287,8 @@ export function ResearchViewer({
                 <> · {research.open_questions.length} open questions</>
               ) : null}
               . Counts, not a score: nothing here has judged whether this place
-              is worth writing about.
+              is worth writing about, and &ldquo;checks out&rdquo; means the
+              quoted passage is in the page that was read.
             </p>
 
             {findings.length === 0 ? (
@@ -471,6 +523,16 @@ function FindingRow({
           <span className={`lp-research-curation lp-research-${finding.curation}`}>
             {CURATION_LABELS[finding.curation] ?? finding.curation}
           </span>
+          {/* What the checks made of it, beside what a person decided about
+              it. Two different things: one is what a machine could establish,
+              the other is a judgement, and neither substitutes for the
+              other. */}
+          <span
+            className={`lp-research-verdict lp-research-${finding.validation}`}
+            title={VALIDATION_WHY[finding.validation] ?? ''}
+          >
+            {VALIDATION_LABELS[finding.validation] ?? finding.validation}
+          </span>
           <div className="lp-research-actions">
             {finding.curation !== 'kept' && (
               <button
@@ -513,6 +575,16 @@ function FindingRow({
                   ? 'about the business as a whole, not this branch'
                   : 'branch or brand not said'}{' '}
               · {finding.origin === 'operator' ? 'typed by a person' : 'from research'}
+              {finding.who_said_it !== 'unknown' && (
+                <>
+                  {' · said by '}
+                  {SPEAKER_LABELS[finding.who_said_it] ?? finding.who_said_it}
+                  {finding.who_name ? ` (${finding.who_name})` : ''}
+                </>
+              )}
+              {finding.channel !== 'unknown' && (
+                <> · seen {CHANNEL_LABELS[finding.channel] ?? finding.channel}</>
+              )}
             </p>
             {finding.evidence.map(item => (
               <div key={item.source_id} className="lp-research-evidence">
@@ -546,6 +618,18 @@ function FindingRow({
                 Nothing attributes this. It is kept as it came back, and it
                 cannot be checked until somebody finds where it was said.
               </p>
+            )}
+            {/* Why it is not evidence-ready. Kept visible rather than hidden
+                behind a badge: the reason is the useful part, and a row nobody
+                can see the reason for is one nobody can act on. */}
+            {finding.validation_notes.length > 0 && (
+              <ul className="lp-research-flags">
+                {finding.validation_notes.map((note, index) => (
+                  <li key={index} className="lp-research-warn">
+                    {note}
+                  </li>
+                ))}
+              </ul>
             )}
             {finding.revisions.length > 0 && (
               <ul className="lp-research-revisions">
@@ -897,8 +981,12 @@ function History({ research }: { research: ListicleProfileResearch }) {
             </button>
             <span className="lp-muted">
               {' '}
-              {attempt.findings_added} new of {attempt.findings_seen} returned
-              {attempt.model ? ` · ${attempt.model}` : ''}
+              {attempt.findings_added} new of {attempt.findings_seen} returned ·{' '}
+              {attempt.evidence_ready} check out ·{' '}
+              {attempt.generations}{' '}
+              {attempt.generations === 1 ? 'generation' : 'generations'} (
+              {attempt.grounded_calls} searched) · {attempt.pages_read} of{' '}
+              {attempt.pages_attempted} pages read
             </span>
             {attempt.reason && <p className="lp-muted">{attempt.reason}</p>}
             {openId === attempt.attempt_id && detail && (
@@ -925,6 +1013,128 @@ function History({ research }: { research: ListicleProfileResearch }) {
                       <li key={index}>{issue}</li>
                     ))}
                   </ul>
+                )}
+                {/* Every call this one action made. Two at most, and a
+                    skipped one has a receipt too, because "no extraction ran"
+                    and "extraction found nothing" are different facts. */}
+                {detail.receipts.length > 0 && (
+                  <ul className="lp-research-receipts">
+                    {detail.receipts.map((receipt, index) => (
+                      <li key={index}>
+                        <strong>{receipt.stage}</strong>
+                        {receipt.grounded ? ' · searched the web' : ' · read collected text'}
+                        {' · '}
+                        {receipt.outcome}
+                        {receipt.model ? ` · ${receipt.model}` : ''}
+                        {receipt.usage.total_tokens
+                          ? ` · ${receipt.usage.total_tokens} tokens`
+                          : ''}
+                        {receipt.duration_seconds !== null
+                          ? ` · ${receipt.duration_seconds}s`
+                          : ''}
+                        {receipt.finish_reason
+                          ? ` · stopped: ${receipt.finish_reason}`
+                          : ''}
+                        {receipt.reason && (
+                          <span className="lp-muted"> — {receipt.reason}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {/* Every page it tried to open, with the address the redirects
+                    ended at. An unreadable page is an access gap and says so;
+                    the version before this could not show one at all. */}
+                {detail.pages.length > 0 && (
+                  <details className="lp-research-block">
+                    <summary>
+                      Pages opened ({detail.pages.filter(p => p.state === 'ok').length}{' '}
+                      of {detail.pages.length} readable)
+                    </summary>
+                    <ul className="lp-research-pages">
+                      {detail.pages.map((page, index) => (
+                        <li key={index}>
+                          <span
+                            className={
+                              page.state === 'ok'
+                                ? 'lp-research-state'
+                                : 'lp-research-warn'
+                            }
+                          >
+                            {page.state}
+                          </span>{' '}
+                          <a
+                            href={page.final_url || page.requested_url}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                          >
+                            {page.title || page.final_url || page.requested_url}
+                          </a>
+                          <span className="lp-muted">
+                            {' · published '}
+                            {page.published_at || 'date unknown'}
+                            {' · read '}
+                            {page.retrieved_at.slice(0, 10)}
+                            {page.reused ? ' · from an earlier read, not re-checked' : ''}
+                            {page.note ? ` — ${page.note}` : ''}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+                {/* What the search said before anything was opened. A
+                    transcription, and it never becomes a citation. */}
+                {(detail.discovery.pages?.length ?? 0) > 0 && (
+                  <details className="lp-research-block">
+                    <summary>
+                      What the search reported, unverified (
+                      {detail.discovery.pages?.length})
+                    </summary>
+                    <ul className="lp-research-coverage">
+                      {(detail.discovery.pages ?? []).map((page, index) => (
+                        <li key={index}>
+                          {page.publisher || 'publisher not named'} — {page.why}
+                          {page.provider_snippet && (
+                            <span className="lp-muted">
+                              {' '}
+                              It said: &ldquo;{page.provider_snippet}&rdquo;
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    {(detail.discovery.not_found?.length ?? 0) > 0 && (
+                      <ul className="lp-research-questions">
+                        {(detail.discovery.not_found ?? []).map((line, index) => (
+                          <li key={index}>Nothing found for: {line}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </details>
+                )}
+                {(detail.brief.priority_questions?.length ?? 0) > 0 && (
+                  <details className="lp-research-block">
+                    <summary>What this request was asked to settle</summary>
+                    <ol className="lp-research-questions">
+                      {(detail.brief.priority_questions ?? []).map((line, index) => (
+                        <li key={index}>{line}</li>
+                      ))}
+                    </ol>
+                    {(detail.brief.discovery_leads?.length ?? 0) > 0 && (
+                      <ul className="lp-research-coverage">
+                        {(detail.brief.discovery_leads ?? []).map((lead, index) => (
+                          <li key={index}>
+                            <span className="lp-research-state">unverified lead</span>{' '}
+                            {lead.snippet}
+                            {lead.angle && (
+                              <span className="lp-muted"> — found by: {lead.angle}</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </details>
                 )}
                 <details className="lp-research-raw">
                   <summary>What came back, exactly as it arrived</summary>

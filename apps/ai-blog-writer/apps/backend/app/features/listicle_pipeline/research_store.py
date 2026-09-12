@@ -28,7 +28,7 @@ from datetime import datetime, timedelta, timezone
 
 from app.core.database import get_db_connection, transaction
 
-from .profiles import CoverageNote, ResearchAttempt
+from .profiles import CallReceipt, CoverageNote, ResearchAttempt
 
 # How long an attempt may hold the slot without being heard from. Comfortably
 # longer than the research timeout, so a slow but living call is never declared
@@ -89,6 +89,22 @@ CREATE TABLE IF NOT EXISTS listicle_research_slot (
 )
 """
 
+# Columns added after the table first shipped. Applied with ALTER rather than
+# folded into the CREATE above, because the databases that matter already have
+# the table: the five baseline attempts this work is measured against live in
+# one, and a CREATE IF NOT EXISTS would silently leave them without the new
+# columns.
+_ATTEMPT_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("brief", "TEXT NOT NULL DEFAULT '{}'"),
+    ("strategy_version", "TEXT NOT NULL DEFAULT ''"),
+    ("receipts", "TEXT NOT NULL DEFAULT '[]'"),
+    ("pages", "TEXT NOT NULL DEFAULT '[]'"),
+    ("discovery", "TEXT NOT NULL DEFAULT '{}'"),
+    ("evidence_summary", "TEXT NOT NULL DEFAULT '{}'"),
+    ("baseline_attempt_id", "TEXT NOT NULL DEFAULT ''"),
+    ("pilot", "TEXT NOT NULL DEFAULT ''"),
+)
+
 _INDEXES = (
     "CREATE INDEX IF NOT EXISTS listicle_research_attempts_profile "
     "ON listicle_research_attempts (profile_id)",
@@ -126,9 +142,26 @@ def _parse(value: str | None) -> datetime | None:
 
 
 def ensure_tables() -> None:
+    """Create what is missing and widen what is old.
+
+    Safe on an empty database and on one that already holds attempts. The
+    widening is the half that matters: an attempt written before receipts
+    existed keeps its row, its raw response and its usage, and reads as an
+    attempt with one unrecorded call -- which is what it is.
+    """
     with get_db_connection() as conn:
         conn.execute(_ATTEMPTS)
         conn.execute(_SLOT)
+        held = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(listicle_research_attempts)")
+        }
+        for column, definition in _ATTEMPT_COLUMNS:
+            if column not in held:
+                conn.execute(
+                    f"ALTER TABLE listicle_research_attempts ADD COLUMN {column} "
+                    f"{definition}"
+                )
         for statement in _INDEXES:
             conn.execute(statement)
 
@@ -172,6 +205,16 @@ def _row_to_attempt(row) -> ResearchAttempt:
         model=row["model"],
         usage=json.loads(row["usage"] or "{}"),
         duration_seconds=row["duration_seconds"],
+        brief=json.loads(row["brief"] or "{}"),
+        strategy_version=row["strategy_version"] or "",
+        receipts=[
+            CallReceipt(**receipt) for receipt in json.loads(row["receipts"] or "[]")
+        ],
+        pages=json.loads(row["pages"] or "[]"),
+        discovery=json.loads(row["discovery"] or "{}"),
+        evidence_summary=json.loads(row["evidence_summary"] or "{}"),
+        baseline_attempt_id=row["baseline_attempt_id"] or "",
+        pilot=row["pilot"] or "",
         owner_token=row["owner_token"],
         lease_until=row["lease_until"] or "",
         started_by=row["started_by"],
@@ -211,6 +254,23 @@ def _values(attempt: ResearchAttempt) -> tuple:
         attempt.model,
         json.dumps(attempt.usage, ensure_ascii=False),
         attempt.duration_seconds,
+        json.dumps(attempt.brief, ensure_ascii=False, sort_keys=True),
+        attempt.strategy_version,
+        json.dumps(
+            [
+                {
+                    **receipt.model_dump(exclude={"started_at"}),
+                    "started_at": _iso(receipt.started_at),
+                }
+                for receipt in attempt.receipts
+            ],
+            ensure_ascii=False,
+        ),
+        json.dumps(attempt.pages, ensure_ascii=False),
+        json.dumps(attempt.discovery, ensure_ascii=False),
+        json.dumps(attempt.evidence_summary, ensure_ascii=False),
+        attempt.baseline_attempt_id,
+        attempt.pilot,
         attempt.owner_token,
         attempt.lease_until,
         attempt.started_by,
@@ -225,6 +285,8 @@ _COLUMNS = (
     "prompt, prompt_version, requested_queries, actual_queries, raw_response, "
     "validation_issues, coverage, open_questions, findings_added, "
     "findings_seen, sources_added, model, usage, duration_seconds, "
+    "brief, strategy_version, receipts, pages, discovery, evidence_summary, "
+    "baseline_attempt_id, pilot, "
     "owner_token, lease_until, started_by, started_at, finished_at"
 )
 
@@ -321,7 +383,7 @@ def reserve(attempt: ResearchAttempt) -> ResearchAttempt:
             raise SlotTaken(_row_to_attempt(holder))
         conn.execute(
             f"INSERT INTO listicle_research_attempts ({_COLUMNS}) VALUES "
-            f"({', '.join(['?'] * 32)})",
+            f"({', '.join(['?'] * len(_COLUMNS.split(', ')))})",
             _values(prepared),
         )
         conn.execute(
@@ -370,6 +432,9 @@ def finish(attempt: ResearchAttempt) -> ResearchAttempt:
             "open_questions = ?, findings_added = ?, findings_seen = ?, "
             "sources_added = ?, model = ?, usage = ?, duration_seconds = ?, "
             "actual_queries = ?, requested_queries = ?, prompt = ?, "
+            "brief = ?, strategy_version = ?, receipts = ?, pages = ?, "
+            "discovery = ?, evidence_summary = ?, baseline_attempt_id = ?, "
+            "pilot = ?, "
             "lease_until = '', finished_at = ? WHERE attempt_id = ?",
             (
                 finished.state,
@@ -388,6 +453,14 @@ def finish(attempt: ResearchAttempt) -> ResearchAttempt:
                 values[16],
                 values[15],
                 finished.prompt,
+                values[27],
+                values[28],
+                values[29],
+                values[30],
+                values[31],
+                values[32],
+                values[33],
+                values[34],
                 _iso(finished.finished_at),
                 finished.attempt_id,
             ),

@@ -1,0 +1,530 @@
+"""What the checks catch, each one written from a mistake that was really made.
+
+Every case below is taken from the five preserved research attempts of run
+`efd5a7cd` — the baseline this design is measured against. Those attempts
+produced thirteen findings, all of them stored as evidence, none of them
+checkable: every source was a `vertexaisearch.cloud.google.com` redirect that
+names no publisher and expires.
+
+These tests do not prove the new packets are true. They prove that the specific
+ways the old ones were wrong now fail in a way somebody can see.
+
+Nothing here reaches the web or a provider. The pages are strings.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+import pytest
+
+from app.features.listicle_pipeline import evidence, research_brief
+from app.features.listicle_pipeline.source_reader import PageRead
+
+
+def brief(**overrides) -> research_brief.ResearchBrief:
+    """BarBarian Bonilla 108, as the board actually holds it."""
+    base = dict(
+        name="BarBarian Bonilla 108",
+        aliases=["Barbarian"],
+        city="Lima Peru",
+        district="Miraflores",
+        address="C. Manuel Bonilla 108, Miraflores 15074, Peru",
+        place_id="ChIJyQz17hnIBZERQqURcd_PGNg",
+        article_title="Chicken Wings in Lima Peru",
+        topic="chicken-wings",
+        topic_label="chicken wings",
+        standard="Wings named specifically by somebody other than the place.",
+        exclusions="No delivery-only kitchens.",
+        mode="initial",
+        gap_text="",
+        discovery_leads=[],
+        held=[],
+        operator_links=[],
+    )
+    base.update(overrides)
+    return research_brief.build_brief(**base)
+
+
+def page(text: str, *, url: str = "https://press.test/a", **overrides) -> PageRead:
+    fields = dict(
+        requested_url=url,
+        final_url=url,
+        state="ok",
+        http_status=200,
+        text=text,
+        published_at="2025-04-02",
+        retrieved_at=datetime(2026, 9, 12, tzinfo=timezone.utc),
+    )
+    fields.update(overrides)
+    return PageRead(**fields)
+
+
+def claim(**overrides) -> dict:
+    body = {
+        "text": "Something concrete about the wings here.",
+        "kind": "other",
+        "categories": ["signature_offering"],
+        "about_subject": True,
+        "scope": "unknown",
+        "who_said_it": "unknown",
+        "channel": "unknown",
+        "temporal_type": "observation",
+        "support": [],
+    }
+    body.update(overrides)
+    return body
+
+
+# --------------------------------------------------------------------------
+# A passage that is not in the page it names
+# --------------------------------------------------------------------------
+
+
+def test_an_excerpt_that_is_not_in_its_page_is_not_evidence():
+    """The check the old parser could not make.
+
+    It validated that a citation pointed at an id the same reply had declared,
+    so a reply that invented a source and then cited it passed. Here the page
+    is real and held, and the quotation is simply not in it.
+    """
+    pages = [page("Las alitas se ahuman por cuatro horas y no son fritas.")]
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="The wings are smoked for four hours rather than fried.",
+                    support=[
+                        {"page_id": "p1", "excerpt": "se ahuman por cuatro horas"}
+                    ],
+                ),
+                claim(
+                    text="A critic called them the best in Lima.",
+                    support=[
+                        {"page_id": "p1", "excerpt": "las mejores alitas de Lima"}
+                    ],
+                ),
+            ]
+        },
+        brief=brief(),
+        pages=pages,
+    )
+    smoked, invented = packet.claims
+    assert smoked.validation == "evidence_ready"
+    assert invented.validation == "unsupported"
+    assert any("is not in that page" in note for note in invented.notes)
+
+
+def test_a_passage_matches_across_accents_and_whitespace():
+    """A Spanish page and a transcription of it disagree about accents
+    constantly, and a byte-equality check fails honest citations while a
+    fabricated one copied verbatim would pass."""
+    pages = [page("Las alitas anticucheras  se sirven\n con ají panca y rocoto.")]
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="The anticuchera wings come with ají panca and rocoto.",
+                    support=[
+                        {
+                            "page_id": "p1",
+                            "excerpt": "alitas anticucheras se sirven con aji panca y rocoto",
+                        }
+                    ],
+                )
+            ]
+        },
+        brief=brief(),
+        pages=pages,
+    )
+    assert packet.claims[0].validation == "evidence_ready"
+
+
+# --------------------------------------------------------------------------
+# One branch's price is not the brand's
+# --------------------------------------------------------------------------
+
+
+def test_a_price_from_another_branch_does_not_become_this_branchs():
+    """Verbatim from the baseline: "The BarBarian brand, including its Huancayo
+    branch, offers chicken wings with specific prices" was stored as evidence on
+    the Bonilla 108 profile."""
+    huancayo = page(
+        "BarBarian Huancayo, Jr. Puno 599. Alitas 8 piezas S/ 19.00.",
+        url="https://aggregator.test/huancayo",
+    )
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="Eight wings cost S/ 19.00 at this bar.",
+                    kind="price",
+                    categories=["value_portions"],
+                    scope="branch",
+                    channel="dine_in",
+                    support=[{"page_id": "p1", "excerpt": "Alitas 8 piezas S/ 19.00"}],
+                )
+            ]
+        },
+        brief=brief(),
+        pages=[huancayo],
+    )
+    priced = packet.claims[0]
+    assert priced.scope == "unknown"
+    assert priced.validation == "review_needed"
+    assert any("does not" in note or "no page" in note for note in priced.notes)
+    # It is not deleted. The claim may well be true of that branch, and saying
+    # so is more useful than losing it.
+    assert priced.text.startswith("Eight wings")
+
+
+def test_a_page_carrying_this_branchs_address_supports_a_branch_claim():
+    here = page(
+        "BarBarian, C. Manuel Bonilla 108, Miraflores. Alitas picantes S/ 28.00 "
+        "en el local.",
+        url="https://press.test/bonilla",
+    )
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="Spicy wings cost S/ 28.00 at the Bonilla 108 bar.",
+                    kind="price",
+                    categories=["value_portions"],
+                    scope="branch",
+                    channel="dine_in",
+                    support=[
+                        {"page_id": "p1", "excerpt": "Alitas picantes S/ 28.00 en el local"}
+                    ],
+                )
+            ]
+        },
+        brief=brief(),
+        pages=[here],
+    )
+    assert packet.claims[0].scope == "branch"
+    assert packet.claims[0].validation == "evidence_ready"
+
+
+def test_a_price_with_no_channel_is_flagged_rather_than_stored_as_the_price():
+    """The baseline held S/ 25.00 from a menu and S/ 29.50 from Rappi for the
+    same portion and could not say which was which."""
+    listing = page(
+        "C. Manuel Bonilla 108, Miraflores. Alitas 6 piezas S/ 29.50.",
+        url="https://delivery.test/barbarian",
+    )
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="Six wings cost S/ 29.50.",
+                    kind="price",
+                    categories=["value_portions"],
+                    scope="branch",
+                    support=[{"page_id": "p1", "excerpt": "Alitas 6 piezas S/ 29.50"}],
+                )
+            ]
+        },
+        brief=brief(),
+        pages=[listing],
+    )
+    assert packet.claims[0].validation == "review_needed"
+    assert any("channel" in note for note in packet.claims[0].notes)
+
+
+# --------------------------------------------------------------------------
+# Keywords are not testimony
+# --------------------------------------------------------------------------
+
+
+def test_an_aggregators_keyword_blob_is_not_a_customer_review():
+    """Verbatim from the baseline: "Customers have positively noted the 'ricas
+    alitas'" — sourced to a Restaurant Guru keyword cloud."""
+    guru = page(
+        "C. Manuel Bonilla 108, Miraflores. ricas alitas · buena cerveza · "
+        "ambiente agradable · buen servicio",
+        url="https://guru.test/barbarian",
+    )
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="Customers have positively noted the ricas alitas.",
+                    kind="review",
+                    categories=["customer_observations"],
+                    scope="branch",
+                    who_said_it="aggregator",
+                    support=[{"page_id": "p1", "excerpt": "ricas alitas"}],
+                )
+            ]
+        },
+        brief=brief(),
+        pages=[guru],
+    )
+    assert packet.claims[0].validation == "review_needed"
+    assert any("not testimony" in note for note in packet.claims[0].notes)
+
+
+def test_a_named_reviewer_with_a_date_survives_the_same_check():
+    review = page(
+        "C. Manuel Bonilla 108, Miraflores. Carlos Ruiz, 12 de abril de 2025: "
+        "las alitas picantes valen el viaje.",
+        url="https://press.test/ruiz",
+    )
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="Carlos Ruiz wrote in April 2025 that the spicy wings "
+                    "are worth the trip.",
+                    kind="review",
+                    categories=["customer_observations"],
+                    scope="branch",
+                    who_said_it="named_reviewer",
+                    who_name="Carlos Ruiz",
+                    event_date="2025-04-12",
+                    support=[
+                        {
+                            "page_id": "p1",
+                            "excerpt": "las alitas picantes valen el viaje",
+                        }
+                    ],
+                )
+            ]
+        },
+        brief=brief(),
+        pages=[review],
+    )
+    assert packet.claims[0].validation == "evidence_ready"
+    assert packet.claims[0].who_name == "Carlos Ruiz"
+
+
+# --------------------------------------------------------------------------
+# Dates, and what a date is allowed to establish
+# --------------------------------------------------------------------------
+
+
+def test_a_source_date_comes_off_the_page_and_never_off_the_claim():
+    """McCarthy's baseline rested a current-menu claim partly on a 2020 opening
+    article and a Paraguayan piece from the same year."""
+    launch = page(
+        "C. 2 de Mayo 220, Miraflores. McCarthy's abre en Miraflores.",
+        url="https://peru-retail.test/mccarthys",
+        published_at="2020-12-28",
+    )
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="The pub opened in Miraflores in 2020.",
+                    kind="history",
+                    categories=["history"],
+                    scope="branch",
+                    temporal_type="historical",
+                    event_date="2026-01-01",
+                    support=[
+                        {"page_id": "p1", "excerpt": "abre en Miraflores"}
+                    ],
+                )
+            ]
+        },
+        brief=brief(
+            name="McCarthy's Irish Pub",
+            aliases=[],
+            address="C. 2 de Mayo 220, Miraflores 15074, Peru",
+        ),
+        pages=[launch],
+    )
+    # The page's own date, not anything the reply asserted about it.
+    assert packet.claims[0].source_published_at == "2020-12-28"
+
+
+def test_an_unsupported_claim_carries_no_date_at_all():
+    """A date is the strongest currency signal a finding has, and one attached
+    to a sentence nothing supports is exactly the shape of an unsupported
+    claim about what is on the menu now."""
+    menu = page("C. Manuel Bonilla 108, Miraflores. Carta 2026.")
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="The smoked wings are on the current menu.",
+                    temporal_type="current_offering",
+                    support=[
+                        {"page_id": "p1", "excerpt": "alitas ahumadas en carta"}
+                    ],
+                )
+            ]
+        },
+        brief=brief(),
+        pages=[menu],
+    )
+    assert packet.claims[0].validation == "unsupported"
+    assert packet.claims[0].source_published_at == ""
+
+
+# --------------------------------------------------------------------------
+# Identity is settled by the address, not by the title
+# --------------------------------------------------------------------------
+
+
+def test_a_page_whose_title_names_another_district_is_not_rejected_on_the_title():
+    """McCarthy's Rappi listing is titled Surquillo and carries the Miraflores
+    address. Rejecting it on the title would have lost the menu."""
+    rappi = page(
+        "McCarthy's Surquillo — Delivery. Dirección: C. 2 de Mayo 220, "
+        "Miraflores. Alitas con 13 salsas.",
+        url="https://rappi.test/mccarthys",
+    )
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="The pub offers wings with thirteen sauces.",
+                    kind="signature",
+                    categories=["signature_offering"],
+                    scope="branch",
+                    scope_basis="the page carries C. 2 de Mayo 220, Miraflores",
+                    who_said_it="aggregator",
+                    support=[
+                        {"page_id": "p1", "excerpt": "Alitas con 13 salsas"}
+                    ],
+                )
+            ]
+        },
+        brief=brief(
+            name="McCarthy's Irish Pub",
+            aliases=[],
+            address="C. 2 de Mayo 220, Miraflores 15074, Peru",
+        ),
+        pages=[rappi],
+    )
+    assert packet.claims[0].scope == "branch"
+    assert packet.claims[0].validation == "evidence_ready"
+
+
+# --------------------------------------------------------------------------
+# What counts as coverage of the subject
+# --------------------------------------------------------------------------
+
+
+def test_a_setting_fact_is_kept_and_does_not_count_as_subject_coverage():
+    """Collecting the room is useful. Counting it as evidence about the wings
+    is how a packet reports coverage it does not have — the baseline filed a
+    "brewpub, gastropub and restaurant in the district" line under wings."""
+    about = page(
+        "C. Manuel Bonilla 108, Miraflores. Un brewpub de dos pisos con terraza."
+    )
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="It is a two-storey brewpub with a terrace.",
+                    kind="setting",
+                    categories=["setting"],
+                    about_subject=False,
+                    scope="branch",
+                    who_said_it="business",
+                    support=[
+                        {"page_id": "p1", "excerpt": "brewpub de dos pisos con terraza"}
+                    ],
+                )
+            ]
+        },
+        brief=brief(),
+        pages=[about],
+    )
+    setting = packet.claims[0]
+    assert setting.validation == "evidence_ready"
+    summary = evidence.derived_coverage(packet, brief=brief(), pages=[about])
+    # Kept, and worth nothing to the wings list's coverage.
+    assert summary["evidence_ready_total"] == 1
+    assert summary["subject_evidence_ready"] == 0
+
+
+def test_coverage_separates_what_was_said_by_the_business_from_everybody_else():
+    """The list's standard asks for somebody other than the place itself, so a
+    packet that cannot count the difference cannot say whether it met it."""
+    menu = page(
+        "C. Manuel Bonilla 108, Miraflores. Nuestras alitas picantes, seis "
+        "piezas. Carlos Ruiz: valen el viaje.",
+    )
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="Spicy wings are a regular six-piece menu item.",
+                    who_said_it="business",
+                    scope="branch",
+                    support=[
+                        {"page_id": "p1", "excerpt": "alitas picantes, seis piezas"}
+                    ],
+                ),
+                claim(
+                    text="Carlos Ruiz wrote that they are worth the trip.",
+                    who_said_it="named_reviewer",
+                    who_name="Carlos Ruiz",
+                    scope="branch",
+                    categories=["customer_observations"],
+                    support=[{"page_id": "p1", "excerpt": "valen el viaje"}],
+                ),
+            ]
+        },
+        brief=brief(),
+        pages=[menu],
+    )
+    summary = evidence.derived_coverage(packet, brief=brief(), pages=[menu])
+    assert summary["subject_evidence_ready"] == 2
+    assert summary["attributable_opinion"] == 1
+    assert summary["business_only"] == 1
+
+
+def test_a_page_that_could_not_be_read_is_counted_as_a_gap_not_an_absence():
+    readable = page("C. Manuel Bonilla 108, Miraflores. Alitas picantes.")
+    blocked = PageRead(
+        requested_url="https://paywalled.test/summum",
+        final_url="https://paywalled.test/summum",
+        state="blocked",
+        http_status=403,
+        note="The page answered 403.",
+    )
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="Spicy wings are on the menu here.",
+                    scope="branch",
+                    support=[{"page_id": "p1", "excerpt": "Alitas picantes"}],
+                )
+            ]
+        },
+        brief=brief(),
+        pages=[readable, blocked],
+    )
+    summary = evidence.derived_coverage(
+        packet, brief=brief(), pages=[readable, blocked]
+    )
+    assert summary["pages_read"] == 1
+    assert summary["pages_attempted"] == 2
+    assert summary["pages_unreachable"] == [
+        {"url": "https://paywalled.test/summum", "state": "blocked"}
+    ]
+
+
+# --------------------------------------------------------------------------
+# Failures that are the extraction's own
+# --------------------------------------------------------------------------
+
+
+def test_a_reply_that_is_not_the_object_asked_for_is_its_own_failure():
+    with pytest.raises(evidence.ExtractionInvalid) as raised:
+        evidence.check("The", brief=brief(), pages=[page("anything")])
+    assert "stopped after 3 characters" in str(raised.value)
+
+
+def test_a_truncated_extraction_says_where_the_json_stops():
+    cut = '```json\n{"claims": [{"text": "La Casa de las Alitas sirve once'
+    with pytest.raises(evidence.ExtractionInvalid) as raised:
+        evidence.check(cut, brief=brief(), pages=[page("anything")])
+    assert "not JSON" in str(raised.value)
+    assert "column 1" not in str(raised.value)

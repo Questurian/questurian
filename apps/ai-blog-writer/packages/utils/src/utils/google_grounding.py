@@ -56,6 +56,24 @@ class GroundedGenerationResult:
     # this is the only evidence about what was really run. Empty means the
     # response did not say, which is not the same as "it searched nothing".
     search_queries: list[str] = field(default_factory=list)
+    # Why the model stopped: `STOP` for a finished answer, `MAX_TOKENS` for one
+    # cut off at the ceiling. The two are indistinguishable from the text alone
+    # -- a truncated JSON object and a model that wrote three characters both
+    # arrive as "this is not the shape asked for" -- and one real call spent
+    # 2,423 thinking tokens and returned one output token with nobody able to
+    # say why. Empty means the response did not carry one.
+    finish_reason: str = ""
+
+
+def _finish_reason(response: Any) -> str:
+    if not isinstance(response, dict):
+        return ""
+    for candidate in response.get("candidates") or []:
+        if isinstance(candidate, dict):
+            reason = candidate.get("finishReason") or candidate.get("finish_reason")
+            if isinstance(reason, str) and reason:
+                return reason
+    return ""
 
 
 def _usage_counts(response: Any) -> tuple[int | None, int | None, int | None]:
@@ -427,6 +445,7 @@ def invoke_google_grounded_text(
         source_urls=extract_grounded_urls_from_response(response),
         source_titles=extract_grounded_source_titles(response),
         search_queries=extract_grounded_search_queries(response),
+        finish_reason=_finish_reason(response),
         model_name=response.get("modelVersion", effective_model_name),
         input_tokens=input_tokens,
         output_tokens=output_tokens,

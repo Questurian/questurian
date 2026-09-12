@@ -160,7 +160,13 @@ def structured(
         )
         observed.set_model(result.model_name)
         observed.set_provider(_provider_for(result.model_name))
-        observed.record_usage(result.usage)
+        if result.usage:
+            observed.record_usage(result.usage)
+        else:
+            # Recorded as unknown rather than as zero. Every forced-tool call
+            # in this repo reported a duration and no tokens, because the
+            # helper chain dropped the counts before they reached here.
+            observed.add_metadata(usageUnreported=True)
     return result
 
 

@@ -156,8 +156,16 @@ def _invoke_gemini_structured_tool(
     input_schema: dict[str, Any],
     max_tokens: int,
     project: Optional[str] = None,
+    usage_out: Optional[dict[str, Any]] = None,
 ) -> tuple[dict[str, Any], str]:
-    """Gemini equivalent of the Anthropic forced-tool call."""
+    """Gemini equivalent of the Anthropic forced-tool call.
+
+    ``usage_out``, when given, is filled with the token counts the response
+    carries. A dict the caller owns rather than a third element of the return,
+    because the two-tuple is the contract every caller of this chain is written
+    against -- and because the alternative, returning nothing, is what made
+    every forced-tool call in this repo report a duration with no tokens.
+    """
     resolved_project = _resolve_vertex_project(project)
     location = (
         GEMINI3_LOCATION
@@ -181,6 +189,13 @@ def _invoke_gemini_structured_tool(
         tool_choice=tool_name,
     )
     message = bound.invoke(prompt)
+    if usage_out is not None:
+        counts = getattr(message, 'usage_metadata', None)
+        if not isinstance(counts, dict):
+            metadata = getattr(message, 'response_metadata', None) or {}
+            counts = metadata.get('usage_metadata') or metadata.get('token_usage')
+        if isinstance(counts, dict):
+            usage_out.update(counts)
     for call in getattr(message, 'tool_calls', []) or []:
         if call.get('name') == tool_name and isinstance(call.get('args'), dict):
             return (call['args'], model_name)

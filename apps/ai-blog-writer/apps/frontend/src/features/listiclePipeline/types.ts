@@ -501,6 +501,54 @@ export type ListicleAttemptState =
   | 'response_invalid'
   | 'interrupted'
 
+/** One provider call inside one research action.
+ *
+ *  A list rather than a single model/usage pair on the attempt, because one
+ *  press makes up to two generations and both are charged. A card showing one
+ *  model name is a card showing half the bill. */
+export interface ListicleCallReceipt {
+  /** `discovery` or `extraction`. What the call was for, not who served it. */
+  stage: string
+  model: string
+  asked_for: string
+  grounded: boolean
+  /** `ok`, `failed`, `invalid` or `skipped`. A skipped call still has a
+   *  receipt, with its reason: "no extraction ran" and "extraction found
+   *  nothing" are different facts about a packet. */
+  outcome: string
+  reason: string
+  /** Why the provider stopped. Empty means it did not say, which is itself
+   *  worth seeing on a truncated answer. */
+  finish_reason: string
+  usage: Record<string, number>
+  duration_seconds: number | null
+}
+
+/** One page a research action tried to open. */
+export interface ListicleReadPage {
+  requested_url: string
+  /** Where the redirects ended — the publisher's own address, for a grounding
+   *  redirect. This is the link a citation should carry. */
+  final_url: string
+  /** `ok`, `blocked`, `not_found`, `unsupported_type`, `budget_exhausted`… An
+   *  unreadable page is an access gap, never evidence that nothing exists. */
+  state: string
+  http_status: number | null
+  title: string
+  /** What the page itself says it was published on. Never the day we read it. */
+  published_at: string
+  retrieved_at: string
+  content_hash: string
+  byte_count: number
+  origin: string
+  /** True when the text came from a page this attempt already held rather than
+   *  from a second fetch. A refresh must not present cached text as newly
+   *  checked. */
+  reused: boolean
+  note: string
+  chars: number
+}
+
 export interface ListicleAttemptSummary {
   attempt_id: string
   run_id: string
@@ -517,6 +565,19 @@ export interface ListicleAttemptSummary {
   finished_at: string
   model: string
   running: boolean
+  receipts: ListicleCallReceipt[]
+  /** Provider calls actually made. The ceiling is two. */
+  generations: number
+  grounded_calls: number
+  pages_read: number
+  pages_attempted: number
+  /** Claims about this list's subject that passed checking. Separate from
+   *  `state` on purpose: a request that ran is not a request that found
+   *  anything, and the screen this replaces showed one number for both. */
+  evidence_ready: number
+  strategy_version: string
+  pilot: string
+  baseline_attempt_id: string
 }
 
 export interface ListicleAttemptDetail extends ListicleAttemptSummary {
@@ -533,6 +594,57 @@ export interface ListicleAttemptDetail extends ListicleAttemptSummary {
   gap_text: string
   raw_response: string
   prompt: string
+  /** The request, worked out before anything was bought. Readable without
+   *  reading the prompt. */
+  brief: {
+    version?: string
+    intent?: string
+    priority_questions?: string[]
+    known_source_leads?: { url: string; origin: string; note: string }[]
+    illustrative_queries?: string[]
+    discovery_leads?: {
+      snippet: string
+      angle: string
+      attempt_id: string
+      status: string
+    }[]
+    scope_notes?: string[]
+    completion_criteria?: string[]
+    [key: string]: unknown
+  }
+  pages: ListicleReadPage[]
+  /** What the search said before anything was opened. A provider snippet is a
+   *  transcription, and it never becomes a citation. */
+  discovery: {
+    pages?: {
+      url: string
+      publisher: string
+      title: string
+      published_at: string
+      provider_snippet: string
+      scope: string
+      why: string
+    }[]
+    searched?: string[]
+    not_found?: string[]
+    notes?: string[]
+    issues?: string[]
+  }
+  /** Arithmetic over checked evidence, kept apart from how the search went. */
+  evidence_summary: {
+    subject_evidence_ready?: number
+    evidence_ready_total?: number
+    review_needed?: number
+    unsupported?: number
+    attributable_opinion?: number
+    business_only?: number
+    pages_read?: number
+    pages_attempted?: number
+    pages_unreachable?: { url: string; state: string }[]
+    unresolved_questions?: string[]
+    priority_questions?: string[]
+    by_category?: Record<string, number>
+  }
 }
 
 export interface ListicleResearchCard {
@@ -587,6 +699,24 @@ export interface ListicleFinding {
   curation: 'unreviewed' | 'kept' | 'discarded' | string
   origin: string
   version: number
+  /** What the checks made of it. `evidence_ready` means a person can open the
+   *  page and find the sentence — a lower bar than true, and the name says so.
+   *  `not_checked` is the honest answer for a typed finding and for anything
+   *  stored before checking existed. */
+  validation:
+    | 'evidence_ready'
+    | 'review_needed'
+    | 'unsupported'
+    | 'not_checked'
+    | string
+  /** Why it is not evidence-ready, in the words a person needs. */
+  validation_notes: string[]
+  /** Who is behind the claim. A menu is the business talking about itself. */
+  who_said_it: string
+  who_name: string
+  /** Which channel a price was seen on. A delivery price is not the price at
+   *  the table. */
+  channel: string
   /** `attributed` or `incomplete`. Derived from whether it actually has a
    *  source — never asserted, and never filled in from the search's own URL
    *  list. */

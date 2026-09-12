@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wings Research Retest</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root { --ink:#1c1a17; --muted:#6b6459; --paper:#F5F0E8; --card:#EFE9DE;
+         --accent:#3B5BDB; --warn:#8a3b2f; --good:#2f6b4f; --rule:#d9d1c4; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--paper); color:var(--ink);
+  font:16px/1.6 "Source Serif 4",ui-serif,Georgia,"Times New Roman",serif;
+  -webkit-font-smoothing:antialiased; }
+main { max-width:1180px; margin:0 auto; padding:2.5rem 1.5rem 5rem; }
+h1, h2 { font-family:"Fraunces",ui-serif,Georgia,serif; font-weight:600;
+  text-wrap:balance; }
+h1 { font-size:2.4rem; margin:0 0 .3rem; letter-spacing:-.015em; }
+h2 { font-size:1.55rem; margin:0 0 .2rem; border-bottom:3px double var(--rule);
+  padding-bottom:.4rem; }
+h3 { font-size:1.05rem; margin:0 0 .4rem; font-weight:600; }
+h4 { font-size:.85rem; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--muted); margin:1.4rem 0 .4rem; }
+code { font:.82em "IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace; }
+.marks span, .state, .l { font-family:"IBM Plex Mono",ui-monospace,monospace; }
+table, .n { font-variant-numeric:tabular-nums; }
+a:focus-visible, summary:focus-visible { outline:2px solid var(--accent);
+  outline-offset:2px; }
+.muted, .l { color:var(--muted); font-size:.85rem; }
+.lede { max-width:62ch; }
+.place { margin:3rem 0; }
+.numbers { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:.75rem; margin:1.2rem 0 1.6rem; }
+.numbers div { background:var(--card); padding:.7rem .8rem; }
+.n { display:block; font-size:1.15rem; font-weight:600;
+  font-family:"IBM Plex Mono",ui-monospace,monospace; }
+.split { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+@media (max-width:860px) { .split { grid-template-columns:1fr; } }
+.col { background:var(--card); padding:1rem 1.1rem; }
+.finding { border-top:1px solid var(--rule); padding:.7rem 0; }
+.claim { margin:0 0 .35rem; }
+.marks span { display:inline-block; font-size:.72rem; text-transform:uppercase;
+  letter-spacing:.06em; padding:.1rem .45rem; margin-right:.3rem;
+  border:1px solid var(--rule); }
+.v-evidence_ready { color:var(--good); border-color:var(--good); }
+.v-review_needed { color:var(--warn); border-color:var(--warn); }
+.v-unsupported { color:var(--warn); border-color:var(--warn); font-weight:600; }
+.v-not_checked { color:var(--muted); }
+.cites { list-style:none; padding:0; margin:.4rem 0 0; font-size:.88rem; }
+.cites li { margin:.3rem 0; }
+blockquote { margin:.25rem 0 .25rem .8rem; padding-left:.7rem;
+  border-left:2px solid var(--accent); color:var(--muted); font-size:.88rem; }
+.dead { color:var(--warn); }
+.flags, .pages, .receipts { font-size:.85rem; padding-left:1.1rem; margin:.3rem 0; }
+.flag { color:var(--warn); }
+.none { color:var(--muted); font-style:italic; }
+.state { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; }
+.s-ok { color:var(--good); }
+.s-blocked, .s-not_found, .s-error, .s-timeout, .s-unsupported_type,
+.s-budget_exhausted, .s-empty { color:var(--warn); }
+a { color:var(--accent); }
+table { border-collapse:collapse; width:100%; margin:1rem 0; font-size:.9rem; }
+th, td { text-align:left; padding:.4rem .6rem; border-bottom:1px solid var(--rule); }
+</style></head><body><main>
+<h1>Listicle research: before and after</h1>
+<p class="muted">Run <code>efd5a7cd</code> · pilot <code>three-place-2026-09-12</code> ·
+   generated 2026-09-12 15:06 UTC</p>
+<p class="lede">Three places, researched once under ADR 0039 and once under
+ADR 0040. The left column is what was stored before: one grounded call, nothing
+opened, nothing checked. The right column is what the same place returns when
+the pages are fetched, the passages are matched in code, and every call writes
+a receipt.</p>
+
+<table>
+<tr><th></th><th>Baseline (ADR 0039)</th><th>Retest (ADR 0040)</th></tr>
+<tr><td>Model calls</td><td>3</td><td>6</td></tr>
+<tr><td>Grounded searches</td><td>3</td><td>3</td></tr>
+<tr><td>Pages opened</td><td>0</td><td>10 read of 22 tried</td></tr>
+<tr><td>Findings in the packets</td><td>13</td><td>19</td></tr>
+<tr><td>Passed a passage check</td><td>0 — nothing could be checked</td><td>17</td></tr>
+<tr><td>Citations to an address that resolves</td><td>0</td><td>22</td></tr>
+<tr><td>Tokens</td><td>27,694</td><td>56,663</td></tr>
+</table>
+
+<section class="place">
+  <h2>BarBarian</h2>
+  <p class="muted">candidate <code>d05c45396385af68</code> ·
+     profile <code>2a8808edaefc</code></p>
+
+  <div class="numbers">
+    <div><span class="n">4 → 0</span>
+         <span class="l">findings in the packet</span></div>
+    <div><span class="n">0 → 0</span>
+         <span class="l">passed a passage check</span></div>
+    <div><span class="n">0 → 0</span>
+         <span class="l">citations to an address that resolves</span></div>
+    <div><span class="n">1 → 2</span>
+         <span class="l">model calls</span></div>
+    <div><span class="n">11,069 → 15,310</span>
+         <span class="l">tokens</span></div>
+    <div><span class="n">45s → 69s</span>
+         <span class="l">elapsed</span></div>
+  </div>
+
+  <div class="split">
+    <div class="col">
+      <h3>Baseline <code>907653bef0e4</code></h3>
+      <p class="muted">place-research/1 ·
+         gemini-2.5-flash ·
+         one grounded call, nothing read, nothing checked</p>
+      <article class='finding'><p class='claim'>The BarBarian brand, including its Huancayo branch, offers chicken wings with specific pricing, such as 24 chicken wings for S/ 89.00 and 24 boneless wings for S/ 37.00.</p><p class='marks'><span class='v v-not_checked'>never checked</span><span class='scope'>brand</span></p><ul class='cites'><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published date unknown</span><blockquote>24 alitas de pollo acompañadas de apio y salsa para dip. S/ 89.00. ... 24 Und. Boneless 250 G. Porción de 24 alitas de pollo con salsa. Incluye aderezo y bastones de zanahoria y apio. S/ 37.00.</blockquote></li></ul></article><article class='finding'><p class='claim'>BarBarian Bonilla 108 is described as a brewpub, gastropub, and restaurant located in the heart of Miraflores, offering a cozy atmosphere and good service.</p><p class='marks'><span class='v v-not_checked'>never checked</span><span class='scope'>branch</span></p><ul class='cites'><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published 2026-08-09</span><blockquote>This brewpub, gastropub y restaurante ofrece una amplia variedad de cervezas artesanales y platos deliciosos que harán las delicias de cualquier paladar exigente. ... Con su ambiente acogedor y su personal amable y servicial, este lugar es perfecto para cualquier ocasión, ya sea una cena romántica, una reunión de negocios o una noche de fiesta con amigos. ... You will enjoy the cute decor. This spot scored 4.4 in the Google rating system.</blockquote></li><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published 2023-09-29</span><blockquote>This brewpub, gastropub y restaurante ofrece una amplia variedad de cervezas artesanales y platos deliciosos que harán las delicias de cualquier paladar exigente. ... Con su ambiente acogedor y su personal amable y servicial, este lugar es perfecto para cualquier ocasión, ya sea una cena romántica, una reunión de negocios o una noche de fiesta con amigos. ... You will enjoy the cute decor. This spot scored 4.4 in the Google rating system.</blockquote></li></ul></article><article class='finding'><p class='claim'>BarBarian Bonilla 108 offers &#x27;alitas picantes&#x27; (spicy wings) as a menu item, which are frequently mentioned in customer reviews.</p><p class='marks'><span class='v v-not_checked'>never checked</span><span class='scope'>branch</span></p><ul class='cites'><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published 2026-08-09</span><blockquote>alitas Picantes. craft beers. the bartender. manage. PEN 80. we asked. expensive. night. again. See allLess. Ratings of BarBarian Bonilla 108. Foursquare. (8.9/10). 313 · Google. (4.4/5). 4934 · Yandex. (4.3/5). 1. Trip. (4.4/5). 273. Facebook. (4.6/5). 1396. Visitors&#x27; reviews on BarBarian Bonilla 108. / 758. Search visitors&#x27; reviews.</blockquote></li></ul></article><article class='finding'><p class='claim'>The prices at BarBarian Bonilla 108 are generally considered reasonable by visitors, with reported costs per person ranging from PEN 20-40 or PEN 40-60.</p><p class='marks'><span class='v v-not_checked'>never checked</span><span class='scope'>branch</span></p><ul class='cites'><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published 2026-08-09</span><blockquote>Prices at this place are worth attention as they&#x27;re reasonable. You will enjoy the cute decor. This spot scored 4.4 in the Google rating system. Read moreHide. Best in the city. ... Price per person: PEN 20–40. cesar malpica Request content removal. cesar malpica a month ago on Google. stars. Price per person: PEN 40–60.</blockquote></li></ul></article>
+      
+    </div>
+    <div class="col">
+      <h3>Retest <code>1bf1f3bba036</code></h3>
+      <p class="muted">place-research/3+research-brief/1+evidence-extract/1
+         · completed_empty</p>
+      <p class='none'>Nothing.</p>
+      <h4>Calls</h4><ul class='receipts'><li><b>discovery</b> · ok · gemini-2.5-flash · 10193 tokens · 42.97s · stopped STOP<br><span class='muted'>4 page(s) named, 11 search(es) reported.</span></li><li><b>extraction</b> · ok · gemini-2.5-pro · 5117 tokens · 23.4s<br><span class='muted'>0 claim(s) from 1 readable page(s).</span></li></ul>
+      <h4>Pages opened</h4><ul class='pages'><li><span class='state s-blocked'>blocked</span> <a href='https://www.pedidosya.com.pe/restaurantes/lima/barbarian-miraflores-menu'>https://www.pedidosya.com.pe/restaurantes/lima/barbarian-miraflores-menu</a> <span class='muted'>· published date unknown · The page answered 403.</span></li><li><span class='state s-ok'>ok</span> <a href='https://www.rappi.com.pe/restaurantes'>https://www.rappi.com.pe/restaurantes</a> <span class='muted'>· published date unknown</span></li><li><span class='state s-not_found'>not_found</span> <a href='https://restaurantguru.com/BarBarian-Miraflores-Lima/menu'>https://restaurantguru.com/BarBarian-Miraflores-Lima/menu</a> <span class='muted'>· published date unknown · The page answered 404.</span></li><li><span class='state s-refused_address'>refused_address</span> <a href='https://www.barbarian.com.pe/'>https://www.barbarian.com.pe/</a> <span class='muted'>· published date unknown · www.barbarian.com.pe does not resolve to a public address; refused at this hop.</span></li></ul>
+      <h4>Still unanswered</h4><ul class='flags'><li>Is Chicken Wings a regular, current item here -- on the menu now, not a one-off special or an old listing?</li><li>What is distinctive about how Chicken Wings is done here: the preparation, the sauces, the flavours, the portion?</li><li>Has any identifiable person -- a named reviewer, a dated customer review, a local food writer -- said something specific about Chicken Wings here?</li><li>What does Chicken Wings cost, on which channel, and as of when?</li></ul>
+    </div>
+  </div>
+</section>
+<section class="place">
+  <h2>La Casa de las Alitas</h2>
+  <p class="muted">candidate <code>5edd7337a45c53c2</code> ·
+     profile <code>018c7cd7f650</code></p>
+
+  <div class="numbers">
+    <div><span class="n">4 → 8</span>
+         <span class="l">findings in the packet</span></div>
+    <div><span class="n">0 → 6</span>
+         <span class="l">passed a passage check</span></div>
+    <div><span class="n">0 → 11</span>
+         <span class="l">citations to an address that resolves</span></div>
+    <div><span class="n">1 → 2</span>
+         <span class="l">model calls</span></div>
+    <div><span class="n">10,176 → 24,578</span>
+         <span class="l">tokens</span></div>
+    <div><span class="n">41s → 100s</span>
+         <span class="l">elapsed</span></div>
+  </div>
+
+  <div class="split">
+    <div class="col">
+      <h3>Baseline <code>2c365b9a32d2</code></h3>
+      <p class="muted">place-research/2 ·
+         gemini-2.5-flash ·
+         one grounded call, nothing read, nothing checked</p>
+      <article class='finding'><p class='claim'>La Casa de las Alitas en Los Olivos ofrece una variedad de sabores de alitas, incluyendo las &#x27;Alitas Anticucheras&#x27;, &#x27;BBQ&#x27;, &#x27;Buffalo Macho&#x27;, &#x27;Mango Habanero&#x27;, &#x27;Nikkei&#x27;, &#x27;Acevichada&#x27;, y &#x27;La Selvatica&#x27;, entre otras.</p><p class='marks'><span class='v v-not_checked'>never checked</span><span class='scope'>branch</span></p><ul class='cites'><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published date unknown</span><blockquote>Nuestras Alitas. ACEVICHADA. S/25.00. AHUMADA. S/25.00. ANTICUCHERA. S/25.00. BBQ. S/25.00. BBQ HOT. S/25.00. BBQ MARACUYA. S/25.00. BUFFALO MACHO. S/25.00. HONEY MUSTARD. S/25.00. LA SELVATICA. S/25.00. MANGO HABANERO. S/25.00. NIKKEI. S/25.00. SALSA DE AJO. S/25.00. / Alitas Anticucheras. 6 Alitas ahumadas salteadas en una salsa anticuchera artesanal acompañadas de papas fritas crujientes y ensalada especial de la casa. S/ 29.50.</blockquote></li><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published date unknown</span><blockquote>Nuestras Alitas. ACEVICHADA. S/25.00. AHUMADA. S/25.00. ANTICUCHERA. S/25.00. BBQ. S/25.00. BBQ HOT. S/25.00. BBQ MARACUYA. S/25.00. BUFFALO MACHO. S/25.00. HONEY MUSTARD. S/25.00. LA SELVATICA. S/25.00. MANGO HABANERO. S/25.00. NIKKEI. S/25.00. SALSA DE AJO. S/25.00. / Alitas Anticucheras. 6 Alitas ahumadas salteadas en una salsa anticuchera artesanal acompañadas de papas fritas crujientes y ensalada especial de la casa. S/ 29.50.</blockquote></li></ul></article><article class='finding'><p class='claim'>Clientes han reportado que el lugar ofrece un ambiente agradable para pasar con amigos y familia, destacando la variedad de sabores en alitas y la buena atención.</p><p class='marks'><span class='v v-not_checked'>never checked</span><span class='scope'>branch</span></p><ul class='cites'><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published 2026-06-20</span><blockquote>Un ambiente agradable para pasar con amigos y familia. Variedad de sabores en alitas y la atención muy buena. Lo recomienda. / Excelente atención, la comida es bastante sabrosa , tienen mucha variedad en alitas... El ambiente complementa perfecto para una cena agradable en pareja, con amigos y familia, la música con un volumen ideal.</blockquote></li></ul></article><article class='finding'><p class='claim'>Las alitas de La Casa de las Alitas son ahumadas por cuatro horas y no son fritas, destacando que se preparan sin aceite.</p><p class='marks'><span class='v v-not_checked'>never checked</span><span class='scope'>branch</span></p><ul class='cites'><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published 2025-04-11</span><blockquote>Las únicas alitas AHUMADAS de Los Olivos y Comas 4 horas de humo, cero frituras. / Sin aceite. Sin fritura. Solo humo y sazón.</blockquote></li><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published 2024-08-15</span><blockquote>Las únicas alitas AHUMADAS de Los Olivos y Comas 4 horas de humo, cero frituras. / Sin aceite. Sin fritura. Solo humo y sazón.</blockquote></li></ul></article><article class='finding'><p class='claim'>El plato de 6 alitas ahumadas, incluyendo las &#x27;Alitas Anticucheras&#x27;, se ofrece a S/ 25.00 según su carta en línea, y a S/ 29.50 en plataformas de delivery como Rappi, y viene acompañado de papas fritas crujientes y ensalada especial de la casa.</p><p class='marks'><span class='v v-not_checked'>never checked</span><span class='scope'>branch</span></p><ul class='cites'><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published date unknown</span><blockquote>Nuestras Alitas. ACEVICHADA. S/25.00. AHUMADA. S/25.00. ANTICUCHERA. S/25.00. BBQ. S/25.00. / Alitas Anticucheras. 6 Alitas ahumadas salteadas en una salsa anticuchera artesanal acompañadas de papas fritas crujientes y ensalada especial de la casa. S/ 29.50.</blockquote></li><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published date unknown</span><blockquote>Nuestras Alitas. ACEVICHADA. S/25.00. AHUMADA. S/25.00. ANTICUCHERA. S/25.00. BBQ. S/25.00. / Alitas Anticucheras. 6 Alitas ahumadas salteadas en una salsa anticuchera artesanal acompañadas de papas fritas crujientes y ensalada especial de la casa. S/ 29.50.</blockquote></li></ul></article>
+      <h4>Also spent, and returned nothing readable</h4><ul class='flags'><li><code>5e5f800084a0</code> — The answer was not the shape this pipeline asked for: The reply was not JSON: Expecting value: line 1 column 1 (char 0) It is kept as it arrived; nothing was read out of it. <span class='muted'>(3843 output tokens spent)</span></li></ul>
+    </div>
+    <div class="col">
+      <h3>Retest <code>f5339abdc2f7</code></h3>
+      <p class="muted">place-research/3+research-brief/1+evidence-extract/1
+         · completed</p>
+      <article class='finding'><p class='claim'>The menu lists 12 flavours of chicken wings: Acevichada, Ahumada, Anticuchera, BBQ, BBQ Hot, BBQ Maracuya, Buffalo Macho, Honey Mustard, La Selvatica, Mango Habanero, Nikkei, and Salsa de Ajo.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>brand</span><span class='who'>business</span></p><ul class='cites'><li><a href='https://lacasadelasalitas.com/'>lacasadelasalitas.com</a> <span class='muted'>· published 2026-06-13</span><blockquote>Nuestras Alitas ACEVICHADA S/ 25.00 AHUMADA S/ 25.00 ANTICUCHERA S/ 25.00 BBQ S/ 25.00 BBQ HOT S/ 25.00 BBQ MARACUYA S/ 25.00 BUFFALO MACHO S/ 25.00 HONEY MUSTARD S/ 25.00 LA SELVATICA S/ 25.00 MANGO HABANERO S/ 25.00 NIKKEI S/ 25.00 SALSA DE AJO S/ 25.00</blockquote></li></ul></article><article class='finding'><p class='claim'>The wings are smoked.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>brand</span><span class='who'>business</span></p><ul class='cites'><li><a href='https://lacasadelasalitas.com/producto/alita-bbq-hot/'>lacasadelasalitas.com</a> <span class='muted'>· published 2026-06-13</span><blockquote>- 6 piezas de alitas ahumadas bañadas en deliciosa salsa BBQ Picante</blockquote></li></ul></article><article class='finding'><p class='claim'>The restaurant offers delivery via Rappi.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>branch</span><span class='who'>aggregator</span></p><ul class='cites'><li><a href='https://www.rappi.com.pe/restaurantes/23605-la-casa-de-las-alitas'>Facebook</a> <span class='muted'>· published 2025-04-11</span><blockquote>La Casa De Las Alitas - Aa.Hh. Los Jazmines del Naranjal Menú Delivery</blockquote></li><li><a href='https://www.rappi.com.pe/lima/restaurantes/delivery/20876-la-casa-de-las-alitas'>Rappi</a> <span class='muted'>· published date unknown</span><blockquote>Anímate a probar nuestra oferta del día La Casa De Las Alitas y recibe tu pedido de comida usando Rappi.</blockquote></li><li><a href='https://www.rappi.com.pe/restaurantes/delivery/20876-la-casa-de-las-alitas'>Rappi</a> <span class='muted'>· published date unknown</span><blockquote>Si, La Casa De Las Alitas hace delivery con Rappi.</blockquote></li></ul></article><article class='finding'><p class='claim'>The delivery hours are listed as being from 18:00 to 23:15 on Mondays, with slight variations on other days of the week.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>branch</span><span class='who'>aggregator</span><span class='who'>delivery</span></p><ul class='cites'><li><a href='https://www.rappi.com.pe/restaurantes/23605-la-casa-de-las-alitas'>Facebook</a> <span class='muted'>· published 2025-04-11</span><blockquote>Lunes | 18:00 - 23:15 | | Martes | 18:15 - 23:15 | | Miércoles | 18:30 - 23:15 | | Jueves | 18:00 - 23:15 | | Viernes | 18:00 - 23:00 | | Sábado | 18:15 - 23:30 | | Domingo | 18:00 - 23:15 |</blockquote></li></ul></article><article class='finding'><p class='claim'>This branch is located at Av. Alisos 1544.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>branch</span><span class='who'>aggregator</span></p><ul class='cites'><li><a href='https://www.rappi.com.pe/restaurantes/23605-la-casa-de-las-alitas'>Facebook</a> <span class='muted'>· published 2025-04-11</span><blockquote>Av. Alisos 1544</blockquote></li></ul></article><article class='finding'><p class='claim'>On the business&#x27;s website, chicken wings are priced at S/ 25.00.</p><p class='marks'><span class='v v-review_needed'>review needed</span><span class='scope'>brand</span><span class='who'>business</span></p><ul class='cites'><li><a href='https://lacasadelasalitas.com/'>lacasadelasalitas.com</a> <span class='muted'>· published 2026-06-13</span><blockquote>ACEVICHADA S/ 25.00 AHUMADA S/ 25.00 ANTICUCHERA S/ 25.00 BBQ S/ 25.00 BBQ HOT S/ 25.00</blockquote></li><li><a href='https://lacasadelasalitas.com/producto/alita-bbq-hot/'>lacasadelasalitas.com</a> <span class='muted'>· published 2026-06-13</span><blockquote>S/25.00</blockquote></li></ul><ul class='flags'><li class='flag'>A price with no channel recorded. A delivery price and a dine-in price are different facts.</li></ul></article><article class='finding'><p class='claim'>The BBQ HOT wings come with a portion of crispy french fries and a special house salad.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>brand</span><span class='who'>business</span></p><ul class='cites'><li><a href='https://lacasadelasalitas.com/producto/alita-bbq-hot/'>lacasadelasalitas.com</a> <span class='muted'>· published 2026-06-13</span><blockquote>- Porción de crujientes papas fritas - Ensalada especial de la casa</blockquote></li></ul></article><article class='finding'><p class='claim'>A portion of BBQ HOT wings contains 6 pieces.</p><p class='marks'><span class='v v-review_needed'>review needed</span><span class='scope'>brand</span><span class='who'>business</span></p><ul class='cites'><li><a href='https://lacasadelasalitas.com/producto/alita-bbq-hot/'>lacasadelasalitas.com</a> <span class='muted'>· published 2026-06-13</span><blockquote>- 6 piezas de alitas ahumadas bañadas en deliciosa salsa BBQ Picante</blockquote></li></ul><ul class='flags'><li class='flag'>A price with no channel recorded. A delivery price and a dine-in price are different facts.</li></ul></article>
+      <h4>Calls</h4><ul class='receipts'><li><b>discovery</b> · ok · gemini-2.5-flash · 11407 tokens · 35.24s · stopped STOP<br><span class='muted'>8 page(s) named, 10 search(es) reported.</span></li><li><b>extraction</b> · ok · gemini-2.5-pro · 13171 tokens · 56.23s<br><span class='muted'>8 claim(s) from 7 readable page(s).</span></li></ul>
+      <h4>Pages opened</h4><ul class='pages'><li><span class='state s-ok'>ok</span> <a href='https://lacasadelasalitas.com/'>https://lacasadelasalitas.com/</a> <span class='muted'>· published 2026-06-13</span></li><li><span class='state s-ok'>ok</span> <a href='https://lacasadelasalitas.com/producto/alita-bbq-hot/'>https://lacasadelasalitas.com/producto/alita-bbq-hot/</a> <span class='muted'>· published 2026-06-13</span></li><li><span class='state s-ok'>ok</span> <a href='https://lacasadelasalitas.com/cartas-para-blackjack/'>https://lacasadelasalitas.com/cartas-para-blackjack/</a> <span class='muted'>· published 2025-12-17 · Redirected away from the address requested, to /cartas-para-blackjack/. This is not the page the search named.</span></li><li><span class='state s-ok'>ok</span> <a href='https://www.rappi.com.pe/restaurantes/23605-la-casa-de-las-alitas'>https://www.rappi.com.pe/restaurantes/23605-la-casa-de-las-alitas</a> <span class='muted'>· published date unknown · Redirected away from the address requested, to /restaurantes/23605-la-casa-de-las-alitas. This is not the page the search named.</span></li><li><span class='state s-ok'>ok</span> <a href='https://lacasadelasalitas.com/'>https://lacasadelasalitas.com/</a> <span class='muted'>· published 2026-06-13 · Redirected away from the address requested, to /. This is not the page the search named.</span></li><li><span class='state s-ok'>ok</span> <a href='https://www.rappi.com.pe/lima/restaurantes/delivery/20876-la-casa-de-las-alitas'>https://www.rappi.com.pe/lima/restaurantes/delivery/20876-la-casa-de-las-alitas</a> <span class='muted'>· published date unknown · Redirected away from the address requested, to /lima/restaurantes/delivery/20876-la-casa-de-las-alitas. This is not the page the search named.</span></li><li><span class='state s-not_found'>not_found</span> <a href='https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGJ6mBafOJChOFkR1LMB-n-FgQpVs7UEmwTTZMWPxVANOHvHttw7OxG3XAsrKPybP6UI6NUbeTS8rAswvZ3QkWFgkUhMfkHlUWprk8zc6YBqJ49x4b-51CrzkPjDUkKM3ztTM3ife93SgetNdJnrYs1s2QWaVsAAB0yWkm_ig=='>https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGJ6mBafOJChOFkR1LMB-n-FgQpVs7UEmwTTZMWPxVANOHvHttw7OxG3XAsrKPybP6UI6NUbeTS8rAswvZ3QkWFgkUhMfkHlUWprk8zc6YBqJ49x4b-51CrzkPjDUkKM3ztTM3ife93SgetNdJnrYs1s2QWaVsAAB0yWkm_ig==</a> <span class='muted'>· published date unknown · The page answered 404.</span></li><li><span class='state s-ok'>ok</span> <a href='https://www.rappi.com.pe/restaurantes/delivery/20876-la-casa-de-las-alitas'>https://www.rappi.com.pe/restaurantes/delivery/20876-la-casa-de-las-alitas</a> <span class='muted'>· published date unknown · Redirected away from the address requested, to /restaurantes/delivery/20876-la-casa-de-las-alitas. This is not the page the search named.</span></li><li><span class='state s-budget_exhausted'>budget_exhausted</span> <a href='https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGZU-_a-Y3Otgdqvaw8zi-_wYJBuZmSgIzkV2u2nIaRqOEQh_Yjgs34Yp7M2VIwRguFnpJAKnh0m9p_rhYSyiujevttTWsZ5e7IFa8jw7eGmhd3nBxJg4pDinNXzpXpNtu2U1VtB8Yy0kSHIHjcoXmvcyydCCe12CMV_cfZuNcyWmU='>https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGZU-_a-Y3Otgdqvaw8zi-_wYJBuZmSgIzkV2u2nIaRqOEQh_Yjgs34Yp7M2VIwRguFnpJAKnh0m9p_rhYSyiujevttTWsZ5e7IFa8jw7eGmhd3nBxJg4pDinNXzpXpNtu2U1VtB8Yy0kSHIHjcoXmvcyydCCe12CMV_cfZuNcyWmU=</a> <span class='muted'>· published date unknown · This attempt&#x27;s 6-page reading budget was already spent. The page is an unread lead.</span></li><li><span class='state s-budget_exhausted'>budget_exhausted</span> <a href='https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGHTIcpll9r4HLYLw7uz9jQSeI_1SxtPCJb9NvmodfjKCJwgCt1UOY7NkLcoCKOCZrTKe4H0FpqmeqGlrnLe5fPtao0Zw2QI93zdhT9NFwXNIa_uUouEMeVVXmqMkI7cBJFlP7a9nm-rbnXCQCemuLMBGX9T3clde3UfhReJyI4TUpTBeJwhpHGxUg8zuXBQFEtbYCHaLSX3IGcS1yogprArk_FMPA8SE6ifOHAyl2IPJon95Vh1PVQQEXWm-JTqsUS3jsvj8Y_SaGS-swEvd-ibt2drzcOI5E='>https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGHTIcpll9r4HLYLw7uz9jQSeI_1SxtPCJb9NvmodfjKCJwgCt1UOY7NkLcoCKOCZrTKe4H0FpqmeqGlrnLe5fPtao0Zw2QI93zdhT9NFwXNIa_uUouEMeVVXmqMkI7cBJFlP7a9nm-rbnXCQCemuLMBGX9T3clde3UfhReJyI4TUpTBeJwhpHGxUg8zuXBQFEtbYCHaLSX3IGcS1yogprArk_FMPA8SE6ifOHAyl2IPJon95Vh1PVQQEXWm-JTqsUS3jsvj8Y_SaGS-swEvd-ibt2drzcOI5E=</a> <span class='muted'>· published date unknown · This attempt&#x27;s 6-page reading budget was already spent. The page is an unread lead.</span></li></ul>
+      <h4>Still unanswered</h4><ul class='flags'><li>Has any identifiable person -- a named reviewer, a dated customer review, a local food writer -- said something specific about Chicken Wings here?</li><li>What is the dine-in price for Chicken Wings at the Av. Los Alisos 1544 branch?</li></ul>
+    </div>
+  </div>
+</section>
+<section class="place">
+  <h2>McCarthy&#x27;s Irish Pub</h2>
+  <p class="muted">candidate <code>c5083d460402547c</code> ·
+     profile <code>d84b87f3e9b4</code></p>
+
+  <div class="numbers">
+    <div><span class="n">5 → 11</span>
+         <span class="l">findings in the packet</span></div>
+    <div><span class="n">0 → 11</span>
+         <span class="l">passed a passage check</span></div>
+    <div><span class="n">0 → 11</span>
+         <span class="l">citations to an address that resolves</span></div>
+    <div><span class="n">1 → 2</span>
+         <span class="l">model calls</span></div>
+    <div><span class="n">6,449 → 16,775</span>
+         <span class="l">tokens</span></div>
+    <div><span class="n">42s → 107s</span>
+         <span class="l">elapsed</span></div>
+  </div>
+
+  <div class="split">
+    <div class="col">
+      <h3>Baseline <code>a243c6e4295e</code></h3>
+      <p class="muted">place-research/2 ·
+         gemini-2.5-flash ·
+         one grounded call, nothing read, nothing checked</p>
+      <article class='finding'><p class='claim'>McCarthy&#x27;s Irish Pub in Miraflores offers chicken wings with a selection of 13 types of sauces.</p><p class='marks'><span class='v v-not_checked'>never checked</span><span class='scope'>branch</span></p><ul class='cites'><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published 2020-12-28</span><blockquote>En este primer local de McCarthy&#x27;s Irish Pub en Perú cuentan con una gran variedad de sabores en hamburguesas, alitas acompañadas con 13 tipos de salsas, varios tipos de pizzas y 60 etiquetas entre cervezas artesanales, locales e importadas.</blockquote></li></ul></article><article class='finding'><p class='claim'>The Miraflores branch also features &#x27;Alitas Crunchy&#x27; available in 8 pieces for S/ 28.90 and 12 pieces for S/ 36.90.</p><p class='marks'><span class='v v-not_checked'>never checked</span><span class='scope'>branch</span></p><ul class='cites'><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published date unknown</span><blockquote>Alitas Crunchy 8 Piezas. 8 alitas de pollo crujientes acompañadas de bastones de zanahoria y apio, con salsa para dip. S/ 28.90. [...] Alitas Crunchy 12 Piezas. 12 alitas crunchy con 2 salsas a elegir y aderezo de ají. S/ 36.90.</blockquote></li></ul></article><article class='finding'><p class='claim'>The brand&#x27;s chicken wings are described as pieces of chicken marinated with a secret recipe, perfectly fried, and then coated in a choice of sauces ranging from sweet to very spicy, including &#x27;Hell´s habanero&#x27;.</p><p class='marks'><span class='v v-not_checked'>never checked</span><span class='scope'>brand</span></p><ul class='cites'><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published 2020-01-29</span><blockquote>“Son unas piezas de pollo marinado con nuestra receta secreta, frito a la perfección y bañado en cualquiera de nuestras 16 salsas –a elección del cliente– que van desde el sabor dulce hasta el más picoso y famoso: Hell´s habanero”, explicó el gerente. “Cabe resaltar, que son recetas caseras que elaboramos día a día en nuestra cocina”, agregó.</blockquote></li></ul></article><article class='finding'><p class='claim'>McCarthy&#x27;s Irish Pub in Miraflores offers a variety of chicken wings, including &#x27;Alitas 8 Piezas&#x27; for S/ 23.90, &#x27;Alitas 12 Piezas&#x27; for S/ 31.90, and &#x27;Alitas 24 Piezas&#x27; for S/ 39.90, with options for different sauces and chili dressing.</p><p class='marks'><span class='v v-not_checked'>never checked</span><span class='scope'>branch</span></p><ul class='cites'><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published date unknown</span><blockquote>Alitas 8 Piezas. 8 alitas de pollo bañadas en salsa barbacoa. S/ 23.90. [...] Alitas 12 Piezas. 12 deliciosas alitas fritas con 2 sabores de salsa a elegir y aderezo de ají. S/ 31.90. [...] Alitas 24 Piezas. 24 deliciosas alitas con 4 salsas a elegir y aderezo de ají. S/ 39.90.</blockquote></li></ul></article><article class='finding'><p class='claim'>Customers have positively noted the &#x27;ricas alitas&#x27; (tasty wings) at McCarthy&#x27;s Irish Pub in Miraflores.</p><p class='marks'><span class='v v-not_checked'>never checked</span><span class='scope'>branch</span></p><ul class='cites'><li><span class='dead'>a grounding redirect — expires, names nobody</span> <span class='muted'>· published 2026-08-29</span><blockquote>Opiniones de los clientes sobre platos y características. [...] ricas alitas.</blockquote></li></ul></article>
+      <h4>Also spent, and returned nothing readable</h4><ul class='flags'><li><code>33029a796573</code> — The answer was not the shape this pipeline asked for: The reply was not JSON: Expecting value: line 1 column 1 (char 0) It is kept as it arrived; nothing was read out of it. <span class='muted'>(1 output tokens spent)</span></li></ul>
+    </div>
+    <div class="col">
+      <h3>Retest <code>fd4e27e54af8</code></h3>
+      <p class="muted">place-research/3+research-brief/1+evidence-extract/1
+         · completed</p>
+      <article class='finding'><p class='claim'>McCarthy&#x27;s Irish Pub is a Mexican chain that was founded in 2009.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>brand</span><span class='who'>publication</span></p><ul class='cites'><li><a href='https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/'>peru-retail.com</a> <span class='muted'>· published 2020-12-28</span><blockquote>McCarthy’s Irish Pub, cadena mexicana fundada en 2009, ha llegado al distrito de Miraflores en la capital peruana para brindar un portafolio de productos de primer nivel.</blockquote></li></ul></article><article class='finding'><p class='claim'>One of the available sauce flavours is rum with passion fruit.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>branch</span><span class='who'>business</span></p><ul class='cites'><li><a href='https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/'>peru-retail.com</a> <span class='muted'>· published 2020-12-28</span><blockquote>En nuestro mix de salsas tenemos un ron con maracuyá y un barbecue con whisky.</blockquote></li></ul></article><article class='finding'><p class='claim'>The Miraflores branch is available for delivery via the Rappi platform.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>branch</span><span class='who'>aggregator</span><span class='who'>delivery</span></p><ul class='cites'><li><a href='https://www.rappi.com.pe/restaurantes/18886-mccarthys'>rappi.com.pe</a> <span class='muted'>· published date unknown</span><blockquote>McCarthy&#x27;s - Surquillo Menú Delivery</blockquote></li></ul></article><article class='finding'><p class='claim'>Jair Tejedor is the expansion manager for McCarthy’s Irish Pub.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>brand</span><span class='who'>publication</span></p><ul class='cites'><li><a href='https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/'>peru-retail.com</a> <span class='muted'>· published 2020-12-28</span><blockquote>“Lima es un punto importante en la región porque las personas son muy cerveceras y además hay mucho turismo. En el corto plazo queremos seguir expandiéndonos tanto en Lima como en el Cusco y otras provincias”, comentó Jair Tejedor, gerente de expansión de McCarthy’s Irish Pub, en exclusiva a Perú Retail.</blockquote></li></ul></article><article class='finding'><p class='claim'>The chicken wings are served with a choice of 13 different sauces.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>branch</span><span class='who'>publication</span></p><ul class='cites'><li><a href='https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/'>peru-retail.com</a> <span class='muted'>· published 2020-12-28</span><blockquote>En este primer local de McCarthy’s Irish Pub en Perú cuentan con una gran variedad de sabores en hamburguesas, alitas acompañadas con 13 tipos de salsas...</blockquote></li></ul></article><article class='finding'><p class='claim'>As of late December 2020, there was a Monday promotion where chicken wings cost S/1.50 per piece.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>branch</span><span class='who'>publication</span><span class='who'>dine_in</span></p><ul class='cites'><li><a href='https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/'>peru-retail.com</a> <span class='muted'>· published 2020-12-28</span><blockquote>Lunes: alitas a S/1.50 la pieza</blockquote></li></ul></article><article class='finding'><p class='claim'>The McCarthy&#x27;s Irish Pub in Miraflores is located at C. 2 de Mayo 220.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>branch</span></p><ul class='cites'><li><a href='https://www.rappi.com.pe/restaurantes/18886-mccarthys'>rappi.com.pe</a> <span class='muted'>· published date unknown</span><blockquote>Calle 2 de Mayo 220, Miraflores</blockquote></li></ul></article><article class='finding'><p class='claim'>The Miraflores branch serves chicken wings (&#x27;alitas&#x27;).</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>branch</span><span class='who'>publication</span></p><ul class='cites'><li><a href='https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/'>peru-retail.com</a> <span class='muted'>· published 2020-12-28</span><blockquote>En este primer local de McCarthy’s Irish Pub en Perú cuentan con una gran variedad de sabores en hamburguesas, alitas acompañadas con 13 tipos de salsas, varios tipos de pizzas y 60 etiquetas entre cervezas artesanales, locales e importadas.</blockquote></li></ul></article><article class='finding'><p class='claim'>The pub&#x27;s concept is based on rock music, food, and sports, and it features over 25 screens and a stage for live concerts.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>branch</span><span class='who'>publication</span></p><ul class='cites'><li><a href='https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/'>peru-retail.com</a> <span class='muted'>· published 2020-12-28</span><blockquote>La esencia del McCarthy’s Irish Pub es el rock, la comida y los deportes, por ello, cuentan con más de 25 pantallas buscando ser uno de los lugares preferidos de la gente. “El restaurante cuenta con un escenario para conciertos de rock y espectáculos en vivo...</blockquote></li></ul></article><article class='finding'><p class='claim'>The sauce selection has been adapted for Peruvian tastes, particularly for sweet-and-sour and spicy flavours.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>branch</span><span class='who'>business</span></p><ul class='cites'><li><a href='https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/'>peru-retail.com</a> <span class='muted'>· published 2020-12-28</span><blockquote>“En nuestro portafolio hemos tropicalizado algunas cosas, por ejemplo, hemos visto que a los peruanos les gusta el agridulce y el picante.</blockquote></li></ul></article><article class='finding'><p class='claim'>One of the available sauce flavours is barbecue with whisky.</p><p class='marks'><span class='v v-evidence_ready'>evidence ready</span><span class='scope'>branch</span><span class='who'>business</span></p><ul class='cites'><li><a href='https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/'>peru-retail.com</a> <span class='muted'>· published 2020-12-28</span><blockquote>En nuestro mix de salsas tenemos un ron con maracuyá y un barbecue con whisky.</blockquote></li></ul></article>
+      <h4>Calls</h4><ul class='receipts'><li><b>discovery</b> · ok · gemini-2.5-flash · 9365 tokens · 50.11s · stopped STOP<br><span class='muted'>6 page(s) named, 10 search(es) reported.</span></li><li><b>extraction</b> · ok · gemini-2.5-pro · 7410 tokens · 53.54s<br><span class='muted'>11 claim(s) from 2 readable page(s).</span></li></ul>
+      <h4>Pages opened</h4><ul class='pages'><li><span class='state s-ok'>ok</span> <a href='https://www.rappi.com.pe/restaurantes/18886-mccarthys'>https://www.rappi.com.pe/restaurantes/18886-mccarthys</a> <span class='muted'>· published date unknown</span></li><li><span class='state s-ok'>ok</span> <a href='https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/'>https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/</a> <span class='muted'>· published 2020-12-28</span></li><li><span class='state s-not_found'>not_found</span> <a href='https://restaurantguru.com/McCarthys-Irish-Pub-Miraflores'>https://restaurantguru.com/McCarthys-Irish-Pub-Miraflores</a> <span class='muted'>· published date unknown · The page answered 404.</span></li><li><span class='state s-no_such_host'>no_such_host</span> <a href='https://mccarthysirishpub.com.mx/chicken-wings/'>https://mccarthysirishpub.com.mx/chicken-wings/</a> <span class='muted'>· published date unknown · mccarthysirishpub.com.mx has no DNS record. The address the search gave does not exist.</span></li><li><span class='state s-blocked'>blocked</span> <a href='https://www.mercadonegro.pe/marketing/mccarthys-llega-al-peru-con-grandes-promociones/'>https://www.mercadonegro.pe/marketing/mccarthys-llega-al-peru-con-grandes-promociones/</a> <span class='muted'>· published date unknown · The page answered 403.</span></li><li><span class='state s-no_such_host'>no_such_host</span> <a href='https://mccarthysirishpub.com.mx/menu/'>https://mccarthysirishpub.com.mx/menu/</a> <span class='muted'>· published date unknown · mccarthysirishpub.com.mx has no DNS record. The address the search gave does not exist.</span></li><li><span class='state s-no_such_host'>no_such_host</span> <a href='https://mccarthysirishpub.com.mx/'>https://mccarthysirishpub.com.mx/</a> <span class='muted'>· published date unknown · mccarthysirishpub.com.mx has no DNS record. The address the search gave does not exist.</span></li><li><span class='state s-error'>error</span> <a href='https://mccarthys.com.mx/menu/'>https://mccarthys.com.mx/menu/</a> <span class='muted'>· published date unknown · ConnectError while fetching.</span></li></ul>
+      <h4>Still unanswered</h4><ul class='flags'><li>What is the current, non-promotional price for Chicken Wings?</li><li>Is the Monday promotion of S/1.50 per wing, reported in 2020, still active?</li><li>What is the price of Chicken Wings for delivery via Rappi?</li><li>What are the other sauce flavours, besides rum-passionfruit and whisky-bbq?</li><li>No reviews or comments on the chicken wings from customers or food writers were found in the provided pages.</li></ul>
+    </div>
+  </div>
+</section>
+
+<section class="place">
+  <h2>Against the criteria the plan set</h2>
+
+  <h3>What was authorised, and what was spent</h3>
+  <ul>
+    <li>Six model generations at most, three of them grounded.
+        <b>Six were made, three grounded</b> — one search and one extraction per
+        place. Every one has a receipt with its model, its tokens, its duration
+        and how it ended.</li>
+    <li>No automatic retries, and no research on the other fifteen places.
+        <b>None ran.</b> The two reader defects found below were fixed without
+        re-buying anything.</li>
+    <li>Nothing was deployed.</li>
+  </ul>
+
+  <h3>Nothing was lost</h3>
+  <ul>
+    <li>The five baseline attempts still hold their rows, their raw responses
+        and their usage, byte for byte.</li>
+    <li>The thirteen baseline findings are unchanged, including BarBarian's
+        three <code>kept</code> curations. Not one row was edited, merged or
+        deleted.</li>
+    <li>Nothing was curated during the pilot. Every new finding is
+        <code>unreviewed</code>.</li>
+  </ul>
+
+  <h3>The three release criteria, answered</h3>
+  <table>
+    <tr><th>Criterion</th><th>Answer</th></tr>
+    <tr>
+      <td>Zero invented sources in evidence-ready material</td>
+      <td><b>Met.</b> Every citation in every evidence-ready finding points at a
+      page this run fetched and stored, at the address its redirects ended at.
+      A grounding redirect that 404'd stayed a lead and became no source.</td>
+    </tr>
+    <tr>
+      <td>Zero branch-transfer errors</td>
+      <td><b>Met.</b> La Casa's twelve-flavour menu is on a site with no branch
+      address and is recorded as <code>brand</code>, not as the Los Olivos
+      branch's. McCarthy's Rappi listing is titled <i>Surquillo</i> and carries
+      <i>Calle 2 de Mayo 220, Miraflores</i>; it was not rejected on the title,
+      and the address settled it.</td>
+    </tr>
+    <tr>
+      <td>Zero unsupported-currentness errors</td>
+      <td><b>Not met.</b> McCarthy's &ldquo;the chicken wings are served with a
+      choice of 13 different sauces&rdquo; is present tense and rests on a
+      launch article dated 2020-12-28. The passage is really there, so the check
+      passed it. The source's date is stored and shown, and the extraction
+      itself listed the currency question as unresolved — but the sentence as
+      written reads as current, and nothing stopped it.</td>
+    </tr>
+    <tr>
+      <td>All model calls accounted for</td>
+      <td><b>Met.</b> Six receipts, six calls, with tokens on each.</td>
+    </tr>
+    <tr>
+      <td>No loss of curated material</td>
+      <td><b>Met.</b></td>
+    </tr>
+    <tr>
+      <td>At least two places gain a concrete, source-supported detail</td>
+      <td><b>Met.</b>
+      2 of 3 places came back with material that passed a
+      passage check.</td>
+    </tr>
+    <tr>
+      <td>No place regresses in attribution</td>
+      <td><b>Met.</b> The baseline's thirteen findings all cite expiring
+      redirects; the new ones cite publisher addresses. Nothing lost an
+      attribution it had.</td>
+    </tr>
+  </table>
+
+  <h3>The verdict: partial success</h3>
+  <p class="lede">The plan said in advance what this outcome would be called:
+  <i>&ldquo;If only menu descriptions improve while recommendation evidence
+  stays thin, report partial success and specify next missing evidence.&rdquo;</i>
+  That is what happened.</p>
+  <p class="lede"><b>What genuinely improved.</b> Attribution, completely. Every
+  claim now points at an address a reader can open, with the sentence that
+  carries it and the page's own date. The menu material is far better: twelve
+  named La Casa flavours at S/&nbsp;25.00 from the restaurant's own site, the
+  wings smoked rather than fried, six pieces with chips and a house salad;
+  McCarthy's thirteen sauces with two of them named. Two claims were caught and
+  flagged rather than stored as facts.</p>
+  <p class="lede"><b>What did not improve.</b> The thing the list's own standard
+  is written around. Its words are &ldquo;Lima food writers, bloggers or recent
+  customer reviews that single out the wings&rdquo;, and across three places the
+  pilot found <b>none</b>. 3 claims count as attributable to somebody
+  other than the business, and all 3 come from a single trade-press
+  launch article dated 2020-12-28 — a chain announcing its arrival, not anybody
+  eating there. Zero customer reviews, zero food writing, at any of the three.
+  Whether that is because the searching is still wrong or because the writing
+  does not exist is not settled by three requests.</p>
+
+  <h3>What is missing, in the order it should be answered</h3>
+  <ol>
+    <li><b>A dated, attributable opinion about the wings.</b> Not one of the
+    three has one. Review platforms carry them and every one this run touched
+    refused the reader (Restaurant Guru 404, PedidosYa 403, Mercado Negro 403).
+    A reader that can read one review platform is worth more than a fourth
+    search.</li>
+    <li><b>The dine-in price at La Casa's Los Olivos branch.</b> The S/&nbsp;25.00
+    on the brand site has no channel and no branch; the extraction said so.</li>
+    <li><b>Whether McCarthy's thirteen sauces and its Monday promotion still
+    hold.</b> Both are 2020 facts. A current menu page would settle them and
+    none was reachable.</li>
+    <li><b>BarBarian, re-run.</b> Its packet is empty for a reason that was this
+    reader's fault, not the design's — see below.</li>
+  </ol>
+
+  <h3>Two defects this pilot found, both fixed, neither re-bought</h3>
+  <ul>
+    <li><b>A host with no DNS record was reported as an address the reader
+    refused.</b> BarBarian's search returned <code>www.barbarian.com.pe</code>,
+    which does not exist; the reader said it &ldquo;does not resolve to a public
+    address&rdquo;, which reads as a safety refusal and sends the next person
+    looking for the wrong problem. A dead link and a private address are now two
+    different states. (The real site is <code>barbarian.pe</code>, and it
+    reads.)</li>
+    <li><b>A redirect that lands on an index page was recorded as a successful
+    read of the page asked for.</b> Rappi answers an unknown menu slug with its
+    restaurant directory, at 200. BarBarian's one readable page was that
+    directory, which is why its extraction honestly reported finding nothing.
+    A page that redirects away from the address requested now says so.</li>
+  </ul>
+  <p class="lede">Neither fix has been paid for. Re-running BarBarian would be a
+  fourth grounded search, and the authorisation was three. It is the obvious
+  next spend and it is a decision, not a consequence.</p>
+
+  <h3>What this does not claim</h3>
+  <ul>
+    <li>A passage check is not a truth check. It proves the sentence is in the
+    page. The page can be wrong, the menu can be stale, and a business
+    flattering itself passes every check here.</li>
+    <li>Two generations and eight pages are a budget chosen against the shape of
+    the material. Three requests do not measure whether they are the right
+    numbers.</li>
+    <li>The baseline and the retest ran a day apart against a live web. Some of
+    the difference is the web, not the design.</li>
+  </ul>
+</section>
+<p class="muted">&ldquo;Passed a passage check&rdquo; means the quoted sentence
+was found in a page this process fetched and stored. It is not a claim that the
+sentence is true, that the page is honest, or that the menu is current.</p>
+</main></body></html>

@@ -1,0 +1,977 @@
+{
+  "schema_version": 1,
+  "run_id": "efd5a7cd",
+  "order_revision_snapshot": 1,
+  "created_at": "2026-09-12T14:04:36.324107+00:00",
+  "purpose": "Read-only prefill for implementation and three-place retest; not imported into application database. Revalidate current board and prep before execution.",
+  "selection_standard": "Wings named specifically — Lima food writers, bloggers or recent customer reviews that single out the wings rather than just praising the bar, plus a menu where wings are a real, regular item and not a one-off special.",
+  "exclusions": "Delivery-only kitchens and ghost-kitchen brands with nowhere to sit down; international fast-food chains such as KFC or Buffalo Wild Wings; anywhere outside Lima city limits.",
+  "counts": {
+    "retained": 18,
+    "previously_researched": 3,
+    "untouched": 15
+  },
+  "candidates": [
+    {
+      "candidate_id": "efe376b76e5cca7b",
+      "board_name": "Wingman [Miraflores]",
+      "district": "Miraflores",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:49+00:00",
+        "place_id": "ChIJSYsZ6_K3BZERrmZ7D65dLy4",
+        "google_name": "Wingman",
+        "address": "Bolognesi 494, Miraflores 15074, Peru",
+        "types": [
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.4,
+        "rating_count": 2861,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "f9a3ba04c914#2",
+          "discovery_attempt_id": "f9a3ba04c914",
+          "angle_id": "a2",
+          "angle": "Lima sports bars where people watch the fútbol over a plate of alitas",
+          "snippet": "especializado en alitas, shows fútbol",
+          "status": "unverified_lead"
+        },
+        {
+          "sighting_id": "e46d0298ab5c#0",
+          "discovery_attempt_id": "e46d0298ab5c",
+          "angle_id": "a7",
+          "angle": "Pollerías in Lima serving alitas a la brasa with ají verde",
+          "snippet": "offers Alitas Brasas",
+          "status": "unverified_lead"
+        },
+        {
+          "sighting_id": "bec019fd9fbc#0",
+          "discovery_attempt_id": "bec019fd9fbc",
+          "angle_id": "a9",
+          "angle": "Lima wing places that have won a wing festival, a best-wings poll or a city food award",
+          "snippet": "Ganadores Food Awards 2026",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "8bed86b4562b738f",
+      "board_name": "Barbarian [Barranco]",
+      "district": "Barranco",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:49+00:00",
+        "place_id": "ChIJMZ_nYO23BZER-OC8jtmLYB4",
+        "google_name": "BarBarian Barranco",
+        "address": "Interior 102, Av. Pedro de Osma 144, Lima 15063, Peru",
+        "types": [
+          "bar",
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.5,
+        "rating_count": 2517,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "dd36f5fca2d7#2",
+          "discovery_attempt_id": "dd36f5fca2d7",
+          "angle_id": "a12",
+          "angle": "Craft beer taprooms in Barranco and Miraflores that pair their own beers with wings",
+          "snippet": "craft beer and alitas to share",
+          "status": "unverified_lead"
+        },
+        {
+          "sighting_id": "627fb0e7d4a3#1",
+          "discovery_attempt_id": "627fb0e7d4a3",
+          "angle_id": "a14",
+          "angle": "Lima bars still serving wings after midnight",
+          "snippet": "bar, wings, open until 3am",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "d05c45396385af68",
+      "board_name": "Barbarian [Miraflores]",
+      "district": "Miraflores",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:50+00:00",
+        "place_id": "ChIJyQz17hnIBZERQqURcd_PGNg",
+        "google_name": "BarBarian Bonilla 108",
+        "address": "C. Manuel Bonilla 108, Miraflores 15074, Peru",
+        "types": [
+          "bar",
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.4,
+        "rating_count": 4938,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "dd36f5fca2d7#1",
+          "discovery_attempt_id": "dd36f5fca2d7",
+          "angle_id": "a12",
+          "angle": "Craft beer taprooms in Barranco and Miraflores that pair their own beers with wings",
+          "snippet": "craft beer and alitas to share",
+          "status": "unverified_lead"
+        },
+        {
+          "sighting_id": "627fb0e7d4a3#0",
+          "discovery_attempt_id": "627fb0e7d4a3",
+          "angle_id": "a14",
+          "angle": "Lima bars still serving wings after midnight",
+          "snippet": "bar, wings, open until 3am",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [
+        "907653bef0e4"
+      ],
+      "retest_target": true
+    },
+    {
+      "candidate_id": "fa95fd471c164ce2",
+      "board_name": "JUNO WINGS",
+      "district": "Barranco",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:50+00:00",
+        "place_id": "ChIJAyu8E2m3BZERQ0FjqRa1i_Q",
+        "google_name": "Juno Wings",
+        "address": "Jr. Soldado Cabada 107, Barranco 15063, Peru",
+        "types": [
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.5,
+        "rating_count": 49,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "9432c3540806#2",
+          "discovery_attempt_id": "9432c3540806",
+          "angle_id": "a1",
+          "angle": "Best chicken wings in Miraflores, Barranco, San Borja and Surco",
+          "snippet": "mejores alitas de Barranco",
+          "status": "unverified_lead"
+        },
+        {
+          "sighting_id": "9a0f05e261af#3",
+          "discovery_attempt_id": "9a0f05e261af",
+          "angle_id": "a3",
+          "angle": "Alitas de pollo in Lima that limeños recommend to each other in Spanish-language reviews and forums",
+          "snippet": "mejores alitas de Barranco",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "69696d6d7cc5c0e3",
+      "board_name": "Peruvian Wings",
+      "district": "Miraflores",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:51+00:00",
+        "place_id": "ChIJ3d6urY_JBZERtQbeEmOgq-Y",
+        "google_name": "Peruvian Wings",
+        "address": "Calle Alcanfores 199, Miraflores 15074, Peru",
+        "types": [
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 3.5,
+        "rating_count": 64,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "9432c3540806#3",
+          "discovery_attempt_id": "9432c3540806",
+          "angle_id": "a1",
+          "angle": "Best chicken wings in Miraflores, Barranco, San Borja and Surco",
+          "snippet": "reinas del sabor criollo en forma de alitas",
+          "status": "unverified_lead"
+        },
+        {
+          "sighting_id": "b2ba77f71b6f#2",
+          "discovery_attempt_id": "b2ba77f71b6f",
+          "angle_id": "a5",
+          "angle": "Lima bars running alitas promotions — buckets, two-for-one wing nights, happy-hour wings",
+          "snippet": "barra libre de alitas",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "efd251bce900eb1d",
+      "board_name": "Wingsbox",
+      "district": "Jesús María",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:51+00:00",
+        "place_id": "ChIJk9lQVrbJBZERtCNfvJLJ7yQ",
+        "google_name": "WingsBox | Alitas fritas y broaster | Almuerzo",
+        "address": "Jirón Huamachuco 1313, Jesús María 15072, Peru",
+        "types": [
+          "establishment",
+          "food",
+          "meal_takeaway",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.6,
+        "rating_count": 156,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "ebecfcdb77bc#3",
+          "discovery_attempt_id": "ebecfcdb77bc",
+          "angle_id": "a4",
+          "angle": "Lima bars serving chicken wings glazed in ají amarillo, ají panca or rocoto instead of Buffalo sauce",
+          "snippet": "Alitas Pachamanquera y Charapita",
+          "status": "unverified_lead"
+        },
+        {
+          "sighting_id": "b2ba77f71b6f#3",
+          "discovery_attempt_id": "b2ba77f71b6f",
+          "angle_id": "a5",
+          "angle": "Lima bars running alitas promotions — buckets, two-for-one wing nights, happy-hour wings",
+          "snippet": "12 alitas con papas + 2 chilcanos",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "8123f88721599f77",
+      "board_name": "7 Vidas",
+      "district": "Miraflores",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:52+00:00",
+        "place_id": "ChIJLe_me7zJBZERqvdE4_eTZls",
+        "google_name": "7 Vidas Taproom Olaya",
+        "address": "tienda 101-102, C. Mártir José Olaya 139, Miraflores 15074, Peru",
+        "types": [
+          "bar",
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.7,
+        "rating_count": 208,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "dd36f5fca2d7#3",
+          "discovery_attempt_id": "dd36f5fca2d7",
+          "angle_id": "a12",
+          "angle": "Craft beer taprooms in Barranco and Miraflores that pair their own beers with wings",
+          "snippet": "taproom pairs intense beers with alitas BBQ",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "e26b776e5d07fd43",
+      "board_name": "Alas Salvajes",
+      "district": "Chorrillos",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:52+00:00",
+        "place_id": "ChIJ4_D7dFi3BZERvhz5_rrDBpM",
+        "google_name": "Alas Salvajes",
+        "address": "Av. Ballestas 391, Chorrillos 15067, Peru",
+        "types": [
+          "bar",
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.7,
+        "rating_count": 90,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "9a0f05e261af#1",
+          "discovery_attempt_id": "9a0f05e261af",
+          "angle_id": "a3",
+          "angle": "Alitas de pollo in Lima that limeños recommend to each other in Spanish-language reviews and forums",
+          "snippet": "propuesta de alitas con sabores arriesgados",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "50857cc10a910f23",
+      "board_name": "Damero Sanguchería Limeña",
+      "district": "San Borja",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:54+00:00",
+        "place_id": "ChIJX9sRgLPHBZERaUWzgxzibMw",
+        "google_name": "Damero Sanguchería Limeña",
+        "address": "Av. San Luis 2620, San Borja 15021, Peru",
+        "types": [
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.3,
+        "rating_count": 208,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "9432c3540806#10",
+          "discovery_attempt_id": "9432c3540806",
+          "angle_id": "a1",
+          "angle": "Best chicken wings in Miraflores, Barranco, San Borja and Surco",
+          "snippet": "alitas crean adicción",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "5edd7337a45c53c2",
+      "board_name": "La Casa de las Alitas",
+      "district": "Los Olivos",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:56+00:00",
+        "place_id": "ChIJzRTT5X_PBZERFbKvGpHyxK4",
+        "google_name": "LA CASA DE LAS ALITAS PERU",
+        "address": "Av. Los Alisos 1544, Los Olivos 15302, Peru",
+        "types": [
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.3,
+        "rating_count": 81,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "ebecfcdb77bc#2",
+          "discovery_attempt_id": "ebecfcdb77bc",
+          "angle_id": "a4",
+          "angle": "Lima bars serving chicken wings glazed in ají amarillo, ají panca or rocoto instead of Buffalo sauce",
+          "snippet": "Alitas Anticucheras (ají panca, rocoto)",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [
+        "5e5f800084a0",
+        "2c365b9a32d2"
+      ],
+      "retest_target": true
+    },
+    {
+      "candidate_id": "c5083d460402547c",
+      "board_name": "McCarthy's Irish Pub",
+      "district": "Miraflores",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:58+00:00",
+        "place_id": "ChIJP1dp8jHJBZERDi1K0qJvjEw",
+        "google_name": "McCarthy's Irish Pub",
+        "address": "C. 2 de Mayo 220, Miraflores 15074, Peru",
+        "types": [
+          "bar",
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.3,
+        "rating_count": 565,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "9432c3540806#5",
+          "discovery_attempt_id": "9432c3540806",
+          "angle_id": "a1",
+          "angle": "Best chicken wings in Miraflores, Barranco, San Borja and Surco",
+          "snippet": "gran variedad de alitas, 13 tipos de salsas",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [
+        "33029a796573",
+        "a243c6e4295e"
+      ],
+      "retest_target": true
+    },
+    {
+      "candidate_id": "6cc404784372d26e",
+      "board_name": "Papachos",
+      "district": "Miraflores",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:58+00:00",
+        "place_id": "ChIJdRvwQFTIBZERnxfYa8Ye72s",
+        "google_name": "Papacho's",
+        "address": "CC Real Plaza, Av. Gral. Felipe Salaverry 2370, Jesús María 15076, Peru",
+        "types": [
+          "bar",
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.4,
+        "rating_count": 3586,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "ebecfcdb77bc#0",
+          "discovery_attempt_id": "ebecfcdb77bc",
+          "angle_id": "a4",
+          "angle": "Lima bars serving chicken wings glazed in ají amarillo, ají panca or rocoto instead of Buffalo sauce",
+          "snippet": "Alitas Charapas (anticuchera)",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "b0afdce638884c3d",
+      "board_name": "Papas Queens",
+      "district": "Miraflores",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:59+00:00",
+        "place_id": "ChIJJbu8H6XJBZERnQ9NNPLSorM",
+        "google_name": "Papas Queen's",
+        "address": "Edificio Diagonal, C. Mártir José Olaya 201, Miraflores 15074, Peru",
+        "types": [
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.1,
+        "rating_count": 521,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "9432c3540806#4",
+          "discovery_attempt_id": "9432c3540806",
+          "angle_id": "a1",
+          "angle": "Best chicken wings in Miraflores, Barranco, San Borja and Surco",
+          "snippet": "parada obligatoria, distintas salsas, porciones generosas",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "a7f67f69afdb1749",
+      "board_name": "Pardos Chicken",
+      "district": "Multiple Districts",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:14:59+00:00",
+        "place_id": "ChIJa2n9fVnIBZERFOgXIl_3kLw",
+        "google_name": "Pardo's Chicken",
+        "address": "Av. Dos de Mayo 1002, San Isidro 15073, Peru",
+        "types": [
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.2,
+        "rating_count": 2952,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "e46d0298ab5c#2",
+          "discovery_attempt_id": "e46d0298ab5c",
+          "angle_id": "a7",
+          "angle": "Pollerías in Lima serving alitas a la brasa with ají verde",
+          "snippet": "famous for Pollo a la brasa, Aji verde",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "c670af62f140a6c8",
+      "board_name": "Primos Chicken Bar",
+      "district": "Multiple Districts",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:15:00+00:00",
+        "place_id": "ChIJCzhvceS3BZERAgUhg1PAELY",
+        "google_name": "Primos Chicken Bar Miraflores",
+        "address": "Armendariz 546, Miraflores 15074, Peru",
+        "types": [
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.4,
+        "rating_count": 2521,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "e46d0298ab5c#3",
+          "discovery_attempt_id": "e46d0298ab5c",
+          "angle_id": "a7",
+          "angle": "Pollerías in Lima serving alitas a la brasa with ají verde",
+          "snippet": "offers Pollo a la Brasa and Piqueos",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "5072f7870d57c430",
+      "board_name": "Rústica [Miraflores - Calle las Pizzas]",
+      "district": "Miraflores",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:15:01+00:00",
+        "place_id": "ChIJuS82VBjIBZERRlOdqDB0Fcw",
+        "google_name": "Rústica",
+        "address": "Pje. San Ramón 104, Miraflores 15074, Peru",
+        "types": [
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 3.9,
+        "rating_count": 1527,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "627fb0e7d4a3#3",
+          "discovery_attempt_id": "627fb0e7d4a3",
+          "angle_id": "a14",
+          "angle": "Lima bars still serving wings after midnight",
+          "snippet": "bar, wings, open until 3am",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "c8b2db8b36fea6bc",
+      "board_name": "Rústica [Wilson]",
+      "district": "Cercado de Lima",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:15:01+00:00",
+        "place_id": "ChIJ_RvxJ8TJBZERXbtets-nva4",
+        "google_name": "Rustica Wilson",
+        "address": "Av. Garcilaso de la Vega 828, Lima 15001, Peru",
+        "types": [
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.0,
+        "rating_count": 276,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "627fb0e7d4a3#2",
+          "discovery_attempt_id": "627fb0e7d4a3",
+          "angle_id": "a14",
+          "angle": "Lima bars still serving wings after midnight",
+          "snippet": "bar, wings, open until 3am daily",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    },
+    {
+      "candidate_id": "56d6341734c25c72",
+      "board_name": "Wings Club",
+      "district": "San Borja",
+      "identity_snapshot": {
+        "status": "found",
+        "reason": "",
+        "checked_at": "2026-09-11T19:15:06+00:00",
+        "place_id": "ChIJ8YQjGT3HBZERYXP3E_L-2I4",
+        "google_name": "Curayacu Tiki Bar - San Borja",
+        "address": "Av. Aviación 2712, San Borja 15036, Peru",
+        "types": [
+          "bar",
+          "establishment",
+          "food",
+          "point_of_interest",
+          "restaurant"
+        ],
+        "is_venue": true,
+        "business_status": "OPERATIONAL",
+        "rating": 4.5,
+        "rating_count": 123,
+        "price_level": 2
+      },
+      "discovery_leads": [
+        {
+          "sighting_id": "9432c3540806#9",
+          "discovery_attempt_id": "9432c3540806",
+          "angle_id": "a1",
+          "angle": "Best chicken wings in Miraflores, Barranco, San Borja and Surco",
+          "snippet": "restaurante con alitas, delivery disponible",
+          "status": "unverified_lead"
+        }
+      ],
+      "baseline_attempt_ids": [],
+      "retest_target": false
+    }
+  ],
+  "discovery_source_pools": {
+    "627fb0e7d4a3": {
+      "angle": "Lima bars still serving wings after midnight",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG2GHvxrFy_H30S9nqlI8qcseOOs1I70SZbkMtYhFRcaAeStDYGTT52Z8oZaRVORe96nTlIT8BljMla7myp931q73bMdNXZvRbAwVKJBktUdwTubEiKJ_riyoo4Z41Cm4ASwkAKKbf7zEQPhZ_3v0yAjphiF7RZMOUo5Svoai6AApn6FRy_OcJJwUfEBOqWR18mw2tp_fQZASAENw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEtIJMDLGS8isdCCK8FzaS2ehNQL7q9olWJxOOvL7aYWRvj4laxpE9BGoFhXdU0Pu4Oaajxg7bqAZiiB8tDgbDtYwC4m-kzXo_GIH4Wt2A6lGmbudyCWppAA8D0icfuczzH1Nn4yXGSlJ0Ak7SDt590BPvkj2-ymI8S2Yk6-zsRgZECOXn58lY3LIv-H_CbtJ_YpZ31Xs_wjsB4tzpEZjXnpcyN3IenzpVFppGzwqLQsbo-jUiEPA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFb_L4cjKvmd_JKydk-gzM4p-9psTRER0_5yEZpAK2G2_pcY-V5LkWNwWPZW5XdyDNLB79vjiQBj5c_tbdRVlyoigyuSZRn0NZ4Kr2GH5hVfI1xfOabtRBqTz3L8yMM2qQf0HE9I6Ey7PuCBYRqIvTjYPs0h5MnKBu6UPyW2ctdT6IsBzMhZyxgTgSXkOrisxTYdSSmpu0pfMahRS1_",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEWjNShaBZxSsRXHPyC9b-Kjg9qtK1bskXp8cm7XVpqTlPDTiIRdJjBzqTx8FRmWmQQC1SFRspjI9UmWmvh5S-Q1xwpNDifQLLor98ZyRejFqgvhPSJVzrnPySZbro5u_5yhSL56--D3Lt5JkPAjhieML8Gg5gg1ASRd4HLPddkXo7uMrQGIL1TgHbPyeggu6G1hzN787NkaEl8LJ2o",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHYY2W3ALHMBAxZZTsMQlsX15jEr9zZjZcDjok8omC84l3I_M362-44_39LDeBU1gnJZz7LV2k8ypaQn9CenHqbwBu2IPFNo853kIQ50Z7dyX7xOJkTZKfnE9kHta13PNuljJ8MonW-8KIGPTW-WY8xwcrz2VfBt-SmMRnApd2MR82kvFBw6fyHJQcvQep8V-pWdxGXsUGXMMqmfS1w6sssqQ==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEmAAqdgH9vl_sT2V7f0sS_Fc_T5cvPgEfBIugrxPU7EIniP5UeAMniUXsld0fn3dT2SJSPr8c3K1DtlmzO8lBEYNTwjjq2gdISGQ8fUc2kneDOXRvjqtNSdErdxZjAtbPVRcX1IUN1jqeu9mGgMbm3cY74cpN3ikvYWcNaiz_2tetOfHsvEcAs8qMDrPHr8jC9_plVa9wsvlWdhJGqUBJrHqR6_pUtFVeSUZlOcNdpqg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFGM9xUp221O8lAsqPj-96HPY1PeDyjfjqcpxz_CG4jfRpX-palof1ZfvULMjtEQYmYge5N5nWUckN-8fQ7AOK1nNLCOiFH0P0hOw8dP7IQIWd8lJNKfMs9xzmjRW65hPsGruTUyVeqU4kT1y7st25CSfqIC8Jz-Y_RBYTMh8OsP2tFXcfeRinfbG6T4OT42tfHFZnV5DQW",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEdRAXSxfoQvFXY0V8mf_0Z0W1Bj1LzHj67IM48S4nPAz7Ai4AM3O2ImPckPlfMcBaBLRgc9Y13YD4j22hc-cOp2o5QMNoF5jc_HBF2TpK-TfstkbDsfDgGeNV0j0DloFAhVtYIdEQwO1-9XmG72C5bnYRYJQiuCiXrVOEOtdCgkZigGaiPZ2fT4tljHsFqCa68nTPdGTtLLkWyqL7ZD_I3ag==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHUqZbpbS0D2W5ClfEcc3rno5fZ9BRbYhSkmw5B8B6JN3-_siG9r75BeRUO56OeOvpP8Wt4uSZVALfPopktvSfqxRjKtXV03t2Yc90Did7GuXbFFqwwTxil",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGBh5JWCYEe9CeCmP8GVK9Y-QR2PJAKjfm-SO0whw2hsg8biQXAP7a5Nxjen6e5mcI1D-Hre_J6LnGr1NZvmUxTg2FXbnPb9imq69r_-SNimOcSygg9_QMWhWb8sXHv4D-7u14cR17QBYP5tdgO-yktEI3kzT5KbxQZ8qiJZ1Oh9FDFE_H29g==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHNmuw5IPSHiDUHcuDexkBFGE22tEdoJ6kAOGRvdweOVTxIEgZe8BV83P-77Ha9gie_v20OV-OVra_Y_8k2wn0t9kLw_EOoFT3_AiWRsI-nGy5BQXHkhHDf8_qQjrECq-FOf9FPsm37mlDwPDOuPA=="
+      ],
+      "source_titles": [
+        "pontebarbaro.com",
+        "sinreservaciones.com",
+        "rappi.com.pe",
+        "feelingperu.com",
+        "rustica.pe"
+      ],
+      "attribution": "search_attempt_only; not assigned to any individual candidate or claim; URL/title arrays are not assumed positionally paired"
+    },
+    "9432c3540806": {
+      "angle": "Best chicken wings in Miraflores, Barranco, San Borja and Surco",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHY0bu9l45K_1CVB02WNrwVkwq35lfCMnM3Xv6mERGPvC-U7Cpc-zlkSVm8tExf25lTARIgyweNovs_StfdvbhdFGlJmVn5I1897wE-xgRlOoZxpZn5uw1-29NApH4jb3dQ-XjAt82a6gNyhJL85VufsCjLvT4NUcOd4NS3s6hcLCM2p0RPWusXHgURygqnFMsbfckUHiphUItLs8iwhBk7",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEslBBjFwRCxUejLjh4EKx3fMmjtrztO1dbuQ-sP78fz2WYM60JiQWprizDfKTq46QepJv_nrVbxoeKC0OT0vXUxeniJ4K0Qv4uGHvVMAMzsnrdU4-0j5Xk4R77T6kQSY40CwdBjbsMkbMKVHYvuqmc1WmTr_hYzrkJzNTR1j6ZsTe1IN6RKeNV0goTWVfhecD8D4_T7Kbuv-Xq8A==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE87N1r2B7DfsLqZ8QNfj5Lu-qj_vaTGkFLxRLTsIK5Kd1esWaYK0ddJ3ijrN7DMkhshT8Gxu2Fn6TsOUoNJVPFtoJZbi0zlsvHpBGaPX3_yAKm5FfaOdTe0gqaFiEaC0VxwFv8qqswJIuMqWWu-v3zFdHCL_8GpqZsJqUpWRD-5VCZsrD6V2bnnad9UC8O6vgq7ThTGGSU-Q==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGgCnSrtpCcBex8IKpfzcsBcHuNiWadkQ1QALgMh2ELb-ToL-pYoibH3ISgSGaSZwpiCxFFRRDoFn2IyT6FrPXK3ssXrKzQkeWgjNr3OeOfWODcxv5iAtD3PwbzY7jbbl0-bxclDUnw-k8J5Sf_jhReHSX8YrpC-krxyjgm-ifhcLK7WqQTvKDNLTPhXXS2wMJboEH2n0ixbQ==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHtkJHOfhl9I12qtJW7fdrSLnqW--QLc1JkX_fBMz0QHsj3uzrCEN08U1kksCeQSCnIbLk39Ndwgm3GW3YQbEXlvTCwKRLzNDYEiLSQubGIh8S5wa5dh_oCj24uy9J6uBp9gZ6aHaF8l_DSInJmzUhL3yxa-JYz0CNMZvLdUws-eiHTjk5i1J_qW897hHWvSfQd8jbzfmR4FLlG9hZVEduiw1Z8iw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGmbjWo3m73UFt9rW3Bi5bXA8N_9t_yjfYGDXolX4O6glgX4BTvlRFaYNBb_mZ0brhv9IKzZLaiq-4XKI0_UBnZFvsIu1i9yccdX0G0UEEcb3r5XaMLoo60f2xyhHHRxwcHhxITfAkY0-mLRaDT9Ajebs3HaTjUd1y32YZrAzxKp8y0SI5HFgjUX0UMTuYu-7CZ1lTNV47vC2G9OUGpXOdR-y8=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHBkHdQwvKpju8Rr0hHG5C01-eW8fsacLROXrY8eGB0881ExBS7W1uvmr1wHFtShHmTU5yQ5kSt-qbSbNyNVcV2dTwjvYH7iWyPqZ5KRANAItG-3O7Uu36ozaZDejNapVFkX-GeETBrpQ_Ixu6Q94I9a79fMQM66H_qL20Cdy4XfC7-D5BY5YVZwWa4BiUhG32ELQrRDkqUcjsbK8U7R-BXaCSdylY--awjrQ==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEwsMk4cholZtqV33x4KPFjdcHRw0OCh73IYvWaxAZlAWYYNAcTXhhD3sBEnQs9G_3FKo1Iukx0WJl0qWjgECMLs75Svck4SGNPHZfnZg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFRc_aIy-6e9j5Ypv84tpAIRoj1nv5sBsRwEum9AKpUIwCsOYD99kncTp-DtrASpm3pIef6tROCMQn4bNbgTxOFuHQykAHW3bGzf0tg0Jp5cHwKfZE3pFP5ZQqBYX62WJPZ5FWx",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE5_WB8Y4eYqpfH45_sKIkCNd--SEsB5G2ZnUMtIKbSYE9Bv6vHKlBJLZjOJehl1R3jbE73boihMa-S8ahqk_a-Sz2hajHKIpkb8fOFd_881IfvHWEnnKrBEuOJWbosdarLPeDQDKfSXXwvTgD0SJqfEHl5RLzBsYlF-vEJEDXv6jGu2hfxRz9pQLM7weVQ_A==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGQmUzgm5FDAzG1ZPYOvjY_FP8f44PY5GquEiiV9Ba_bSWlgMZWsXh6I812R68vYiZwCOz5pA8UenxqCUef9niwGvet7cBuzJsn6AFBFQry3z_xhnPSJ2yp3p3SqghcPE-Q7_2M_f0p81CtPBUme27oqV6gVXMYDA6CGf5TyPtbIprwUS0F_BgxyupkgMLSf8nHisYrP-W0_l0jVLbNBfGTkcA="
+      ],
+      "source_titles": [
+        "diariocorreo.pe",
+        "wingman.pe",
+        "youtube.com",
+        "joinnus.com",
+        "peru-retail.com",
+        "rappi.com.pe",
+        "hotevia.info",
+        "juicylucy.pe",
+        "facebook.com"
+      ],
+      "attribution": "search_attempt_only; not assigned to any individual candidate or claim; URL/title arrays are not assumed positionally paired"
+    },
+    "9a0f05e261af": {
+      "angle": "Alitas de pollo in Lima that limeños recommend to each other in Spanish-language reviews and forums",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGtAXd5VFw-tFRoJB_sdJF02nNqHlWcOSjKiYcvEGe8zZsA8HeT9H60aLZIa6ztQRunAipczeGysrUoMhdUEUPboyKuoJFkNOL2M-mwsCQ-oieVeSxjC1YwHzlYQK4ag1Nhtm0abFo4A-VgEmgcRTjXzeXd5X6lipErX3XlvovhVo96bkjvEHtebcjlqIq27AvlQqvEa6gYs7CSB0B23TTbT39xQ4e-0oIBLA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFDerDkqHwuact7r2U1dY3A7M5lgEbnSNlnpS_fyBggP0D9YNrKQY8hZoIkwFGMIK8dDdC5g2qWW2mrXb-Lt9Z-9nmiuDsQl8jA-uTXwCWGEq4d5eiDHdWUJo6gvyLlJdoJwKsswtXNVOlch-6_p90s3-mzeNtYrL5hzxoXwaOzYccKf-Gwq8LAFCyiNu2_alWBUoC82EHziyug2BD9hgbSKg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHKc2EKPPB32swdImpZ5jaSspmYi26jcsWnuxQLNl1F58Gb5RWOvFfDGrIEPgIZJ0zUnwxFRAmGdxEWMYLBIlZtaay7uauUMpbUiT1p0mD9CDZ_TktO45qborQ4PlDp82PDyMyD2FdrKTU5e1OJLVkwn4MAaz7dw92yC7NS6vWmeiifWi-VPVpX7FENv2wBdu7MA3HsLrnsp5zyFGpHsYTEsSn-jQ==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHB2Xte0jSu1N0i6JLymGXL8p-Bve6upQhuRoiv_F6Wh5p_iG9vje-TujiP-2v-dMb88AyHX99C9t9hritNpS8YzKcyJTeCgA1AS9L-GtPFFKV5jVNNC5YtDFk7tboP0t7eNjiDpL9YZpbG3qBc-scCc3hQULA6eL-yHTmWo8jIrWlWQTfnk5fp-6mwhlHdEfrPss9NJD_yc15P8x0FcruqEBKSrYv0V4OdtSnV3KzA",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEY3PB0XhqWjK6YoMEqLy9LXz8ii2FcdPvBlhtUrnj1ujnhnRDNTEq0hZ08cF2d0ZcZ4kTp7qIiAwVnLTDff1miwZ1rSGTBkxSuZtsJN74E2BrfpsFMvFkPCA8uiVX9Fxyg4fbIU_7SnmAkqbm9b72e3lBZtQMUlJCDm3BiBgE7yZLW8xtowGwhEWdRdRloNSVq2731ggP6AD6FTl0f",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE5LGeheoCw8u3sZwkme9eJEpUUhgwqMJVvFShaQczBqrP9qp5f5vAyY4eaQcdpSDHOV4sSTpbOC3xRKceZv8lcC_zrWUonwIQpvvMeWRdCOzoFuB_rgH8q6330ruF-S31EZXTl-_6JjDNEPoPlgQ4VCupNRmBpJNoS7-ghcaHxbnEpnU-UX6dR7IIjCyrSmvBGzhgRtFURsxfTIFbW_wDNsNgJdA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFs0Me3qH1JmzNcPaj57iowZ1QlqX7UhW8He3GazAQcPd4Mfou48Aingt5Dbfvwzc5vyzifUxc0f-jVGv2ACBNzjJ8XzF0X2KjYZkBhzBaqcpj_Xzf_MUzmhSmLMmrygFqetIzZwh-FUAaKQt4q4UO8xeJTCXcsA5ksMoP3HiXiMr9lyf6XJL2WL8RIExyHabPa3Gi9wKNF-M8JP54W-Uqe8Ryi6Osf0VlYLPsW2yKeasp23xUn9Q==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH03K9gZXOXlfq44B2EXNmQKOic46TZmmDQLM16uup-6yLUti3ejtyLwt_JM2kXuFI1NwFUvBSQUpa1_2dLv-4zP6RLDWko0mRx3yxnIe_gUgQu94UHVsUzNDFhdmfOIL98PB-E9wt48BUmJdhDnKXtWuTxCw5VPup-0ACnzabwP2MDmniQer8f71PxCklM7u_fXmxB1YGFgiH4npfSX3fbww==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGk6h4JjGEBg3AqFT4cTuta1FN_W35YlAF_-NuVapPgxMhyFY20dVofGrvLp-v65891m0S7r-zpzEoD875VwRKSkb8DxVjO1rqVp8k6RrNkQhkTo2W0brdVd6hDMP_9kw2DVoONUC4QitCaCsPCFlqZEfbZ0Py74aWwwBMzDazxELT1AiZS7CvByJhD7AE2NIJDEhH26yv83gppV5U8SNzXHVCf5iKMBv4=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGlsLwWhPqllKRX5mWw11V6CJGAPQmq6zuCG42GnIOqydR-v3UXSXcGE5GE7fE3aCPr6rVYtT42zeJHmdsn7ZBqs-L8zniNE8m-xwHfm0s84Ris_BFbuROOhNB1sf7ZTt8O9AWS7QXVBX3cqtfcfLBClTmwVbLz7m0dq6ohz7NAReyjxsHR1c4XAKC7xl92XtdJOk9UJO1DoL9wCJW4JSO8hn3BE79mJaIKFg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGj5EPtmxYlVoUIakLtPwWBzOaifR_Q5kKEvZDHQdZNk3SxdyPkq_AWDYnviTsVzQSet5UfpJKahHkBmHQ61scEWAEJX1_NgQ05BnzecNs="
+      ],
+      "source_titles": [
+        "wingman.pe",
+        "elcomercio.pe",
+        "joinnus.com",
+        "youtube.com"
+      ],
+      "attribution": "search_attempt_only; not assigned to any individual candidate or claim; URL/title arrays are not assumed positionally paired"
+    },
+    "b2ba77f71b6f": {
+      "angle": "Lima bars running alitas promotions — buckets, two-for-one wing nights, happy-hour wings",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGV7OmrEeAv9iY6eoBFKbFgEPxV_XtMHsj5JvtWZmZ5ueQ2ChWWo3hpGuiu0t0zFaxPIQmSqtvHHKhnt4s2dIAQVxyYamlvbBAksfmJCmilX2bHds7BfvotWlUC7vniZtoILLJAC4ObQIWyaw5eiuTcBQ852u3US7GEy7sBZ_FCmmC-SOwcBYgxkyyzgZdGvPZm92gSAQTevQ==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHaPZTQSAZ99ae7HR4jxGOOmdtXt2Gku9n_mpdOAhXaPSq-THERx8byf82VUU0nWVv9A9gMak8X5ThGGOmop9FHVerUIw-NQome4BNmAihGRMF59qHfILFKjiz2oXWHJPCeCch5ijLvgErVDh1NUrjkLdQpNoiqPZsyOUIU3iqddA40uKXGnCjwjPr5CWK5D9qvwpO4BlyTFJx_yg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEjSsycdPLsyBbexRaKZk_wfTcpOhJpW5ojTXTeqoHI9ed3G8ZDELR253OLGLGTGffJXAoVXe_rUwl4Dzex3p3VKkM4fNuAxL84GLTpSKq3cAmCLhZyXmLwOrWok4wPUyd8USPLR70mMWR58pOgLdpaUkfZYvrQz_9KEbLP3K-l8uUutiICOXilQqUKAt79yP7yVuIBp0KbI296wVv09aYe1dk=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH7Z5lezA9TNysAm6fOE6fuNv1j1eDaKA6_61KfQHbV7P-bdE67jdlAPkJphIPZoGoPODW7tc4fM4-gOjTyOwPGmmVI2hswFhI5Vxia4pB1LVe_74NgKRWHpskcvUXMuYZSRgMEPyGjOLk9ECQ4pe3ksh1d5PlLiHv4cvCsfQumO4qOf71jYrIxDkmRplQAqixJdQIBC0fOww==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH2Vroh6feXX4CL0DK74ZAkTBHOTBwCnj8T_5Zk0Wqjx-MPZmRUuUUmXNjiuBeaH4DZ2voXmabW8pxevGoBhZ1Jhfk3ra2jxQWQY-PYwLcPP10t7JvJSejo5bwKFpo5wRtBxJtNuzx4HqVYkKYiCQGB0NMLfdK1WtiYg72IIA2zGxreMv9yvOiBYjXtaIQh8RdMa2CegfKgI4XMrmBG-peaLg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEB5ZScU0YHYChDf2ye9oktphEXd5N6_n9gjjRlktgnxlegonX3Lmn4xvkDdfg7DJDn-jAtNg5aYKXPTyjGr6uDbWy1Kb0ewJJ4pQQJI9Jqsn7WeKvOJTahXl4R3C2FDyPQFf2QdJeb1vXucW9zfcsDlHcnfWEWhaXh2O6Sgoj9lGZ4UxeGct2yHb3bSqlML9ClGLWx80EHbn4FRWkYpA9AGEg=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFA3GG1nwZdA7Ah-hoNve5LNyy-5drDKW9zXTjcutD-tm0I45icSmDm3sormIJDzS4Zjh1T6KZ4W6dALF9WxrW4mvtHxxevHkZaOHxm3ePFacwn5nWjMp1GAkzwh-IYLKdOBTXkKR7MfnGGSGMTxlbONuRz60CB91Ltlm1ckBfJfVqWLJHaOkIsLD0SeRJeMS6SSPyBwBMooMC7LNkUsOTiz7WCtpZNwv3xjJ-jbdgsvNb7-z1v1SzIaZ0Ubtwx8eXxanVmGLBcA1PW7lN31rE=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGCc98NnmSAIq6KH39YBuV9sTxHfGR-DYF5NkXdKrbdGHS6ZULZrjj7-Y9DBHVrN20V8nA-cy-UUNASR6SkTcg8SawDcRyxy4Q4-DfXg7qkHdrur7cg7XFlAlQyw5q_wuNGqhyRADhOsQzReLaroZmgLd5fmby1FIuSDHejNpBDncq5VVEodWo4Guk6-C3ZE1l7AIIAg9tCDqt73FYJ0-VcpVbrVDVc8tUQTTUXz5A-ypPSUGX1lE1CMPucrF63vbTm8AWcIfv_dggwb2Y=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHB6RiLEyJ_iufLkvujXM2ZtxpTCyB1OCqKX70dO-LfAYZO937jUZ2S3Oth28w5fvC41fOdZtPBgUU9wq8zY4gRzZQxc2aM-NMfzd_uqyl5ZhD8nKyFsf4IabLDT5LeEfwK8XBaUQ==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFUrpss_p3Kpjt7zitlm_IYB45bYGoxybOLEzVHIojPH1b-Zq3SJyyD5uWy2sF7xwOaCAxpV43LXQp5UXSCG8Vq_nDeOzJox0rHbPWUmiXvzbw7MAkV-87RK-zTEmvdqTki9gY="
+      ],
+      "source_titles": [
+        "facebook.com",
+        "youtube.com",
+        "wingsbox.pe"
+      ],
+      "attribution": "search_attempt_only; not assigned to any individual candidate or claim; URL/title arrays are not assumed positionally paired"
+    },
+    "bec019fd9fbc": {
+      "angle": "Lima wing places that have won a wing festival, a best-wings poll or a city food award",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHdbLXg-RVpnO5VfrsWFJI7AkX-sQoQcq2jE_k8dcuL7VNFGuV-JGbJfsAWrFt1oCdJFfNYykUZfHIMUUvoejoc-J0DKP2R8ihs3ZcDZB2Seapf_NWf0jV_0aSPUqUIUdAqeeveAOIEYOqVnDDe1OmcwrYGmC1E7q8Ob0Xq5U5fOWYCCGeO9hZZwW0JRkftnz_vZhllrFLnCw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGVObRNIXc6v7Vh13UefUsvA03Sp3m5EJxxYK9KWLB9O2c9CmXqLZxMhFG5Zmv6dAGXsLVPpk7bLfNHj3cz-jcueTha8RBCrOkwjOSxla8qwYEhYxT8sURMs2jjpSys9chCsvn0SMPj2RjAue_oWzE_7mwEAcv3MKdU6D43pQLgnRjm9_ej-Nk2_Gn1ZhLcTzbKomhAeyk=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHr-Q08zVp0tu2z1R59SiPO_NnoeJgFg_Fnli1xXB5ySLNgH94LnL3v-JnqVJ-Po2EXIdajG9MnVm7XnMtr9PTjzJ2SSvfgnAThOyYpMmeJiONHsWX2ilwPUoyQUr9NH7iSezAwKLl9X_Ei1bC2Rx6oNpt10FA3KZtH1wRRjMCpUEh4p7dpXtc_nI94amXagXovqeYc42oYKjhUNHcWyQ==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEZu8EZdRf2w3qsT7peRk3hmUjOG8O2LboaR377uR3FBxYsMYJ-ueHyc5C9ZRDV2tPR3j-h4LAv136MG7PcD1-oZ8kODXOiETU8Msqd1EMd3JxbdUEDiir-Fg3GTOctH49UsLFJmoPzA77zPhZ1CimIHeUxAPW0T8u5yspXnAZA6IJMkKjPCB6yqrqzfBJ-rPgePAB0sYpvPoQGEgw=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEBmeiaOe7HLLfO8QKhWe3tYpt2COdCdkDvj-Md7aplUhLX6IXH7wqOyaFZKz_kW3ciLX7Dr76Ke1O41gD5ZLzWILhMDAno_WvTHjkhkToeM5-bx0foeSVuzYYTqBEcudmEoDEK5SY3lrpCt3efbvYCdy_bCpOln4IcaTfrfMtBuQjA9ECTY2i5a01sm_4OZPwpBLY0A6gO1d4E-_F5CpfrM3nmOA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFPgidWYugpBp8D1x9YXyuNS3pNMx93p9FFsJUSU606hg5Gw9CgFQ6zEhDAmyaK2UH1jzk31yXIoRCXGayVlSu96jVAAmprTnr2v0CMEo48EcoNS3vEkysywus8dsQT7f5PjOxTTY2DnKksZfEMV9wyGcK4XGlli7LhkUoTF0KWkgKAak-A2W3_8AeZKmyCJAikQdrPDeg6nDfB7w==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH-FMXM5COLXcBW9DbFSZKE-2fnYiW1BCphoq1_NW0D4SB_XadcaMrORJLYC4oMn4L6fpnA3x55VmDLnSqXTBwbuNWSfF_Seq_80oT4lwwOC2NxaTU0T2tMDIXyROheHslwmdYmhjI7m6X-yDL-KnGLthA6zFYjLs15UI6_hGyS6gko2KCP50KtP4ZjuG6lq-JHtjzWJ8YqH8HsXTk=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHCu6B9j-m9V1cCllgbR565efjnZVav1PCf9iaiSxECg4YcBLBC8u-cLKno1K7CEtyEZ5sI1uRIbuKG7vt2fMWVlJ19NiPXPBKkrUMjlyf1W782jRq7uLrSUf_i3ZuVTv_BAoGJczGCjKAyti-fofQMgcNfYXM-TpHItNs3eY2K-YNGouxeisLrfoKfE9TOQXnyE7SFjtJpwgH0mAo=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE-3LzZ06CagRoj56S-6s25lwbEtfW65cNXSUte24ekYlwAAreZ03boin5XyBx0Q03enTX-EOGkDajNoWe3hm8b34UUepDUEayBmcIPZQqgSRlyokpksUSzHuttIsflXAnppr4fjFKDHDmk-TFaJNMs82Ell0rbPiA-4X2wclmYoPEz6_MS2lpGC4wZeGyNlAbRh2tCY6XpGksVOrlI",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGe5SA74u8P--foD-PocM3xPLoQ6vKSzOM9xb7WKMys5iXJs3s-P_gKx6V9Zb7SEJs7PXAQZLjmmqfMvfQwPVKQQ4gEdvqKhRRKqYwCpW36z-tw16Ew1vlN_QajCKRxzfQeOJU8wSCy2deJCzJGu3ZjXFgczGtl4Z_D8eWX2QwH0fbwU1rxnFhezHwocxSn_y3LbaX-1W5LW73k",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFI4eULuQ09ft8o5Qx2unMFi55Gk9kf0XSOcRpFJY5-P8sWrHWeT7nyITol9EzCafvDqHXQVburp3K5u300_gAm27OLUB4dxwCn4B7Ped5Fv-nCZTBf47rEfqwNVaDqfXItu4JRUODMFN40kSuQcGeJScfBqQ=="
+      ],
+      "source_titles": [
+        "mesa247.pe"
+      ],
+      "attribution": "search_attempt_only; not assigned to any individual candidate or claim; URL/title arrays are not assumed positionally paired"
+    },
+    "dd36f5fca2d7": {
+      "angle": "Craft beer taprooms in Barranco and Miraflores that pair their own beers with wings",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGJXjSmNGSOkaJk9TSBnXrVkI4ciLLiSSWb2AGomoSbAMjfdxGTrp6_IEWM_t1XYwJFGffQdiMG8A0AMn-OGx-r6cFiAhnb4DnmbBYD4sAVFHdRtkfxkuFym_n7hUjBRLN5cJ1QThGgI3AY3Q3ttPcvppOO6_pvk3SpkKjNlmChij5ttZQeIHkkst3GCzJtJU7JHvaFZBaKXt8B",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFCqLs-DXPkOT6wfooIgTJv9HeUN6o1mUYPwgvMcrWr5Cyc2-jK-AzYrKXGZdJq--KmFGF9O446R1CXCvk3rd7toAYzUv7XRr5XPkn2BLwbYQbb5ZY2JBWAETWH8YMRq3W3rnQCd5USXSJmXj2xkKQCZDy_rzvGqwB0aj_FNWtXi1cO1ExixwIglxTx1PRKj3XXuQwNIl0b2DOhPc_UgchCe_Guv-yEmVip_rLcTQ==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFcv0YG5XQGkGnvcq4QW_qkvvCuBTHRzidd4V7mlk07dW73v12OlKjAlGbtpsLJPQuvFENdK2qDNiIc4xnhWReQflEzlQZfKdQxSr2MQgFSuKOYV-E-autl_31-ypGWKI94pBD3tTSS2UDCRziixolNviWRatE7r79cvX9bV9wxPdp-6tJemcUnY2q52C6YKAqnfZhYcoy0pBt23w==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFQefeLi74M5cpqysDOlGUOgT9nOHDAjhhh2zdlurWjeamYiODM5t_xqAF-6LhAtbedFXa6h31w6ruU3siZgmMcPSazBWfbjpoXkuXvdbpgP2uPp_nqU2BYZGXdlPlISKw7esIifAXj-TYrKxfZ2UPjlYTyyL-5pypZEHTERoOiQXoENe1mqWMNGdTOuCp6jliiUrqSkHDLrcG2t7vC0kCRcV-ZqNc4uJ_81tSpscGya2bvSlikKItyZw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGFd4wjdEghm_aDWDGAPYC_vVQJ3Xnq4TeicdVJoyr9fuZ2FWOLLDsymDVJ4tIs9ksQMlLkXOfuq3wD1eFuOuqXxwl5ChWw0JjGJSlg7-D2uOXbg15ucRdYd2awIp0UqblPSVtNxbl7EpZb1x5d4jtanEwxhJN3QIpgbmN3KtKTh-eHWyJwyOkbZaLs-kRS0VFk8jrij1bdj5iz9rYR8fVgsOi8QrsYv9fz1FNBvy7x3TEDPOmfCO5a48GU",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEPuIYMHvIMwEUx7gynd3HzWyLYXd6oQ3mCxrETMmPJUIkO5926RBMSc_QsnMGoiVtRNEqGGpYYLqhCpQChVLuFh3nX2DW7GauVePg86gvdqmOhzre0WWNQnvUoqoIjgqUuCBzFLwt7IOstSx_xiFsZG5Plkv3J685a11HKK1VSttb5fV4KwKGaV9XG57-7CcQENc5TT3UDhjXsCrPPeMq6uA1rvVliuH-qOo9qRIU-4Cg8gUm7Rg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG2lr7fcYcHChtuOmRHsgqyTArdBfDyp_EsfUq3qzPSswA6sgce2k__Ao3cwGiwnWu7zn54oXeec83IRL7YGHBJsZ-rtLAEEpGCBIKhsb8afBD32b8BG6--K3C2gITSuSLnPkeroMVfh2I3tiC3_WapEnX7HxnkbuyJac0LPY4EM41LT3AGBVYAvVbdG_3IkcVMu22FQBUSUCshN8Qdfn2ka_F62BqFaqszji2JZnJ5H7UyiePupGnD",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGKtEg1gvN5PeR2cRyxK-nuNNGVtidUQWCRIwDNp6gD94iXnGu9QG5vmSykOmn5wmNn_ep_ejavXX8dYauerS3XnU3TYZLwt9Sg5VNPzjZo_PzZxVJ0bHD7YrROmuA-MjdRWlYRR8VFO0D572S2lhM2u3sSdfeYerLlpB-Qh75nfc3-8t0XuO0279VhWeVzSnb3vGcK-_A5iCwXGldY",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF90_WOOxI4XFyGUODnXCzq6n-_emjaX86Fz39e9xiaBp7oT_ybhTPUJSiLemV9s5kTUgRheg4eAsViFBkTHqe-2j1_1STZroKUAM93lWDuJHoUMO6AbYphGjScx5oFY_t6cwQdknLfmvwGnEv7bdgKboCMMabvFyQaH8vlDeM09eTCKOVo773xCUmm7zQsqNq-6geXwofiNkfebUk=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG4UpQU7_ij4GboBaOdFcbj8Q4jgw66VEbWBfRoij1BXjWIzmdZrHWljnt4PDBXtjLuuFFgIp8Zy8Jfv7EWoaRzaVbAxY3umWedf2FJuXrndZDUEkiBrVOeLejN8JoqRptfXJhAgSa6Qyk4N8jAsUJAPXC5qiImZ6Qub8aYFSd_2dmQHRmeB-AlXx8-DGnQygK-6Gdb8oHdn60PkKSJteGEY2snOvQ2p_5OknADdsqx",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGqsvvOREAFyL7oBOBUGZPR7HNRScy5GMEwDOwPU5LZmDWtTXyy3LR4w_5q8mcN2eNgywb1eg5lekiwNLNAolSRppIs-aLgOgCyVEG6gByyKk7cYplLfKQIhun4026BIWtx3gPze_Z9MHjcd7veujMbRjg="
+      ],
+      "source_titles": [
+        "thecitylane.com",
+        "cosas.pe",
+        "elcomercio.pe",
+        "killbait.com"
+      ],
+      "attribution": "search_attempt_only; not assigned to any individual candidate or claim; URL/title arrays are not assumed positionally paired"
+    },
+    "e46d0298ab5c": {
+      "angle": "Pollerías in Lima serving alitas a la brasa with ají verde",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE4KjMSEUugo_PKNGXAq1yAt--5ZbHtOo6qGN8Cwo0QqtdiID6XaqWCEdb1xIVR9ctQtDopU8avqF9jHQEfLXH9nVLMplPbASACrvvczdSZeYwnI2rQMsfCEBkgGvSqqE7IKenFzcWQZKba8uSMh2BS_aZ4zPa_GjOOMHrws8Ut6MfLPgxVw_7s1pzWAFe4h9em8EhRE0hCoob_Ib0-7Uj6EXuadzsBxPXU1A==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF8TuFMj5LUVD8W340Mi_La6VOxuEzhe8tSFNDZDxr7xarsam7oQxgcAntE5qFA_lHUgBdf7JkhdFcFfMBJlL3KijPrSA_PpDNcNGKaQgUwcYsXY5E6sQTFvsNRS1cJVHTxmCY5t-zipVG8NsRzolKCrdQdCTarwG6qJ-eWTdnzJS7NJGlhj7aRSqS9vepPSMLrXaip_19U1XTTBI4xLh20nWv9TVKaZH-BmvqJLqJU",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEs0f9P4UgcIOx7LSrLe5AC-8geFHoBnmd-jIWfhocSWvLkBk8Twq9USQLDKYZqc0p1X0tUXw3Pp5Oh2EYsoTELMEw1OnBbBMt_IyLqucpiemeyVTUSayajrzZatiK9b9F6EWLKdmuRvzdLbEFGXt-_NFrWn4ykfoMlHLphOWu98Ai3GPT4EJ6brd0bdq3vaDtsuoQAZJi5tsBO-GN9qFPODhod2YSXrFtPHHvfNipcSidBcsr6-w==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG18SSC7gQMJfcpjXZoV-XZ5acCVOC1mo3nkup4vTj2N169D80k-L_R7GmRhyXjBH8wsc-wkyzMdKGqdMPVn3I4fEAhhFuFnjcZpyekqrXxHJE0wWNaurbxOcgE03sRcLVEVDbgPz4G6OxVOPeifDw93G2xBV_ZgNU59SvsESikwyQkm-fg2ABrFpk25jj_WsfBIM9FsOW3NTkJHIkU8stbz92aSbUiJsXUV7RlEn1lpTbsjLAGhXB8g6GgT4I=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG0PN5Cc3uV0P7y7MYk6SPdGF-vL8ug2AZeKOg_fB-HMH5KvrHJ50rlaeXgdBqgTPsRZMlfnuvjvWmfivYa0pTPexcDp8SRE5FSRcboCWWu7mffZrAnKn7bKn6CJiQAwlEvG5uDR7u2x7qkFfsLOX9howfQj7NLKD2JTD0BEMSsDLyNHP-5CbNNCAfYw6Z41LPD8UYBBBjWY-ZPUeiPVjsMDXV0CqK36bqEIupl",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEUeLfYRMzuLu_5L5WPbCceHWlqj11-gnVy3eLtop3lY3uUCR_G47w4FE5Kigr9QBIFyugunRoP2Zlg_iEbK00i5EHctHLMDomsw-PjuCIa3TyJO_JMiogwRRjqeqcAWB_CfownqnQJVg-Mk-G1ZvE9b3rDdtklWD29Dy5p7CYDSY_XjwVJQv10xwLz5jnUj2LKXBOisIpfZjSIpsZjvukd1bvIlz9KSaeIMZtFqnX4TQ79",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGtNVZH_RxV0wnZ3rignIEqu0LeVi_L1s1ardPRNOrLEqDIlA7jcqtqp4rc1I-3JG6EIIbcW3oi2sFWFKA0q1k5zHeuLsP88nUwpW9-fN52MDyilAI_yBX8VAdz1HNiI5uAn6SKFt40HNNwU9cdt25eYEpX4mVaqyh9-wRMM6Xtqbl16l9p-aOYsrqn9eENgdVpWYtxJarmgkf-zL36JN9mmFB7d1VDSIr40LMA",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGsOh8lg4jKut11gMbABjVKkjgxdgXcvi9P4I2QvNasr8OYjOXF5Cw4f5XZhjdV75uDVh60DZwlHr3r9ZS3hV66hMZtqBmdjLIxwFOuXkKtKnR2gXNGDCxuCeIhLqqFOnIR-KffwFN--NUqO1dMMWP2eR0gUg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGl_m0Q8-hTaC9LLXaTwwtutTNLztIlQREFMoWmU35FwjAgV7epKu586CoUf5_plu0IjQoxikcauIrQ9tsrszRjbJt_pA0eWi-9gInA734gKOE93zry_WJFuuOCYnCpXv1jibr5l4ZKXdMq96tVyaFImyLfqqo=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHoUaRUbT7Y9WYKlnIEO272RZ3-pO7RvAsqLzyP7EZ09FKv3u3elpXPykwOU77ooAckVpGfTWz96fGViHqTpqiKp7UeQ_zq7i5vYhCYZWWtitt1Eeh7MChUvH9sW5OeoPUsKLkJoEfdo7lxF3REzTj0UKY=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHA8oFQztCLIVvKOum5-4QfxPDSvcvhKO-hYdBlA3TsteYIE6kq3bHBxegcPrkv0EGKI5CMpQkeOV3VFvgQOBusKTgzD3wxGG0Ylbu7sBIQa2nf0kts-xcA_cgZtMyafs1-QyNnpaxbpJy4BtQFk_7G39ft"
+      ],
+      "source_titles": [
+        "mesa247.pe",
+        "tasteatlas.com",
+        "youtube.com",
+        "primoschickenbar.pe"
+      ],
+      "attribution": "search_attempt_only; not assigned to any individual candidate or claim; URL/title arrays are not assumed positionally paired"
+    },
+    "ebecfcdb77bc": {
+      "angle": "Lima bars serving chicken wings glazed in ají amarillo, ají panca or rocoto instead of Buffalo sauce",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG0eZ_fXUAKEugQlIfg6xvRiOtS5VWoWXupv2W_3eqmoexucYM-AqESSSP2AcLz7kWRz_-Zb96YSWHgIqXidPuZ9HZO4AL9YBG2YU4xHj9DE5HrLP-TLRfchD9om73nF9gvzenWSher1GMHDOhHX3pBLAUZrCCrIMYuT5EaW6TK9wMos_yWh4zQavizdz2UUMGCCjsnjJ5DjbC7jf4xxGJFdlnaHRSH5sM=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGsulkg2E9rtmWHHhbbccROKo1uMRg-ssZaIJ0PFObxYgvRULvXkF17eG_W4VATqFkrslI5zIHDVZ-eXQ8NOxQEHecbg5MB9ch50Xo2oWgsAx2S78BBL1FftYDxWZG3e0ZSrH7IDSls5p_seU9jWtpqupqBIzZMHJBfTDlIA6N-yvoQKhPN_j-pGpECwPCX5JRvpOyfb1pihMqjzcgEI7Dleg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHX4OCove-QHIWL74Rx9h4AenbSqF8AhnfuhCO27JmU3c24i6ly04-TPDx_pz-g49buLp-rZWMX1V7KijZ4sKaut2yyx1rzHLdbFcZ2tAxSGXesX06WHL9iFhmOnkMtDTahm7i4u8T6z303F6DLhjVibJGPnxd1p7EaKM4IjnK_JpTX2O6sPSnZ5PPlm0GZ4nDfBn4zJ3SA9Tc8ZdEksZoLoqHYIpIxAeu6iIO1",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGzQeYQWPOxXTZoCg8vrEzFwU6xkPwtCt0sdeMKLvAvmC47EGIcUJqHb7pN9rX87lDD8ogY-lBRCJlzDALS6_ARCZpYU1g03lp4SjGQkVht4DXIqlswhokM4Uo5EbveKZQ2nlZFUoJFuXZlq-azHkihb2DS4uKk_ASYmRyN6OtR_iYmONuWUbQ9mUQYk7C3gQ55gfT0-GHc6-5BJm0NbKZ24LmCFD_DFzHJ",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEcIK4syFoHvhnPUyF1SC1Q2zELF5GGPitAI5nD3qs1VxwLLb3T5TOzU5jK4UwC61N4qjhy-4h_dCknQ99IgCv0pmg9k-aNiD2F9iPOGWga8isLZg8GxD_dep8F_ou-BJI0ULiwvfHQ8LZYYMV2Vn23dF87tr93GScddzxVBFYNhTvK7wtCqLI-yiaow5p-dRwdWu1X2CQ7pX6U0FkZVHZiHzBi",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE21koorttV_j7AtjHtFHdyokU8sOLz-fhp4o2pWqxjORrBDQBE_0ye01kzk3jcvOIgYcvJr-x7Zs9l_CHlqM44LSaKoqvefdEPDjB00hqgwpr3AJBEkeA1Ua0QYehP1XD7zAs2OcNB4OheDFaUFu9V1FsulKD1ZeepTGQlyzHJzQ==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFueVlD7zlAC3b0d2rCQ9fo4TwhNpTbuEcG3Y1oVw49Y0g_WcPcLaTQ14gCufykp-4p_I5cyUwCiwuNGdAhxLqegmCzjtZSR5ZI3w1-JVWm2tS3O4vZQP4-eMemIb61Iz2tS5w5EUVY4RTpSfUVqg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGneYaAw7HlTSlBXmsJN9V-mM2oWPVEoDm8vxF19DAFhfU7OWI4Pv22pHi6lpI6zHWGbzklS-iwoDaTqTRBsX2vYw5bFMpyL2AODqhhq1JbArteAkJ3qPw9eVswuYs73Gm6VWx1YtOHu45CmqEVdgIR3eT4M4nvrL8CrzSYTX2gER4Sfbno1qTOibBkYmVyRkzhYff2vK841mSbgd4vOyq8TsibZz7zoDQ-ft4=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHu7LqXj13l1LsygQ7hIZS4EouZVt3qm1h3Se50qdiT4yGZy6bFV5nfJlQsGSmJ1qyNZTb9BV1PN4X8_QjX0S1mIkUIwN-P23LEg3H-EJztJWlrJqQ=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGDivPwMWP8qaX6oOyH2eNjsjHo-4WViUV-JXiqQWq9NOxGF0H1QbgxXZ_yjLGvgheYXrr0BT9fpykq7Wkv5qalSUjxLf5d3qRObpCPmlecntCGgn_mOobEjwM6V8DiTtW3zMmvtToywWw4QA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH5DQuHzmwo2MmTsU7ff6Rm0aeWa1DCg09UXTKprTEXyF3b6To6ga3vpvsDu1GpGfdU4PJmDVneONcCVhXnQn0WHd1Gb94uUzm0zLK1Bl51qJ4d7WXKyhAB4Q=="
+      ],
+      "source_titles": [
+        "papachos.com",
+        "rappi.com.pe",
+        "diariocorreo.pe",
+        "queresto.com",
+        "lacasadelasalitas.com",
+        "facebook.com",
+        "argositsac.com",
+        "wingsbox.pe"
+      ],
+      "attribution": "search_attempt_only; not assigned to any individual candidate or claim; URL/title arrays are not assumed positionally paired"
+    },
+    "f9a3ba04c914": {
+      "angle": "Lima sports bars where people watch the fútbol over a plate of alitas",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE9Dnpse8KZUBGpmC1iXnq540WYQVqou2MK0TbfkJQv0VCz2YQo1rKwFK_JGUdNBEyohwSw04SYpQEb-sNzUhcHZBxXYDPmFqZLSVRoTX22aX30Qn34B6A1Lt_SHz0W-SGOdTjtcILKD1yP2exSVlbFvkZ3E0M0IXK4YKBj2LNQ4xGoRsQCNyk70naSfF1BlBBQ-uKO753OcTiW_n7D4NXFr1O2tXsI9qv6",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEDuMm0bMSBdzXV3moKhfdaGD117dSdba6YX0g87fBw_szYJi4Cm3moISEjK96z6FCxynISdNt3bMLOGF0Ww8xpaT5GLJo7ehNv6kWKGFY_9G5mBz_qbCZ9YeVkkLt0BniJ6Nls8d1Bkd4GZ8WoJuW-BuuQB_RCAew1HLNN97idNu_U_hcttQfJ0nQaKSX-bdisH3UGbBP4tK2il_5sJ4C7ywUXyfn2HAJN",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEJtHnZxakAV3PNke7IZ-nACKF0tcnHA_D4F2nRSh7-9xEiN0R5KMmr1kEMClzw42hLCRyG_Ej4EHK-EwuLrRa3cXyfHm57xMr0CLvF3ZKPclmqyK6TREyJ6JIrHIszylljaYg-sjx4t7n6L0I_hu3PmwW1tGvsyGKGd4a2GQvUHt4u97M6d4JzuEe5VPn9Tq3Sy5GYvcrHQq1hr1hGispidRBKvMpR",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHVMXjWFxqoLNWQUhfNp_K1C2HS17cpN-G4RGRre5I_mizoTl7Q9VVBZeSw6uszLL6YQhTVkO2m5JO5RYLbkBHo9oMrJPstzz9T23lx3XWKmCOAsTCGDE2RjamoQXRGknA8Uk232O-1Ix1pUiWNSmAK4-NjGj8SsTOyRw2Y_8egO7G0twc_r8BztisedRyOCuuyBLQndbvajJGNLneFg7aSO0R40-A=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHBqDbxEEG8OZE9gm2MMC9OmkN6r0iAGd8roWvMk9ehkzKQZ5N-MVXZhGi_v2i2u1GEaMb3avg4SkqxgSzY_z-HexOMqq7WwbqYdaGvCbPvJI-hgbL9tSiFOfYnwK7xF9NjP442_77nbMC8mIUTmzOGQ5VOhdVznG94-PG5tbnTpB4AoD9KxwhKux_SpOtReTPSJ_PEfp5zHdeXUp0cQQIr3Eyu2UDK",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH2QOeS9mPYgDeRXVvLTubKsQ4nKdJLGf4ct3CiNtrT0zCZpKRBOnX8bJBJNrbmf9pfV2ts_Tj6lzQE5FlNqK-iTBwvSUNtgSH83TsV6LAejPD6CPqSMhlowD-1DbnNxvc70IVy6JijRHaXNFbebxJg8u6_5pw869A8Fhgc8REHLyfFHpUxPsHiIj15nm-a6GR04S4Blj0RhK80vvD8dSrf5UQd1XN9DK6i670u9J7RCA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH8VlPAV90nJvibOFle8EhhJWa_NU0L0O30Hy7O58uwDbIm6DjSeGWXb2PnUup0_boLv7SMa1RdVY6fbGJ0MhhssFAV5jjPNPUV9mLRMC7zt8hikFUO7NPFSC96q2mEMe_ncZa40Qsvy6-l2n2NMWdIwMqtL3RqwmjgR2YsyhH1sIhx33EsuNkymSJ865GMoyHpZvxAOE2VbSZpQeh4pyiKCeDH4cO5aMBzHRApcA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGAVL71L5Xh5weiLdQ6AQzB1NfzqN14xwP5PJxNs2dkxMPEnjL4NncCS_I6LDc7yFXOmVrN6WuXtDLrb_-HAIWASEUNULu1Ih-0P3zehhTXdvZtaANn6KvpGFdIC4GE9woCNSFRjVxlPeF6A4o4xd-BvwOCulSdTbmlahm6S0xYPpgN9cT1HsQSobCLC-pjCjghlKbWPA_hWXyZSYquewxl",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHZoTj2Rj1zqUt-TquWf3HXR8d_wGeTH5iFxCYFJMfjMw2_0Jsoo55s5kQ2afTT7cKR64xy24oYDJ2Bl_4iZKjeF3s8eZgTFOoHv1NQ1Rq0q65ZqrQEyYitk8kdh_orKTFuFxXli937AXP-z3MiATrgHjnLsSVPp4IJ1a8eXxZ5Dq0V",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEN4X4NCkcbdKge1B8YAk4vKueEwk4MszRml2tx4xeB-Hesf7rh4p2Ku7jCmv6aheBPYu7rd-YyFIKaokee85vr-dCEhhV6gRlonzLvVfutv8Qb-2SQ1tJY8AecaBMoKv7fcUeOVVVIXBBy9vF7dXjHZbYMRgrSIAs=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGxtZEIzS73PhRaSlF2EZthW2zX5P32wWB4d0StxclU7GxktZGvaDYLX7hKw1cHnAIM8paBTc6bSxbxw72yWPI2tWnukiGEBgBgT7qyZ4770x4SQERQ0yobel0TdcWyoYnDNrMECY5zkJcWmBO3iQDaoK9D7f5hOOBp29N0YmGElYRe9nTDdTXHFaUIlHFbT3W3iX4ahh-DEBYpL80VmznUDzscvptSESHbLoStLaP_kvJHCjxYt5pntnk_BkmprXkO1RnZ-BfQwjPerIpHbNQg2qA1yw=="
+      ],
+      "source_titles": [
+        "rappi.com.pe",
+        "facebook.com",
+        "wingman.pe",
+        "mesa247.pe"
+      ],
+      "attribution": "search_attempt_only; not assigned to any individual candidate or claim; URL/title arrays are not assumed positionally paired"
+    }
+  },
+  "audit_supplied_source_leads": [
+    {
+      "urls": [
+        "https://lacasadelasalitas.com/",
+        "https://lacasadelasalitas.com/producto/alita-bbq-hot/"
+      ],
+      "origin": "prior audit; must read and verify anew; not discovery attribution",
+      "profile_id": "018c7cd7f650"
+    },
+    {
+      "urls": [
+        "https://www.rappi.com.pe/restaurantes/18886-mccarthys",
+        "https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/"
+      ],
+      "origin": "prior audit; address matches saved McCarthy identity; recheck before use",
+      "profile_id": "d84b87f3e9b4"
+    }
+  ]
+}

@@ -121,12 +121,19 @@ function attemptLine(card: ListicleResearchCard): string {
     case 'completed': {
       const found = profile?.findings_this_topic ?? attempt.findings_added
       const open = attempt.open_questions.length
-      return `${found} ${found === 1 ? 'finding' : 'findings'}${
+      // Two numbers, because they are two facts. How much material came back,
+      // and how much of it rests on a page somebody can open and check. The
+      // version of this card that showed one number showed the larger one.
+      return `${found} ${found === 1 ? 'finding' : 'findings'} · ${
+        attempt.evidence_ready
+      } check out · ${attempt.pages_read} of ${attempt.pages_attempted} pages read${
         open ? ` · ${open} unresolved ${open === 1 ? 'question' : 'questions'}` : ''
       }`
     }
     case 'completed_empty':
-      return 'No findings returned'
+      return attempt.pages_attempted > 0 && attempt.pages_read === 0
+        ? `No page could be opened (${attempt.pages_attempted} tried)`
+        : 'No findings returned'
     case 'failed':
       return 'The request failed'
     case 'response_invalid':
@@ -575,9 +582,21 @@ function ResearchAction({
           </button>
         )}
       </div>
+      {/* The budget, said before the press rather than discovered after it.
+          One search, one reading pass over what it names, one extraction from
+          the text that was actually read. */}
       <p className="lp-muted lp-research-cost">
-        One grounded request. No automatic retries.
+        One web search and one reading pass — two model calls at most, up to
+        eight pages opened. No automatic retries.
       </p>
+      {attempt && !running && attempt.generations > 0 && (
+        <p className="lp-muted lp-research-cost">
+          Last time: {attempt.generations}{' '}
+          {attempt.generations === 1 ? 'call' : 'calls'} (
+          {attempt.grounded_calls} searched), {attempt.pages_read} of{' '}
+          {attempt.pages_attempted} pages read.
+        </p>
+      )}
       {research.saveError && (
         <p className="lp-link-why" role="alert">
           {research.saveError}
