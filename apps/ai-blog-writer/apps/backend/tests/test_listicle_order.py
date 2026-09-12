@@ -255,6 +255,47 @@ def test_a_marker_covered_without_a_turn_still_yields_a_searchable_noun():
     assert order.target_count == 40
 
 
+def test_a_marker_covered_without_a_turn_stays_covered_when_the_grill_forgets():
+    """Live listicle run abb7004b, 2026-09-10.
+
+    `count` was read off the title and claimed on turn one without a question
+    being spent on it. Turn two still listed it. Turn three did not -- the
+    model simply omitted it from "the full list of markers you can now fill" --
+    and the interview went back to ask whether 15 meant 15, having already
+    built its whole search order on that number.
+
+    A marker reached by being ASKED about was always permanent. This is the
+    same rule for the other road to the same place.
+    """
+    from app.features.prompt2blog.grill_v4 import _markers_from
+    from app.features.listicle_pipeline.contracts import LISTICLE_MARKER_KEYS
+
+    state = agreed_state(seed="The 15 best rooftop bars in Lima").model_copy(
+        update={"markers_covered": ["kind", "place", "count"], "turns": []}
+    )
+    # Turn three's payload: everything except the one it forgot.
+    covered = _markers_from(
+        {"markers_covered": ["kind", "place", "bar", "cut", "angles"]},
+        state,
+        marker_keys=LISTICLE_MARKER_KEYS,
+    )
+    assert "count" in covered, "a forgotten marker must not become an unasked question"
+
+
+def test_a_marker_is_never_uncovered_by_an_empty_claim():
+    """The degenerate case of the same slip: a payload that claims nothing at
+    all must not wipe an interview's progress."""
+    from app.features.prompt2blog.grill_v4 import _markers_from
+    from app.features.listicle_pipeline.contracts import LISTICLE_MARKER_KEYS
+
+    state = agreed_state(seed="The 15 best rooftop bars in Lima").model_copy(
+        update={"markers_covered": ["kind", "place", "count"], "turns": []}
+    )
+    assert set(
+        _markers_from({}, state, marker_keys=LISTICLE_MARKER_KEYS)
+    ) == {"kind", "place", "count"}
+
+
 def test_the_place_falls_back_to_the_location_not_the_whole_headline():
     turns = [
         t for t in default_turns() if t.question.asks_about not in {"kind", "place"}

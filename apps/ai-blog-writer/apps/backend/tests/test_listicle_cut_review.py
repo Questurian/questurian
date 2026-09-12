@@ -34,6 +34,16 @@ def _order(**overrides) -> SearchOrder:
     return SearchOrder(**defaults)
 
 
+def _flags(review):
+    """The verdicts read back by the name they were filed about.
+
+    A convenience for these tests only. The store and the screen key on the
+    candidate id -- a name is not an identity, and reading verdicts by name is
+    exactly the fault R5 records.
+    """
+    return {verdict.name: verdict for verdict in review.verdicts}
+
+
 def _reviewer(payload, *, seen=None):
     def review(job_id, prompt, tool_name, schema):
         if seen is not None:
@@ -87,17 +97,62 @@ def test_an_order_with_no_angles_does_not_spend_either():
     assert seen == []
 
 
+def test_the_order_check_asks_about_wording_not_about_what_might_come_back():
+    """Run add41aca, 2026-09-11: eight rooftop-bar searches, a cut barring
+    members-only clubs and guest-only terraces, and six flagged -- every reason
+    "a sunset bar could still be members-only". The question asked which
+    searches were LIKELY TO RETURN barred places, and every model answers that
+    one yes.
+
+    The one real conflict on record clashes in the words themselves, so that
+    is what the prompt asks now: picture a place that perfectly fits the
+    search, and say whether its description alone puts it out.
+    """
+    seen: list = []
+    cut_review.review_order(_order(), _reviewer({"conflicts": []}, seen=seen))
+    prompt = seen[0][1]
+    assert "likely to return" not in prompt
+    assert "PERFECTLY fits" in prompt
+    # It is told the truth about how each search is sent, in this order's own
+    # words, so it does not reason about a search that forgot the kind.
+    assert '"cevicherias in Lima that match this description"' in prompt
+    assert "an empty list is the normal answer" in prompt
+
+
+def test_the_two_checks_run_as_the_two_jobs_they_were_measured_as():
+    """Measured apart, so registered apart. The order check is one short
+    judgement about wording and moved off Flash on evidence; the place check
+    reads sixty rows of evidence and was not measured anywhere else."""
+    seen: list = []
+    cut_review.review_order(_order(), _reviewer({"conflicts": []}, seen=seen))
+    assert seen[0][0] == cut_review.CONFLICT_JOB == "listicle.angle_conflicts"
+    assert cut_review.CANDIDATE_JOB == "listicle.cut_review"
+
+
+def test_both_cut_jobs_are_ones_the_gateway_has_heard_of():
+    """The registry sweep in test_prompt2blog_job_ids_are_registered walks the
+    article pipeline only, and these ids are passed positionally, so it would
+    not see an unregistered one. That is the p2b.section_edit bug: every test
+    green, and UnknownJob on the first real call."""
+    from model_gateway import JOBS_BY_ID
+
+    assert cut_review.CONFLICT_JOB in JOBS_BY_ID
+    assert cut_review.CANDIDATE_JOB in JOBS_BY_ID
+
+
 # After they come back
 
 
 def _candidates():
     return [
         {
+            "candidate_id": "c-maido",
             "name": "Maido",
             "district": "Miraflores",
             "sightings": [{"evidence": "top Nikkei restaurant, offers ceviche"}],
         },
         {
+            "candidate_id": "c-canta-rana",
             "name": "Canta Rana",
             "district": "Barranco",
             "sightings": [{"evidence": "cevicheria open since the 1980s"}],
@@ -122,8 +177,9 @@ def test_a_returned_place_that_breaks_the_cut_is_flagged():
             }
         ),
     )
-    assert set(flags) == {"Maido"}
-    assert flags["Maido"]["confidence"] == "clear"
+    assert set(_flags(flags)) == {"Maido"}
+    assert _flags(flags)["Maido"].confidence == "clear"
+    assert flags.status == "complete"
 
 
 def test_the_evidence_the_searches_wrote_is_what_gets_judged():
@@ -152,7 +208,7 @@ def test_a_confidence_nobody_recognises_is_read_as_arguable(value):
             }
         ),
     )
-    assert flags["Maido"]["confidence"] == "arguable"
+    assert _flags(flags)["Maido"].confidence == "arguable"
 
 
 def test_the_row_number_identifies_the_place_not_its_name():
@@ -175,7 +231,7 @@ def test_the_row_number_identifies_the_place_not_its_name():
             }
         ),
     )
-    assert set(flags) == {"Maido"}
+    assert set(_flags(flags)) == {"Maido"}
 
 
 def test_the_listing_is_numbered_so_the_answer_can_point_at_a_row():
@@ -196,12 +252,18 @@ def test_a_row_number_that_is_not_a_row_is_dropped(number):
                          "confidence": "clear"}]}
         ),
     )
-    assert flags == {}
+    assert flags.verdicts == []
+    assert flags.status == "failed", (
+        "a chunk that answered about a row it was not sent has not answered "
+        "the question, and must not report itself covered"
+    )
 
 
-def test_a_number_naming_a_different_place_is_dropped_as_an_off_by_one():
+def test_a_number_naming_a_different_place_is_rejected_as_an_off_by_one():
     """Acting on it would flag an innocent place while the real one goes
-    unflagged -- worse than losing the finding."""
+    unflagged. The whole chunk is rejected rather than the finding quietly
+    dropped: a chunk reporting itself complete while a real flag was discarded
+    is the one falsehood this step must not tell."""
     flags = cut_review.review_candidates(
         _order(),
         _candidates(),
@@ -218,7 +280,9 @@ def test_a_number_naming_a_different_place_is_dropped_as_an_off_by_one():
             }
         ),
     )
-    assert flags == {}, "row 2 is Canta Rana, so this verdict is not trustworthy"
+    assert flags.verdicts == [], "row 2 is Canta Rana, so this verdict is not trustworthy"
+    assert flags.status == "failed"
+    assert flags.reviewed_candidate_ids == []
 
 
 # Where it runs, and where it must not
@@ -227,7 +291,7 @@ def test_a_number_naming_a_different_place_is_dropped_as_an_off_by_one():
 def test_agreeing_checks_the_order_because_that_turn_already_spends(isolated_db):
     state = agreed_state()
     store.save(state)
-    order = service._ensure_order(
+    order = service.create_order(
         state,
         _reviewer({"conflicts": [{"angle_id": "a1", "why": "it fights the cut"}]}),
     )
@@ -252,7 +316,7 @@ def test_a_check_that_fails_is_not_a_clean_bill(isolated_db):
 
     state = agreed_state()
     store.save(state)
-    order = service._ensure_order(state, explode)
+    order = service.create_order(state, explode)
     assert order.conflicts_checked is False, "a failure must not read as checked"
     assert order.angle_conflicts == []
 
@@ -260,7 +324,7 @@ def test_a_check_that_fails_is_not_a_clean_bill(isolated_db):
 def test_changing_the_cut_retires_the_old_verdict(isolated_db):
     state = agreed_state()
     store.save(state)
-    service._ensure_order(
+    service.create_order(
         state, _reviewer({"conflicts": [{"angle_id": "a1", "why": "stale"}]})
     )
 
@@ -276,7 +340,7 @@ def test_changing_the_cut_retires_the_old_verdict(isolated_db):
 def test_nobody_checked_and_nothing_was_barred_are_different(isolated_db):
     state = agreed_state()
     store.save(state)
-    service._ensure_order(state, None)
+    service.create_order(state, None)
     order = service.order(state.run_id)
 
     assert store.load_cut_review(order.run_id, order.revision) is None
@@ -285,14 +349,16 @@ def test_nobody_checked_and_nothing_was_barred_are_different(isolated_db):
 
 
 def _two_rows_one_name():
-    """A pair the merge refused to join, because their districts disagreed."""
+    """A pair the pooling refused to join, because their districts disagreed."""
     return [
         {
+            "candidate_id": "c-hanzo-miraflores",
             "name": "Hanzo",
             "district": "Miraflores",
             "sightings": [{"evidence": "Nikkei restaurant"}],
         },
         {
+            "candidate_id": "c-hanzo-san-isidro",
             "name": "Hanzo",
             "district": "San Isidro",
             "sightings": [{"evidence": "second location"}],
@@ -300,9 +366,14 @@ def _two_rows_one_name():
     ]
 
 
-def test_two_verdicts_about_one_name_are_both_kept():
-    """Last-write-wins threw one away silently. Run 33fca394 has three such
-    pairs, and one came back barred for two different reasons."""
+def test_two_rows_with_one_name_get_their_own_verdicts():
+    """R5. The verdicts used to be stored by name, so a flag meant for one
+    branch landed on both -- the reviewer flagged only the Azul inside a hotel
+    and the independent street bar in another district came back flagged too,
+    with the same sentence.
+
+    Two candidates with one name are two candidates. Their verdicts are filed
+    against their ids and never combined."""
     flags = cut_review.review_candidates(
         _order(exclusions="no chains, and no places where ceviche is not primary"),
         _two_rows_one_name(),
@@ -325,29 +396,55 @@ def test_two_verdicts_about_one_name_are_both_kept():
             }
         ),
     )
-    assert "Nikkei" in flags["Hanzo"]["why"]
-    assert "second location" in flags["Hanzo"]["why"]
+    verdicts = flags.by_candidate()
+    assert verdicts["c-hanzo-miraflores"].why == "A Nikkei restaurant."
+    assert verdicts["c-hanzo-miraflores"].confidence == "arguable"
+    assert verdicts["c-hanzo-san-isidro"].why == "It has a second location."
+    assert verdicts["c-hanzo-san-isidro"].confidence == "clear"
+
+
+def test_one_candidate_flagged_twice_keeps_both_reasons():
+    """Two reasons about ONE row -- which is the case combining was for. Run
+    33fca394 has a pair barred as Nikkei on one row and as a chain on the
+    other, and last-write-wins threw one away silently."""
+    flags = cut_review.review_candidates(
+        _order(exclusions="no chains, and no places where ceviche is not primary"),
+        _candidates(),
+        _reviewer(
+            {
+                "barred": [
+                    {"number": 1, "name": "Maido", "why": "A Nikkei restaurant.",
+                     "confidence": "arguable"},
+                    {"number": 1, "name": "Maido", "why": "It has a second location.",
+                     "confidence": "clear"},
+                ]
+            }
+        ),
+    )
+    verdict = flags.by_candidate()["c-maido"]
+    assert "Nikkei" in verdict.why
+    assert "second location" in verdict.why
     # The stronger of the two readings, so a `clear` is not softened by an
     # `arguable` that happened to arrive after it.
-    assert flags["Hanzo"]["confidence"] == "clear"
+    assert verdict.confidence == "clear"
 
 
 def test_the_same_reason_twice_is_not_said_twice():
     flags = cut_review.review_candidates(
         _order(),
-        _two_rows_one_name(),
+        _candidates(),
         _reviewer(
             {
                 "barred": [
-                    {"number": 1, "name": "Hanzo", "why": "A Nikkei restaurant.",
+                    {"number": 1, "name": "Maido", "why": "A Nikkei restaurant.",
                      "confidence": "arguable"},
-                    {"number": 2, "name": "Hanzo", "why": "A Nikkei restaurant.",
+                    {"number": 1, "name": "Maido", "why": "A Nikkei restaurant.",
                      "confidence": "arguable"},
                 ]
             }
         ),
     )
-    assert flags["Hanzo"]["why"] == "A Nikkei restaurant."
+    assert flags.by_candidate()["c-maido"].why == "A Nikkei restaurant."
 
 
 def test_an_unmerged_twin_is_marked_so_it_does_not_read_as_a_chain():
@@ -359,12 +456,14 @@ def test_an_unmerged_twin_is_marked_so_it_does_not_read_as_a_chain():
         _order(exclusions="no chains"),
         [
             {
+                "candidate_id": "c-chez-wong-lince",
                 "name": "Chez Wong",
                 "district": "Lince",
                 "possible_duplicates": ["Chez Wong"],
                 "sightings": [{"evidence": "best ceviche in the world"}],
             },
             {
+                "candidate_id": "c-chez-wong-la-victoria",
                 "name": "Chez Wong",
                 "district": "La Victoria",
                 "possible_duplicates": ["Chez Wong"],

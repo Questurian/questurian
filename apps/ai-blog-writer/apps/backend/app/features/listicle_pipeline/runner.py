@@ -28,9 +28,17 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from .contracts import SearchAttempt, SearchOrder
-from . import store
+from .contracts import (
+    AngleSelection,
+    AttemptContribution,
+    PoolSnapshot,
+    ProviderCall,
+    SearchAttempt,
+    SearchOrder,
+)
+from . import cut_review, store
 from .search import (
+    POOLING_VERSION,
     AngleRequest,
     Candidate,
     Sighting,
@@ -38,6 +46,7 @@ from .search import (
     pool_sightings,
     run_one_angle,
 )
+from . import spec
 from .spec import planned_capacity
 
 logger = logging.getLogger(__name__)
@@ -47,7 +56,7 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def _request_for(order: SearchOrder, angle) -> AngleRequest:
+def _request_for(order: SearchOrder, angle, attempt_id: str = "") -> AngleRequest:
     return AngleRequest(
         angle_id=angle.angle_id,
         text=angle.text,
@@ -56,6 +65,7 @@ def _request_for(order: SearchOrder, angle) -> AngleRequest:
         shape_key=angle.shape_key,
         group=angle.group,
         edited=angle.edited,
+        attempt_id=attempt_id,
     )
 
 
@@ -82,6 +92,30 @@ def reusable_attempt(
     return max(matching, key=lambda a: (a.revision, a.finished_at))
 
 
+def _select(
+    order: SearchOrder,
+    angle_id: str,
+    *,
+    selected: str,
+    latest: str,
+) -> None:
+    """Point one angle at the work it is currently showing.
+
+    A reference, never a copy. Re-filing the reused attempt under the new
+    revision is what made one paid execution appear three times in search
+    history, and it also lost the fact that the work was done earlier.
+    """
+    store.save_selection(
+        AngleSelection(
+            run_id=order.run_id,
+            revision=order.revision,
+            angle_id=angle_id,
+            selected_attempt_id=selected,
+            latest_attempt_id=latest,
+        )
+    )
+
+
 def _sightings_of(attempt: SearchAttempt) -> list[Sighting]:
     return [
         Sighting(
@@ -90,10 +124,24 @@ def _sightings_of(attempt: SearchAttempt) -> list[Sighting]:
             name=row.get("name", ""),
             district=row.get("district", ""),
             evidence=row.get("evidence", ""),
+            # Named from the attempt and the row's position when it is missing,
+            # which is every row stored before observations had identities.
+            sighting_id=row.get("sighting_id")
+            or f"{attempt.attempt_id}#{index}",
         )
-        for row in attempt.sightings
+        for index, row in enumerate(attempt.sightings)
         if row.get("name")
     ]
+
+
+class LeaseLost(RuntimeError):
+    """The batch no longer owns the run.
+
+    Raised rather than logged. A process that lost its lease has to stop
+    dispatching and must not publish over the work of whoever took it; the
+    responses it already bought are archived as orphaned evidence, which is
+    what an attempt row left in `running` is.
+    """
 
 
 def run_order(
@@ -102,6 +150,7 @@ def run_order(
     *,
     only: list[str] | None = None,
     reuse: bool = True,
+    owner_token: str = "",
 ) -> dict:
     """Run the angles that need running, and assemble what the run now knows.
 
@@ -111,30 +160,57 @@ def run_order(
 
     `reuse` off is the deliberate full refresh: the operator wants new
     research, knows it costs, and asked for it.
+
+    `owner_token` is the batch lease. It is checked before every dispatch and
+    again before the result is committed, so a process whose lease expired and
+    was taken over cannot spend on this run's behalf or overwrite the work of
+    the process that took it.
     """
-    stored = {a.angle_id: a for a in _latest_by_angle(store.load_attempts(order.run_id))}
+    known = store.load_attempts(order.run_id)
+    selections = store.load_selections_for(order.run_id, order.revision)
     wanted_ids = set(only) if only is not None else None
 
     for angle in order.angles:
-        request = _request_for(order, angle)
         fingerprint = order.angle_fingerprint(angle)
         should_run = wanted_ids is None or angle.angle_id in wanted_ids
+        current = selections.get(angle.angle_id)
+        selected_now = current.selected_attempt_id if current else ""
+
         if should_run and reuse:
-            existing = reusable_attempt(order, angle, list(stored.values()))
+            existing = reusable_attempt(order, angle, known)
             if existing is not None:
-                # Re-filed under this revision so the assembled view is a view
-                # of one revision, while `gathered_at` still says when the work
-                # was actually done.
-                carried = existing.model_copy(
-                    update={"revision": order.revision, "wanted": angle.wanted}
+                # A reference. The attempt keeps the revision it was run under,
+                # so `gathered_at` still says when the work was actually done
+                # and search history still counts one execution.
+                _select(
+                    order,
+                    angle.angle_id,
+                    selected=existing.attempt_id,
+                    latest=existing.attempt_id,
                 )
-                store.save_attempt(carried)
-                stored[angle.angle_id] = carried
                 continue
         if not should_run:
+            if current is None and selected_now == "":
+                # Not asked for, and nothing points at it yet. A stored result
+                # from an earlier revision may still answer this request.
+                existing = reusable_attempt(order, angle, known)
+                if existing is not None:
+                    _select(
+                        order,
+                        angle.angle_id,
+                        selected=existing.attempt_id,
+                        latest=existing.attempt_id,
+                    )
             continue
 
+        if owner_token and not store.holds_batch(order.run_id, owner_token):
+            raise LeaseLost(
+                "These searches lost their claim on the run while they were "
+                "working; nothing further was bought."
+            )
+
         running = SearchAttempt(
+            attempt_id=store.new_attempt_id(),
             run_id=order.run_id,
             revision=order.revision,
             angle_id=angle.angle_id,
@@ -147,17 +223,34 @@ def run_order(
             state="running",
             started_at=_now(),
         )
+        # Written BEFORE the call. A request that is sent and never answered
+        # has to leave a row saying so, or an interrupted search is
+        # indistinguishable from one that never ran -- and only one of those
+        # may already have been charged for.
         store.save_attempt(running)
-        stored[angle.angle_id] = running
+        _select(
+            order,
+            angle.angle_id,
+            selected=selected_now,
+            latest=running.attempt_id,
+        )
 
         result, sightings = run_one_angle(
-            request,
+            _request_for(order, angle, running.attempt_id),
             kind=order.kind,
             place=order.place,
             exclusions=order.exclusions,
             standard=order.standard,
             research=research,
+            subject=spec.catalogue_subject_of(order),
         )
+        if owner_token and not store.holds_batch(order.run_id, owner_token):
+            # The response may well have been bought. It is left in `running`,
+            # which reads as interrupted: orphaned evidence, not current work.
+            raise LeaseLost(
+                "These searches lost their claim on the run before this "
+                "result could be filed."
+            )
         finished = running.model_copy(
             update={
                 "state": "failed" if result.failed else "completed",
@@ -166,6 +259,10 @@ def run_order(
                 "reason": result.reason,
                 "source_urls": result.source_urls,
                 "source_titles": result.source_titles,
+                "provider_calls": [
+                    ProviderCall(at=call.at, outcome=call.outcome, detail=call.detail)
+                    for call in result.provider_calls
+                ],
                 "sightings": [
                     {
                         "angle": s.angle,
@@ -173,6 +270,7 @@ def run_order(
                         "name": s.name,
                         "district": s.district,
                         "evidence": s.evidence,
+                        "sighting_id": s.sighting_id,
                     }
                     for s in sightings
                 ],
@@ -183,7 +281,20 @@ def run_order(
         # the whole reason a failure on the sixth search no longer costs the
         # five that worked.
         store.save_attempt(finished)
-        stored[angle.angle_id] = finished
+        known = [a for a in known if a.attempt_id != finished.attempt_id]
+        known.append(finished)
+        # A completed refresh becomes what is shown, empty or not: a search
+        # that ran and named nobody is a real finding about the angle. A failed
+        # one leaves the earlier success selected and says the refresh failed,
+        # which is two facts and used to be stored as one.
+        _select(
+            order,
+            angle.angle_id,
+            selected=(
+                finished.attempt_id if finished.state == "completed" else selected_now
+            ),
+            latest=finished.attempt_id,
+        )
 
     # The pool is only final once the batch is. Contribution is written back
     # here rather than at the moment each search lands, because what a search
@@ -200,6 +311,12 @@ def prior_contribution(order: SearchOrder) -> dict[str, str]:
     none. Roughly two of seven searches bought nothing, nothing noticed, and
     the numbers only existed after the money was spent.
 
+    Read from pool snapshots rather than from attempts. Contribution is a
+    measurement against peers, and one execution referenced by three revisions
+    used to be summed three times -- "30 rows and 30 places nothing else found"
+    for a single search that returned ten. One snapshot per prior run, each
+    attempt counted once inside it.
+
     An angle is identified across runs by its SHAPE, not its wording -- the
     model rewrites the sentence every run -- and only within the same subject.
     An angle the operator wrote themselves has no shape to look up, so it is
@@ -209,17 +326,30 @@ def prior_contribution(order: SearchOrder) -> dict[str, str]:
     runs is a fact about two runs, and this pipeline has two.
     """
     subject = subject_of(order)
-    history = store.completed_attempts_for(subject, exclude_run=order.run_id)
-    if not history:
+    snapshots = store.latest_pool_snapshots(subject, exclude_run=order.run_id)
+    if not snapshots:
         return {}
 
-    by_shape: dict[str, list[SearchAttempt]] = {}
-    by_text: dict[str, list[SearchAttempt]] = {}
-    for attempt in history:
-        if attempt.shape_key:
-            by_shape.setdefault(attempt.shape_key, []).append(attempt)
-        if attempt.angle_text:
-            by_text.setdefault(attempt.angle_text.strip().lower(), []).append(attempt)
+    by_shape: dict[str, list[tuple[str, AttemptContribution]]] = {}
+    by_text: dict[str, list[tuple[str, AttemptContribution]]] = {}
+    for snapshot in snapshots:
+        seen: set[str] = set()
+        for entry in snapshot.contributions:
+            # One execution, once. A snapshot cannot legally hold the same
+            # attempt twice, and refusing it here means a corrupt one cannot
+            # inflate the number either.
+            if entry.attempt_id and entry.attempt_id in seen:
+                continue
+            if entry.attempt_id:
+                seen.add(entry.attempt_id)
+            if entry.shape_key:
+                by_shape.setdefault(entry.shape_key, []).append(
+                    (snapshot.run_id, entry)
+                )
+            if entry.angle_text:
+                by_text.setdefault(entry.angle_text.strip().lower(), []).append(
+                    (snapshot.run_id, entry)
+                )
 
     notes: dict[str, str] = {}
     for angle in order.angles:
@@ -230,19 +360,26 @@ def prior_contribution(order: SearchOrder) -> dict[str, str]:
         )
         if not earlier:
             continue
-        runs = len({attempt.run_id for attempt in earlier})
-        rows = sum(attempt.rows for attempt in earlier)
-        exclusive = sum(attempt.exclusive for attempt in earlier)
-        when = "the last time this search ran here" if runs == 1 else (
-            f"across the {runs} times this search has run here"
+        runs = len({run_id for run_id, _ in earlier})
+        executions = len(earlier)
+        rows = sum(entry.rows for _, entry in earlier)
+        exclusive = sum(entry.exclusive for _, entry in earlier)
+        when = (
+            "the last time this search ran here"
+            if executions == 1
+            else f"across the {executions} times this search has run here"
         )
         earned = (
             "no place the other searches missed"
             if exclusive == 0
             else f"{exclusive} place{'' if exclusive == 1 else 's'} nothing else found"
         )
+        # The run count is said separately rather than folded into the
+        # execution count. Two searches in one run and one search in each of
+        # two runs are different facts about coverage.
+        across = "" if runs == executions else f" (in {runs} runs)"
         notes[angle.angle_id] = (
-            f"{when.capitalize()} it returned {rows} "
+            f"{when.capitalize()}{across} it returned {rows} "
             f"row{'' if rows == 1 else 's'} and {earned}."
         )
     return notes
@@ -259,7 +396,7 @@ def subject_of(order: SearchOrder) -> str:
 
 
 def record_contribution(order: SearchOrder) -> None:
-    """Write each angle's contribution onto its stored attempt.
+    """Write down what this pooling of the evidence measured.
 
     Contribution is computed against the finished pool, so it cannot be written
     when a search lands -- the searches after it will change it. It is written
@@ -267,9 +404,14 @@ def record_contribution(order: SearchOrder) -> None:
     angle changes the pool and therefore changes what the other six turn out to
     have contributed.
 
-    This is what makes the number outlive the run. Until it was stored, an
-    angle that bought nothing was visible on one screen, for one run, after the
-    money was already spent.
+    Stored as a snapshot rather than as a property of each execution. The same
+    search has different exclusivity against different peers, and a number kept
+    only on the execution cannot say what it was measured against -- which is
+    how one paid search came to be reported as three.
+
+    The per-attempt copy is kept as a convenience for the scripts that read
+    attempts directly, and it is a mirror of the latest snapshot, never a
+    second source of truth.
     """
     by_angle = _current_attempts(order)
     sightings: list[Sighting] = []
@@ -279,74 +421,167 @@ def record_contribution(order: SearchOrder) -> None:
             sightings.extend(_sightings_of(attempt))
     candidates = pool_sightings(sightings)
 
+    contributions: list[AttemptContribution] = []
     for angle in order.angles:
         attempt = by_angle.get(angle.angle_id)
         if attempt is None or attempt.state != "completed":
             continue
         found, shared, exclusive = contribution_of(candidates, angle.text)
-        store.save_attempt(
-            attempt.model_copy(
-                update={
-                    "found": found,
-                    "shared": shared,
-                    "exclusive": exclusive,
-                    "contribution_recorded": True,
-                    "shape_key": attempt.shape_key or angle.shape_key,
-                    "subject": attempt.subject or subject_of(order),
-                }
+        contributions.append(
+            AttemptContribution(
+                attempt_id=attempt.attempt_id,
+                angle_id=angle.angle_id,
+                angle_text=attempt.angle_text or angle.text,
+                shape_key=attempt.shape_key or angle.shape_key,
+                role=angle.role,
+                rows=attempt.rows,
+                found=found,
+                shared=shared,
+                exclusive=exclusive,
             )
         )
+        store.record_attempt_contribution(
+            attempt.attempt_id,
+            found=found,
+            shared=shared,
+            exclusive=exclusive,
+            shape_key=angle.shape_key,
+            subject=subject_of(order),
+        )
 
-
-def _latest_by_angle(attempts: list[SearchAttempt]) -> list[SearchAttempt]:
-    best: dict[str, SearchAttempt] = {}
-    for attempt in attempts:
-        current = best.get(attempt.angle_id)
-        if current is None or (attempt.revision, attempt.finished_at) >= (
-            current.revision,
-            current.finished_at,
-        ):
-            best[attempt.angle_id] = attempt
-    return list(best.values())
+    store.save_pool_snapshot(
+        PoolSnapshot(
+            run_id=order.run_id,
+            revision=order.revision,
+            subject=subject_of(order),
+            target_count=order.target_count,
+            candidate_count=len(candidates),
+            uncertain_identity=sum(1 for c in candidates if c.possible_duplicates),
+            pooling_version=POOLING_VERSION,
+            taken_at=_now(),
+            contributions=contributions,
+        )
+    )
 
 
 def _current_attempts(order: SearchOrder) -> dict[str, SearchAttempt]:
-    """The attempt that speaks for each angle right now.
+    """The attempt whose RESULT each angle is showing right now.
 
-    This revision's attempt when there is one, because that is the live work
-    -- running, failed or finished. Otherwise a completed attempt from an
-    earlier revision whose request fingerprint still matches, which is the
-    reuse rule stated once: a stored result belongs to a request, not to a
-    revision number.
+    The selection is what says so. It is written when work is filed rather than
+    worked out on read, because "what is displayed" and "what happened most
+    recently" come apart exactly when it matters: a refresh that failed leaves
+    the earlier success on screen and the failure as the latest attempt, and
+    the previous version of this function could only ever return one of those.
 
-    Reading it this way is what stops a corrected count blanking the screen. An
-    order revised to fix one angle leaves five angles asking exactly what they
-    asked before, and their results are still answers to their questions.
+    An order with no selections yet -- one stored before they existed -- falls
+    back to the reuse rule stated once: a stored result belongs to a request,
+    not to a revision number.
     """
-    stored = store.load_attempts(order.run_id)
+    selections = store.load_selections_for(order.run_id, order.revision)
+    stored = {a.attempt_id: a for a in store.load_attempts(order.run_id)}
     chosen: dict[str, SearchAttempt] = {}
     for angle in order.angles:
+        selection = selections.get(angle.angle_id)
+        attempt = (
+            stored.get(selection.selected_attempt_id)
+            if selection and selection.selected_attempt_id
+            else None
+        )
+        if attempt is not None:
+            chosen[angle.angle_id] = attempt
+            continue
+        if selection is not None and selection.latest_attempt_id:
+            # Nothing successful is selected, but something was tried. The
+            # latest attempt is what the screen has to show -- running, failed
+            # or interrupted -- and it is not a result.
+            latest = stored.get(selection.latest_attempt_id)
+            if latest is not None:
+                chosen[angle.angle_id] = latest
+            continue
+        # No selection at all. Either an order stored before selections
+        # existed, or an attempt written straight to storage by a recovery
+        # path. This revision's own attempt speaks first -- including one still
+        # marked `running`, which is what an interrupted search looks like --
+        # and a matching stored success from an earlier revision after it.
         mine = [
             a
-            for a in stored
+            for a in stored.values()
             if a.angle_id == angle.angle_id and a.revision == order.revision
         ]
         if mine:
-            chosen[angle.angle_id] = max(mine, key=lambda a: a.finished_at)
-            continue
-        fingerprint = order.angle_fingerprint(angle)
-        reusable = [
-            a
-            for a in stored
-            if a.angle_id == angle.angle_id
-            and a.state == "completed"
-            and a.request_fingerprint == fingerprint
-        ]
-        if reusable:
             chosen[angle.angle_id] = max(
-                reusable, key=lambda a: (a.revision, a.finished_at)
+                mine, key=lambda a: (a.finished_at, a.started_at)
             )
+            continue
+        fallback = reusable_attempt(order, angle, list(stored.values()))
+        if fallback is not None:
+            chosen[angle.angle_id] = fallback
     return chosen
+
+
+def _latest_attempts(order: SearchOrder) -> dict[str, SearchAttempt]:
+    """The most recent attempt for each angle, whatever it did.
+
+    Read beside `_current_attempts` rather than instead of it. "Showing an
+    earlier result because the refresh failed" is two facts and the screen has
+    to be given both.
+    """
+    selections = store.load_selections_for(order.run_id, order.revision)
+    stored = {a.attempt_id: a for a in store.load_attempts(order.run_id)}
+    latest: dict[str, SearchAttempt] = {}
+    for angle in order.angles:
+        selection = selections.get(angle.angle_id)
+        if selection is None or not selection.latest_attempt_id:
+            continue
+        attempt = stored.get(selection.latest_attempt_id)
+        if attempt is not None:
+            latest[angle.angle_id] = attempt
+    return latest
+
+
+def _review_for(order: SearchOrder, candidates: list[Candidate]):
+    """The stored review of exactly this pool, if there is one.
+
+    A read and never a call. Drawing a screen must not spend, and the whole
+    point of storing the verdict is that opening the page again is free.
+    """
+    fingerprint = cut_review.review_fingerprint(
+        order, [candidate_payload(c) for c in candidates]
+    )
+    return store.load_pool_review(order.run_id, fingerprint)
+
+
+def candidate_payload(candidate: Candidate) -> dict:
+    """One candidate in the shape the reviewer and the fingerprint read.
+
+    Built in one place so that what is hashed and what is sent cannot drift --
+    a fingerprint over material the reviewer was not actually shown is a cache
+    key that means nothing.
+    """
+    return {
+        "candidate_id": candidate.candidate_id,
+        "name": candidate.name,
+        "district": candidate.district,
+        "evidence": candidate.evidence,
+        "possible_duplicates": list(candidate.possible_duplicates),
+        "sightings": [
+            {"angle": s.angle, "evidence": s.evidence} for s in candidate.sightings
+        ],
+    }
+
+
+def pooled_candidates(order: SearchOrder) -> list[Candidate]:
+    """The pool as `assemble` builds it, without building the whole payload."""
+    by_angle = _current_attempts(order)
+    sightings: list[Sighting] = []
+    for angle in order.angles:
+        attempt = by_angle.get(angle.angle_id)
+        if attempt is not None and attempt.state == "completed":
+            sightings.extend(_sightings_of(attempt))
+    return sorted(
+        pool_sightings(sightings),
+        key=lambda c: (-c.overlap, c.name.lower(), c.candidate_id),
+    )
 
 
 def _state_of(attempt: SearchAttempt | None, running: bool) -> str:
@@ -376,14 +611,42 @@ def assemble(order: SearchOrder) -> dict:
         attempt = by_angle.get(angle.angle_id)
         if attempt is not None and attempt.state == "completed":
             sightings.extend(_sightings_of(attempt))
+    # Sorted for the screen only. Identity does not come from position: the
+    # id is a function of a candidate's members, so the same evidence produces
+    # the same candidates however it is ordered here.
     candidates: list[Candidate] = sorted(
-        pool_sightings(sightings), key=lambda c: (-c.overlap, c.name.lower())
+        pool_sightings(sightings),
+        key=lambda c: (-c.overlap, c.name.lower(), c.candidate_id),
     )
 
+    latest_by_angle = _latest_attempts(order)
     angle_rows = []
     for angle in order.angles:
         attempt = by_angle.get(angle.angle_id)
+        latest = latest_by_angle.get(angle.angle_id) or attempt
         state = _state_of(attempt, running)
+        latest_state = _state_of(latest, running)
+        # The result on screen was gathered by an attempt that is not the most
+        # recent one. That is a refresh that failed, and saying "0 results" for
+        # it -- which is what the old single-row-per-angle storage did -- is
+        # both wrong and unrecoverable.
+        showing_earlier = bool(
+            attempt
+            and latest
+            and attempt.attempt_id != latest.attempt_id
+            and attempt.state == "completed"
+        )
+        if showing_earlier:
+            note = (
+                f"refresh {latest_state}; showing the earlier result from "
+                f"{attempt.finished_at or 'before'}"
+            )
+        elif latest_state == "interrupted":
+            note = "it never came back; re-running it may be charged again"
+        elif attempt is None:
+            note = "this search has not been run yet"
+        else:
+            note = attempt.reason
         found, shared, exclusive = contribution_of(candidates, angle.text)
         angle_rows.append(
             {
@@ -396,17 +659,16 @@ def assemble(order: SearchOrder) -> dict:
                 "edited": angle.edited,
                 "custom": angle.custom,
                 "state": state,
+                # What happened most recently, which is not always what is on
+                # screen. Kept separate so a failed refresh can say both.
+                "latest_state": latest_state,
+                "showing_earlier": showing_earlier,
                 # Kept for the screen that has always read these.
-                "failed": state in {"failed", "interrupted"},
+                "failed": latest_state in {"failed", "interrupted"}
+                and not showing_earlier,
                 "rows": attempt.rows if attempt else 0,
                 "sources": attempt.sources if attempt else 0,
-                "reason": (
-                    attempt.reason
-                    if attempt
-                    else "this search has not been run yet"
-                )
-                if state != "interrupted"
-                else "it never came back; re-running it may be charged again",
+                "reason": note,
                 # Repeated discovery, reported as itself. Not a ranking: a
                 # search with few exclusive names may be carrying the coverage
                 # everything else is being checked against.
@@ -420,16 +682,43 @@ def assemble(order: SearchOrder) -> dict:
                     and attempt.state == "completed"
                     and attempt.revision != order.revision
                 ),
+                # How many requests actually reached the provider for the work
+                # being shown. One invocation is not one billable call.
+                "provider_calls": len(attempt.provider_calls) if attempt else 0,
+                "origin": attempt.origin if attempt else "",
             }
         )
 
     uncertain = sum(1 for c in candidates if c.possible_duplicates)
     capacity = planned_capacity(order)
-    # None means nobody has checked this revision against the cut; `{}` means
-    # something checked and barred nothing. The screen says which, because
-    # "we looked and it is fine" and "we never looked" are different claims.
-    stored_review = store.load_cut_review(order.run_id, order.revision)
-    barred = stored_review or {}
+    # Work this run has that no longer answers the order as it stands. A
+    # correction changes what the searches ask for, so their results answered
+    # the previous request -- they are not lost, they are filed under the
+    # revision they were bought for, and saying so is the difference between
+    # "your research is gone" and "your research answered a different
+    # question".
+    shown = {attempt.attempt_id for attempt in by_angle.values()}
+    superseded = sum(
+        1
+        for attempt in store.load_attempts(order.run_id)
+        if attempt.state == "completed" and attempt.attempt_id not in shown
+    )
+    # The review of exactly THIS pool, or nothing. Looked up by the fingerprint
+    # of the material a reviewer would be sent, so a pool whose candidates
+    # changed cannot be answered by the verdict on the pool they replaced --
+    # which is what used to happen, and left a completely different set of
+    # venues reading as checked and clean.
+    review = _review_for(order, candidates)
+    barred = review.by_candidate() if review else {}
+    # A verdict filed under the old rules -- keyed by revision, and by NAME
+    # within it. It is real work somebody paid for and it cannot be applied to
+    # these rows: a name is not a candidate, and this pool was built by
+    # different pooling rules. Said rather than silently dropped, so an
+    # operator who remembers checking this run is not left thinking the record
+    # lost it.
+    historical = review is None and store.load_cut_review(
+        order.run_id, order.revision
+    ) is not None
     payload = {
         "run_id": order.run_id,
         "revision": order.revision,
@@ -441,6 +730,13 @@ def assemble(order: SearchOrder) -> dict:
         "complete": all(
             row["state"] == "completed" for row in angle_rows
         ) and bool(angle_rows),
+        # A refresh that failed over work that stands. The list is still
+        # complete and something still went wrong, and one boolean cannot say
+        # both.
+        "failed_refreshes": [
+            row["angle_id"] for row in angle_rows if row["showing_earlier"]
+        ],
+        "superseded_results": superseded,
         # Said plainly rather than left to be worked out. A distinct count is
         # provisional while any two rows might be one venue, and a screen that
         # prints one number implies a certainty this step has not got.
@@ -452,9 +748,27 @@ def assemble(order: SearchOrder) -> dict:
         # Whether anything has judged this revision's places against the cut,
         # and what it said. Separate from the flags themselves so an unchecked
         # run does not read as a clean one.
-        "cut_checked": stored_review is not None,
+        # True only for a review that COVERED every candidate. A partial
+        # review, a failed one and a pool nobody looked at are three different
+        # states and used to be one.
+        "cut_checked": bool(review and review.status == "complete"),
+        "cut_historical": historical,
+        "cut_review_status": review.status if review else "not_checked",
+        "cut_reviewed_count": len(review.reviewed_candidate_ids) if review else 0,
+        "cut_expected_count": len(review.expected_candidate_ids) if review else 0,
+        # Which chunks failed, so a retry can buy the missing part and nothing
+        # else. An additional chunk is an additional call, and it is named
+        # before it is bought.
+        "cut_missing_chunks": (
+            [chunk.index for chunk in review.chunks if chunk.state != "complete"]
+            if review
+            else []
+        ),
+        "cut_chunks_planned": len(cut_review.chunks_of(
+            [{"candidate_id": c.candidate_id} for c in candidates]
+        )),
         "barred_count": sum(
-            1 for c in candidates if barred.get(c.name, {}).get("why")
+            1 for c in candidates if c.candidate_id in barred
         ),
         "empty_handed": [
             row["angle_id"]
@@ -482,19 +796,41 @@ def assemble(order: SearchOrder) -> dict:
         "angles": angle_rows,
         "candidates": [
             {
+                # The id, not the name, is what anything filed against this
+                # candidate has to key on. Two rows may legitimately show one
+                # name; they are never one candidate.
+                "candidate_id": c.candidate_id,
                 "name": c.name,
                 "district": c.district,
                 "evidence": c.evidence,
                 "found_by": list(c.found_by),
                 "overlap": c.overlap,
                 "possible_duplicates": list(c.possible_duplicates),
-                # What the cut check said about this place, if anything has
-                # looked. Read from storage rather than recomputed: judging
-                # costs a model call, and drawing a screen must not.
-                "barred": barred.get(c.name, {}).get("why", ""),
-                "barred_confidence": barred.get(c.name, {}).get("confidence", ""),
+                "possible_duplicate_ids": list(c.possible_duplicate_ids),
+                # What the cut check said about THIS candidate, if anything
+                # has looked. Keyed by id: two branches of one bar are two
+                # candidates with one name, and keying by name put the flag
+                # meant for the branch inside a hotel onto the independent
+                # street bar as well. Read from storage rather than
+                # recomputed: judging costs a model call, and drawing a screen
+                # must not.
+                "barred": (
+                    barred[c.candidate_id].why if c.candidate_id in barred else ""
+                ),
+                "barred_confidence": (
+                    barred[c.candidate_id].confidence
+                    if c.candidate_id in barred
+                    else ""
+                ),
+                # Whether anything looked at this row at all. A partial review
+                # leaves rows nobody judged, and an unjudged row must not read
+                # as one that came back clean.
+                "cut_reviewed": bool(
+                    review and c.candidate_id in set(review.reviewed_candidate_ids)
+                ),
                 "sightings": [
                     {
+                        "sighting_id": s.sighting_id,
                         "angle": s.angle,
                         "name": s.name,
                         "district": s.district,

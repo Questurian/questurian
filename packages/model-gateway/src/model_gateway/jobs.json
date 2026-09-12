@@ -184,9 +184,17 @@
       "id": "listicle.cut_review",
       "app": "ai-blog-writer",
       "call": "json",
-      "summary": "Judge angles and returned places against what the operator barred.",
+      "summary": "Judge returned places against what the operator barred, from the evidence the searches brought back.",
       "site": "features/listicle_pipeline/cut_review.py",
       "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "listicle.angle_conflicts",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Before anything is searched, name any approved search whose own wording asks for places the operator barred.",
+      "site": "features/listicle_pipeline/cut_review.py",
+      "defaultModel": "claude-sonnet-5-medium"
     },
     {
       "id": "listicle.grill",
@@ -194,7 +202,7 @@
       "call": "json",
       "summary": "Interview the operator about the list, using the article grill's engine.",
       "site": "features/listicle_pipeline/service.py",
-      "defaultModel": "gemini-2.5-flash"
+      "defaultModel": "claude-opus-5-high"
     },
     {
       "id": "listicle.grill_lookup",

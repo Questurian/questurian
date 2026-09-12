@@ -1,0 +1,1289 @@
+{
+  "case": "narrow-hotels",
+  "label": "live",
+  "ran_at": "2026-09-10T134420Z",
+  "manifest": {
+    "case": "narrow-hotels",
+    "place": "Lima, Peru",
+    "kind": "independent hotels",
+    "subject": "hotels",
+    "target": 20,
+    "standard": "independently owned, and set up for stays of a week or more",
+    "exclusions": "chains and international groups",
+    "angles": [
+      {
+        "angle_id": "a1",
+        "text": "aparthotels and guesthouses in Lima with self-catering kitchens",
+        "role": "broad",
+        "wanted": 7,
+        "prompt": "List real, currently open independent hotels in Lima, Peru that match this description:\naparthotels and guesthouses in Lima with self-catering kitchens\n\nFind 7. Keep going until you have 7 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal accommodation and travel reporting, hotel listing and review sites, and the places' own pages are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: independently owned, and set up for stays of a week or more\n\nLeave out, no matter how good: chains and international groups\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      },
+      {
+        "angle_id": "a2",
+        "text": "hotels in Lima advertising weekly and monthly rates",
+        "role": "broad",
+        "wanted": 7,
+        "prompt": "List real, currently open independent hotels in Lima, Peru that match this description:\nhotels in Lima advertising weekly and monthly rates\n\nFind 7. Keep going until you have 7 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal accommodation and travel reporting, hotel listing and review sites, and the places' own pages are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: independently owned, and set up for stays of a week or more\n\nLeave out, no matter how good: chains and international groups\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      },
+      {
+        "angle_id": "a3",
+        "text": "hotels in Lima in converted republican-era casonas",
+        "role": "distinctive",
+        "wanted": 5,
+        "prompt": "List real, currently open independent hotels in Lima, Peru that match this description:\nhotels in Lima in converted republican-era casonas\n\nFind 5. Keep going until you have 5 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal accommodation and travel reporting, hotel listing and review sites, and the places' own pages are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: independently owned, and set up for stays of a week or more\n\nLeave out, no matter how good: chains and international groups\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      },
+      {
+        "angle_id": "a4",
+        "text": "hotels in Barranco, Lima",
+        "role": "broad",
+        "wanted": 7,
+        "prompt": "List real, currently open independent hotels in Lima, Peru that match this description:\nhotels in Barranco, Lima\n\nFind 7. Keep going until you have 7 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal accommodation and travel reporting, hotel listing and review sites, and the places' own pages are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: independently owned, and set up for stays of a week or more\n\nLeave out, no matter how good: chains and international groups\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      },
+      {
+        "angle_id": "a5",
+        "text": "guesthouses in Lima run by the family who own them",
+        "role": "distinctive",
+        "wanted": 5,
+        "prompt": "List real, currently open independent hotels in Lima, Peru that match this description:\nguesthouses in Lima run by the family who own them\n\nFind 5. Keep going until you have 5 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal accommodation and travel reporting, hotel listing and review sites, and the places' own pages are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: independently owned, and set up for stays of a week or more\n\nLeave out, no matter how good: chains and international groups\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      },
+      {
+        "angle_id": "a6",
+        "text": "hotels in Lima within walking distance of the Metropolitano",
+        "role": "distinctive",
+        "wanted": 5,
+        "prompt": "List real, currently open independent hotels in Lima, Peru that match this description:\nhotels in Lima within walking distance of the Metropolitano\n\nFind 5. Keep going until you have 5 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal accommodation and travel reporting, hotel listing and review sites, and the places' own pages are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: independently owned, and set up for stays of a week or more\n\nLeave out, no matter how good: chains and international groups\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+      }
+    ],
+    "provider_calls_at_best": 6,
+    "provider_calls_at_worst": 18,
+    "cap_enforced_at_dispatch": 18,
+    "resolved_model": "gemini-2.5-flash",
+    "pooling_version": "2",
+    "search_prompt_version": "2026-09-09",
+    "judged_by": [
+      "Do independence and long-stay survive every search, or does one optional angle carry the whole commission?"
+    ],
+    "outcomes_still_to_be_judged": {
+      "eligibility": "how many checked candidates fit the requirements and the angle",
+      "coverage": "how many suitable distinct venues the whole pool holds, and what is missing",
+      "identity_errors": "false merges and unresolved duplicates, counted separately",
+      "wording_drift": "unrequested restrictions added, and requirements silently broadened",
+      "operator_effort": "edits, confusing choices, repeated questions, recovery actions"
+    }
+  },
+  "stopped_at_cap": "",
+  "target": 20,
+  "found": 34,
+  "shortfall": 0,
+  "uncertain_identity": 17,
+  "provider_calls": [
+    {
+      "at": "2026-09-10T13:44:20+00:00",
+      "prompt": "List real, currently open independent hotels in Lima, Peru that match this description:\naparthotels and guesthouses in Lima with self-catering kitchens\n\nFind 7. Keep going until you have 7 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: independently owned, and set up for stays of a week or more\n\nLeave out, no matter how good: chains and international groups\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 5105,
+      "rows_text": "La Paz Apart Hotel | Miraflores | self-catering suites\nApart Hotel San Martin | Miraflores | comfortable apartments\nPeru Star Apart-Hotel | San Isidro | mini-kitchen\nApart Hotel Petit Palace Suites | Miraflores | serviced apartments\nInkari Apart Hotel | Miraflores | mini-kitchen\nLa Casona Hospedaje | Barranco | alojamiento con cocina\nApart Hotel Caminos Del Inca | Miraflores | kitchen in single room",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGvfN7Xm20U_vuDv1y4f8oJgjLH1RjTWV7Xe9ZHtJm8IPT1DFCS-f9RSlGQkeRjYlzjG8v4yf1WD3dtdxwZx5A_IuRjJ0pEsiFzIWvV32KpAW6Ql63Y2M5W8ITTI8YZ9vgHemHA2nuolBKhEN7yp2dFTODinmPEcqdxSwfZ7z6M4yRUy44aX6foTnKKMssf-vGaF20IejrbG7ZBiRW8WwTdHH6j7Lmto2jjmPHpv_BKZndjbQZBlyn9IKU=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHY1aALaDdWmzc9UscwSVIIfoJV57GSdgr92_cS8iLHMlh-l1X4ZoY8zy-dudXQjArWX8GT0w-SmAOygWfSbRPG2-UyxNU95LCyOJSfesq4XVhtSvR4GMht2PpD7XRTAhW-C5qypszmOclF0OQduA9v7WHU-mltmM7Xmp-Nc0oaAvVE4QIE4PBPLucyA7AHCcPiAB9OFY3l2o5h2WU5P7kMolq2d2_mliSQzyqG-A==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGhcfc9lBrOuNPnkCcQ49NuN8q7lNgrf-l4msnbPzUAv4elVxx_1lvY0UDjGrkQheW7Y8xhmzPpPL1cH72yZz-fEuS05MbcxI7rpkVUYV70BCo8MSlNH6yQfoxfWgK9ygijEDUuvn0KGYidhGzSvMXeQ_ryMQ_cwBsGggnXqon_EeYLQfPauzO8BMcxv3YaGtizzdkAk-47sQVfcUT2shMi9SiwGVNg9RnIUsSQng==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH4IYCCePcLft6cOi4-VsmASlIgSFjRu6i2TzzMX30GI9HrY-5D-jcgglra1V9m0E6zeIQ52wNbZPojYqJIELgV3xEJWF5bq9g3dSlBQDjepY7-GkyY3i1PR300Y9nWJGXBZobpJDc2c_tdKypX85MEh7uKzZ-KXoyYGDECkJb-XtF62rcksYszHpyCXhKRYJWLykE2KUijB4iYyj1XKgxLdvX1f6LLdZ1-uPoIYo7Qo9TZrpmYSaczBpDxQ9H1KA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH-z8kDv3PTHEfc7M3VSptZg2uhSQiiPBI8r_bic8NBhY8vce5PB9Y3Nr6_XdgWSzDNUBo2A5v8giu5xRX7LGzG7ead88cX3d43ok_6K7XAPUZmkdEMQOK1KkSdZouTRlJcQ-nxzjduIW_VhDOXFVCUBUR39gXx8kpOvspKgwzFLOeA4ES8BwzShMxVz1yeY5LXaBaSXFoDlypMG_Lpe6Po1EWseGIqdNPYSnW9aqreUFXbzyVyPIIu",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGBZuOCEXSpax6v-THzM1Qktn0QBzG7XWP0xSQEtlPZTSBbtFVc5OJhe2IanzwGZnjXGeMtzupIFLRZwA5znZKZBbCXyxaDgAWkQN8972NhSig9nw1FArKFjYdfQH9VevSkZ4AcuvKCUAYYcF6bjehelAtpTzICFL1wSIWw-AJmao73aaeQdajQxCBOfNBvZXFpDbQpYmMOf2R4COQbfi_Zdo1mDJtrOJRkNEi4FApmZg7LS77IzMlg8r9TXNIP8g==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHcMI6E66jKwqgWrp1mUgRzhRXrChBAH110Pf0T8_7kwcimTOwt-3oldyYlU0U5pSK4FBQhWuoym69Pxhx0b0EzdKP980zU5nwEoR1BNlDHod4sKKmoIfXfkgvtTaOPWGd4BWedarh2DaSVNEhhvFB3uo1VWBkjB1WzEQ6IvLFvTwKlE1OmXjtGMAAxlRQ5-yFgBrS--wp6srbk13c6lc0uAiO6O731l7cG2eNs9Vgj2PFYZ2eY5W9eFYFjHwg=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHZzh4UdC2lkQUKE-BSRk-9O-C1UW9BH382unKIL-tFIzRpiyMSk5mCpzIBAv8e49R84MXYeshwGwNXcbhLB6TuFh8tQOhyrcABP1cvRJ-0tS7QVDCkomcJ6OJFZF5-H1IgoLhn_V1HrvwezgnHkOTYaCJM6cLn07Josfr_dy_TDFyNKsFVQaB3vh57_-aJlnyXNtSJ4YSI9YGzGKocLERRP0581eCCj9EE-kGoQzIPjGvJERW7QdvYwNc=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGZu2hWER4LvqVxiVLccRHpsoQrZxuUSkZ1mCckdJwI13bAlgX0zQZ8yiTOJ7YL6W40ZN2XtjZV7uGQ7jPMMrQ9IzlUvZNeOK8hjebgMDSTq09AMoRjCBlK1Se-ZhIICLGQFawFlVP-W95h7eDz7sqffV0dr0dyoWXI6oon87qYYh7yGJ_u27_fv0rC5zu_nqJaViL4YUQGC-0mxNeCTKwvC2PJ",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEZn9gzJxF-9bkWHw7OmV3NIAj0Udm9VWPcFNkO1OlYjxnJJngpL45ax7FKjf2Ct7UzXKlb4Wv5VYg_cd4ICZiKMcsjHPB9t-yaDBsCQ6Br6kCX-Pq_PDSeDOsH7NAo6yf5WdGzoNVWVXKSR_RJMY6lnIOvuGKUZ9E_9ih1qTuL-ge-t_rbvWuE-AIy99id4ZQc7vkULEelrsit62OkUJLY1wZe2_03UlYh",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEQIS6w7XAlK6aTZpz5-nVfB-eRk9gaMAFsNcV3JBzkjBllyKAJdx73cjpg2AcuxKdTHYcC9RiXuW5myWVxJoIM6rCdDm8bjeAcDcwbN3HnMtDGxo9jmZHWmwpt40QDVlH1-Mf7eOrpddJbGeQnFSxXYIbM4w8ruMQVw4xpv_Df2vcAmQWqL3dGugof9IRRmbgpY16UeqVWLnZPpWcw8ypAV1j_JIeiWEcqlFDzzTpiMalieRXt0d7oY_0H5zYS-A=="
+      ],
+      "source_titles": [
+        "booking.com",
+        "aparthotelshq.com"
+      ]
+    },
+    {
+      "at": "2026-09-10T13:44:47+00:00",
+      "prompt": "List real, currently open independent hotels in Lima, Peru that match this description:\nhotels in Lima advertising weekly and monthly rates\n\nFind 7. Keep going until you have 7 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: independently owned, and set up for stays of a week or more\n\nLeave out, no matter how good: chains and international groups\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 3700,
+      "rows_text": "Manor House Lima | Miraflores | monthly rental for digital nomads\nAtrium Miraflores | Miraflores | monthly rental for digital nomads\nVerona Hotel & Baños Turcos | Los Olivos | monthly and weekly rentals\nCasa Fanning Apart Hotel | Miraflores | aparthotel, long stay friendly\nApartamentos Lima 501 | Miraflores | furnished apartments, long stay\nInkari Apart Hotel | Miraflores | furnished apartments, long stay\nSori Apartments | Miraflores | furnished apartments, long stay",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEYMafyU2TQiyw_LAk7q4G8g9UZcbxNDsuAIuybQN6p-2IA4ugoPm69dHGB4U-HH6o5gjSnCkWMlu0CMfDck6nZnmz4so7naru3U22NSN_jpIalWPi33hjDzuvjyD3VPyR2OtH0uNOiMQPqhFLDICtqXFBr2DO3uhThHgP77GJrCs4K52JMLEgDGt1zhebn-8lVk4n_EjsArQ37u-NpprsxgOVPhwGzseB8pcc1y8nYP9gkaK1Gqw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHU5iCD228bIM-y6dwWdo5_KlR9DBn0VOyfpWWy_6uu5UlPU2wPnqihVPKjxUbYGykEMWEstkU_UT8dWFfTleeTRLkmuuLL1khO_a0fIRuuVtekgkz9s61bo03Z_c_f4ruu9Iqq79XP8zrapiSxNithYeF5K9PSfEQ5IWCnYq9ShElsxpIaToIHtl1piRP-txuY_rIWlNy5NUEW_K8=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHMcZo1JykGeKg0lP2-u5C9JPUmg18gf7r80yf6nd5vJpVn2dwz5jm6F_Ld3nmVfc26CfhI2RyJNq2wCba2uoWtil4vzTxZyBywSrBcC2p_s_TAzU7grFk2haBPlornSl9bDgWoT76jC6NfG6VUgAr3LjcAfUogzTlcFv8gWdjO6UfHHeRnWFUSG_FfBjk8FIF_uTcv3hTnVacf2HrYAmU=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGdxwSmqxT99HVBHtEMw2F47GHTrGZ-J8m8JRXMT98KooK7dbVqULQ8TEGXPydxLs9m1ddBOVz5nD_V9xNEdDJtIK94lGgI1lhki3AhNsYTetCN_3_43onpuFaEzCBuU1nv1CIbcJp1cqTp7t9tPFzT1cjkmajVTh97ve5OZmhb2fp3L8CR0gQtNp1HPl9qcwnMcYoC_TiEwshUc08DgonFXgyIGnp1l3V7ytI2eDahhawmG9aYlmQ1OWnP",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGaLWrX51sZu7l4M8nTc23873ghxwUBTBbLDs0Ecj-QqbRo34Gats3GxrpGJ0T6SnLU5AIIuWCbyIblMODlN5nps2o8-Iw8NbuUM7eXuj0Xul7JMI2dHm0VgAHU-2LYhiFzApKOPopXgSQVaBBceS-GYy4Y-EIuIqe5PulDt7aAtAaSEjKww_omH6-MDs7Wr8taLHihiv1hcJo=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEfw3JIbM9OTQZttTxPRKANfaU9YMM-P7_6NI68TKR3ikNQAkqerspOmlMtkrJZOVbKIAp8Q-wMhi48CnwqWFJhr23G8B7xniSGsJxakYsiTfTcGEE8cHxwXBbBPCisSHP5zSdHo9ipLx0e0eYQ6OjWPH6mBVE1t4N7_g1VvYbYq8_NOPTywp5eISfiGsbKHJe_b77B2eP9g72wKF7TC2Q=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHTsRHKULCfo36YuDny3Pgo44YhAR2XEK7hrEun5JQ0oeaX05ngxuhNdzz1kLdcmLI-LdNqKQnGiwtPM_KnPmT-qVSoVLof1qZatvDVFUEv_oP6ystntOXLREQZ_3GKwoXxlUoy-aQMfDO5uLIxX2lkZPVTL2io1oAtTV1ZZobEtZnXMY_JuYm9mz6PPszagL9a3Z7QNigyGTtys9xSov8Yj443oqQoIQgWaw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHXP974VAuvE0gb6sK55ZtI2_Jf1K4u25ZBKpKkpym_DB0lMHYXz24-4aRI5eEqf7riEJNpCzSN7X-ZUKIdSz2G-TdWOA5dGvv-u6SiIzOUYG-RSgSdM8SFqktCtqJl4U6pJBIo-OSrcKBMbsGFE0ju0I_VKcEsMO3RcSTzdagH1nsG1H9IwjPmUQKd7gikcsZcr42SPSLk_eJ5bPYnaNNL2q6rMMNxWrwmBMkFCEjc",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQExEJvqPp0f4g194VRCavDzJBgY7PAcKV_HpgKCNKKgXjs1C7_kkYksPPKqfc5x1ZvIg34x0qnEfkxJR_vpp-xTC7P6MLg474pqIkQ-mN8haR0R7cAMDCmKBdr4sa4IERoWRvLC7CBTuZD-LKvt2rsrN-eTlDqnovS2Ti3qhDxx43CrECV-6kV4kV_vGOjG7jCruKR66V8ht2vwUuPLvHmg_CA=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF0c6U4kAJ8f9WCQFi8-zGtPB8nm-3kR3FMNP7CHquo0AtPqf10zsVtSYJo0Te5Tzx9VMDOfiyeI8YKAlUHLpj7clcSvdEkc8HFigWg7tXIC-skCkAJ4H3LkVAhQZt9HC1gt4bc9f00crM=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGO6bj0yJUUMTnJbu3zSBYxf0arHpphlaAmMohzYX0zXpAum30XSSIYvutLGe0Zz-CzGYQC5PPYm70teeKMEDtvy5NxQuvaDX-KN1etgZve_3N40EmKQrEfrPFJ4j36QOthkz99oKo2GxtvYW2U9eHTx6R_4aBu1VlHqfx3A0g-ow=="
+      ],
+      "source_titles": [
+        "nomadrental.com",
+        "sonder.com",
+        "travelocity.com",
+        "expedia.com"
+      ]
+    },
+    {
+      "at": "2026-09-10T13:45:06+00:00",
+      "prompt": "List real, currently open independent hotels in Lima, Peru that match this description:\nhotels in Lima in converted republican-era casonas\n\nFind 5. Keep going until you have 5 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: independently owned, and set up for stays of a week or more\n\nLeave out, no matter how good: chains and international groups\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 3627,
+      "rows_text": "Casa Republica | Barranco | 1920s mansion, Republican era style\nLima House | Centro Histórico | renovated Republican era architecture\nLa Casona Azul | Miraflores | charming old house, tranquil setting\nCasa Lima | Centro Histórico | beautiful historic building\nHotel B | Barranco | restored 1914 Belle Époque mansion",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHcvcfL0HgMVBIKJ0TKxw_uvlFcW9XpOhUXFQ0K_SbzjeeaR0rAxyBGFaZ9gS37yTwOGh5a596j-iROcLs3OI3nyIFWbJkiExPjMgj5qzJOKl0owaRQIYUU00tz8VMfLvTwlV1MWMbmsO49GHKqdLvirCi_DySFdGfbHxhNRQEVc7z2zO6xmy1HL4ZrONXyBr94TOSanCImMOIiqGHS8L8U6HB0",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGTfP3W21aJOag0HspuFh2hKn_Xmgh7gHKD2CvY-BTqbI7d2lVJyyJieGLcTWQPp0I3IaN3ZAPmwYz1Hx_mU9r5ARa4j_HeNgy4SJBOLTrKDqB8JSe0aAj_xIS4Be_8V8DVNEErbYMFdqc-aPD4UvNLV85Pz_k5s8haUtstVEbvf1TKC6ZMbKXyvYkbXmXn3RsvRXnHdtleyeU_tvbIAYa6sU4Du0DsU6Qo",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGYIl3sOIekqm1Mb54-gn2BvvJFexy_0baE19VsRF4N6Dp1nY56wqbPYpYHX7-NrN4RrzLgIDpOnCpgQL2BqHHCLyewcwtGcFHd6M6dSlfM73f6PgOoWs4T9WNY9U4ESC1n5qCh_pzNrU5JJLH1eo6mBfEKDxCM_MZIp4Bl_XZ4X5WMPXYhRtrutd6kGEgCiCH7zzLlTCIkjDSIfHyx-ovN_Rn1KjJxuXDo1I9GzNZFeAY=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHHFb2PXwacXkDMMvjlQLFNFD-_9TpD4Ox6-W3-45-0oderitNySKwsRordxiAmpx9OT7kRe8rBJrHWEpHYP3rGVkGtzQYC7NR5ic-fuwt-cwQ7JYzUw27GWWKjOlrPcldvh5j13a9BhTCqbjRlp61R2VM4ev613RF1q4E9B-EF8J653oO-LJQiSiAE41ts7DwyRIJmWmUhPo8HpcoXSHSQJ9dMFJ-g6V8=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHB5Uj7_AjNK8baFHQcfJtigSooE0ctzG-UUGcMcFQJNTxekXbve8WsIpdz63iGVVGem4fnH1cuRV7wWwp4Eoq3dtPLWxvc9h-ook0enXDtUvBFCviirEeS9I6EB0Fd88YWHmoeEr625gmKrIxdI3w4kRRXfVkvO0OIKYp1jnyD8Cq0EeufBCzMdZ4AFbJdhD3tYv-ZSnwAuvZAB3q7h7EwJtbze6ITv0YGELh6wFkE8QOQf0NKirY=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGdfbVjRE_YOwWq5xyAS7600wZ5YtGHqXs3A0-oGW74873L5TWaLbS12hqKsKvXiB7R5UI4YzX0neiYOKVpS_z41yOzECO67Z3olEyr8NN5dSVjIfWvAdvLTP5FNOpDUkTXW1Av5svKbU5dZD5G8Ll79gYnvbjV1QqcQRSQLF6iEhYXIe3l9l9BCQfUztFjAFcfEwK2-vVf45bj2yeuT9JNs4-WnDta7QzJbixo",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHnLgYA7sbzdu8waTt5gu3OPEATCDnYYL77akLUkQX3S30iG_P_ZYpFmxOcH1NYn_2cO_OaBNDT9RMWR6xv2d1VkYRf_8en8VLMADZs1IuXLcvOcs6I5ohOu4rng-tlGQJoGYs4JLaYIvGpI_xHfcOlEh6LN0P3l6BUJvgOMqP-RRBrRw5bEYOq2ZEUT3roitz5CqhyqjDi0RiZkCQIR2B7oX_F-H35Jg==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFWQ6ItzWYkuVnJ51HohTwJd9sPYZtDFGcAGhmZ9L4MuZaH18LYY7TcWAbdktAmH3Doq_dYbfJDFNuHw8hXsAZY7T7fs2qo8TiizesjYtfV2Mvi14F6B1SBVpP0V5BzDEqauaQb4kftNBstfLPA82TdM7zvAmwElLGVILa10sWO",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEBxKcGWoUQ8JEHafvwMshUsKaZqnv9MxZsclxabFkvsuzbFgir9_uByqpj8nS1T8M-zIEtyPoLPn139n-s98arOu6fVRzSBln-Vle4bm0mLENdmKGqOt6Sp43aM7meVrX_9dMXpUUC9erskUxx74Jhv2j0XuQNtb8=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFVX7SESp30uMW-xILFfMBt3puXeRZF8fC-ajKbDZ4RqmYdb1HPXgy5RS4cpatfaGAWUNr5m_gk8zIjGNhJWDyXuqwJU3qBnoH3HNslCMCwYXGRMMn61Vy6iFD0JeZmrUElyK-qO8ow5EY50JDE4u43ix0UrJm0VG8b1_yjiZ-J3e2d4-72ESlNqlD7q4w=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF2aY4OQqLvyzw57MWismvNPoj4w5IMbcCwI8l3ZJmyucZ_Cx9TP3KRy3iUslLnP8jBQkdgqHxCBIUj86W_Fu91b5CuH2DDLwJSYp-NpLd8h4UWPJkyrsQxIQDYXggEZ4ahvL0_wbu91VPXM6aSLmx0-er_C3kFaHE25SLyKeR7y_q6yZ0PhlP8Q7674BoLRKEjBHbcDHCKRGuUAfql38VGAi-dD85BG7qDz57n"
+      ],
+      "source_titles": [
+        "aracari.com",
+        "southamericacollection.com",
+        "southamericaplanet.com",
+        "hotevia.info",
+        "casarepublica.com",
+        "maneramagazine.mx",
+        "facebook.com",
+        "karryon.com.au",
+        "thebetterbeyond.com",
+        "youtube.com",
+        "luxuryhotelshub.com",
+        "incaexpert.com",
+        "trivago.com",
+        "booking.com",
+        "kayak.com",
+        "limahouse.com.pe",
+        "hotelb.pe"
+      ]
+    },
+    {
+      "at": "2026-09-10T13:45:25+00:00",
+      "prompt": "List real, currently open independent hotels in Lima, Peru that match this description:\nhotels in Barranco, Lima\n\nFind 7. Keep going until you have 7 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: independently owned, and set up for stays of a week or more\n\nLeave out, no matter how good: chains and international groups\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 4950,
+      "rows_text": "Villa Barranco by Ananay Hotels | Barranco | boutique hotel, junior suites\nBarranco Boutique Hotel by 3B | Barranco | B&B, microwave, refrigerator, monthly stays\nCasa Republica Barranco Boutique Hotel | Barranco | boutique hotel, laundry service\nCasa Fanning Apart Hotel | Barranco | apartamentos completos, días y semanas\nCasa Nuestra Peru | Barranco | guesthouse, kitchen, microwave, fridge\nSecond Home Peru | Barranco | bed & breakfast, high rating\nHotel Bohemia | Barranco | amplias habitaciones, comfortable ambiente",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHSTO50saBWjFiV1rSvdcltPxuByOKtyDEUu7pxbhsfZmtKikVbOMhZcc7GAwuUJO9G8tKOHlPgEE48SD4jXZKabhozzO2-u_7Vln6WwkjfNCRfJ75nLn2UGTV5YbgZ5ao0wCwELGNjcORRCkSvHOZZKi1WwPBk3uzugTn3-G6_AhDr1ZW3TKWQN49NvOn1vqB51_oN0xJXxGcBoM0=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGEappZn8l4NKfsckexCzMKlEdqZQpktKIkclQmhXdcEis8hogaZ9iAT5IX7R3ViFcLYtV72awXXnVYnzET3tQK2S-S3e1V53CyA-hu8Sw8JxCUL9SzGfo8PYdVjR0SwLN1SNdOu2ukh2k3Liad5saprgYbm7LWXDhnfr-35zkozwLjH3b1oNjqmmV2qU6lQs6xgWjvgzdXRN-Sr1y-TGvB0KfqeZcwPk8jmsz-",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHzve_1ID9eLCPqDMwDOx4NodzE3AsSyym7bBUsrfeXrnHx3-3nxFujD8j9T6SzfR1H6FvQ_kLFiebmc9H6IYHfPLVL15YHO2EQx3017dPgMKeR4U38JRjsTAEz2cWRBblJSwQfF8F9HGqRrcTfZKD-Ip18WmPuxBnb394JPU0Ug4uE_U6TZEwckh4zPaSHmMjjIqAjrBZek-7Ib4hq",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF-c7V6njYpukTc4Ppq_7yN1tELcxvaQkKlHJp-dCcqtta9AyAiUWb2_wwQ2zYE-sSrzYqAgNPVW_9nuFzylHsqs2fVqFP8sSOCXp02m8fHw9eqh_HTr70LfCZXcYQlAhymIrKoOmkkmaToOoUHfvcIFUiNK1lPTsGszqO-JsbwEUS1QOkri8WJayQti5RI_-2yqSIeEQpHPz_REWTp8ApFKbuqHsJ6HyMEIPoWgOkUa-cCEfq4_g==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEn8cCLnE0c3aEOB-YE7gygvD4Fk4qM8rGFxBWN7gWGX_GbKt0z_TZ17KgQ0w6YaKY2iKlRz7iUHd_Zopb42lwZLn_qf7TI1WMu0cZwV7kpLVi4BmGLPV7rxuXo3XbT5dWDqyLooJGkkmpkOaXxQK4seTDX87oNaF9DxwLghIlzixMa4eDm15941ZCmWaxfLI9oJxByYO3j1M5_PWgEE8zAO_0jQThSUo_86a27HC9g",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEo-PQAtryjwxjAgASIwuWnsbHpF9d6BqW7fkBArLyLvvJ1SPg8XEzf3AUdGwvMYgbhAhl2IorFp3XYoe6SKB1uHNLzs37f7H_SzSWBqQrqIDKovSoLonKQqbMR1UtORgM3HYjynKFqQZvfcny-sNjAQJHBxPly16cI9cneuTmw1wL3QAgNUXY58xQ-gz-HeKyafQiMR7H3AEWRIrxWECJ9RO04u66uiLI=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG1-X8T-1Q4uKeE20LBWIJwNoJYtZbJgpXBqddEDobEv_MKc4N-cUBzSGVFpl9NSDnBP5xkUk7QaHZ81l4oXf7FWKAH561wWMIa-Pk4eZ2vZbrob3bFtfNPKKy0b48LeS5aAvUQ6xlxa8MCeSPRVpMrmqIVlk_lRrU0lhML7FgEAqpB1GNmKxqPrNlrVL_mNv0B7Tv8rUHn_vP6ORZRYohwGPNmCj3ZPBvB_3Q=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEvfh1sqCtQPCa0uxeqpMpYCy4FKE1lwtyiqvwZfyJ6nGqANy-GSe7BNSetEvIrpJXAfFM0Pxa-p6QK0RftXXl8ooQAFM2uaaDkHptS4JCpKtxjotaZ1dnnUHlTEzK--wKk5sC8whjoao8YJYFwm4xgQ7iHTU26OyPyet_1Pb7VQjhIyvxBFo_2ozf-MQmXUEo_AMN550jOoaEhVECmFaJ8xHmqR32zu2fL3RctSC6mK77onXNNtw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHdnBRLc3DZlkMEkDoQopTXs_aB_tOfeAntkICYDUkEPPRrmQGEFaNFEWxiFJsfPYhMVu51H0J0sSyGuU-nSSI9svtYR-KplB7ZEnwrvekazN3ELpf26QoAxWCAlvxfCcwwkwxyNAvVXbI=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFBe-x-IUjs9Q2hnnHcVNGcxmR-4f46M3xiFOk758lBfXzI6v6ewNGXMrwm4kNMzI3fhfTbRXnR6yaVQ-Q15Bi9QhlS5A9fIGjT9-GgblVhDoSVe3dO6itwVanTIwyuxeZZuyKT5PfE4n_bz4G8_qHBY5XBjoo4TI2FrBuPvErGkVs=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGDu1rr2Swvw13lBL2xGWDawzfoqBYppzHkm_Mqmi7QqWvHYGiY7-0OmaC8vh16Ru3Jc2BX_VdpKMqqKXP7fje3_OBL0FI9sfsGdj4OQncACehBW9yL0MB6D8NBRRg9OlcX2VsPcbRw4Hqcxg=="
+      ],
+      "source_titles": [
+        "boutiquehotel.me",
+        "incaexpert.com",
+        "ananayhotels.com",
+        "travelweekly.com",
+        "booking.com",
+        "casarepublica.com",
+        "casafanning.com",
+        "hotels.com",
+        "h-bohemia.com"
+      ]
+    },
+    {
+      "at": "2026-09-10T13:45:45+00:00",
+      "prompt": "List real, currently open independent hotels in Lima, Peru that match this description:\nguesthouses in Lima run by the family who own them\n\nFind 5. Keep going until you have 5 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: independently owned, and set up for stays of a week or more\n\nLeave out, no matter how good: chains and international groups\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 3270,
+      "rows_text": "Beraja Family Hostel | Barranco | gestionado por familia de viajeros\nSecond Home Peru | Barranco | owner and his family's attention\nCasa Cáceres | Miraflores | muy amables los propietarios\nChakana Family Home Lima Airport | Callao | Family Home, habitación particular\nCasa Bellido - Miraflores Private Rooms - Cocina Compartida - Wifi | Miraflores | homestay with shared kitchen",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHPAVgiv2tWkptePKUwQOo-vLYWmik5PCpIg2khNKNvh2oWedKXBPeFYEvHosjvp2BzDkRqjkCquoRePn81I0vmC6j15lReAGSzQFEYxvZTZNfHj5vjgy4M0nPp53lfjD_9iDF8hIvRs74Mo1nMSl7AeyhZcBLBlPqusRnqBnYoBH5kaG343iXN3CCloTrCag9q7SHKxLoyzm3yRnENkh2oGmO-94J7CQgplXZ7eE-H2w==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGr2yEyBDFycF4nL-aTDMJasyEMtunNRBV8TYzyBytnprUy6cit3xN2POHCDBUIUxyBQPLboDtIGZgon0C8OOtuwMYvA_14Mf6EIiv4TE5vuhBzlr7wARVUIReL7-d3kjZZUcNv_Akqgd0RF40IDB5_hboaxQcDtux54LSyjNoMdyeN1_Yb7lq098XOLu4IaPOd4IYZrw6MmdMoxetMo_y0ow80KKDuJIB14bM=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFwmMSwuaWqUgrZA4qNCFUe3AWC4-Hz1xBhFzSJ3oCGSX0COrEewTYu90ylo7YPdThEAqy3X9sRKR_RWsXZDh2DFS_pa6A29xEP4c_6zZoup5vdVRqfx4nMjP71wamAnkM1wVscxP-29QdUHOYiAPveNdtTG8b8CCrZar97B_MqwIk1HqN9OZUAR5HsYn89_ztL-fgCQVp4lbSdR8Nj18kbcFG8LTgtTqItSGgmtNdFZ1FuQ7zLxQ==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEm3qkTPfAy5sIWPodDWqgpKx8aZvxp5x7JiKWHMyBpkWlYzfOUipNTpfzrcqiWBiKbAQ8DVC7jue2IQwDBfBOdclNUIsEVRXzzqXMZv32rVZ75jlPU0_pks-MLViJZGaJ5kh2s5vQNXXkJWNB_kJMEHZQcRh3k2ccuV-sLoiP1S_fcZ-dRu0y2GqVGPp-R4thyDctyZL9zvcP3QFCu8_nPt1ypSQLu4pOz",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF5hyKGGKVb__l3vd8mmNnx8nUo2DCkaxPtzEerLSX0o0e_rlv8uGjr3OCZFpwSOqG-qYORyb4BAVQcd0oXLqc-j7IH-DcufCcK8OmGCTYYKVp1fP7ac0d2K1T_9yDAbtKVJKLBarmIOZHwiqzMIbPmuhW2Se6YRw9c3pMGr5AzLxd3IyJ6R2R5_l1kP8HM7R-UQZt2XJ08IkTB08b-beD9a6MKJH1vUM3-3_qy7HtdNTIf6JE=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHP66tFg__HjoIYo80BsJYTKIKbZtfFXQ1710HwrKFSR4f1DCX1Gtv8LqtsPy1lA1GXWavvVQ6n5Rvd2MwaDBDyMg7h4sJL9NV0cPjYPQcy9Rd3pp94pV9ZF46EadSnFXv7GCTEbzBq2A-LsVVhSyIgkpVaW3Dpy3joLAGzgGr-76Tp9i_8i9T2quGZYrRWmvYwZ_4F6HJqDYoPk2ATjJ79uec4",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG-_kG_uYna90qbtyGUtDH-3HbMCbn0KkbaTD5UfWCCaFgVL1wXOnK_aO1wEngfe5y63NMWucMOsPaHCOV-71ZG9wiHCYJL_4d_cANq8BuBcoUX7MYYFCg08xHU8zU4-AoFzpPftG4rVK68hDk1xyasri2UaUaPOCrYiU4fuxq3psoYPoNhFGFNrPf0-D-HYcpePRYSinVqPf_93seMYwQj9Dhrtzo=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF3fVNqAWZu9KB_aSlzAqt5U0XcSzdjGJXX5VRi-fGOQfxmko5yD6miPYinBe5NDnqsI-j_V9UvN0oS7zAY-OhwwxCo_Jlbt-PgZbFl3PVVhWmE99VlaVvcoHH3y9ZUBbT61GzSY9fZ5jsOnfVK2PmZsSL_JtTfeRcHSAsKKBHFUwlElNGLYOTWhMAkuPTzbHLrf3Z8PVo0xbkDjDPT51QnFca3WrPrU-7XXjDA",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEMX8It3Sls2V3UlJmabc_sBFcgkGlglIGkDtCa0AgxP52ky2rdzx1VU8PBu0qEa9IYm3yX1f7qHj1rVGVKEzfE2M6ijEOSqbcLPtuyIs_jBNEal_11pvD0zDEuQdEypI9klC620nVPrASHEx8uwIqulOtOXxWMrbSEPFia6ScsCsCkdQQD_ElahD3l9yRUG5KTulrVnoTQEITaB4rfp_DQnMtxHTqnm97ruqM=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHdraVgKCAQPdX5SIS2oAn-ypbc11lFAv85QSmVLIi04-FUBCQy_PPvdv9jviYys5vBSoAGZuxO5AG3pShUdNIjEMA4WWX9Y8VASqNkoO9BKGzzWt_pGEokoZZ6yyUbRvVTQkn8665KFmqz2LFeM9OL-8w5mx8a0Le_LN6Z_9Gx7DgT9VaNkdIgS98ooV_zMjjiK9Z8OYjbXQy2BeYsk840Pwmcw8gPhiw=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHY7fUotbLWLA9NCI704v7gwuUxa7dW0iBwtIvtzfaSvust0258ZcbLkgqOHVf5mNzi0v1K0lbnBCY1LFRIuSDsBOq9cCYChCcCnS5kao605e-a5AhdGV05L2qYokcYSs6Ryu2VkRvb9JIxvT4KueRnsML4kdDqTOBKoAuCMvV4ct_Y-Jz-bPYS87i1_myrgp6IF8P2h_BPDUUPhQy7ZUv0qo_0gTXQMU_N2DY="
+      ],
+      "source_titles": [
+        "booking.com",
+        "impactful.travel",
+        "limaperuhotels.net",
+        "limahotel24.com"
+      ]
+    },
+    {
+      "at": "2026-09-10T13:46:04+00:00",
+      "prompt": "List real, currently open independent hotels in Lima, Peru that match this description:\nhotels in Lima within walking distance of the Metropolitano\n\nFind 5. Keep going until you have 5 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal press, local blogs and local review sites are where most of this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: independently owned, and set up for stays of a week or more\n\nLeave out, no matter how good: chains and international groups\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line.",
+      "outcome": "answered",
+      "tokens": 4300,
+      "rows_text": "Alojamiento en Lima - 123 Peru | Rímac | apartamentos para larga estancia\nInkari Apart Hotel | Magdalena del Mar | apart hotel, cerca Metropolitano\nPetit Palace Apart Hotel Suites | Miraflores | apart hotel, cerca Metropolitano\nApart Hotel El Doral | Miraflores | apart hotel, cerca Metropolitano\nPeru Star Apart-Hotel | Miraflores | apart hotel, cerca Metropolitano",
+      "source_urls": [
+        "http://www.w3.org/2000/svg",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFSV2RQV-ln6pvutZWkJBkLgSPkY11i_qvtMMKUpxeZErjeS1Wq_W8VPGOe_gZ2_tRzlF9qBHz4Qyb-u-5F-cNjyc368GWycTmeS8ZA0wU6DGIFq4GoR3TcpA5j7_era3Zn64lP5xAPj0q6em7lI50Ix-Zkl9OyHSBFOBVQlFV-504yyYbOIWpUJ5Y84xVVHqoGz8khapvNtLW3D4282lPngMUeoCSp_SbBGcFLspgFXlXwvkrTo4ui",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFHC9UoHcDWdz11PuyCymu9r2QMXbsQlsYluvpTQB3bDM_gMZuwrhYDiFMG8BCYuE3t8m_VkcveGihKSMUBBVTx6E34DMi5CqNO7ioLOZd_lKzQddRi4pA1mZMbcqEHXzzyoucYdSOqS_FJQQUe3r-qIptAeuumtx0UdwOf4vAttJBU11M4Tq8XUJv1LBe--eskrPIYPHMB2xc3uYzPDB5Wpo_Z7K11N7E89moKagG-J41l6apVsduW3nfNDfhAolic",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHwevCD7z1yLrGP4MeX5TtzBmed3EYa0Q0vIHDkgq9lKSjLbYHpF6speUVQOhxEwAFph0WA6A8swpif8in2jJVlo7VxTLROjovwcpo5hT7HX_a44ObS3kQRxFEaW-WM2OcKdJoUnVwOwb383yK5svIp_GOzC0Tuw-dN3fVLwbzviEHmwc-CHNRgoYQYhGIzi1_GQue5Sx1zCAo0JvwsTNuTJFc0S6YOy8tGXV6veNDibSpf",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFAVRV7NM8tz13K7se19XwytwUpVhoRwJq9o585LUOPI5o9LohWS35nXe-LXz8TMRYCd06EPak4lWr7HFUYigFv7_J13AmN_RwFAp9doWiVCIAmvTTnKgwUPY-GBDPQ_Kh_rjAwrYfbhRDByOkHCBvwJaXv9Wkdf604ICmYtXL5-II08V7gk8BbtaOXyCXOpq38rWWWyM696AWRkt62F_aQjXMomqLJS7ByAY06TafhS3XVRnJr8klPJw==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE89OOfMoJgJS5Emc0RP00Ao46H8QhsEJY8PxmnxaAQnQ-BN-HSu9XkgYBJ8IoxshS1BIywI9TCvx7BwO06tkVgzhnRtyRB5uYMW2VsOuHamICjqjWSS1a-ZmvnlSqlOCb3baCLBRo=",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHCFcO66I04Zd99_KrVACF37xFZB8P-IjdiF6FD-kP0k-tkfN-phmL_Uu_Y6hVF5utWlVHA63O_YWVJza9PP2Wp4h8GD51OnubFJpYK3BRJLBrMsDasi4ix5Biq7tJUNU9rW0SYFflifTYuy04LDV2xdl1pLFBJOVsFPlv_r54qmUkmfStCXTZg8fX5L0mkmRcJAA==",
+        "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE5ri34irSJd4QxjaCst_5e_TLrHTe6cCS-aufHPOutKdKhNRNuBuGoiI6_HVeiZ8jDaSy5dRQpSYarNa01MQgIDmuP-HxN0hJC6e5NZasBEpCW-aIGGwaPmNSYxwWufntxBmeH8QbqB7ZyvjW5tQQ0Y-jWcAdhrjoCN1Vmy4A4ZUutH7EhcGCPsmmLpDwHC-NDVrTDYdr0WGPcxSU3X-f1gwaTnuR1k5o="
+      ],
+      "source_titles": [
+        "123peru.com",
+        "trivago.es",
+        "travelocity.com"
+      ]
+    }
+  ],
+  "provider_calls_made": 6,
+  "angles": [
+    {
+      "angle_id": "a1",
+      "angle": "aparthotels and guesthouses in Lima with self-catering kitchens",
+      "role": "broad",
+      "wanted": 7,
+      "rows": 7,
+      "sources": 12,
+      "sources_named": [
+        "booking.com",
+        "aparthotelshq.com"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-10T13:44:20+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 7,
+      "shared": 1,
+      "exclusive": 6
+    },
+    {
+      "angle_id": "a2",
+      "angle": "hotels in Lima advertising weekly and monthly rates",
+      "role": "broad",
+      "wanted": 7,
+      "rows": 7,
+      "sources": 12,
+      "sources_named": [
+        "nomadrental.com",
+        "sonder.com",
+        "travelocity.com",
+        "expedia.com"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-10T13:44:47+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 7,
+      "shared": 1,
+      "exclusive": 6
+    },
+    {
+      "angle_id": "a3",
+      "angle": "hotels in Lima in converted republican-era casonas",
+      "role": "distinctive",
+      "wanted": 5,
+      "rows": 5,
+      "sources": 12,
+      "sources_named": [
+        "aracari.com",
+        "southamericacollection.com",
+        "southamericaplanet.com",
+        "hotevia.info",
+        "casarepublica.com",
+        "maneramagazine.mx",
+        "facebook.com",
+        "karryon.com.au",
+        "thebetterbeyond.com",
+        "youtube.com",
+        "luxuryhotelshub.com",
+        "incaexpert.com",
+        "trivago.com",
+        "booking.com",
+        "kayak.com",
+        "limahouse.com.pe",
+        "hotelb.pe"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-10T13:45:06+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 5,
+      "shared": 0,
+      "exclusive": 5
+    },
+    {
+      "angle_id": "a4",
+      "angle": "hotels in Barranco, Lima",
+      "role": "broad",
+      "wanted": 7,
+      "rows": 7,
+      "sources": 12,
+      "sources_named": [
+        "boutiquehotel.me",
+        "incaexpert.com",
+        "ananayhotels.com",
+        "travelweekly.com",
+        "booking.com",
+        "casarepublica.com",
+        "casafanning.com",
+        "hotels.com",
+        "h-bohemia.com"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-10T13:45:25+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 7,
+      "shared": 1,
+      "exclusive": 6
+    },
+    {
+      "angle_id": "a5",
+      "angle": "guesthouses in Lima run by the family who own them",
+      "role": "distinctive",
+      "wanted": 5,
+      "rows": 5,
+      "sources": 12,
+      "sources_named": [
+        "booking.com",
+        "impactful.travel",
+        "limaperuhotels.net",
+        "limahotel24.com"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-10T13:45:45+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 5,
+      "shared": 1,
+      "exclusive": 4
+    },
+    {
+      "angle_id": "a6",
+      "angle": "hotels in Lima within walking distance of the Metropolitano",
+      "role": "distinctive",
+      "wanted": 5,
+      "rows": 5,
+      "sources": 8,
+      "sources_named": [
+        "123peru.com",
+        "trivago.es",
+        "travelocity.com"
+      ],
+      "failed": false,
+      "reason": "",
+      "provider_calls": [
+        {
+          "at": "2026-09-10T13:46:04+00:00",
+          "outcome": "answered",
+          "detail": ""
+        }
+      ],
+      "found": 5,
+      "shared": 0,
+      "exclusive": 5
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "0623fdc594734f66",
+      "name": "Inkari Apart Hotel",
+      "district": "Miraflores",
+      "found_by": [
+        "aparthotels and guesthouses in Lima with self-catering kitchens",
+        "hotels in Lima advertising weekly and monthly rates"
+      ],
+      "possible_duplicates": [
+        "Apart Hotel Caminos Del Inca",
+        "Apart Hotel El Doral",
+        "Apart Hotel Petit Palace Suites",
+        "Apart Hotel San Martin",
+        "Casa Fanning Apart Hotel",
+        "Inkari Apart Hotel",
+        "La Paz Apart Hotel",
+        "Peru Star Apart-Hotel",
+        "Petit Palace Apart Hotel Suites"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "de5d6c449af6~1",
+          "angle": "aparthotels and guesthouses in Lima with self-catering kitchens",
+          "name": "Inkari Apart Hotel",
+          "evidence": "mini-kitchen"
+        },
+        {
+          "sighting_id": "67355daba3df~1",
+          "angle": "hotels in Lima advertising weekly and monthly rates",
+          "name": "Inkari Apart Hotel",
+          "evidence": "furnished apartments, long stay"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "fd221e386a52e35f",
+      "name": "Second Home Peru",
+      "district": "Barranco",
+      "found_by": [
+        "hotels in Barranco, Lima",
+        "guesthouses in Lima run by the family who own them"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "669390f0e475~1",
+          "angle": "hotels in Barranco, Lima",
+          "name": "Second Home Peru",
+          "evidence": "bed & breakfast, high rating"
+        },
+        {
+          "sighting_id": "97cdf048f325~1",
+          "angle": "guesthouses in Lima run by the family who own them",
+          "name": "Second Home Peru",
+          "evidence": "owner and his family's attention"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "13e112a61930222f",
+      "name": "Alojamiento en Lima - 123 Peru",
+      "district": "Rímac",
+      "found_by": [
+        "hotels in Lima within walking distance of the Metropolitano"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "a4c0d44d061d~1",
+          "angle": "hotels in Lima within walking distance of the Metropolitano",
+          "name": "Alojamiento en Lima - 123 Peru",
+          "evidence": "apartamentos para larga estancia"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "3188d5ad92e1f8b8",
+      "name": "Apart Hotel Caminos Del Inca",
+      "district": "Miraflores",
+      "found_by": [
+        "aparthotels and guesthouses in Lima with self-catering kitchens"
+      ],
+      "possible_duplicates": [
+        "Apart Hotel El Doral",
+        "Inkari Apart Hotel",
+        "La Paz Apart Hotel"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "f3bb1f50363d~1",
+          "angle": "aparthotels and guesthouses in Lima with self-catering kitchens",
+          "name": "Apart Hotel Caminos Del Inca",
+          "evidence": "kitchen in single room"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "ae6bf85fa470af4d",
+      "name": "Apart Hotel El Doral",
+      "district": "Miraflores",
+      "found_by": [
+        "hotels in Lima within walking distance of the Metropolitano"
+      ],
+      "possible_duplicates": [
+        "Apart Hotel Caminos Del Inca",
+        "Apart Hotel Petit Palace Suites",
+        "Apart Hotel San Martin",
+        "Casa Fanning Apart Hotel",
+        "Inkari Apart Hotel",
+        "La Paz Apart Hotel",
+        "Peru Star Apart-Hotel",
+        "Petit Palace Apart Hotel Suites"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "14fe0d4e2099~1",
+          "angle": "hotels in Lima within walking distance of the Metropolitano",
+          "name": "Apart Hotel El Doral",
+          "evidence": "apart hotel, cerca Metropolitano"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "432fa81b396f7935",
+      "name": "Apart Hotel Petit Palace Suites",
+      "district": "Miraflores",
+      "found_by": [
+        "aparthotels and guesthouses in Lima with self-catering kitchens"
+      ],
+      "possible_duplicates": [
+        "Apart Hotel El Doral",
+        "Inkari Apart Hotel",
+        "La Paz Apart Hotel",
+        "Petit Palace Apart Hotel Suites"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "ece2591eb68b~1",
+          "angle": "aparthotels and guesthouses in Lima with self-catering kitchens",
+          "name": "Apart Hotel Petit Palace Suites",
+          "evidence": "serviced apartments"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "0227d550ddaa7896",
+      "name": "Apart Hotel San Martin",
+      "district": "Miraflores",
+      "found_by": [
+        "aparthotels and guesthouses in Lima with self-catering kitchens"
+      ],
+      "possible_duplicates": [
+        "Apart Hotel El Doral",
+        "Inkari Apart Hotel",
+        "La Paz Apart Hotel"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "864e6422bbc1~1",
+          "angle": "aparthotels and guesthouses in Lima with self-catering kitchens",
+          "name": "Apart Hotel San Martin",
+          "evidence": "comfortable apartments"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "1232fd389e89bb3f",
+      "name": "Apartamentos Lima 501",
+      "district": "Miraflores",
+      "found_by": [
+        "hotels in Lima advertising weekly and monthly rates"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "cec5bd798bae~1",
+          "angle": "hotels in Lima advertising weekly and monthly rates",
+          "name": "Apartamentos Lima 501",
+          "evidence": "furnished apartments, long stay"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "66e989ce441f2cbd",
+      "name": "Atrium Miraflores",
+      "district": "Miraflores",
+      "found_by": [
+        "hotels in Lima advertising weekly and monthly rates"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "02b0fa9957a4~1",
+          "angle": "hotels in Lima advertising weekly and monthly rates",
+          "name": "Atrium Miraflores",
+          "evidence": "monthly rental for digital nomads"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "c6f0b266a945eb61",
+      "name": "Barranco Boutique Hotel by 3B",
+      "district": "Barranco",
+      "found_by": [
+        "hotels in Barranco, Lima"
+      ],
+      "possible_duplicates": [
+        "Casa Republica Barranco Boutique Hotel"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "f1f467631061~1",
+          "angle": "hotels in Barranco, Lima",
+          "name": "Barranco Boutique Hotel by 3B",
+          "evidence": "B&B, microwave, refrigerator, monthly stays"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "96d8dc655a4b6f80",
+      "name": "Beraja Family Hostel",
+      "district": "Barranco",
+      "found_by": [
+        "guesthouses in Lima run by the family who own them"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "58494e4413a1~1",
+          "angle": "guesthouses in Lima run by the family who own them",
+          "name": "Beraja Family Hostel",
+          "evidence": "gestionado por familia de viajeros"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "d7a02403a8630b76",
+      "name": "Casa Bellido - Miraflores Private Rooms - Cocina Compartida - Wifi",
+      "district": "Miraflores",
+      "found_by": [
+        "guesthouses in Lima run by the family who own them"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "aaa63b334347~1",
+          "angle": "guesthouses in Lima run by the family who own them",
+          "name": "Casa Bellido - Miraflores Private Rooms - Cocina Compartida - Wifi",
+          "evidence": "homestay with shared kitchen"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "7f3fb002242babef",
+      "name": "Casa Cáceres",
+      "district": "Miraflores",
+      "found_by": [
+        "guesthouses in Lima run by the family who own them"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "2ad64336022a~1",
+          "angle": "guesthouses in Lima run by the family who own them",
+          "name": "Casa Cáceres",
+          "evidence": "muy amables los propietarios"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "37614b8fc3d75f1c",
+      "name": "Casa Fanning Apart Hotel",
+      "district": "Miraflores",
+      "found_by": [
+        "hotels in Lima advertising weekly and monthly rates"
+      ],
+      "possible_duplicates": [
+        "Apart Hotel El Doral",
+        "Casa Fanning Apart Hotel",
+        "Inkari Apart Hotel",
+        "La Paz Apart Hotel"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "281c259088c5~1",
+          "angle": "hotels in Lima advertising weekly and monthly rates",
+          "name": "Casa Fanning Apart Hotel",
+          "evidence": "aparthotel, long stay friendly"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "36acdd00468c7d84",
+      "name": "Casa Fanning Apart Hotel",
+      "district": "Barranco",
+      "found_by": [
+        "hotels in Barranco, Lima"
+      ],
+      "possible_duplicates": [
+        "Apart Hotel El Doral",
+        "Casa Fanning Apart Hotel",
+        "Inkari Apart Hotel",
+        "La Paz Apart Hotel"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "3028d0d12ebe~1",
+          "angle": "hotels in Barranco, Lima",
+          "name": "Casa Fanning Apart Hotel",
+          "evidence": "apartamentos completos, días y semanas"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "2055d43e201479c3",
+      "name": "Casa Lima",
+      "district": "Centro Histórico",
+      "found_by": [
+        "hotels in Lima in converted republican-era casonas"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "e10b5f87a506~1",
+          "angle": "hotels in Lima in converted republican-era casonas",
+          "name": "Casa Lima",
+          "evidence": "beautiful historic building"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "12ec543c8b8ed1b0",
+      "name": "Casa Nuestra Peru",
+      "district": "Barranco",
+      "found_by": [
+        "hotels in Barranco, Lima"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "638f7402716e~1",
+          "angle": "hotels in Barranco, Lima",
+          "name": "Casa Nuestra Peru",
+          "evidence": "guesthouse, kitchen, microwave, fridge"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "281b374faca10111",
+      "name": "Casa Republica",
+      "district": "Barranco",
+      "found_by": [
+        "hotels in Lima in converted republican-era casonas"
+      ],
+      "possible_duplicates": [
+        "Casa Republica Barranco Boutique Hotel"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "025ae7c74a77~1",
+          "angle": "hotels in Lima in converted republican-era casonas",
+          "name": "Casa Republica",
+          "evidence": "1920s mansion, Republican era style"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "a4e8cd2ab189640a",
+      "name": "Casa Republica Barranco Boutique Hotel",
+      "district": "Barranco",
+      "found_by": [
+        "hotels in Barranco, Lima"
+      ],
+      "possible_duplicates": [
+        "Barranco Boutique Hotel by 3B",
+        "Casa Republica"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "604e7209b1c7~1",
+          "angle": "hotels in Barranco, Lima",
+          "name": "Casa Republica Barranco Boutique Hotel",
+          "evidence": "boutique hotel, laundry service"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "af6941d61683fd1e",
+      "name": "Chakana Family Home Lima Airport",
+      "district": "Callao",
+      "found_by": [
+        "guesthouses in Lima run by the family who own them"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "c316c9b29d64~1",
+          "angle": "guesthouses in Lima run by the family who own them",
+          "name": "Chakana Family Home Lima Airport",
+          "evidence": "Family Home, habitación particular"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "ac9c55a680ca81be",
+      "name": "Hotel B",
+      "district": "Barranco",
+      "found_by": [
+        "hotels in Lima in converted republican-era casonas"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "20fae8129d3d~1",
+          "angle": "hotels in Lima in converted republican-era casonas",
+          "name": "Hotel B",
+          "evidence": "restored 1914 Belle Époque mansion"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "a31b783b97e5781f",
+      "name": "Hotel Bohemia",
+      "district": "Barranco",
+      "found_by": [
+        "hotels in Barranco, Lima"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "31cda03de467~1",
+          "angle": "hotels in Barranco, Lima",
+          "name": "Hotel Bohemia",
+          "evidence": "amplias habitaciones, comfortable ambiente"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "b18b10d3702f37e2",
+      "name": "Inkari Apart Hotel",
+      "district": "Magdalena del Mar",
+      "found_by": [
+        "hotels in Lima within walking distance of the Metropolitano"
+      ],
+      "possible_duplicates": [
+        "Apart Hotel Caminos Del Inca",
+        "Apart Hotel El Doral",
+        "Apart Hotel Petit Palace Suites",
+        "Apart Hotel San Martin",
+        "Casa Fanning Apart Hotel",
+        "Inkari Apart Hotel",
+        "La Paz Apart Hotel",
+        "Peru Star Apart-Hotel",
+        "Petit Palace Apart Hotel Suites"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "d6036d415293~1",
+          "angle": "hotels in Lima within walking distance of the Metropolitano",
+          "name": "Inkari Apart Hotel",
+          "evidence": "apart hotel, cerca Metropolitano"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "7f3929f4d4f453c1",
+      "name": "La Casona Azul",
+      "district": "Miraflores",
+      "found_by": [
+        "hotels in Lima in converted republican-era casonas"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "be7cce6f370f~1",
+          "angle": "hotels in Lima in converted republican-era casonas",
+          "name": "La Casona Azul",
+          "evidence": "charming old house, tranquil setting"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "a5ee6c2580a51987",
+      "name": "La Casona Hospedaje",
+      "district": "Barranco",
+      "found_by": [
+        "aparthotels and guesthouses in Lima with self-catering kitchens"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "691593f5cb2f~1",
+          "angle": "aparthotels and guesthouses in Lima with self-catering kitchens",
+          "name": "La Casona Hospedaje",
+          "evidence": "alojamiento con cocina"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "47706e5d8799717c",
+      "name": "La Paz Apart Hotel",
+      "district": "Miraflores",
+      "found_by": [
+        "aparthotels and guesthouses in Lima with self-catering kitchens"
+      ],
+      "possible_duplicates": [
+        "Apart Hotel Caminos Del Inca",
+        "Apart Hotel El Doral",
+        "Apart Hotel Petit Palace Suites",
+        "Apart Hotel San Martin",
+        "Casa Fanning Apart Hotel",
+        "Inkari Apart Hotel",
+        "Peru Star Apart-Hotel",
+        "Petit Palace Apart Hotel Suites"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "36652dc807a0~1",
+          "angle": "aparthotels and guesthouses in Lima with self-catering kitchens",
+          "name": "La Paz Apart Hotel",
+          "evidence": "self-catering suites"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "89b3d3d740e145d7",
+      "name": "Lima House",
+      "district": "Centro Histórico",
+      "found_by": [
+        "hotels in Lima in converted republican-era casonas"
+      ],
+      "possible_duplicates": [
+        "Manor House Lima"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "c2747ca61adc~1",
+          "angle": "hotels in Lima in converted republican-era casonas",
+          "name": "Lima House",
+          "evidence": "renovated Republican era architecture"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "c5e11cee755c98af",
+      "name": "Manor House Lima",
+      "district": "Miraflores",
+      "found_by": [
+        "hotels in Lima advertising weekly and monthly rates"
+      ],
+      "possible_duplicates": [
+        "Lima House"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "586d79fe4a45~1",
+          "angle": "hotels in Lima advertising weekly and monthly rates",
+          "name": "Manor House Lima",
+          "evidence": "monthly rental for digital nomads"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "32c5990dfb3e07b0",
+      "name": "Peru Star Apart-Hotel",
+      "district": "San Isidro",
+      "found_by": [
+        "aparthotels and guesthouses in Lima with self-catering kitchens"
+      ],
+      "possible_duplicates": [
+        "Apart Hotel El Doral",
+        "Inkari Apart Hotel",
+        "La Paz Apart Hotel",
+        "Peru Star Apart-Hotel"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "b85c03edcefd~1",
+          "angle": "aparthotels and guesthouses in Lima with self-catering kitchens",
+          "name": "Peru Star Apart-Hotel",
+          "evidence": "mini-kitchen"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "7a5291f534598e44",
+      "name": "Peru Star Apart-Hotel",
+      "district": "Miraflores",
+      "found_by": [
+        "hotels in Lima within walking distance of the Metropolitano"
+      ],
+      "possible_duplicates": [
+        "Apart Hotel El Doral",
+        "Inkari Apart Hotel",
+        "La Paz Apart Hotel",
+        "Peru Star Apart-Hotel"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "7a60a95cc829~1",
+          "angle": "hotels in Lima within walking distance of the Metropolitano",
+          "name": "Peru Star Apart-Hotel",
+          "evidence": "apart hotel, cerca Metropolitano"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "99cec3ba87d3d394",
+      "name": "Petit Palace Apart Hotel Suites",
+      "district": "Miraflores",
+      "found_by": [
+        "hotels in Lima within walking distance of the Metropolitano"
+      ],
+      "possible_duplicates": [
+        "Apart Hotel El Doral",
+        "Apart Hotel Petit Palace Suites",
+        "Inkari Apart Hotel",
+        "La Paz Apart Hotel"
+      ],
+      "sightings": [
+        {
+          "sighting_id": "589ce3b24516~1",
+          "angle": "hotels in Lima within walking distance of the Metropolitano",
+          "name": "Petit Palace Apart Hotel Suites",
+          "evidence": "apart hotel, cerca Metropolitano"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "7bd591b4eabfc94a",
+      "name": "Sori Apartments",
+      "district": "Miraflores",
+      "found_by": [
+        "hotels in Lima advertising weekly and monthly rates"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "d6020616e97f~1",
+          "angle": "hotels in Lima advertising weekly and monthly rates",
+          "name": "Sori Apartments",
+          "evidence": "furnished apartments, long stay"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "ad191372d0ef9720",
+      "name": "Verona Hotel & Baños Turcos",
+      "district": "Los Olivos",
+      "found_by": [
+        "hotels in Lima advertising weekly and monthly rates"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "848e819c5dbc~1",
+          "angle": "hotels in Lima advertising weekly and monthly rates",
+          "name": "Verona Hotel & Baños Turcos",
+          "evidence": "monthly and weekly rentals"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    },
+    {
+      "candidate_id": "6697bcb862692c7a",
+      "name": "Villa Barranco by Ananay Hotels",
+      "district": "Barranco",
+      "found_by": [
+        "hotels in Barranco, Lima"
+      ],
+      "possible_duplicates": [],
+      "sightings": [
+        {
+          "sighting_id": "3606f3ca86ab~1",
+          "angle": "hotels in Barranco, Lima",
+          "name": "Villa Barranco by Ananay Hotels",
+          "evidence": "boutique hotel, junior suites"
+        }
+      ],
+      "judged": {
+        "eligible": "",
+        "why": "",
+        "source": ""
+      }
+    }
+  ],
+  "outcomes_still_to_be_judged": {
+    "eligibility": "how many checked candidates fit the requirements and the angle",
+    "coverage": "how many suitable distinct venues the whole pool holds, and what is missing",
+    "identity_errors": "false merges and unresolved duplicates, counted separately",
+    "wording_drift": "unrequested restrictions added, and requirements silently broadened",
+    "operator_effort": "edits, confusing choices, repeated questions, recovery actions"
+  },
+  "judged_by": [
+    "Do independence and long-stay survive every search, or does one optional angle carry the whole commission?"
+  ]
+}

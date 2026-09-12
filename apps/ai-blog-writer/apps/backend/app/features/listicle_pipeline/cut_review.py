@@ -36,11 +36,21 @@ they are looking at the question.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import re
+from datetime import datetime, timezone
 from typing import Any, Callable
 
-from .contracts import AngleConflict, SearchOrder
+from .contracts import (
+    CUT_REVIEW_VERSION,
+    AngleConflict,
+    CutReview,
+    CutReviewChunk,
+    CutVerdict,
+    SearchOrder,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,13 +63,51 @@ logger = logging.getLogger(__name__)
 # schema fault and is not.
 REVIEW_MAX_TOKENS = 8192
 
-# How many candidates go into one review call. Well above a real run -- 43 in
-# the largest so far -- so a normal list is judged as a whole, against the pool
-# it is actually in, rather than in batches that cannot see each other.
-MAX_CANDIDATES_REVIEWED = 120
+# How many candidates go into one review call.
+#
+# This was 120 and it TRUNCATED: a pool of 121 sent 120 rows, the reviewer
+# answered about those, and the pool was assembled as `cut_checked` with the
+# 121st never looked at. Nine legal searches at their per-angle allowances
+# reach 121 without anything unusual happening.
+#
+# Sixty is a bound, not an optimum. Nobody has measured what a reviewer judges
+# best in one call; what is measured is that 43 candidates at 2048 output
+# tokens died mid-list, reported by Gemini as a malformed function call rather
+# than as a length problem. A normal 43-candidate pool is still one call.
+# Anything larger is chunked, and every chunk is another call the operator is
+# told about before it is bought.
+CHUNK_SIZE = 60
+
+# Kept as the old name for the one thing it still means: the largest pool one
+# call may be asked about.
+MAX_CANDIDATES_REVIEWED = CHUNK_SIZE
 
 CONFLICT_TOOL = "record_angle_conflicts"
 CANDIDATE_TOOL = "record_barred_places"
+
+# The two checks are separate jobs because they are different questions, and
+# they were measured apart.
+#
+# The order check is one short call, on the path to spending money, and it is
+# a judgement about wording. Replayed against four stored orders with a known
+# answer plus five planted clashes (2026-09-11), with the prompt below:
+#
+#     gemini-2.5-flash        ceviche orders perfect; missed "private members'
+#                             clubs with a rooftop terrace" against a cut that
+#                             bars members-only clubs, three times in three
+#     claude-sonnet-5-medium  9 true, 0 false, 0 missed, ~9s
+#     claude-opus-5-high      9 true, 0 false, 0 missed, twice, ~15s
+#
+# The place check reads up to sixty rows of evidence in one call with an 8k
+# output budget, and nothing has measured it on another model. It stays where
+# it was.
+#
+# With the Claude subscription off, the order check substitutes back to
+# Flash. That fails toward saying nothing, which is the recoverable side:
+# a missed clash is still caught place by place after the searches run, and a
+# false one teaches the operator to stop reading the warning.
+CONFLICT_JOB = "listicle.angle_conflicts"
+CANDIDATE_JOB = "listicle.cut_review"
 
 CONFLICT_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -110,11 +158,33 @@ CANDIDATE_SCHEMA: dict[str, Any] = {
 
 
 def build_conflict_prompt(order: SearchOrder) -> str:
-    """Ask whether any approved search is hunting for barred places."""
+    """Ask whether any approved search is, by its own wording, a search for
+    barred places.
+
+    It used to ask which searches were "likely to return" barred places, and
+    that is a question about the future that every model answers yes to. Run
+    add41aca had eight searches for rooftop bars and a cut barring members-only
+    clubs and guest-only terraces; the check flagged six, every reason some
+    form of "a sunset bar could still be members-only". Replayed on four stored
+    orders with a known answer, Flash raised 16 false flags against 6 true
+    ones, and Opus 9 against 3 -- Opus's being the worse kind, confident local
+    claims ("decades-old cevicherias are mostly chains") that the stored
+    results contradict.
+
+    The one real conflict on record is a different kind of thing. "Nikkei
+    cevicherias doing Japanese-Peruvian fusion" against "no places where
+    ceviche is not the primary offering" clashes IN THE WORDS: a place that
+    perfectly fits the search is, by that description, a place the cut bars.
+    That is checkable from the text alone, and it is the only thing this check
+    can know before anything has been searched. What a search happens to drag
+    back is the job of `review_candidates`, which reads the actual results.
+    """
     angles = "\n".join(
         f"- {angle.angle_id}: {angle.text}" for angle in order.angles
     )
-    return f"""An operator is building a list of {order.kind or "places"} in {order.place or "a city"}.
+    kind = order.kind or "places"
+    place = order.place or "the city"
+    return f"""An operator is building a list of {kind} in {place}.
 
 They said to leave these out, no matter how good the place is:
 
@@ -124,33 +194,52 @@ These are the searches they approved:
 
 {angles}
 
-Name any search that is likely to return places the operator just barred.
+Every search is sent as "{kind} in {place} that match this description", with
+the leave-out rules above attached. So every search is already asking for
+{kind}, and already told what to leave out. After the searches run, every
+place they return is checked against the rules separately. You are not being
+asked whether a search might return a bad place. Nearly every search might.
 
-A real example of what this is for: a list of cevicherias whose cut said "no
-places where ceviche is not the primary offering", with an approved search for
-"Nikkei cevicherias doing Japanese-Peruvian preparations". Most Nikkei
-restaurants are Japanese-Peruvian restaurants that serve ceviche among many
-things, so that search mostly returns barred places. It did: 8 of the 10 it
-found were barred.
+You are being asked something narrower. For each search, picture a place that
+PERFECTLY fits its description. Does that description, by itself, make it a
+place the rules leave out?
 
-Only name a search where the clash is likely, not merely possible. Nearly any
-search can return one bad result; that is not what this is asking. Say nothing
-about a search that is fine.
+The real case this exists for: a list of cevicherias whose rules said "no
+places where ceviche is not the primary offering", and an approved search for
+"Nikkei cevicherias doing Japanese-Peruvian preparations". A place that
+perfectly fits that search is a Japanese-Peruvian restaurant, and those serve
+ceviche as one dish among many. The description itself points at barred
+places, and 8 of the 10 it returned were barred.
 
-For each one, give its id and one plain sentence saying why the two disagree.
+Compare "cevicherias that have been open for decades". A place that perfectly
+fits it is an old cevicheria, and nothing in "open for decades" makes a place a
+chain or a hotel restaurant. Some old places may be chains; that is a guess
+about what the search returns, and it is not what you are being asked. Do not
+name a search on the strength of what places of that kind are usually like in
+this city.
+
+Name a search only when the clash is in its own words: when you can point at
+the words of the search and the words of the rules that cannot both be true of
+one place. If you cannot point at both, the search is fine. Most orders have no
+clashing search at all, and an empty list is the normal answer.
+
+For each one, give its id and one plain sentence naming the words that clash.
 Address the operator. Do not suggest replacement wording -- they will decide
 what to do."""
 
 
 def build_candidate_prompt(order: SearchOrder, candidates: list[dict]) -> str:
-    """Ask which returned places break the cut, from evidence already stored."""
+    """Ask which returned places break the cut, from evidence already stored.
+
+    Every candidate given is printed. Nothing is trimmed to fit: a prompt that
+    silently drops its last rows produces a verdict about a pool that is not
+    the pool, and the caller has no way to tell. Deciding how many rows one
+    call may hold is `chunks_of`, above this, where the decision is countable
+    and the extra calls it implies are reported before they are bought.
+    """
     lines = []
-    for index, candidate in enumerate(candidates[:MAX_CANDIDATES_REVIEWED], start=1):
-        evidence = "; ".join(
-            str(sighting.get("evidence", "")).strip()
-            for sighting in candidate.get("sightings", [])
-            if str(sighting.get("evidence", "")).strip()
-        )
+    for index, candidate in enumerate(candidates, start=1):
+        evidence = _evidence_line(candidate)
         district = str(candidate.get("district", "")).strip()
         where = f" -- {district}" if district else ""
         # Rows this pipeline could not prove are separate places. Said out
@@ -221,6 +310,84 @@ Give the row's number, its name, and one plain sentence saying which rule it
 breaks. Copy the number exactly; it is what identifies the row."""
 
 
+def _evidence_line(candidate: dict) -> str:
+    """Every distinct thing the searches said about this place, once each.
+
+    Three searches that returned the identical sentence are three sightings and
+    one piece of evidence. Printing it three times spends tokens saying nothing
+    and reads to the model as corroboration -- which repetition of one source's
+    wording is not. Nothing is paraphrased and nothing unique is dropped: the
+    repeat count is said instead, so the reviewer can still see that a row was
+    reported the same way more than once.
+    """
+    seen: dict[str, int] = {}
+    for sighting in candidate.get("sightings", []):
+        text = str(sighting.get("evidence", "")).strip()
+        if not text:
+            continue
+        seen[text] = seen.get(text, 0) + 1
+    if not seen and str(candidate.get("evidence", "")).strip():
+        seen[str(candidate["evidence"]).strip()] = 1
+    return "; ".join(
+        text if count == 1 else f"{text} (said by {count} searches)"
+        for text, count in seen.items()
+    )
+
+
+def chunks_of(candidates: list[dict]) -> list[list[dict]]:
+    """The pool, split into calls, deterministically.
+
+    In the order the pool was assembled, so the same evidence always chunks the
+    same way. A pool at or under the bound is one call, which is every real run
+    so far.
+    """
+    return [
+        candidates[start : start + CHUNK_SIZE]
+        for start in range(0, len(candidates), CHUNK_SIZE)
+    ] or []
+
+
+def review_fingerprint(order: SearchOrder, candidates: list[dict]) -> str:
+    """What has to match for a stored review to still be about this pool.
+
+    Everything the reviewer was actually shown, plus the versions of the rules
+    that shaped it. Change the cut, the candidates, their evidence, their
+    duplicate context, the pooling rules or the reviewer's prompt, and the
+    stored answer answers a different question.
+
+    Ordered by candidate id rather than by position, so re-sorting the screen
+    is not a cache miss and a genuinely different pool always is one.
+    """
+    material = json.dumps(
+        {
+            "kind": order.kind.strip(),
+            "place": order.place.strip(),
+            "exclusions": order.exclusions.strip(),
+            "review_version": CUT_REVIEW_VERSION,
+            "pooling_version": _pooling_version(),
+            "candidates": sorted(
+                (
+                    str(candidate.get("candidate_id", "")),
+                    str(candidate.get("name", "")).strip(),
+                    str(candidate.get("district", "")).strip(),
+                    _evidence_line(candidate),
+                    bool(candidate.get("possible_duplicates")),
+                )
+                for candidate in candidates
+            ),
+        },
+        sort_keys=True,
+        ensure_ascii=False,
+    )
+    return hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
+
+
+def _pooling_version() -> str:
+    from .search import POOLING_VERSION
+
+    return POOLING_VERSION
+
+
 def _fold(text: str) -> str:
     """A name reduced to what two spellings of it have in common."""
     return re.sub(r"[^a-z0-9]+", " ", str(text).lower()).strip()
@@ -255,7 +422,7 @@ def review_order(
 
     try:
         payload = review(
-            "listicle.cut_review",
+            CONFLICT_JOB,
             build_conflict_prompt(order),
             CONFLICT_TOOL,
             CONFLICT_SCHEMA,
@@ -282,28 +449,129 @@ def review_order(
     return found
 
 
+class ReviewValidationError(RuntimeError):
+    """The reviewer answered about a row that is not in the chunk it was sent.
+
+    Raised rather than shrugged off. A finding quietly discarded turns into a
+    chunk that reports itself complete while a real flag was thrown away, and
+    "we looked and it is fine" is the one thing this step must never say
+    falsely.
+    """
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
 def review_candidates(
     order: SearchOrder,
     candidates: list[dict],
     review: Callable[[str, str, str, dict], Any],
-) -> dict[str, dict[str, str]]:
-    """Which returned places break the cut, keyed by the name they came back as.
+    *,
+    only_candidate_ids: set[str] | None = None,
+    reviewer_model: str = "",
+) -> CutReview:
+    """Judge this pool against the cut, and say exactly what was covered.
 
-    One call for the whole list. Nothing is looked up: the evidence each search
-    already wrote is what this reads.
+    Nothing is looked up: the evidence each search already wrote is what this
+    reads. What is new is that the answer knows its own extent -- which
+    candidates were sent, which were covered, and which chunk failed if one
+    did.
+
+    `only_candidate_ids` retries the part that failed. A chunk costs a call,
+    and a retry that re-buys the chunks that already succeeded is the operator
+    paying twice for the same verdict.
     """
+    fingerprint = review_fingerprint(order, candidates)
+    base = CutReview(
+        run_id=order.run_id,
+        revision=order.revision,
+        fingerprint=fingerprint,
+        expected_candidate_ids=[
+            str(candidate.get("candidate_id", "")) for candidate in candidates
+        ],
+        pooling_version=_pooling_version(),
+        reviewer_model=reviewer_model,
+        completed_at=_now(),
+    )
     if not order.exclusions.strip() or not candidates:
-        return {}
+        # Nothing was barred, so there is nothing to check. Distinct from
+        # "checked and clean" and from "nobody looked": no call is made, and
+        # the pool is not presented as having survived a judgement.
+        return base.model_copy(update={"status": "not_needed"})
 
-    payload = review(
-        "listicle.cut_review",
-        build_candidate_prompt(order, candidates),
-        CANDIDATE_TOOL,
-        CANDIDATE_SCHEMA,
+    planned = chunks_of(candidates)
+    verdicts: list[CutVerdict] = []
+    chunks: list[CutReviewChunk] = []
+    reviewed: list[str] = []
+
+    for index, chunk in enumerate(planned):
+        ids = [str(candidate.get("candidate_id", "")) for candidate in chunk]
+        if only_candidate_ids is not None and not (set(ids) & only_candidate_ids):
+            continue
+        try:
+            payload = review(
+                CANDIDATE_JOB,
+                build_candidate_prompt(order, chunk),
+                CANDIDATE_TOOL,
+                CANDIDATE_SCHEMA,
+            )
+            verdicts.extend(_verdicts_from(payload, chunk))
+        except ReviewValidationError as error:
+            logger.warning("Cut review chunk %s was not usable: %s", index, error)
+            chunks.append(
+                CutReviewChunk(
+                    index=index, candidate_ids=ids, state="failed", reason=str(error)
+                )
+            )
+            continue
+        except Exception as error:  # pragma: no cover -- network dependent
+            logger.warning("Cut review chunk %s failed", index, exc_info=True)
+            chunks.append(
+                CutReviewChunk(
+                    index=index,
+                    candidate_ids=ids,
+                    state="failed",
+                    reason=type(error).__name__,
+                )
+            )
+            continue
+        chunks.append(CutReviewChunk(index=index, candidate_ids=ids, state="complete"))
+        reviewed.extend(ids)
+
+    covered = set(reviewed)
+    expected = set(base.expected_candidate_ids)
+    if not chunks:
+        status = "failed"
+    elif expected <= covered:
+        status = "complete"
+    elif covered:
+        status = "partial"
+    else:
+        status = "failed"
+
+    return base.model_copy(
+        update={
+            "status": status,
+            "reviewed_candidate_ids": reviewed,
+            "verdicts": _combined(verdicts),
+            "chunks": chunks,
+            "completed_at": _now(),
+        }
     )
 
-    reviewed = candidates[:MAX_CANDIDATES_REVIEWED]
-    flags: dict[str, dict[str, str]] = {}
+
+def _verdicts_from(payload: Any, chunk: list[dict]) -> list[CutVerdict]:
+    """Read one chunk's findings, refusing any that names a row it was not sent.
+
+    The row's number is what identifies it, and the name is a cross-check. A
+    number pointing at a different place from the one the model named is an
+    off-by-one, and acting on it flags an innocent place while the real one
+    goes unflagged. The whole chunk is rejected rather than the one finding
+    dropped: a chunk that answered about rows it was not shown has not answered
+    the question, and calling it complete would be the falsehood.
+    """
+    found: list[CutVerdict] = []
     for entry in (payload or {}).get("barred", []) or []:
         why = str(entry.get("why", "")).strip()
         if not why:
@@ -311,45 +579,68 @@ def review_candidates(
         try:
             number = int(entry.get("number"))
         except (TypeError, ValueError):
-            continue
+            raise ReviewValidationError(
+                f"a finding carried no usable row number: {entry.get('number')!r}"
+            ) from None
         # The listing is one-based, as printed.
-        if not 1 <= number <= len(reviewed):
-            continue
-        candidate = reviewed[number - 1]
+        if not 1 <= number <= len(chunk):
+            raise ReviewValidationError(
+                f"row {number} was named, and this chunk holds {len(chunk)} rows"
+            )
+        candidate = chunk[number - 1]
         actual = str(candidate.get("name", "")).strip()
-        if not actual:
-            continue
-        # The name is a cross-check, not the key. A number that points at a
-        # different restaurant from the one the model named is an off-by-one,
-        # and acting on it would flag an innocent place while the real one goes
-        # unflagged -- worse than dropping the finding. Compared loosely
-        # because the model may echo the row's district along with its name.
+        candidate_id = str(candidate.get("candidate_id", "")).strip()
+        if not candidate_id:
+            raise ReviewValidationError(
+                f"row {number} ({actual!r}) has no candidate id to file against"
+            )
+        # Compared loosely because the model may echo the row's district along
+        # with its name.
         named = str(entry.get("name", "")).strip().lower()
         if named and _fold(actual) not in _fold(named) and _fold(named) not in _fold(actual):
-            logger.warning(
-                "Cut review said row %s was %r, but row %s is %r; dropped",
-                number, entry.get("name"), number, actual,
+            raise ReviewValidationError(
+                f"row {number} was named {entry.get('name')!r}, and row {number} "
+                f"is {actual!r}"
             )
-            continue
-        confidence = _confidence(entry.get("confidence", ""))
-        # The same name can appear on more than one row: a pair the merge
-        # refused to join because their districts disagreed is two candidates
-        # with one name, and the model judges each row separately. Run
-        # 33fca394 has three such pairs, and one of them came back barred for
-        # two different reasons -- Nikkei on one row, chain on the other.
-        # Last-write-wins threw one of those away without saying so, so both
-        # are kept, at the stronger of the two readings.
-        existing = flags.get(actual)
+        found.append(
+            CutVerdict(
+                candidate_id=candidate_id,
+                name=actual,
+                why=why,
+                confidence=_confidence(entry.get("confidence", "")),
+            )
+        )
+    return found
+
+
+def _combined(verdicts: list[CutVerdict]) -> list[CutVerdict]:
+    """One verdict per candidate, keeping every distinct reason.
+
+    A candidate can be flagged twice for two different reasons -- run 33fca394
+    has a pair barred as Nikkei on one row and as a chain on the other.
+    Last-write-wins threw one away silently, so both are kept, at the stronger
+    of the two readings.
+
+    Combined by candidate id. Two candidates with one name stay two verdicts,
+    which is the whole of R5: the reviewer flagged the Azul inside a hotel, and
+    storing by name put the same flag on the independent street bar in another
+    district.
+    """
+    merged: dict[str, CutVerdict] = {}
+    for verdict in verdicts:
+        existing = merged.get(verdict.candidate_id)
         if existing is None:
-            flags[actual] = {"why": why, "confidence": confidence}
+            merged[verdict.candidate_id] = verdict
             continue
-        reasons = existing["why"]
-        if _fold(why) not in _fold(reasons):
-            reasons = f"{reasons} {why}"
-        flags[actual] = {
-            "why": reasons,
-            "confidence": "clear"
-            if "clear" in (existing["confidence"], confidence)
-            else "arguable",
-        }
-    return flags
+        reasons = existing.why
+        if _fold(verdict.why) not in _fold(reasons):
+            reasons = f"{reasons} {verdict.why}"
+        merged[verdict.candidate_id] = existing.model_copy(
+            update={
+                "why": reasons,
+                "confidence": "clear"
+                if "clear" in (existing.confidence, verdict.confidence)
+                else "arguable",
+            }
+        )
+    return list(merged.values())

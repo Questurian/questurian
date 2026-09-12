@@ -67,6 +67,79 @@
   line-height: 1.5;
 }
 
+/* ---------- the shelf of saved lists ---------- */
+
+.lp-shelf,
+.lp-shelf-loading {
+  max-width: 42rem;
+  margin: var(--space-6) auto 0;
+}
+
+.lp-shelf-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.lp-shelf-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+
+.lp-shelf-row + .lp-shelf-row {
+  border-top: 1px solid var(--border);
+}
+
+.lp-shelf-row-hidden {
+  opacity: 0.6;
+}
+
+.lp-shelf-open {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 18rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.lp-shelf-open:hover .lp-shelf-title {
+  color: var(--lp-accent);
+}
+
+.lp-shelf-title {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.lp-shelf-stage {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.lp-shelf-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+/* Doubled so it beats `.lp-link-button`, which is declared further down and
+   indents itself for sitting beside text. */
+.lp-link-button.lp-shelf-toggle {
+  margin-top: var(--space-3);
+  padding-left: 0;
+  font-size: 0.8125rem;
+}
+
 /* ---------- the interview, as a chat ---------- */
 
 .lp-chat {
@@ -628,7 +701,8 @@
 /* ---------- what the searches found ---------- */
 
 .lp-results {
-  max-width: 46rem;
+  /* Wider than the interview above it, so the boxes run three to a row. */
+  max-width: 64rem;
   margin: var(--space-5) auto 0;
   background: var(--panel);
   border: 1px solid var(--border);
@@ -705,68 +779,396 @@
   color: var(--lp-accent);
 }
 
+/* A result that stands under a refresh that did not. Marked, not struck out:
+   the places are real and current, and the only thing wrong is that the
+   attempt to replace them failed. */
+.lp-angle-stale .lp-angle-note {
+  font-style: italic;
+}
+
+/* A row a partial review never reached. Quiet, and present: the absence of a
+   flag on this row means nobody looked, not that it came back clean. */
+.lp-candidate-unchecked {
+  font-size: 0.85em;
+  font-style: italic;
+  color: var(--lp-muted, #6b6b6b);
+  margin: 0;
+}
+
+/* A column of equal boxes, each the full width of the results. Same height on
+   purpose: one place with a long duplicate warning must not make its box
+   taller than the rest. */
 .lp-candidates {
   list-style: none;
-  counter-reset: candidate;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .lp-candidate {
-  counter-increment: candidate;
+  --lp-card-ink: #2d2a26;
+  --lp-card-rule: rgba(45, 42, 38, 0.14);
+  --lp-card-rule-soft: rgba(45, 42, 38, 0.08);
+  position: relative;
+  height: 15rem;
+  background: #ffffff;
+  border: 1px solid var(--lp-card-rule);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(45, 42, 38, 0.05);
+  transition: border-color 0.25s ease;
+}
+
+/* Every item ticked. The box itself says so, so a finished place can be
+   picked out of forty without reading any of them. */
+.lp-candidate-complete {
+  border-color: var(--lp-accent);
+}
+
+/* The one thing that moves: a line along the top edge that fills as the
+   checklist does. It answers a tick, and says nothing when nothing changed. */
+.lp-candidate-progress {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--lp-accent);
+  transform-origin: left center;
+  transform: scaleX(var(--lp-progress, 0));
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+  z-index: 1;
+}
+
+/* A soft fade at the bottom edge. With the scrollbar hidden it is the only
+   sign a box holds more than it shows; over a box that fits, it lands on the
+   white bottom padding and cannot be seen. */
+.lp-candidate::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1.5rem;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #ffffff);
+  pointer-events: none;
+}
+
+/* Two sides: who the place is and the tools to look it up on the left, the
+   checklist on the right behind a hairline. What does not fit scrolls inside
+   the box, with no scrollbar drawn. */
+.lp-candidate-scroll {
+  height: 100%;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(15rem, 1fr);
+  align-items: start;
+  scrollbar-width: none;
+  /* The hand-off in scrollHandoff.ts decides what reaches the page; the
+     browser's own chaining (and the bounce) would do it a second time. */
+  overscroll-behavior: contain;
+}
+
+.lp-candidate-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.lp-candidate-main {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  padding: var(--space-2) 0 var(--space-2) var(--space-6);
-  border-bottom: 1px solid var(--border);
-  position: relative;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  min-width: 0;
 }
 
-.lp-candidate::before {
-  content: counter(candidate);
-  position: absolute;
-  left: 0;
-  top: var(--space-2);
-  width: var(--space-5);
-  text-align: right;
-  color: var(--muted);
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.lp-candidate-line {
+.lp-candidate-head {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .lp-candidate-name {
-  color: var(--ink);
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--lp-card-ink);
+  overflow-wrap: anywhere;
+}
+
+.lp-candidate-where {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-4);
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* Repeat discovery, the only ranking signal the pipeline has earned. Said in
+   words, in the section's colour, rather than as a badge. */
+.lp-candidate-overlap {
+  color: var(--lp-accent);
   font-weight: 600;
 }
 
-.lp-candidate-district {
-  font-size: 0.8125rem;
+/* Tools: crisp and square-shouldered, dark text on white with a real border,
+   so they read as things to press and not as more labels. */
+.lp-candidate-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
-/* The ranking signal, and the only one the pipeline has actually earned. */
-.lp-candidate-overlap {
-  margin-left: auto;
-  font-size: 0.6875rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--lp-accent);
-  border: 1px solid var(--lp-accent);
-  border-radius: var(--radius-sm, 4px);
-  padding: 0.05rem 0.4rem;
+.lp-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.375rem;
+  padding: 0 1rem;
+  border: 1px solid rgba(45, 42, 38, 0.24);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--lp-card-ink);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(45, 42, 38, 0.08);
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.lp-candidate-evidence {
+.lp-tool svg {
+  flex-shrink: 0;
+}
+
+.lp-tool:hover {
+  border-color: rgba(45, 42, 38, 0.45);
+  background: #fcfbf9;
+  box-shadow: 0 2px 6px -2px rgba(45, 42, 38, 0.18);
+}
+
+.lp-tool:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.lp-tool:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+}
+
+/* Details stays inside the app, so it does not dress like the two that
+   leave it. */
+.lp-tool-quiet {
+  border-color: var(--lp-card-rule-soft);
+  background: var(--cream);
+  color: var(--ink-light, #5a544c);
+  box-shadow: none;
+}
+
+/* The warning: a rule down its left edge and a warm ground, set apart from
+   the tools and the checklist so it reads as a caution rather than a control. */
+.lp-candidate-duplicate {
   margin: 0;
-  color: var(--muted);
+  padding: 0.6rem 0.85rem;
+  border-left: 3px solid #c8962e;
+  border-radius: 0 8px 8px 0;
+  background: #fdf8ee;
+  color: #6b4a12;
   font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+/* The checklist: one bordered list with hairlines between its rows, on its
+   own side of the box. A form, not a set of buttons. */
+.lp-candidate-checks {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-5) var(--space-6) var(--space-5) var(--space-5);
+  border-left: 1px solid var(--lp-card-rule-soft);
+  align-self: stretch;
+  min-height: 100%;
+}
+
+.lp-candidate-checks li + li .lp-check {
+  border-top: 1px solid var(--lp-card-rule-soft);
+}
+
+.lp-check {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 0.25rem;
+  font-size: 0.9375rem;
+  color: var(--lp-card-ink);
+  cursor: pointer;
+}
+
+.lp-check-text {
+  transition: color 0.15s ease;
+}
+
+.lp-check:hover .lp-check-box {
+  border-color: rgba(45, 42, 38, 0.55);
+}
+
+/* The real checkbox stays in the page for the keyboard and screen readers;
+   what is drawn is the square beside it. */
+.lp-check-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.lp-check-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.3rem;
+  height: 1.3rem;
+  border: 1.5px solid rgba(45, 42, 38, 0.32);
+  border-radius: 5px;
+  background: #ffffff;
+  color: #ffffff;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.lp-check-box svg {
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.lp-check-input:checked + .lp-check-box {
+  background: var(--lp-accent);
+  border-color: var(--lp-accent);
+}
+
+.lp-check-input:checked + .lp-check-box svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.lp-check-input:checked ~ .lp-check-text {
+  color: var(--lp-accent);
+}
+
+/* The TripAdvisor row: its square is ticked by the link being right, not by
+   a click, so it is drawn without a pointer and fills from the row's class. */
+.lp-check-auto {
+  cursor: default;
+}
+
+.lp-check-auto:hover .lp-check-box {
+  border-color: rgba(45, 42, 38, 0.32);
+}
+
+.lp-check-done .lp-check-box {
+  background: var(--lp-accent);
+  border-color: var(--lp-accent);
+}
+
+.lp-check-done .lp-check-box svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.lp-check-done .lp-check-text {
+  color: var(--lp-accent);
+}
+
+.lp-check-optional {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.lp-check-link {
+  padding-bottom: var(--space-2);
+}
+
+.lp-check-link .lp-check {
+  padding-bottom: 0.5rem;
+}
+
+.lp-link-input {
+  width: 100%;
+  height: 2.25rem;
+  padding: 0 0.7rem;
+  border: 1px solid rgba(45, 42, 38, 0.24);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--lp-card-ink);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.lp-link-input::placeholder {
+  color: var(--muted);
+}
+
+.lp-link-input:focus {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 1px;
+  border-color: var(--lp-accent);
+}
+
+.lp-link-input[aria-invalid='true'] {
+  border-color: #b42318;
+}
+
+.lp-link-input[aria-invalid='true']:focus {
+  outline-color: #b42318;
+}
+
+.lp-check-done ~ .lp-link-input {
+  border-color: rgba(15, 118, 110, 0.45);
+}
+
+.lp-link-why {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
   line-height: 1.4;
+  color: #b42318;
+}
+
+.lp-check-input:focus-visible + .lp-check-box {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+}
+
+/* Narrow screens: the checklist goes under the tools instead of beside them. */
+@media (max-width: 44rem) {
+  .lp-candidate {
+    height: 26rem;
+  }
+
+  .lp-candidate-scroll {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lp-candidate-checks {
+    border-left: none;
+    border-top: 1px solid var(--lp-card-rule-soft);
+    min-height: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-candidate-progress,
+  .lp-check-box,
+  .lp-check-box svg,
+  .lp-tool {
+    transition: none;
+  }
 }
 
 
@@ -810,28 +1212,9 @@
   font-size: 0.75rem;
 }
 
-/* Every row as a search returned it. Two angles found this place for two
-   different reasons, and the reasons are what a person needs to check whether
-   the merge was right. */
-.lp-candidate-sightings {
-  margin: 0.3rem 0 0;
-  padding-left: 1rem;
-  list-style: none;
-  border-left: 2px solid var(--border);
-  color: var(--muted);
-  font-size: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
 /* Shown rather than resolved. This step cannot tell a second branch from a
    second spelling, and folding them together loses a venue silently. */
-.lp-candidate-duplicate {
-  margin: 0.3rem 0 0;
-  font-size: 0.75rem;
-  color: var(--lp-accent);
-}
+
 
 /* Where the searches actually looked. Collapsed by default: it is forty
    domains and the answer it gives -- local press, or only visitor guides --
@@ -851,4 +1234,541 @@
   color: var(--muted);
   line-height: 1.7;
   word-break: break-word;
+}
+
+/* ---------- how the places were found (folded) ---------- */
+
+.lp-results-how {
+  margin-bottom: var(--space-4);
+  font-size: 0.875rem;
+}
+
+.lp-results-how > summary {
+  cursor: pointer;
+  color: var(--muted);
+  padding: var(--space-2) 0;
+}
+
+.lp-results-how > summary:hover {
+  color: var(--ink);
+}
+
+.lp-results-how-body {
+  padding: var(--space-3) 0 var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.lp-results-how-body > .lp-results-sub:last-of-type {
+  margin-bottom: var(--space-3);
+}
+
+/* ---------- one place's details (pop-up) ---------- */
+
+.lp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(20, 20, 20, 0.35);
+}
+
+.lp-modal {
+  width: min(40rem, 100%);
+  max-height: calc(100vh - 2 * var(--space-4));
+  overflow-y: auto;
+  /* Solid, not `--panel`: that one is translucent, and the list behind showed
+     through the text. */
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 40px var(--shadow-soft);
+  padding: var(--space-5) var(--space-6);
+}
+
+.lp-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.lp-modal-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.25rem;
+}
+
+.lp-modal-sub {
+  margin: var(--space-1) 0 0;
+  font-size: 0.875rem;
+}
+
+.lp-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 var(--space-1);
+}
+
+.lp-modal-close:hover {
+  color: var(--ink);
+}
+
+.lp-modal-section {
+  margin-top: var(--space-4);
+}
+
+.lp-modal-sightings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.lp-modal-sightings li {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border);
+}
+
+.lp-modal-angle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.lp-modal-evidence {
+  margin: var(--space-1) 0 0;
+  color: var(--ink);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+/* ---------- settling a duplicate ---------- */
+
+/* The warning, made pressable. It keeps its caution look so it still reads
+   as a warning first; the underlined "Sort it out" is what says it opens. */
+.lp-candidate-duplicate-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lp-candidate-duplicate-action:hover {
+  background: #faf0da;
+}
+
+.lp-candidate-duplicate-action:focus-visible {
+  outline: 2px solid #c8962e;
+  outline-offset: 2px;
+}
+
+.lp-candidate-duplicate-cta {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.lp-dupe-modal {
+  width: min(46rem, 100%);
+}
+
+.lp-dupe-place {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.lp-dupe-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.lp-dupe-where {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.lp-dupe-said {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-light, #5a544c);
+  line-height: 1.45;
+}
+
+.lp-dupe-place .lp-candidate-tools {
+  margin-top: 0.25rem;
+}
+
+/* The place the check was opened from, set apart as the thing the others
+   are compared against. */
+.lp-dupe-anchor {
+  padding: var(--space-4);
+  border: 1px solid rgba(45, 42, 38, 0.14);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.lp-dupe-list {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.lp-dupe-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid rgba(45, 42, 38, 0.1);
+  border-left: 3px solid #c8962e;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.lp-dupe-row-same {
+  border-left-color: var(--lp-accent);
+}
+
+.lp-dupe-row-different {
+  border-left-color: rgba(45, 42, 38, 0.25);
+}
+
+/* Two answers, one row: a pair of joined buttons, the chosen one filled. */
+.lp-dupe-choice {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1px solid rgba(45, 42, 38, 0.24);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lp-dupe-choice button {
+  padding: 0.5rem 0.9rem;
+  border: none;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lp-dupe-choice button + button {
+  border-left: 1px solid rgba(45, 42, 38, 0.24);
+}
+
+.lp-dupe-choice button:hover {
+  background: var(--cream);
+}
+
+.lp-dupe-choice button[aria-pressed='true'] {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.lp-dupe-choice button:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: -2px;
+}
+
+.lp-dupe-keep {
+  margin: var(--space-5) 0 0;
+  padding: var(--space-4);
+  border: 1px solid rgba(15, 118, 110, 0.3);
+  border-radius: 10px;
+  background: var(--lp-accent-softer);
+}
+
+.lp-dupe-keep legend {
+  padding: 0 var(--space-2);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.lp-dupe-keep-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.45rem 0;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.lp-dupe-keep-option input {
+  accent-color: var(--lp-accent);
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+}
+
+.lp-dupe-note {
+  margin: var(--space-2) 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.lp-dupe-error {
+  max-width: none;
+  margin: var(--space-4) 0 0;
+}
+
+.lp-dupe-actions {
+  margin-top: var(--space-5);
+}
+
+/* ---------- removed places ---------- */
+
+.lp-removed {
+  margin-top: var(--space-5);
+  font-size: 0.875rem;
+}
+
+.lp-removed > summary {
+  cursor: pointer;
+  color: var(--muted);
+  padding: var(--space-2) 0;
+}
+
+.lp-removed > summary:hover {
+  color: var(--ink);
+}
+
+.lp-removed-list {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  border: 1px solid rgba(45, 42, 38, 0.12);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.lp-removed-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+
+.lp-removed-row + .lp-removed-row {
+  border-top: 1px solid rgba(45, 42, 38, 0.08);
+}
+
+.lp-removed-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ---------- what Google said ---------- */
+
+.lp-google-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-4);
+  font-size: 0.8125rem;
+}
+
+.lp-google-summary {
+  color: #9a3412;
+  font-weight: 600;
+}
+
+.lp-candidate-closed {
+  display: inline-block;
+  margin-left: var(--space-3);
+  padding: 0.15rem 0.55rem;
+  border: 1px solid rgba(180, 35, 24, 0.35);
+  border-radius: 6px;
+  background: #fef3f2;
+  color: #b42318;
+  font-family: var(--font-body, inherit);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+
+.lp-candidate-google {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: 0.875rem;
+  color: var(--lp-card-ink);
+}
+
+.lp-candidate-rating [aria-hidden='true'] {
+  color: #e8a317;
+}
+
+.lp-candidate-price {
+  color: var(--ink-light, #5a544c);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* Google says this is not somewhere to eat or drink. The note carries its
+   own Remove, because the note is the reason. */
+.lp-candidate-notvenue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-1);
+  padding: 0.45rem 0.45rem 0.45rem 0.75rem;
+  border-left: 3px solid #c2410c;
+  border-radius: 0 8px 8px 0;
+  background: #fff4ed;
+  font-size: 0.8125rem;
+  color: #9a3412;
+}
+
+.lp-notvenue-remove {
+  margin-left: auto;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid rgba(154, 52, 18, 0.45);
+  border-radius: 6px;
+  background: #ffffff;
+  color: #9a3412;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lp-notvenue-remove:hover {
+  background: #9a3412;
+  border-color: #9a3412;
+  color: #ffffff;
+}
+
+.lp-notvenue-remove:focus-visible {
+  outline: 2px solid #c2410c;
+  outline-offset: 2px;
+}
+
+/* Google's opinion on "Still open", at the end of the row it informs. */
+.lp-check-google {
+  margin-left: auto;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.lp-check-google-good {
+  color: var(--lp-accent);
+}
+
+.lp-check-google-warn {
+  color: #9a6b12;
+}
+
+.lp-check-google-bad {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.lp-check-google-muted {
+  color: var(--muted);
+}
+
+/* The free-lookup countdown, under the Google button it decides the cost of. */
+.lp-allowance {
+  margin: var(--space-2) 0 0;
+  font-size: 0.8125rem;
+  color: var(--ink);
+}
+
+.lp-allowance strong {
+  font-size: 0.9375rem;
+  color: var(--lp-accent);
+}
+
+/* Remove by hand: in the card's corner, quiet until pointed at, and red only
+   then -- it is a decision, not a lookup. */
+.lp-candidate-main {
+  position: relative;
+}
+
+.lp-candidate-main .lp-candidate-head {
+  padding-right: 5.5rem;
+}
+
+.lp-tool.lp-tool-remove {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  height: 2rem;
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.lp-tool.lp-tool-remove:hover {
+  border-color: rgba(180, 35, 24, 0.35);
+  background: #fef3f2;
+  color: #b42318;
+  box-shadow: none;
+}
+
+.lp-confirm-modal {
+  width: min(28rem, 100%);
+}
+
+.lp-confirm-body {
+  margin: var(--space-3) 0 0;
+  color: var(--ink-light, #5a544c);
+  line-height: 1.5;
+}
+
+.lp-confirm-actions {
+  margin-top: var(--space-5);
+}
+
+.lp-actions .lp-danger {
+  background: #b42318;
+}
+
+.lp-actions .lp-danger:hover:not(:disabled) {
+  background: #912018;
 }

@@ -539,11 +539,30 @@ def _markers_from(
 
     Unknown names in the claim are dropped rather than refused: a model
     inventing a seventh marker has still told us about the six real ones.
+
+    **Covered is sticky.** The prompt asks for "the full list of markers you
+    can now fill" every turn, and a model that simply forgets one un-covers it.
+    Listicle run abb7004b (2026-09-10) covered `count` on turns one and two,
+    omitted it from turn three's list, and was sent back to ask a question it
+    had already settled -- the exact repetition the prompt spends a paragraph
+    warning against, arriving through the one route the prompt cannot close.
+
+    Markers reached by being ASKED about were already permanent, through
+    `answered`. This makes the ones claimed without asking permanent too, which
+    is the same rule applied to both roads to the same place. Mid-interview, an
+    omission is a slip and not a decision: the grill has no way to say "I was
+    wrong about that" other than by dropping it silently, which is precisely
+    what must not be trusted.
+
+    There is exactly one deliberate un-covering, and it does not come through
+    here. `reopen_grill` empties `markers_covered` itself, because going back
+    to rethink an agreed brief is a decision someone made rather than a list
+    someone forgot to retype.
     """
     raw = payload.get("markers_covered")
     claimed = {_safe_str(item) for item in raw} if isinstance(raw, list) else set()
     answered = {turn.question.asks_about for turn in state.turns}
-    settled = claimed | answered
+    settled = claimed | answered | set(state.markers_covered)
     keys = marker_keys if marker_keys is not None else state.marker_keys
     return [key for key in keys if key in settled]
 
@@ -845,7 +864,21 @@ def reopen_grill(state: GrillState, dependencies: GrillDependencies) -> GrillSta
     dossier, or a brief the operator no longer wants all come back here. What
     was learned stays in the transcript; the agreement does not.
     """
-    reopened = state.model_copy(update={"status": "asking", "consensus": "", "pending": None})
+    reopened = state.model_copy(
+        update={
+            "status": "asking",
+            "consensus": "",
+            "pending": None,
+            # Reopening is the one deliberate un-covering, and it has to be
+            # explicit now that a marker no longer un-covers itself by being
+            # left out of a claim. What was LEARNED survives -- the transcript
+            # is untouched, and every marker an actual question was asked about
+            # is restored from it on the next turn. What is dropped is the
+            # bookkeeping that says the brief is settled, which is the whole
+            # point of coming back here.
+            "markers_covered": [],
+        }
+    )
     return advance_grill(reopened, dependencies)
 
 

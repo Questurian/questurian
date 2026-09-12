@@ -210,3 +210,22 @@ trustworthy, because otherwise the measurement measures the bug.
   not process a request whose answer never arrived, so an interrupted attempt
   is labelled interrupted rather than failed and the screen says retrying it
   may be charged again.
+
+## Superseded in part by ADR 0038
+
+A second review on 2026-09-09 reproduced ten failures and two spend mechanisms
+against this commit. Three decisions above turned out to be right in intent and
+wrong in mechanism, and [ADR
+0038](./0038-the-record-says-what-actually-happened.md) replaces them:
+
+- **"Work is stored per angle, not per batch"** stored one row per angle per
+  revision, so a second search of one angle overwrote the first. Work is now
+  stored per invocation, and a terminal attempt is frozen.
+- **"A merge that is not certain does not happen"** still let containment merge:
+  "Hotel Sol" and "Hotel Sol Palace" in one district became one candidate.
+  Containment is a hint now and merges nothing.
+- **"A correction makes a new revision"** did not cover the interview agreeing
+  a second time, which returned the existing order unconditionally.
+
+Everything else here stands. The last section's admissions in particular still
+stand: the paid comparison has still not been run.

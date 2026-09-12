@@ -1,0 +1,43 @@
+{
+  "case": "narrow-bars",
+  "place": "Lima, Peru",
+  "kind": "rooftop bars",
+  "subject": "bars",
+  "target": 15,
+  "standard": "an actual roof terrace open to guests",
+  "exclusions": "",
+  "angles": [
+    {
+      "angle_id": "a1",
+      "text": "rooftop bars in Lima people go to for what they can see",
+      "role": "broad",
+      "wanted": 40,
+      "prompt": "List real, currently open rooftop bars in Lima, Peru that match this description:\nrooftop bars in Lima people go to for what they can see\n\nFind 40. Keep going until you have 40 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal drink and nightlife reporting, local bar critics and local drink blogs are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: an actual roof terrace open to guests\n\n\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+    },
+    {
+      "angle_id": "a2",
+      "text": "rooftop bars in Lima people go to for what they can see",
+      "role": "broad",
+      "wanted": 3,
+      "prompt": "List real, currently open rooftop bars in Lima, Peru that match this description:\nrooftop bars in Lima people go to for what they can see\n\nFind 3. Keep going until you have 3 or have genuinely run out -- listing four when eight exist is the failure mode here, and a place you are reasonably confident about belongs on the list. Breadth first: this is a shortlist someone will check, not a final answer.\n\nSearch in the local language of Lima, Peru as well as in English, and say so to\nyourself before you start: run the query the way a resident would type it.\nLocal drink and nightlife reporting, local bar critics and local drink blogs are where this is written down. An English-only search reaches the places written up\nfor visitors and stops there. Evidence in the local language counts exactly the\nsame. Write the results in English, but keep every business name exactly as it\nis written locally.\n\nEvery entry must be ONE named business a reader could walk into. Not a market,\na street or a district -- if the answer is \"the stalls in X market\", name the\nindividual stalls or leave it out.\n\nEvery place must satisfy this no matter which description found it: an actual roof terrace open to guests\n\n\n\nWrite ONLY the list. One place per line, in exactly this format:\nNAME | DISTRICT | evidence in under ten words\n\nIf a business has a branch qualifier -- a district, a street, a room inside a\nhotel -- keep it in brackets after the name. Two branches are two entries.\n\nNo preamble, no numbering, no closing line."
+    }
+  ],
+  "provider_calls_at_best": 2,
+  "provider_calls_at_worst": 6,
+  "cap_enforced_at_dispatch": 2,
+  "resolved_model": "gemini-2.5-flash",
+  "pooling_version": "2",
+  "search_prompt_version": "2026-09-09",
+  "ask_overridden": true,
+  "judged_by": [
+    "Does every returned place actually have a roof terrace?",
+    "Does any angle spend itself restating 'rooftop', which every search already carries?"
+  ],
+  "outcomes_still_to_be_judged": {
+    "eligibility": "how many checked candidates fit the requirements and the angle",
+    "coverage": "how many suitable distinct venues the whole pool holds, and what is missing",
+    "identity_errors": "false merges and unresolved duplicates, counted separately",
+    "wording_drift": "unrequested restrictions added, and requirements silently broadened",
+    "operator_effort": "edits, confusing choices, repeated questions, recovery actions"
+  }
+}

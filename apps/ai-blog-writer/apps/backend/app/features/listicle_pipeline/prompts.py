@@ -38,30 +38,65 @@ from .shapes import (
     overlap_notes,
     roles_note,
     shape_menu,
-    shapes_for,
+    shape_outline,
     subject_of,
 )
 from .spec import count_from, kind_from
 
 
+# What has to be settled before the catalogue can be used at all.
+#
+# `angles` is built FROM these: how many comes from the count, the wording from
+# the kind and the place, and what every place must satisfy from the bar and
+# the cut. The prompt already refuses to ask about angles until they are
+# settled, so a full catalogue before then is three hundred lines the model is
+# forbidden to act on.
+_ANGLE_PREREQUISITES: tuple[str, ...] = ("kind", "place", "count", "bar", "cut")
+
+
 def _catalogue_block(state: GrillState) -> str:
     """The catalogue, in as much detail as this turn can use.
 
-    Spelled out once `count` is settled, because that is the first turn on
-    which `angles` may be asked at all. Before then the model needs to know
-    what exists -- so that it does not settle a count the catalogue cannot
-    serve -- and does not need three hundred lines of wording rules it is
-    forbidden to act on yet.
+    Three phases, and the middle one is the only turn that can act on it.
+
+    **Before the prerequisites are settled** the model needs to know what
+    exists -- so that it does not settle a count the catalogue cannot serve --
+    and needs nothing else. It gets the names.
+
+    **On the turn that asks about angles** it gets the whole thing: every
+    shape, every pair that tends to collide, what the roles mean, and how many
+    angles a list this long wants.
+
+    **Once the angles are agreed** it gets neither. The full menu was still
+    being sent on the turn that writes the consensus, where there is nothing
+    left to choose -- 1,173 words of wording rules attached to a reply that
+    says "done". What it gets instead is the lines that were approved, because
+    the consensus has to read them back.
+
+    Every option stays on the menu at the menu turn. Nothing is trimmed for
+    size: an operator shown only the six the model picked has nothing to swap
+    in, which is the whole reason the menu exists.
     """
     subject = subject_of(kind_from(state))
-    available = shapes_for(subject)
     named = subject or "no specialised subject; the shared catalogue only"
+    covered = set(state.markers_covered)
 
-    if "count" not in state.markers_covered:
-        labels = ", ".join(shape.key for shape in available)
+    if not set(_ANGLE_PREREQUISITES) <= covered:
         return f"""THE SHAPE CATALOGUE ({named}), in outline. You will be shown it in full
-once the count is settled, which is the earliest you may ask about angles:
-{labels}"""
+on the turn you ask about angles, which is after the kind, the place, the
+count, the bar and the cut are settled:
+{shape_outline(subject)}"""
+
+    if "angles" in covered:
+        approved = _approved_angles(state)
+        return f"""THE ANGLES ALREADY AGREED. The catalogue is not repeated here; there is
+nothing left to choose from it. Read these back in the consensus exactly as
+they are written:
+{approved}
+
+If the menu genuinely has to be reopened -- they asked to change which searches
+run -- leave `angles` OUT of `markers_covered` and you will be shown the whole
+catalogue again on the next turn."""
 
     return f"""THE SHAPE CATALOGUE ({named}). These are the only shapes this commission
 gets. A shape not listed here does not apply to this subject -- do not reach
@@ -77,6 +112,14 @@ WHAT AN ANGLE IS FOR (`role`, one per angle):
 {roles_note()}
 
 {angle_count_guidance(count_from(state))}"""
+
+
+def _approved_angles(state: GrillState) -> str:
+    """The lines the operator agreed to, read off the interview."""
+    from .spec import angle_lines
+
+    lines = angle_lines(state)
+    return "\n".join(f"  - {line}" for line in lines) or "  (none recorded)"
 
 
 def build_listicle_turn_prompt(state: GrillState) -> str:
@@ -261,13 +304,12 @@ Now the part that matters.
   unfindable.
 
   When and only when you ask about `angles`, fill `options` with a MENU, not
-  just your picks. Each entry is `{{text, recommended, group, shape, role}}`:
+  just your picks. Each entry is `{{text, recommended, shape, role}}`:
 
     text         the finished search line, standing alone -- no numbering, no
                  shape name, no commentary
     recommended  true for the ones you are proposing, false for the rest
     shape        the catalogue key you wrote it from, or "" if it is your own
-    group        the shape's theme, or "" -- a label, not a rule
     role         broad, distinctive or specific
 
   The menu has three parts, and all three go in the same list:
@@ -297,8 +339,10 @@ Now the part that matters.
        a search. Do not restate a shape you have already written under a new
        name -- if it answers a shape, it IS that shape.
 
-  Put only the recommended lines in `recommendation`, one per line, so an
-  operator answering in plain text gets your picks and nothing else.
+  Leave `recommendation` EMPTY on this question. Your recommended lines are
+  already in `options`, and writing them out a second time is the same text
+  paid for twice -- the pipeline builds the recommendation from the options you
+  marked, in the order you sent them.
 
 - Push back when an answer contradicts the title or an earlier answer.
 

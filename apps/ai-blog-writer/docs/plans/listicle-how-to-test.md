@@ -19,6 +19,30 @@ That switch cannot reach a real build: it is fenced on Vite's `DEV` flag, which
 is a build-time literal, and a production build with the flag deliberately
 turned on was checked to contain no trace of it.
 
+## Look at the states, all on one page — free
+
+    PYTHONPATH=apps/backend:packages/shared/src:packages/utils/src \
+        .venv/bin/python apps/backend/scripts/build_listicle_demo_run.py
+
+Then http://localhost:3003/listicle-pipeline/zzdemo01. It is built offline;
+nothing reaches the web and nothing is bought. What it shows, in order down the
+page:
+
+- **A refresh that failed over work that stands.** One search says "refresh
+  failed; showing the earlier result from <time>" and offers to run just that
+  one. Its places are still in the list. Before this work, the failure
+  overwrote them.
+- **Hotel Sol and Hotel Sol Palace**, two rows in one district, each saying it
+  might be the same place as the other. One name being inside another is not
+  proof they are one hotel.
+- **Hotel Azul (Lobby bar) and Hotel Azul (Rooftop bar)**, two rows and no
+  duplicate warning between them. The searches deliberately told them apart.
+- **A cut review that covered three of seven rows.** It says so, the four it
+  never reached are marked "Not checked against what you left out", and the
+  button says how many more calls finishing it would cost.
+
+`--remove` deletes it when you are done.
+
 ## Look at a finished run — free
 
 Open one of the two real runs:
@@ -50,6 +74,12 @@ order that paid for it. You now see that before you spend.
 
 **The flagged places** in the list below, marked "Looks like something you left
 out" or "Might be". Nothing is removed; they are marked for you to judge.
+
+On `33fca394` the cut check now reads as unchecked, and that is not a
+regression. The verdicts stored for it were filed by NAME, which put one
+branch's flag on another branch with the same name; they are kept as a record
+and cannot be applied to these rows. "Check them now" says how many calls it
+would cost and buys them only if you press it.
 
 Two honest warnings about those flags:
 

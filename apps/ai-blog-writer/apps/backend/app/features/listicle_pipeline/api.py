@@ -83,6 +83,10 @@ class ReviseOrderRequest(BaseModel):
     angles: list[AngleEdit] | None = None
     standard: str | None = Field(default=None, max_length=2000)
     exclusions: str | None = Field(default=None, max_length=2000)
+    # The revision the browser was looking at. A correction typed against a
+    # version that has since moved is refused with the current one rather than
+    # applied over whatever happened in between.
+    expected_revision: int | None = Field(default=None, ge=1)
 
 
 class SearchRequest(BaseModel):
@@ -334,10 +338,26 @@ def _report(action, *args, **kwargs) -> dict[str, Any]:
     because a missing run and an unagreed order mean the same thing on either
     side of the boundary.
     """
+    from .runner import LeaseLost
+    from .store import RevisionConflict
+
     try:
         return action(*args, **kwargs)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+    except RevisionConflict as error:
+        # 409 with the revision that actually won, so the screen can re-read
+        # rather than guess which version it is now arguing with.
+        raise HTTPException(
+            status_code=409,
+            detail=str(error),
+            headers={"X-Listicle-Revision": str(error.current_revision)},
+        ) from error
+    except LeaseLost as error:
+        # 409, not 500. Nothing broke: another batch took the run, and the
+        # right answer is to look at what that batch is doing rather than to
+        # retry into a race.
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -371,6 +391,7 @@ def revise_listicle_order(
         angles=None if req.angles is None else [a.model_dump() for a in req.angles],
         standard=req.standard,
         exclusions=req.exclusions,
+        expected_revision=req.expected_revision,
         # Changing the angles or the cut is when the two can start disagreeing,
         # so the question is asked again on the correction that caused it.
         review=_review_call,
@@ -401,6 +422,17 @@ def run_listicle_search(
     )
 
 
+@router.post("/recheck/{run_id}")
+def recheck_listicle_cut(run_id: str, _staff=Depends(require_staff)):
+    """Buy the part of the cut review that is still missing.
+
+    Its own route because it costs, and because "some of this list was never
+    checked" is a state the operator has to be able to act on. A pool already
+    covered is returned as it stands and no call is made.
+    """
+    return _report(service.recheck_cut, run_id, _review_call)
+
+
 @router.get("/search/{run_id}")
 def get_listicle_search(run_id: str, _staff=Depends(require_staff)):
     """What this run knows, without running anything.
@@ -415,6 +447,112 @@ def get_listicle_search(run_id: str, _staff=Depends(require_staff)):
             status_code=404, detail="This search order has not been run yet."
         )
     return found
+
+
+class HideRequest(BaseModel):
+    hidden: bool
+
+
+@router.get("/runs")
+def list_listicle_runs(include_hidden: bool = False, _staff=Depends(require_staff)):
+    """Every saved run and how far it got, so one can be picked up again.
+
+    A read. Nothing is searched, checked or rebuilt by looking at the shelf.
+    """
+    return {"runs": service.runs(include_hidden=include_hidden)}
+
+
+@router.post("/runs/{run_id}/hidden")
+def hide_listicle_run(
+    run_id: str, req: HideRequest, _staff=Depends(require_staff)
+):
+    """Take a run off the shelf or put it back. The run itself is untouched."""
+    _report(service.set_hidden, run_id, req.hidden)
+    return {"run_id": run_id, "hidden": req.hidden}
+
+
+class DuplicateAnswer(BaseModel):
+    """One answer to "might be the same place", from the card it was asked on."""
+
+    candidate_id: str = Field(min_length=1, max_length=64)
+    same: list[str] = Field(default_factory=list, max_length=40)
+    different: list[str] = Field(default_factory=list, max_length=40)
+    keep: str = Field(default="", max_length=64)
+
+
+class RestoreRequest(BaseModel):
+    candidate_id: str = Field(min_length=1, max_length=64)
+
+
+class RemoveRequest(BaseModel):
+    candidate_id: str = Field(min_length=1, max_length=64)
+    # `not_a_venue` (Google says so) or `by_hand` (the operator's own call).
+    reason: str = Field(min_length=1, max_length=32)
+
+
+@router.get("/board/{run_id}")
+def get_listicle_board(run_id: str, _staff=Depends(require_staff)):
+    """What was removed as a duplicate, and which pairs are different places."""
+    return _report(service.board, run_id)
+
+
+@router.post("/board/{run_id}/duplicates")
+def resolve_listicle_duplicates(
+    run_id: str, req: DuplicateAnswer, _staff=Depends(require_staff)
+):
+    """Settle a duplicate warning. Removing is not deleting: a removed place
+    can be put back."""
+    return _report(
+        service.resolve_duplicates,
+        run_id,
+        req.candidate_id,
+        same=req.same,
+        different=req.different,
+        keep=req.keep,
+    )
+
+
+@router.post("/board/{run_id}/remove")
+def remove_listicle_candidate(
+    run_id: str, req: RemoveRequest, _staff=Depends(require_staff)
+):
+    """Take a place off the list. Reversible: Put back returns it."""
+    return _report(service.remove_candidate, run_id, req.candidate_id, req.reason)
+
+
+@router.post("/board/{run_id}/restore")
+def restore_listicle_candidate(
+    run_id: str, req: RestoreRequest, _staff=Depends(require_staff)
+):
+    return _report(service.restore_candidate, run_id, req.candidate_id)
+
+
+@router.get("/google/{run_id}")
+def get_listicle_google_checks(run_id: str, _staff=Depends(require_staff)):
+    """What Google has already said about this run's places. Never looks
+    anything up."""
+    return _report(service.google_checks, run_id)
+
+
+@router.post("/google/{run_id}")
+def check_listicle_places_on_google(run_id: str, _staff=Depends(require_staff)):
+    """Look up the places on the board that Google has not answered for.
+
+    Billed per place on the owner's Google Cloud account, so it is a POST the
+    operator presses, and a place already answered for is never asked again.
+    """
+    return _report(service.check_on_google, run_id)
+
+
+@router.get("/google-allowance")
+def get_places_allowance(refresh: bool = False, _staff=Depends(require_staff)):
+    """Free Google place lookups left this month, as Google counts them.
+
+    Covers every app on the Maps key, not just this one. Reading it is free.
+    """
+    from .places_allowance import allowance
+
+    return allowance(refresh=refresh)
 
 
 @router.get("/shapes")

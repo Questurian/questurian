@@ -615,3 +615,43 @@ def test_the_verdict_survives_a_reload_without_spending_again(run):
     assert len(calls) == 1, "reading a stored run must not re-judge it"
     assert reopened["cut_checked"] is True
     assert reopened["barred_count"] == 1
+
+
+def test_a_corrected_order_is_not_answered_by_the_previous_revisions_blob(run):
+    """Found by driving the real HTTP routes, not by a test.
+
+    Correcting the count changes what every search asks for, so every stored
+    result answered the previous request. The screen used to be handed the
+    previous revision's assembled payload marked `legacy` -- which says two
+    false things at once: that these are results for this order, and that this
+    run predates per-angle recording.
+    """
+    service.search(
+        run.run_id,
+        _replies(
+            decades="Canta Rana | Barranco | open since the 1980s",
+            cheap="Al Toke Pez | Surquillo | counter seating",
+        ),
+    )
+    assert service.progress(run.run_id)["found"] == 2
+
+    service.revise_order(run.run_id, target_count=8)
+    after = service.progress(run.run_id)
+
+    assert after.get("legacy") is not True, "this run records work per angle"
+    assert after["revision"] == 2
+    assert after["found"] == 0
+    assert all(row["state"] == "not_started" for row in after["angles"])
+    # And the work is not reported as gone.
+    assert after["superseded_results"] == 2
+
+
+def test_a_run_from_before_attempts_existed_still_opens(run):
+    """The case the fallback is actually for: no attempts at all, and a stored
+    blob that is a real result."""
+    store.save_results(
+        run.run_id, {"target": 12, "candidates": [{"name": "Canta Rana", "found_by": ["a"]}]}
+    )
+    view = service.progress(run.run_id)
+    assert view["legacy"] is True
+    assert view["candidates"][0]["name"] == "Canta Rana"

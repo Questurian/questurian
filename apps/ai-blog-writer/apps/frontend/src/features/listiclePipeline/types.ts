@@ -147,6 +147,9 @@ export interface ListicleOrder {
  * itself.
  */
 export interface ListicleSighting {
+  /** The attempt this row came from, and its position in that attempt's reply.
+   *  What a candidate's identity is built out of. */
+  sighting_id?: string
   angle: string
   name: string
   district: string
@@ -154,6 +157,11 @@ export interface ListicleSighting {
 }
 
 export interface ListicleCandidate {
+  /** A hash of this candidate's member sightings. What everything filed
+   *  against this candidate keys on — two rows may legitimately show the same
+   *  name, and they are never the same candidate. Stable under reordering;
+   *  different the moment the membership changes. */
+  candidate_id: string
   name: string
   district: string
   evidence: string
@@ -161,14 +169,23 @@ export interface ListicleCandidate {
    *  itself — not a verdict that the most-repeated place is the best one. */
   found_by: string[]
   overlap: number
-  /** Rows that look like this place and were not merged into it, because a
-   *  district or a bracketed qualifier said they might be somewhere else. */
+  /** Rows that look like this place and were not folded into it. Shown rather
+   *  than resolved: this step cannot tell a second branch from a second
+   *  spelling, and folding them loses a venue with nothing on screen to
+   *  notice. */
   possible_duplicates: string[]
+  /** The same relation by id, for a screen that wants to point at the other
+   *  row rather than name it. */
+  possible_duplicate_ids?: string[]
   /** Why this place appears to break what the operator left out. Empty when it
    *  does not, or when nothing has checked. */
   barred?: string
   /** 'clear' or 'arguable'. Anything unrecognised is read as 'arguable'. */
   barred_confidence?: string
+  /** Whether the cut review covered this row at all. A partial review leaves
+   *  rows nobody judged, and an unjudged row must not read as one that came
+   *  back clean. */
+  cut_reviewed?: boolean
   /** Every row exactly as a search returned it. Kept so a merge can be
    *  checked: two angles found this place for two different reasons. */
   sightings: ListicleSighting[]
@@ -190,7 +207,15 @@ export interface ListicleAngleResult {
   wanted: number
   edited: boolean
   custom: boolean
+  /** The state of the attempt whose result is being shown. */
   state: ListicleAngleState
+  /** The state of the most recent attempt, which is not always the one being
+   *  shown. A refresh that failed leaves the earlier result on screen and the
+   *  failure as the latest attempt, and one field cannot say both. */
+  latest_state?: ListicleAngleState
+  /** The result on screen was gathered by an earlier attempt than the most
+   *  recent one — a refresh that failed over work that stands. */
+  showing_earlier?: boolean
   rows: number
   sources: number
   /** A search that never came back. Different from one that ran and found
@@ -211,6 +236,13 @@ export interface ListicleAngleResult {
   /** This result was gathered under an earlier revision of the order and still
    *  answers the request being made. */
   reused: boolean
+  /** How many requests actually reached the provider for the work being shown.
+   *  One search is not one billable call: the runner retries, and a request
+   *  whose answer never arrived may still have been charged for. */
+  provider_calls?: number
+  /** 'executed' for work this pipeline ran and watched, 'reconstructed' for
+   *  work rebuilt from a row stored before attempts had identities. */
+  origin?: string
 }
 
 export interface ListicleSearchResults {
@@ -231,10 +263,35 @@ export interface ListicleSearchResults {
    *  fact about this run, not a verdict: a search with nothing exclusive may
    *  be the coverage everything else is being checked against. */
   empty_handed?: string[]
-  /** Whether anything judged this revision's places against the cut. False is
-   *  "nobody looked", not "nothing was barred". */
+  /** Whether a review COVERED every candidate below. False is "nobody
+   *  finished looking", which is not "nothing was barred" — read
+   *  `cut_review_status` for which of the several ways that can be true. */
   cut_checked?: boolean
+  /** 'not_checked' | 'not_needed' | 'complete' | 'partial' | 'failed'. A pool
+   *  with no exclusions to check is not the same as one nobody looked at, and
+   *  neither is the same as one where a chunk of the reviewing failed. */
+  cut_review_status?: string
+  /** How many of the candidates a finished chunk actually covered, out of how
+   *  many there are. Unequal means part of the list is unjudged. */
+  cut_reviewed_count?: number
+  cut_expected_count?: number
+  /** Chunks of the review that failed. Each one is a call a retry would buy —
+   *  and only those, never the chunks that already answered. */
+  cut_missing_chunks?: number[]
+  /** How many reviewer calls this pool takes. Said before they are bought. */
+  cut_chunks_planned?: number
+  /** A cut check exists for this run from before verdicts were filed against
+   *  candidates. It cannot be applied to these rows — it was keyed by name,
+   *  under different pooling rules — and it is not lost either. */
+  cut_historical?: boolean
   barred_count?: number
+  /** Searches whose latest attempt failed over a result that still stands. The
+   *  list is complete and something still went wrong. */
+  failed_refreshes?: string[]
+  /** Completed searches this run holds that no longer answer the order as it
+   *  stands — a correction changed what they ask for. Not lost: filed under
+   *  the revision they were bought for. */
+  superseded_results?: number
   order: {
     kind: string
     place: string
@@ -251,4 +308,84 @@ export interface ListicleSearchResults {
   /** A result stored before work was recorded per angle. Readable, and not
    *  retryable at the angle level. */
   legacy?: boolean
+}
+
+/** One saved run, as the shelf lists it.
+ *
+ *  `found` and `target` are set only once searches have come back. `hidden`
+ *  runs are off the shelf and nothing else: they still open and still hold
+ *  everything they found. */
+export interface ListicleRunSummary {
+  run_id: string
+  seed: string
+  status: string
+  stage: 'interview' | 'agreed' | 'searching' | 'searched' | 'unreadable'
+  found: number | null
+  target: number | null
+  created_at: string
+  touched_at: string
+  hidden: boolean
+}
+
+/** The operator's answers to "might be the same place".
+ *
+ *  A removed place is off the board, not deleted: it is listed at the bottom
+ *  and can be put back. A distinct pair is two flagged places judged to be
+ *  different, so the warning between them stops showing. */
+export interface ListicleBoard {
+  /** `duplicate`: the operator said it is the same place as `kept_id`.
+   *  `closed`: Google calls it permanently closed.
+   *  `not_a_venue`: Google lists it as something that is not a restaurant or
+   *  bar, and the operator took it off.
+   *  `by_hand`: the operator's own call. `kept_id` is empty for all but
+   *  `duplicate`. */
+  removed: {
+    candidate_id: string
+    kept_id: string
+    removed_at: string
+    reason?: 'duplicate' | 'closed' | 'not_a_venue' | 'by_hand'
+  }[]
+  distinct_pairs: [string, string][]
+}
+
+/** What Google said about one place on the board.
+ *
+ *  `not_found` means Google answered and nothing matched; `failed` means
+ *  there was no answer (no key, a timeout, a refused quota) and the place can
+ *  be checked again. The two are never shown the same way. */
+export interface ListicleGoogleCheck {
+  status: 'found' | 'not_found' | 'failed'
+  reason: string
+  checked_at: string
+  place_id?: string
+  google_name?: string
+  address?: string
+  types?: string[]
+  is_venue?: boolean
+  /** `OPERATIONAL`, `CLOSED_TEMPORARILY`, `CLOSED_PERMANENTLY`, or empty when
+   *  Google did not say — which is not the same as open. */
+  business_status?: string
+  rating?: number | null
+  rating_count?: number | null
+  price_level?: number | null
+  /** The operator put the place back after Google called it permanently
+   *  closed: Google is overruled, and the closure is no longer shown or acted
+   *  on. The rest of what Google said still stands. */
+  closed_dismissed?: boolean
+  /** The operator put the place back after removing it as "not a restaurant
+   *  or bar": Google matched the wrong thing, so the note stops showing. */
+  venue_dismissed?: boolean
+}
+
+/** Free Google place lookups left this month, as Google counts them across
+ *  every app on the Maps key. `available` false means the count could not be
+ *  read, and nothing should be assumed about what is left. */
+export interface ListiclePlacesAllowance {
+  available: boolean
+  free: number
+  used?: number
+  left?: number
+  month_start: string
+  as_of: string
+  reason?: string
 }

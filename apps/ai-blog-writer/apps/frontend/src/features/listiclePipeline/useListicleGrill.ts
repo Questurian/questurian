@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   NotFoundError,
+  RevisionConflictError,
   answerGrill,
   loadGrill,
   loadOrder,
   loadSearch,
+  recheckCut,
   reviseOrder,
   runSearch,
   startGrill,
@@ -53,6 +55,9 @@ interface UseListicleGrill {
   start: (seed: string) => void
   answer: (text: string, selections?: ListicleAngleSelection[]) => void
   search: (options?: { angleIds?: string[]; reuse?: boolean }) => void
+  /** Buy the part of the cut review nobody has done. Costs one call per
+   *  unjudged chunk, and nothing at all when the pool is already covered. */
+  recheck: () => void
   correctCount: (target: number) => void
   /** The bar or the cut, typed out. Needed because either can have been
    *  assembled from more than one answer, and an assembled value has to be
@@ -123,6 +128,12 @@ export function useListicleGrill(runId: string | null): UseListicleGrill {
   // again.
   useEffect(() => {
     if (!runId) {
+      // No run in the address means nothing is being read. Cleared here and
+      // not only when a read finishes: the router navigates in a transition,
+      // so a reset commits first, a read of the run being left starts in the
+      // gap, and the navigation that follows cancels it before it can clear
+      // its own flag. The screen then said "Opening run…" forever.
+      setLoading(false)
       setMissing(false)
       return
     }
@@ -207,6 +218,27 @@ export function useListicleGrill(runId: string | null): UseListicleGrill {
     [searching, state?.run_id],
   )
 
+  const recheck = useCallback(() => {
+    const id = state?.run_id
+    if (!id || searching) return
+    setSearching(true)
+    setError(null)
+    void (async () => {
+      try {
+        const found = await recheckCut(id)
+        if (showing.current !== id) return
+        setResults(found)
+      } catch (caught) {
+        if (showing.current !== id) return
+        setError(
+          caught instanceof Error ? caught.message : 'The cut check failed.',
+        )
+      } finally {
+        setSearching(false)
+      }
+    })()
+  }, [searching, state?.run_id])
+
   // One correction path, whatever is being corrected. The count, the bar and
   // the cut all make a new revision and all invalidate stored results the same
   // way, and a second copy of that sequence is a second place for the re-read
@@ -215,10 +247,17 @@ export function useListicleGrill(runId: string | null): UseListicleGrill {
     (patch: { target_count?: number; standard?: string; exclusions?: string }) => {
       const id = state?.run_id
       if (!id) return
+      // Which revision this correction was written against. Sent so the server
+      // can refuse a correction typed against a version that has since moved,
+      // rather than applying it over whatever happened in between.
+      const against = order?.revision
       setError(null)
       void (async () => {
         try {
-          const revised = await reviseOrder(id, patch)
+          const revised = await reviseOrder(id, {
+            ...patch,
+            ...(against ? { expected_revision: against } : {}),
+          })
           if (showing.current !== id) return
           setOrder(revised)
           // The results on screen answered the previous request. Re-read
@@ -228,13 +267,26 @@ export function useListicleGrill(runId: string | null): UseListicleGrill {
           if (showing.current === id) setResults(stored)
         } catch (caught) {
           if (showing.current !== id) return
+          if (caught instanceof RevisionConflictError) {
+            // The order moved. Show them the one that exists rather than
+            // leaving a stale version on screen with an error beside it.
+            const [current, stored] = await Promise.all([
+              loadOrder(id),
+              loadSearch(id),
+            ])
+            if (showing.current !== id) return
+            if (current) setOrder(current)
+            setResults(stored)
+            setError(caught.message)
+            return
+          }
           setError(
             caught instanceof Error ? caught.message : 'That correction failed.',
           )
         }
       })()
     },
-    [state?.run_id],
+    [order?.revision, state?.run_id],
   )
 
   const correctCount = useCallback(
@@ -262,6 +314,7 @@ export function useListicleGrill(runId: string | null): UseListicleGrill {
     start,
     answer,
     search,
+    recheck,
     correctCount,
     correctRequirements: correctOrder,
     reset,

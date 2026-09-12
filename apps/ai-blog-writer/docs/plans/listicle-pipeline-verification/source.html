@@ -1,0 +1,369 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Verified source excerpts</title><style>body{background:#F5F0E8;color:#1A1A1A;font:16px/1.6 system-ui;margin:30px auto;padding:0 20px;max-width:1050px}a{color:#3B5BDB}pre{font:13px/1.7 monospace;background:#EFE9DE;padding:16px;white-space:pre-wrap;overflow-wrap:anywhere}section{margin:40px 0}.selected{background:color-mix(in srgb,#3B5BDB 12%,#F5F0E8);font-weight:bold}h2{font:26px Georgia}small{color:#57534c}</style><h1>Source excerpts</h1><p><a href="../listicle-pipeline-implementation-plan.html">Return to implementation plan</a></p><p>Exact local source at commit <code>f344970843afc0208dad0b03025257bf08a9206d</code>. Referenced line highlighted. Full-file SHA-256 hashes retained in <a href="results.json">observations</a>.</p><section id="cut_review-148"><h2>cut_review.py:148</h2><small>apps/backend/app/features/listicle_pipeline/cut_review.py</small><pre> 143  
+ 144  
+ 145  def build_candidate_prompt(order: SearchOrder, candidates: list[dict]) -&gt; str:
+ 146      &quot;&quot;&quot;Ask which returned places break the cut, from evidence already stored.&quot;&quot;&quot;
+ 147      lines = []
+<span class="selected"> 148      for index, candidate in enumerate(candidates[:MAX_CANDIDATES_REVIEWED], start=1):</span>
+ 149          evidence = &quot;; &quot;.join(
+ 150              str(sighting.get(&quot;evidence&quot;, &quot;&quot;)).strip()
+ 151              for sighting in candidate.get(&quot;sightings&quot;, [])
+ 152              if str(sighting.get(&quot;evidence&quot;, &quot;&quot;)).strip()
+ 153          )
+ 154          district = str(candidate.get(&quot;district&quot;, &quot;&quot;)).strip()
+ 155          where = f&quot; -- {district}&quot; if district else &quot;&quot;
+ 156          # Rows this pipeline could not prove are separate places. Said out
+ 157          # loud, because without it the model reads two rows of one restaurant
+ 158          # as two branches: a real run flagged Chez Wong and El Verídico de
+</pre></section><section id="cut_review-344"><h2>cut_review.py:344</h2><small>apps/backend/app/features/listicle_pipeline/cut_review.py</small><pre> 339          # two different reasons -- Nikkei on one row, chain on the other.
+ 340          # Last-write-wins threw one of those away without saying so, so both
+ 341          # are kept, at the stronger of the two readings.
+ 342          existing = flags.get(actual)
+ 343          if existing is None:
+<span class="selected"> 344              flags[actual] = {&quot;why&quot;: why, &quot;confidence&quot;: confidence}</span>
+ 345              continue
+ 346          reasons = existing[&quot;why&quot;]
+ 347          if _fold(why) not in _fold(reasons):
+ 348              reasons = f&quot;{reasons} {why}&quot;
+ 349          flags[actual] = {
+ 350              &quot;why&quot;: reasons,
+ 351              &quot;confidence&quot;: &quot;clear&quot;
+ 352              if &quot;clear&quot; in (existing[&quot;confidence&quot;], confidence)
+ 353              else &quot;arguable&quot;,
+ 354          }
+</pre></section><section id="profile_store-168"><h2>profile_store.py:168</h2><small>apps/backend/app/features/listicle_pipeline/profile_store.py</small><pre> 163          conn.execute(_BLURBS)
+ 164          for statement in _INDEXES:
+ 165              conn.execute(statement)
+ 166  
+ 167  
+<span class="selected"> 168  def find(*, place_id: str = &quot;&quot;, name: str = &quot;&quot;, city: str = &quot;&quot;) -&gt; PlaceProfile | None:</span>
+ 169      &quot;&quot;&quot;The profile for this place, by Place ID if we have one, else by name.
+ 170  
+ 171      Place ID first and always: it is the only identity that survives a rename,
+ 172      a spelling variant, or a Spanish source and an English one describing the
+ 173      same bar.
+ 174      &quot;&quot;&quot;
+ 175      ensure_tables()
+ 176      with get_db_connection() as conn:
+ 177          row = None
+ 178          if place_id:
+</pre></section><section id="profile_store-245"><h2>profile_store.py:245</h2><small>apps/backend/app/features/listicle_pipeline/profile_store.py</small><pre> 240          created_at=_parse(row[&quot;created_at&quot;]),
+ 241          updated_at=_parse(row[&quot;updated_at&quot;]),
+ 242      )
+ 243  
+ 244  
+<span class="selected"> 245  def open_profile(</span>
+ 246      *, name: str, city: str = &quot;&quot;, district: str = &quot;&quot;, place_id: str = &quot;&quot;
+ 247  ) -&gt; PlaceProfile:
+ 248      &quot;&quot;&quot;Find this place&#x27;s profile, or start one.
+ 249  
+ 250      Called the moment a search returns a name, before anything is known about
+ 251      whether the place is worth writing about -- because deciding that is what
+ 252      the profile is for.
+ 253      &quot;&quot;&quot;
+ 254      existing = find(place_id=place_id, name=name, city=city)
+ 255      if existing is not None:
+</pre></section><section id="prompts-264"><h2>prompts.py:264</h2><small>apps/backend/app/features/listicle_pipeline/prompts.py</small><pre> 259    be a plain description of what to look for. Never describe a place as having
+ 260    no online presence: a web search cannot find what you have just called
+ 261    unfindable.
+ 262  
+ 263    When and only when you ask about `angles`, fill `options` with a MENU, not
+<span class="selected"> 264    just your picks. Each entry is `{{text, recommended, group, shape, role}}`:</span>
+ 265  
+ 266      text         the finished search line, standing alone -- no numbering, no
+ 267                   shape name, no commentary
+ 268      recommended  true for the ones you are proposing, false for the rest
+ 269      shape        the catalogue key you wrote it from, or &quot;&quot; if it is your own
+ 270      group        the shape&#x27;s theme, or &quot;&quot; -- a label, not a rule
+ 271      role         broad, distinctive or specific
+ 272  
+ 273    The menu has three parts, and all three go in the same list:
+ 274  
+</pre></section><section id="prompts-300"><h2>prompts.py:300</h2><small>apps/backend/app/features/listicle_pipeline/prompts.py</small><pre> 295  
+ 296         They obey every other rule: one idea, no &quot;AND&quot;, searchable, worded as
+ 297         a search. Do not restate a shape you have already written under a new
+ 298         name -- if it answers a shape, it IS that shape.
+ 299  
+<span class="selected"> 300    Put only the recommended lines in `recommendation`, one per line, so an</span>
+ 301    operator answering in plain text gets your picks and nothing else.
+ 302  
+ 303  - Push back when an answer contradicts the title or an earlier answer.
+ 304  
+ 305  - Set `asks_about` to the marker your question is meant to settle, spelled
+ 306    exactly as one of: kind, place, count, bar, cut, angles. A question that
+ 307    does not name its marker cannot count as progress, and the interview will
+ 308    ask it again. Never ask about the same marker twice: once they have
+ 309    responded, it is settled and you move on.
+ 310  
+</pre></section><section id="prompts-60"><h2>prompts.py:60</h2><small>apps/backend/app/features/listicle_pipeline/prompts.py</small><pre>  55      &quot;&quot;&quot;
+  56      subject = subject_of(kind_from(state))
+  57      available = shapes_for(subject)
+  58      named = subject or &quot;no specialised subject; the shared catalogue only&quot;
+  59  
+<span class="selected">  60      if &quot;count&quot; not in state.markers_covered:</span>
+  61          labels = &quot;, &quot;.join(shape.key for shape in available)
+  62          return f&quot;&quot;&quot;THE SHAPE CATALOGUE ({named}), in outline. You will be shown it in full
+  63  once the count is settled, which is the earliest you may ask about angles:
+  64  {labels}&quot;&quot;&quot;
+  65  
+  66      return f&quot;&quot;&quot;THE SHAPE CATALOGUE ({named}). These are the only shapes this commission
+  67  gets. A shape not listed here does not apply to this subject -- do not reach
+  68  for one, and do not invent a category so that the catalogue has something to
+  69  offer:
+  70  {shape_menu(subject)}
+</pre></section><section id="runner-128"><h2>runner.py:128</h2><small>apps/backend/app/features/listicle_pipeline/runner.py</small><pre> 123              existing = reusable_attempt(order, angle, list(stored.values()))
+ 124              if existing is not None:
+ 125                  # Re-filed under this revision so the assembled view is a view
+ 126                  # of one revision, while `gathered_at` still says when the work
+ 127                  # was actually done.
+<span class="selected"> 128                  carried = existing.model_copy(</span>
+ 129                      update={&quot;revision&quot;: order.revision, &quot;wanted&quot;: angle.wanted}
+ 130                  )
+ 131                  store.save_attempt(carried)
+ 132                  stored[angle.angle_id] = carried
+ 133                  continue
+ 134          if not should_run:
+ 135              continue
+ 136  
+ 137          running = SearchAttempt(
+ 138              run_id=order.run_id,
+</pre></section><section id="runner-150"><h2>runner.py:150</h2><small>apps/backend/app/features/listicle_pipeline/runner.py</small><pre> 145              shape_key=angle.shape_key,
+ 146              subject=subject_of(order),
+ 147              state=&quot;running&quot;,
+ 148              started_at=_now(),
+ 149          )
+<span class="selected"> 150          store.save_attempt(running)</span>
+ 151          stored[angle.angle_id] = running
+ 152  
+ 153          result, sightings = run_one_angle(
+ 154              request,
+ 155              kind=order.kind,
+ 156              place=order.place,
+ 157              exclusions=order.exclusions,
+ 158              standard=order.standard,
+ 159              research=research,
+ 160          )
+</pre></section><section id="runner-234"><h2>runner.py:234</h2><small>apps/backend/app/features/listicle_pipeline/runner.py</small><pre> 229              else by_text.get(angle.text.strip().lower())
+ 230          )
+ 231          if not earlier:
+ 232              continue
+ 233          runs = len({attempt.run_id for attempt in earlier})
+<span class="selected"> 234          rows = sum(attempt.rows for attempt in earlier)</span>
+ 235          exclusive = sum(attempt.exclusive for attempt in earlier)
+ 236          when = &quot;the last time this search ran here&quot; if runs == 1 else (
+ 237              f&quot;across the {runs} times this search has run here&quot;
+ 238          )
+ 239          earned = (
+ 240              &quot;no place the other searches missed&quot;
+ 241              if exclusive == 0
+ 242              else f&quot;{exclusive} place{&#x27;&#x27; if exclusive == 1 else &#x27;s&#x27;} nothing else found&quot;
+ 243          )
+ 244          notes[angle.angle_id] = (
+</pre></section><section id="runner-431"><h2>runner.py:431</h2><small>apps/backend/app/features/listicle_pipeline/runner.py</small><pre> 426      uncertain = sum(1 for c in candidates if c.possible_duplicates)
+ 427      capacity = planned_capacity(order)
+ 428      # None means nobody has checked this revision against the cut; `{}` means
+ 429      # something checked and barred nothing. The screen says which, because
+ 430      # &quot;we looked and it is fine&quot; and &quot;we never looked&quot; are different claims.
+<span class="selected"> 431      stored_review = store.load_cut_review(order.run_id, order.revision)</span>
+ 432      barred = stored_review or {}
+ 433      payload = {
+ 434          &quot;run_id&quot;: order.run_id,
+ 435          &quot;revision&quot;: order.revision,
+ 436          &quot;target&quot;: order.target_count,
+ 437          &quot;found&quot;: len(candidates),
+ 438          &quot;shortfall&quot;: max(0, order.target_count - len(candidates)),
+ 439          &quot;rows_returned&quot;: sum(row[&quot;rows&quot;] for row in angle_rows),
+ 440          &quot;running&quot;: running,
+ 441          &quot;complete&quot;: all(
+</pre></section><section id="runner-494"><h2>runner.py:494</h2><small>apps/backend/app/features/listicle_pipeline/runner.py</small><pre> 489                  &quot;overlap&quot;: c.overlap,
+ 490                  &quot;possible_duplicates&quot;: list(c.possible_duplicates),
+ 491                  # What the cut check said about this place, if anything has
+ 492                  # looked. Read from storage rather than recomputed: judging
+ 493                  # costs a model call, and drawing a screen must not.
+<span class="selected"> 494                  &quot;barred&quot;: barred.get(c.name, {}).get(&quot;why&quot;, &quot;&quot;),</span>
+ 495                  &quot;barred_confidence&quot;: barred.get(c.name, {}).get(&quot;confidence&quot;, &quot;&quot;),
+ 496                  &quot;sightings&quot;: [
+ 497                      {
+ 498                          &quot;angle&quot;: s.angle,
+ 499                          &quot;name&quot;: s.name,
+ 500                          &quot;district&quot;: s.district,
+ 501                          &quot;evidence&quot;: s.evidence,
+ 502                      }
+ 503                      for s in c.sightings
+ 504                  ],
+</pre></section><section id="search-378"><h2>search.py:378</h2><small>apps/backend/app/features/listicle_pipeline/search.py</small><pre> 373  
+ 374  {effort}
+ 375  
+ 376  Search in the local language of {place} as well as in English, and say so to
+ 377  yourself before you start: run the query the way a resident would type it.
+<span class="selected"> 378  Local press, local food and drink blogs, and local review sites are where most</span>
+ 379  of this is written down, and an English-only search reaches the places written
+ 380  up for visitors and stops there. Evidence in the local language counts exactly
+ 381  the same. Write the results in English, but keep every business name exactly as
+ 382  it is written locally.
+ 383  
+ 384  Every entry must be ONE named business a reader could walk into. Not a market,
+ 385  a street or a district -- if the answer is &quot;the stalls in X market&quot;, name the
+ 386  individual stalls or leave it out.
+ 387  
+ 388  {f&quot;Every place must satisfy this no matter which description found it: {standard}&quot; if standard else &quot;&quot;}
+</pre></section><section id="search-470"><h2>search.py:470</h2><small>apps/backend/app/features/listicle_pipeline/search.py</small><pre> 465          tokens = set(name_tokens(candidate.name))
+ 466          host = None
+ 467          blocked: list[Candidate] = []
+ 468          if len(tokens) &gt;= _CONTAINMENT_MIN_TOKENS:
+ 469              for other in kept:
+<span class="selected"> 470                  if not tokens &lt;= set(name_tokens(other.name)):</span>
+ 471                      continue
+ 472                  if may_merge(other, candidate):
+ 473                      host = other
+ 474                      break
+ 475                  blocked.append(other)
+ 476          if host is None:
+ 477              for other in blocked:
+ 478                  if candidate.name not in other.possible_duplicates:
+ 479                      other.possible_duplicates.append(candidate.name)
+ 480                  if other.name not in candidate.possible_duplicates:
+</pre></section><section id="service-127"><h2>service.py:127</h2><small>apps/backend/app/features/listicle_pipeline/service.py</small><pre> 122      is a POST that is already spending on the model, and that is where the check
+ 123      belongs. Opening the order screen is a GET, and a GET must not spend --
+ 124      reopening a run without buying anything is the whole point of addressing
+ 125      runs by id. Called without it, the order is built unchecked and says so.
+ 126      &quot;&quot;&quot;
+<span class="selected"> 127      existing = store.load_order(state.run_id)</span>
+ 128      if existing is not None:
+ 129          return existing
+ 130      order = spec.build_search_order(
+ 131          state, revision=1, selections=store.load_selections(state.run_id)
+ 132      )
+ 133      _apply_conflicts(order, review)
+ 134      store.save_order(order)
+ 135      return order
+ 136  
+ 137  
+</pre></section><section id="service-307"><h2>service.py:307</h2><small>apps/backend/app/features/listicle_pipeline/service.py</small><pre> 302      finally:
+ 303          # Released whatever happened, so a failed batch does not lock the run
+ 304          # out of the retry that is the point of storing attempts separately.
+ 305          store.release_batch(run_id)
+ 306      store.save_results(run_id, payload)
+<span class="selected"> 307      _review_candidates(current, payload, review)</span>
+ 308      return runner.assemble(current)
+ 309  
+ 310  
+ 311  def _review_candidates(order: SearchOrder, payload: dict, review) -&gt; None:
+ 312      &quot;&quot;&quot;Judge what came back against the cut, once, on the batch that bought it.
+ 313  
+ 314      One call for the whole list, reading evidence the searches already wrote.
+ 315      Nothing is looked up: that is the difference between this and researching
+ 316      forty places to rediscover what the first search said.
+ 317  
+</pre></section><section id="service-328"><h2>service.py:328</h2><small>apps/backend/app/features/listicle_pipeline/service.py</small><pre> 323          return
+ 324      try:
+ 325          flags = cut_review.review_candidates(
+ 326              order, payload.get(&quot;candidates&quot;, []), review
+ 327          )
+<span class="selected"> 328      except Exception:</span>
+ 329          logger.warning(
+ 330              &quot;The cut check did not run over %s&#x27;s candidates&quot;, order.run_id
+ 331          )
+ 332          return
+ 333      store.save_cut_review(order.run_id, order.revision, flags)
+ 334  
+ 335  
+ 336  def progress(run_id: str) -&gt; dict | None:
+ 337      &quot;&quot;&quot;What the run knows, without running anything.
+ 338  
+</pre></section><section id="shapes-104"><h2>shapes.py:104</h2><small>apps/backend/app/features/listicle_pipeline/shapes.py</small><pre>  99      Returning &quot;&quot; is a real answer and the common one. A list of museums keeps
+ 100      the shared shapes and the operator&#x27;s own lines; it is not filed under
+ 101      restaurants so that the catalogue has something to offer it, which is how
+ 102      a hotel list was offered market stalls.
+ 103      &quot;&quot;&quot;
+<span class="selected"> 104      words = set(re.findall(r&quot;[a-z&amp;]+&quot;, kind.lower()))</span>
+ 105      # Longest match wins nothing here -- the subjects do not overlap in these
+ 106      # words, and a `kind` that hits two of them (&quot;hotel bars&quot;) is genuinely
+ 107      # both. First in declaration order is the one it is filed under, and bars
+ 108      # come before hotels for that phrase because the list is of bars.
+ 109      for subject in (BARS, RESTAURANTS, HOTELS):
+ 110          if words &amp; set(_SUBJECT_WORDS[subject]):
+ 111              return subject
+ 112      return &quot;&quot;
+ 113  
+ 114  
+</pre></section><section id="shapes-287"><h2>shapes.py:287</h2><small>apps/backend/app/features/listicle_pipeline/shapes.py</small><pre> 282          &quot;ceviche: where Lima chefs say they eat ceviche on their days off | &quot;
+ 283          &quot;bars: where bartenders drink after their shift&quot;,
+ 284          theme=&quot;locality&quot;,
+ 285      ),
+ 286      Shape(
+<span class="selected"> 287          &quot;family&quot;,</span>
+ 288          &quot;Family run&quot;,
+ 289          &quot;Run by one family.&quot;,
+ 290          &quot;Run by one family, often across generations.&quot;,
+ 291          &quot;ceviche: cevicherias run by the same family for more than one&quot;
+ 292          &quot; generation | hotels: guesthouses run by the family who own them&quot;,
+ 293          theme=&quot;heritage&quot;,
+ 294          overlaps_with=(&quot;institution&quot;,),
+ 295      ),
+ 296      Shape(
+ 297          &quot;setting&quot;,
+</pre></section><section id="shapes-307"><h2>shapes.py:307</h2><small>apps/backend/app/features/listicle_pipeline/shapes.py</small><pre> 302          &quot;bars: rooftop bars people go to for what they can see&quot;,
+ 303          theme=&quot;setting&quot;,
+ 304          role=BROAD,
+ 305      ),
+ 306      Shape(
+<span class="selected"> 307          &quot;district&quot;,</span>
+ 308          &quot;One neighbourhood&#x27;s own&quot;,
+ 309          &quot;Belongs to one named neighbourhood.&quot;,
+ 310          &quot;The place people in one specific district go to, that visitors miss.&quot;
+ 311          &quot; Name the district.&quot;,
+ 312          &quot;ceviche: cevicherias that one Lima neighbourhood keeps to itself | &quot;
+ 313          &quot;hotels: places chosen for the street they are on&quot;,
+ 314          theme=&quot;locality&quot;,
+ 315          overlaps_with=(&quot;lesser-known&quot;,),
+ 316          role=BROAD,
+ 317      ),
+</pre></section><section id="store-258"><h2>store.py:258</h2><small>apps/backend/app/features/listicle_pipeline/store.py</small><pre> 253  
+ 254  
+ 255  # --- one angle&#x27;s search ----------------------------------------------------
+ 256  
+ 257  
+<span class="selected"> 258  def save_attempt(attempt: SearchAttempt) -&gt; None:</span>
+ 259      ensure_tables()
+ 260      with get_db_connection() as conn:
+ 261          conn.execute(
+ 262              &quot;INSERT INTO listicle_search_attempts &quot;
+ 263              &quot;(run_id, revision, angle_id, payload) VALUES (?, ?, ?, ?) &quot;
+ 264              &quot;ON CONFLICT(run_id, revision, angle_id) DO UPDATE SET &quot;
+ 265              &quot;payload=excluded.payload, updated_at=datetime(&#x27;now&#x27;)&quot;,
+ 266              (
+ 267                  attempt.run_id,
+ 268                  attempt.revision,
+</pre></section><section id="store-373"><h2>store.py:373</h2><small>apps/backend/app/features/listicle_pipeline/store.py</small><pre> 368      for a request whose answer never came back. Retrying an interrupted attempt
+ 369      may spend a second time, and the screen says so rather than implying a
+ 370      guarantee nothing can make.
+ 371      &quot;&quot;&quot;
+ 372      ensure_tables()
+<span class="selected"> 373      with get_db_connection() as conn:</span>
+ 374          row = conn.execute(
+ 375              &quot;SELECT started_at FROM listicle_search_locks WHERE run_id = ?&quot;,
+ 376              (run_id,),
+ 377          ).fetchone()
+ 378          if row is not None:
+ 379              try:
+ 380                  started = datetime.fromisoformat(row[0])
+ 381              except ValueError:  # pragma: no cover -- corrupt row
+ 382                  started = datetime.now(timezone.utc) - _LOCK_STALE_AFTER
+ 383              if started.tzinfo is None:
+</pre></section><section id="store-387"><h2>store.py:387</h2><small>apps/backend/app/features/listicle_pipeline/store.py</small><pre> 382                  started = datetime.now(timezone.utc) - _LOCK_STALE_AFTER
+ 383              if started.tzinfo is None:
+ 384                  started = started.replace(tzinfo=timezone.utc)
+ 385              if datetime.now(timezone.utc) - started &lt; _LOCK_STALE_AFTER:
+ 386                  return False
+<span class="selected"> 387          conn.execute(</span>
+ 388              &quot;INSERT INTO listicle_search_locks (run_id, revision, started_at) &quot;
+ 389              &quot;VALUES (?, ?, ?) ON CONFLICT(run_id) DO UPDATE SET &quot;
+ 390              &quot;revision=excluded.revision, started_at=excluded.started_at&quot;,
+ 391              (run_id, revision, _now()),
+ 392          )
+ 393      return True
+ 394  
+ 395  
+ 396  def release_batch(run_id: str) -&gt; None:
+ 397      ensure_tables()
+</pre></section></html>
