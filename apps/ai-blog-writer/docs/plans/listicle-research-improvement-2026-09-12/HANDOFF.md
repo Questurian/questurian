@@ -17,15 +17,16 @@ ecac99f8 feat(listicle): a research request reads the pages it cites
 ```
 
 Read **ADR 0040** (`docs/adr/0040-a-research-request-reads-its-sources.md`)
-before changing any of it. It amends ADR 0039 and explains every constraint
-below. `AGENTS.md` and `CONTEXT.md` still apply.
+and then **ADR 0041** (`0041-customer-reviews-come-from-the-reviews-api.md`)
+before changing any of it. 0040 amends 0039; 0041 amends 0040 and moves the
+reviews source. `AGENTS.md` and `CONTEXT.md` still apply.
 
 ### Verification baseline, as of this handoff
 
 | | |
 |---|---|
-| backend pytest | **2,565 pass, 0 fail** (`cd apps/backend && ../../.venv/bin/python -m pytest tests -q`) |
-| frontend vitest | **962 pass** (`pnpm exec vitest run --config apps/frontend/vite.config.ts`) |
+| backend pytest | **2,584 pass, 0 fail** (`cd apps/backend && ../../.venv/bin/python -m pytest tests -q`) |
+| frontend vitest | **965 pass** (`pnpm exec vitest run --config apps/frontend/vite.config.ts`) |
 | frontend tsc | clean (`pnpm exec tsc --noEmit -p apps/frontend/tsconfig.json`) |
 
 The full backend suite takes ~7 minutes. Run it in the background and do not
@@ -42,8 +43,10 @@ One press of Research this place, in order, with a ceiling nothing inside can
 raise:
 
 1. **A brief**, computed from stored data. No model call.
-2. **Google's reviews** — one Places Details call. Not fetched over HTTP, spends
-   none of the page budget, branch-anchored by Place ID.
+2. **Google's reviews** — one Local Business Data call (`business-reviews-v2`)
+   on the RapidAPI account key, addressed by Place ID. Twenty reviews, each
+   with its own exact date and permalink. Not fetched over HTTP, spends none of
+   the page budget, branch-anchored by Place ID. **Capped: see ADR 0041.**
 3. **Read known source leads** — operator links and audit links.
 4. **One grounded search**, which asks for *pages*, not a profile.
 5. **Read the pages it named**, within an eight-page budget.
@@ -51,9 +54,15 @@ raise:
 7. **Checks in code** — passage presence, branch scope, price channel, speaker,
    dates. Nothing is deleted for failing.
 
-Budget: **two model generations, eight pages, one Places call.** `extract_only`
-is a fourth mode that re-extracts over pages already collected and buys no
-search.
+Budget: **two model generations, eight pages, one reviews call.**
+`extract_only` is a fourth mode that re-extracts over pages already collected
+and buys no search.
+
+The reviews call is metered against a **free allowance of 500 review objects**,
+billed per review returned. `reviews_budget` refuses before the request leaves;
+nothing inside the pipeline can overspend it. The remaining budget reads as
+"about N more places" on the research drawer, in the board payload, and in
+`--dry-run`.
 
 ## What happened in the pilot, and after it
 
@@ -105,14 +114,15 @@ work; keeping them that way is a requirement, not a courtesy.
 
 ## What is left, in the order it should be decided
 
-### 1. An open question the operator has not answered
+### 1. ~~An open question~~ — ANSWERED 2026-09-12
 
-They wrote: *"i think google reviews is fine but but not via the google api
-means get the reviews via api call"*. This was read as **fetch them through an
-API rather than scrape**, and Places Details is what was built. If they meant
-*do not call Google's API at all*, there is no other sanctioned route — scraping
-Google reviews breaks their terms — and the whole reviews stage backs out as one
-commit (`52673e40`). **Ask before building anything further on top of it.**
+The operator chose RapidAPI. Reviews now come from Local Business Data's
+`business-reviews-v2`, not Places Details. See **ADR 0041** and the commit
+`twenty reviews instead of five, and a switch that stops at 500`.
+
+Flagged once and accepted: that vendor scrapes Google Maps and resells it. It
+changes who bills for the fetch, not what may be done with the words.
+**Quoting a review in a published article is still an unmade decision.**
 
 ### 2. The discovery model — a spending decision, not a bug
 
@@ -135,8 +145,9 @@ From the pilot report, still true after BarBarian:
 1. **A substantial attributable opinion.** One thin one now exists. Casa and
    McCarthy still have none — their Google reviews have not been fetched,
    because both were researched before the reviews stage existed. **A refresh of
-   each would now pull them.** Two places, two generations each, two Places
-   calls.
+   each would now pull them** — and would now pull twenty each, with dates and
+   permalinks, rather than five. Two places, two generations each, ~40 reviews
+   off the free allowance. **This is the cheapest next thing worth doing.**
 2. **La Casa's dine-in price at Los Olivos.** The S/ 25.00 on the brand site has
    no channel and no branch; the extraction said so and it is flagged
    `review_needed`.
@@ -157,8 +168,12 @@ From the pilot report, still true after BarBarian:
   Mercado Negro 403, TripAdvisor 403 on both `.com` and `.com.pe`. The prep
   card's TripAdvisor box already reaches the reader, so pasting URLs costs no
   code and buys a `blocked` page record. Do not build a TripAdvisor path.
-- **Places returns at most five reviews**, chosen by Google as "most relevant".
-  Not a sample anybody designed; the page record says so.
+- ~~Places returns at most five reviews~~ — fixed by ADR 0041: twenty per
+  press, and `sort_by` / `query` now exist. Both are left at the
+  Places-equivalent defaults (`most_relevant`, no filter) so the swap can be
+  judged against the baseline without two variables moving at once. Choosing
+  `newest` is a live, unmade decision — and it is the first real answer to the
+  dated-fact weakness above.
 - **Storing review text** is what the whole-run pass has always done. *Quoting*
   it in a published article is a separate decision with its own terms to read,
   and nobody has made it.
@@ -183,11 +198,17 @@ All under `apps/ai-blog-writer/`.
 | discovery prompt, parser, salvage | `.../profile_research.py` |
 | the sequence | `.../profile_service.py` (`research`, `_save_packet`) |
 | the three seams tests replace | `.../api.py` — `_research_call`, `_extract_call`, `_read_pages`; plus `profile_service.fetch_reviews` |
-| Google reviews | `.../places.py` — `reviews_as_page` |
+| Google reviews | `.../reviews_api.py` — `fetch_reviews`, `reviews_as_page` |
+| the 500-review cap | `.../reviews_budget.py` — `check` is the switch |
 | storage | `.../research_store.py`, `.../profile_store.py` (additive columns only) |
 | frontend | `apps/frontend/src/features/listiclePipeline/` — `types.ts`, `components/ResearchViewer.tsx`, `components/CandidateCard.tsx` |
 | the harness | `scripts/listicle-research-pilot.py` (`--dry-run`, `--spend`, `--report`, `--artifact`) |
 | tests | `apps/backend/tests/test_listicle_place_research.py`, `test_listicle_evidence_checks.py`, `apps/frontend/src/features/listiclePipeline/place-research.test.tsx` |
+
+**Nothing in this feature may reach the reviews API in a test.** `reviews_api`
+refuses without `RAPID_API_KEY`, but do not rely on that — the `client` fixture
+patches `profile_service.fetch_reviews`, and a test that leaves it real bills
+the owner.
 
 **Every test in this feature must stand in front of all four seams.** A test
 that leaves `_read_pages` or `fetch_reviews` real reaches the web, or bills the
