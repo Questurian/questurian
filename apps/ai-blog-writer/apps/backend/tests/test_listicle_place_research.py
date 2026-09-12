@@ -2032,3 +2032,84 @@ def test_the_strategy_version_records_prompt_brief_and_checks_together(
     assert "place-research/" in version
     assert "research-brief/" in version
     assert "evidence-extract/" in version
+
+
+def test_held_findings_are_offered_to_check_never_suppressed(client, ready, monkeypatch):
+    """A retest has to return a complete packet, including what is already held.
+
+    The prompt this replaces said "Findings already held -- do not repeat
+    these", which makes a second pass look thin for the wrong reason: the
+    material is there, it was simply forbidden. Held findings are now leads to
+    verify, and the comparison reports the whole packet beside the net new rows.
+    """
+    from app.features.listicle_pipeline import profile_research
+
+    request = profile_research.ResearchRequest(
+        name="Somewhere",
+        city="Lima",
+        topic="chicken-wings",
+        topic_label="chicken wings",
+        existing_findings=[
+            {
+                "text": "The wings are smoked for four hours.",
+                "version": 2,
+                "curation": "kept",
+                "attributed": True,
+            }
+        ],
+    )
+    prompt = profile_research.build_discovery_prompt(
+        profile_research.brief_of(request)
+    )
+    held = prompt.split("Already held about this place")[1].split("Pages already")[0]
+    assert "do not repeat" not in held.lower()
+    assert "material to CHECK and not to restate" in prompt
+    # The unverified discovery leads keep their own "do not repeat": a search
+    # snippet restated as a finding is the thing this pipeline must not do.
+    assert "Check them; do not repeat them" in prompt
+    assert "The wings are smoked for four hours. [v2, kept, attributed]" in prompt
+
+
+def test_a_discarded_finding_is_never_offered_back_as_context(client, researched):
+    """Somebody threw it out. Handing it back is how a rejected claim returns
+    wearing the profile's own authority."""
+    run_id, candidate_id, profile_id = researched
+    view = client.get(f"{BASE}/profiles/{profile_id}/research").json()
+    doomed = view["findings"][0]
+    client.patch(
+        f"{BASE}/profiles/{profile_id}/findings/{doomed['finding_id']}",
+        json={"curation": "discarded", "expected_version": doomed["version"]},
+    )
+    ctx = candidate_prep.context(run_id)
+    request = profile_service._build_request(
+        ctx, candidate_id, profile_id, mode="refresh", gap_text=""
+    )
+    held = {item["text"] for item in request.existing_findings}
+    assert doomed["text"] not in held
+    # And it is still there. Curation is not deletion.
+    after = client.get(f"{BASE}/profiles/{profile_id}/research").json()
+    assert any(
+        finding["finding_id"] == doomed["finding_id"] for finding in after["findings"]
+    )
+
+
+def test_a_retest_reports_the_whole_packet_and_the_net_new_rows(
+    client, ready, monkeypatch
+):
+    """Comparing a baseline total against only the additions is how a good
+    retest reads as a regression."""
+    run_id, candidate_id, _ = ready
+    monkeypatch.setattr(listicle_api, "_research_call", _Transport())
+    first = client.post(
+        f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+        json={"idempotency_key": "packet-key-0001"},
+    ).json()
+    assert first["attempt"]["findings_seen"] == first["attempt"]["findings_added"]
+    again = client.post(
+        f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+        json={"idempotency_key": "packet-key-0002", "mode": "refresh"},
+    ).json()
+    # The same three claims came back. The packet is still three; nothing new
+    # was added, and the two numbers say exactly that.
+    assert again["attempt"]["findings_seen"] == 3
+    assert again["attempt"]["findings_added"] == 0
