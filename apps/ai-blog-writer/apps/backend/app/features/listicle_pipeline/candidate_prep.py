@@ -680,30 +680,23 @@ def readiness_of(
             names = ", ".join(
                 ctx.candidates[other].get("name", other) for other in twins
             )
-            # Already answered: the operator looked at these and said they are
-            # different venues. That settles what they are and unsettles
-            # something else -- if they are two places, Google has matched at
-            # least one of them to the wrong building, and research under a
-            # wrong identity buys evidence about somewhere else.
+            # Only while it is an open question. The operator looking at two
+            # cards and saying they are different places is an answer, and an
+            # answered question does not stay on the card -- a warning that
+            # survives the decision it asked for is a warning nobody can
+            # clear, and it lands on the card that was right as well as the
+            # one that was wrong.
             #
-            # So the warning changes rather than clearing. Saying "different
-            # places" must not become a way to tick away a broken identity.
-            all_judged_distinct = all(
+            # What it costs to be wrong about: the losing card keeps Google's
+            # address, so research would be about that building. The operator
+            # is the one ticking "correct place and branch" against that
+            # address, and they are asked exactly once.
+            settled = all(
                 (min(candidate_id, other), max(candidate_id, other)) in ctx.distinct
                 for other in twins
             )
-            if all_judged_distinct:
-                blockers.append(
-                    Blocker(
-                        "identity_mismatch",
-                        f"You said this and {names} are different places, "
-                        "and Google has them as one. One of these cards is "
-                        "pointing at the wrong building, so its research would "
-                        "be about somewhere else. Check this one on Google "
-                        "again, or take the wrong card off.",
-                        "board",
-                    )
-                )
+            if settled:
+                required_total -= 1
             else:
                 blockers.append(
                     Blocker(

@@ -591,7 +591,7 @@ function ResearchAction({
               {/* The one blocker with a fix that is not a removal: Google can
                   be asked again. Offered here rather than in the Google bar at
                   the top, because it is about this card and costs one lookup. */}
-              {blocker.code === 'identity_mismatch' && research.onRecheckGoogle && (
+              {blocker.code === 'identity_conflict' && research.onRecheckGoogle && (
                 <>
                   {' '}
                   <button

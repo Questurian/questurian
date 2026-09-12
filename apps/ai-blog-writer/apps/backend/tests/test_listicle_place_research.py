@@ -1309,27 +1309,37 @@ def test_a_google_twin_can_be_settled_the_same_way_a_duplicate_is(client, run):
     assert "identity_conflict" not in {b["code"] for b in after["blockers"]}
 
 
-def test_calling_two_google_twins_different_places_does_not_tick_the_problem_away(
-    client, run
-):
-    """If they are two venues, Google has matched at least one of them to the
-    wrong building — and research under a wrong identity buys evidence about
-    somewhere else. The warning changes; it does not clear."""
+def test_calling_two_google_twins_different_places_settles_it(client, run):
+    """The operator looked at two cards and said they are different places.
+    That is an answer, and an answered question leaves the card.
+
+    It used to stay, on the grounds that if they are two venues then one of
+    them is matched to the wrong building. True, and not worth saying twice:
+    the warning landed on the card that was RIGHT as well as the one that was
+    wrong, and nothing the operator could do would clear it. They are asked
+    once, at the tick that says this is the correct place and branch.
+    """
     cards = list(_cards(client, run).values())
     first, second = cards[0], cards[1]
     stored = store.load_google_checks(run)
     twin = dict(stored[first["candidate_id"]])
     twin["place_id"] = stored[second["candidate_id"]]["place_id"]
     store.save_google_check(run, first["candidate_id"], twin)
+    assert "identity_conflict" in {
+        b["code"] for b in _cards(client, run)[first["name"]]["readiness"]["blockers"]
+    }
 
     service.resolve_duplicates(
         run, first["candidate_id"], same=[], different=[second["candidate_id"]]
     )
-    codes = {
-        b["code"] for b in _cards(client, run)[first["name"]]["readiness"]["blockers"]
-    }
-    assert "identity_mismatch" in codes
-    assert "identity_conflict" not in codes
+
+    after = _cards(client, run)[first["name"]]["readiness"]
+    assert "identity_conflict" not in {b["code"] for b in after["blockers"]}
+    # And it stops being counted, so the card does not wear a mark for it.
+    assert after["required_total"] == 2
+    # And the other card is settled by the same decision, not left carrying it.
+    other = _cards(client, run)[second["name"]]["readiness"]
+    assert "identity_conflict" not in {b["code"] for b in other["blockers"]}
 
 
 def test_a_settled_duplicate_leaves_no_mark_on_the_card(client, run):
