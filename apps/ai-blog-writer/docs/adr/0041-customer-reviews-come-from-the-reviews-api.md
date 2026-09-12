@@ -47,17 +47,30 @@ can be written:
 * **`query`**, so the reviews about the subject can be asked for instead of
   the five Google happened to pick — most of any five being about parking and
   the music.
-* **`review_link` and `review_datetime_utc`**: each review has its own address
-  and its own exact day. A claim can name the review it came from, and the date
-  check has a real date rather than "2 years ago".
+* **`review_datetime_utc`**: each review has its own exact day, so the date
+  check has a real date rather than "2 years ago". (`review_link` also exists
+  per review; see below for why it is not carried into the page.)
 
 **Reviews are still one collected page, not one page per review.** Twenty
 reviews would be twenty of an eight-page allowance, and 0040 decided reviews
 spend none of it. What changed is what is inside: every block now carries its
-own link, its own exact date, and the reviewer's standing (how many reviews
-they have written, their Local Guide level). One review from an account with
-four hundred behind it and one from an account with one are not the same
-evidence, and nothing downstream could tell them apart unless it is said here.
+exact date and the reviewer's standing (how many reviews they have written,
+their Local Guide level). One review from an account with four hundred behind
+it and one from an account with one are not the same evidence, and nothing
+downstream could tell them apart unless it is said here.
+
+**That page obeys the same 12,000-character ceiling as every fetched page**,
+and whole reviews are dropped rather than the text being cut at the limit. A
+review sliced in half fails the passage check for a sentence its author really
+wrote, which reads as a fabricated quote rather than as a page that was too
+long. The page note says how many were bought and how many fitted.
+
+**The per-review permalinks are deliberately not written into that page.** They
+exist on the response and they are real, but a Google Maps review URL is ~170
+characters; across twenty reviews that is 28% of the page's budget, and nothing
+downstream follows them — the extraction cites a page id, not a review link.
+Measured on BarBarian's twenty: with the links, 16 reviews fit; without them,
+all 20 do. Four real opinions is too much to pay for URLs no reader opens.
 
 **The reviews are left in Spanish.** The API will translate them. A translated
 sentence is not a verbatim passage, and the check this whole design rests on is
@@ -136,6 +149,16 @@ far.** `sort_by` defaults to `most_relevant` and `query` defaults to nothing —
 the same selection Places Details made, so the swap can be judged against the
 baseline without two variables moving at once. Choosing `newest`, or filtering
 to the subject, is a separate decision with its own evidence to gather.
+
+**The extraction's output ceiling was not raised, and nothing checks whether
+its reply was truncated.** `EXTRACTION_MAX_TOKENS` is 8,192 and the structured
+call reports no finish reason, so a reply cut off at the ceiling is
+indistinguishable from one that finished. Four times the review material makes
+that more likely, not less. Two things hold the risk down rather than remove
+it: the page ceiling above bounds how much the input actually grew, and 0040's
+`extract_only` mode re-runs the extraction over pages already collected without
+buying a second search. Threading a finish reason through the model gateway's
+structured path is the real fix and is not done here.
 
 **Not yet proven.** One probe of six reviews was made while building this. It
 showed the mechanism works and the filter is fuzzy rather than exact: asking

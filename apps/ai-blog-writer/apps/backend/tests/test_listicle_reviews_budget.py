@@ -285,8 +285,9 @@ def test_a_place_whose_reviews_are_all_silent_yields_no_page(isolated_db):
 def test_a_review_block_carries_its_own_date_link_and_standing(isolated_db):
     """What the old Places path could not give a claim.
 
-    Google's own endpoint returned "2 years ago" and no per-review link, so a
-    claim could only ever cite "the reviews". Each block now names one.
+    Google's own endpoint returned "2 years ago", so a claim could not say when
+    a customer said a thing. Each block now carries the exact day, the writer,
+    and how much of a reviewer they are.
     """
     fetched = reviews_api.ReviewFetch(
         "ChIJ-anything",
@@ -314,7 +315,9 @@ def test_a_review_block_carries_its_own_date_link_and_standing(isolated_db):
     assert "written 2020-01-08" in page.text
     assert "151 reviews written" in page.text
     assert "Local Guide level 7" in page.text
-    assert "https://www.google.com/maps/reviews/data=!abc" in page.text
+    # The permalink is deliberately absent: ~170 characters each, nothing
+    # downstream follows them, and twenty of them cost four real opinions.
+    assert "https://www.google.com/maps/reviews/data=!abc" not in page.text
     assert "OWNER REPLY (2020-01-10)" in page.text
     # Still anchored to the branch by Place ID, which the address check relies on.
     assert page.branch_anchored is True
@@ -370,3 +373,78 @@ def test_an_older_response_shape_still_reads_as_reviews(isolated_db, monkeypatch
     assert fetched.objects == 1
     page = reviews_api.reviews_as_page(fetched, "ChIJ-anything")
     assert "5 stars" in page.text
+
+
+def test_the_reviews_page_obeys_the_same_ceiling_as_every_other_page(isolated_db):
+    """Reviews arrive as one page, so without a cap they are the only text in
+    the extraction prompt that ignores the limit the rest obey.
+
+    At `limit=100` one unbounded page would be five times the size of any
+    other, and the material that decides what gets written would be whatever
+    happened to be longest.
+    """
+    from app.features.listicle_pipeline import source_reader
+
+    long_text = "Las alitas estaban buenas y el ambiente agradable. " * 40
+    fetched = reviews_api.ReviewFetch(
+        "ChIJ-anything",
+        reviews=[
+            {
+                "author_name": f"Reviewer {n}",
+                "rating": 4,
+                "review_text": f"{n}. {long_text}",
+                "review_datetime_utc": "2025-06-15T12:00:00.000Z",
+            }
+            for n in range(100)
+        ],
+        objects=100,
+    )
+
+    page = reviews_api.reviews_as_page(fetched, "ChIJ-anything")
+
+    assert len(page.text) <= source_reader.MAX_TEXT_CHARS
+    # And it says what it left out, rather than quietly shortening itself.
+    assert "were bought and left out of this page for length" in page.note
+
+
+def test_a_review_is_dropped_whole_rather_than_cut_in_half(isolated_db):
+    """A sliced review is worse than a missing one.
+
+    The check downstream asks whether a quoted sentence is really in this text.
+    Half a review fails that check for a sentence the reviewer actually wrote,
+    which reads as a fabricated quote rather than as a page that was too long.
+    """
+    from app.features.listicle_pipeline import source_reader
+
+    body = "x" * 6000
+    fetched = reviews_api.ReviewFetch(
+        "ChIJ-anything",
+        reviews=[
+            {"author_name": f"R{n}", "rating": 5, "review_text": f"{n}{body}"}
+            for n in range(5)
+        ],
+        objects=5,
+    )
+
+    page = reviews_api.reviews_as_page(fetched, "ChIJ-anything")
+
+    assert len(page.text) <= source_reader.MAX_TEXT_CHARS
+    # Every block that survived is a complete one: each still ends with the
+    # full body it started with.
+    for block in page.text.split("\n\n"):
+        assert block.endswith(body), "a review was cut mid-text"
+
+
+def test_one_review_longer_than_the_ceiling_is_still_carried(isolated_db):
+    """Otherwise a single very long review would produce an empty page, and an
+    empty page reads as a place nobody has reviewed."""
+    fetched = reviews_api.ReviewFetch(
+        "ChIJ-anything",
+        reviews=[{"author_name": "R", "rating": 5, "review_text": "y" * 20000}],
+        objects=1,
+    )
+
+    page = reviews_api.reviews_as_page(fetched, "ChIJ-anything")
+
+    assert page is not None
+    assert "y" * 20000 in page.text

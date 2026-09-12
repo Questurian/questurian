@@ -246,6 +246,16 @@ def fetch_reviews(
 # that review rather than "the reviews".
 # ---------------------------------------------------------------------------
 
+# Each review has its own permalink on this endpoint, and it is deliberately
+# NOT written into the page text. A Google Maps review URL is ~170 characters,
+# which across twenty reviews is 28% of the page's character budget -- and
+# nothing downstream reads them: the extraction cites a page id (`p3`), not a
+# per-review link. Spending a quarter of the budget on URLs no reader follows
+# costs four or five real opinions, which is the material the page exists for.
+#
+# What IS kept per review is short and load-bearing: who wrote it (the speaker
+# check), the exact day (the date check), and how many reviews they have
+# written (whether this is one voice or four hundred).
 REVIEWS_URL = "https://search.google.com/local/reviews?placeid={place_id}"
 
 
@@ -263,6 +273,7 @@ def reviews_as_page(fetched: ReviewFetch, place_id: str, place_name: str = ""):
     is the branch. Without that the address check would reject every review
     claim for want of an address reviews do not print.
     """
+    from . import source_reader
     from .source_reader import PageRead
 
     if fetched.failed:
@@ -298,10 +309,6 @@ def reviews_as_page(fetched: ReviewFetch, place_id: str, place_name: str = ""):
             header += f" — written {when}"
         if standing:
             header += f" — {', '.join(standing)}"
-        link = str(review.get("review_link") or "").strip()
-        if link:
-            header += f"\nLink: {link}"
-
         block = f"{header}\n{text}"
         owner = str(review.get("owner_response_text") or "").strip()
         if owner:
@@ -310,11 +317,35 @@ def reviews_as_page(fetched: ReviewFetch, place_id: str, place_name: str = ""):
             block += f": {owner}"
         blocks.append(block)
 
+    # The same ceiling every fetched page is held to. Reviews arrive as one
+    # page, so without this the reviews would be the only text in the prompt
+    # that ignores the limit the rest obey -- and at `limit=100` one page would
+    # be five times the size of any other.
+    #
+    # Whole reviews are dropped rather than the text being cut at the ceiling.
+    # A review sliced in half is worse than a review left out: the passage
+    # check downstream asks whether a quoted sentence is really in this text,
+    # and half a review can fail that check for a sentence the reviewer
+    # actually wrote.
+    kept: list[str] = []
+    spent = 0
+    for block in blocks:
+        if kept and spent + len(block) + 2 > source_reader.MAX_TEXT_CHARS:
+            break
+        kept.append(block)
+        spent += len(block) + 2
+    dropped = len(blocks) - len(kept)
+
     bought = len(fetched.reviews)
     silent = bought - len(usable)
-    note = f"{len(usable)} review(s) with text"
+    note = f"{len(kept)} review(s) with text"
     if silent:
         note += f", from {bought} bought ({silent} were a star rating only)"
+    if dropped:
+        note += (
+            f"; {dropped} more were bought and left out of this page for "
+            f"length"
+        )
     note += ". Reviews Google returned for this Place ID, in the order asked for."
 
     return PageRead(
@@ -326,7 +357,7 @@ def reviews_as_page(fetched: ReviewFetch, place_id: str, place_name: str = ""):
             "Google reviews for "
             f"{place_name or fetched.place_name or 'this place'}"
         ),
-        text="\n\n".join(blocks),
+        text="\n\n".join(kept),
         # The page has no publication date of its own. Each review carries its
         # own, inline, and a claim drawn from one takes that as its event date.
         published_at="",
