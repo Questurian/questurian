@@ -259,94 +259,85 @@ def fetch_reviews(
 REVIEWS_URL = "https://search.google.com/local/reviews?placeid={place_id}"
 
 
-def reviews_as_page(fetched: ReviewFetch, place_id: str, place_name: str = ""):
-    """The reviews as one page. `None` when there are none to read.
+def _render_block(review: dict) -> str:
+    """One review, as the extraction will read it.
 
-    `place_name` is the caller's name for the place, used for the page title.
-    This endpoint's payload carries the reviews and nothing about the business,
-    so without it every page would be titled "this place".
+    The header is not decoration. `who_said_it` is decided from the name, the
+    date check reads the day, and the reviewer's standing is the only signal
+    separating one voice from four hundred -- none of which survives if the
+    block is just the text.
+    """
+    text = str(review.get("review_text") or "").strip()
+    who = str(review.get("author_name") or "").strip() or "an unnamed reviewer"
+    stars = review.get("rating")
+    if stars is None:
+        stars = review.get("review_rating")
+    when = _review_date(review)
 
-    `None` is a real answer about a place, not a failure -- and it is a
-    different answer from `fetched.failed`, which the caller checks separately.
+    standing = []
+    count = review.get("author_review_count")
+    if isinstance(count, int) and count > 0:
+        standing.append(f"{count} reviews written")
+    level = review.get("author_local_guide_level")
+    if isinstance(level, int) and level > 0:
+        standing.append(f"Local Guide level {level}")
+
+    header = f"REVIEW by {who}"
+    if stars is not None:
+        header += f" \u2014 {stars} stars"
+    if when:
+        header += f" \u2014 written {when}"
+    if standing:
+        header += f" \u2014 {', '.join(standing)}"
+
+    block = f"{header}\n{text}"
+    owner = str(review.get("owner_response_text") or "").strip()
+    if owner:
+        owner_when = _iso_date(review.get("owner_response_datetime_utc"))
+        block += "\nOWNER REPLY" + (f" ({owner_when})" if owner_when else "")
+        block += f": {owner}"
+    return block
+
+
+def reviews_as_page(
+    fetched: ReviewFetch,
+    place_id: str,
+    place_name: str = "",
+    *,
+    terms: list[str] | None = None,
+):
+    """The reviews worth reading, as one page. `None` when there are none.
+
+    `terms` are this list's subject words (see `review_selection`). Given them,
+    the reviews about the subject are chosen first and the ones about the
+    parking fill whatever space is left. Without them nothing is off-topic and
+    the ranking falls back to the reviewer's standing and the length -- still
+    better than the order the API happened to return.
+
+    `None` is a real answer about a place, not a failure, and it is a different
+    answer from `fetched.failed`, which the caller checks separately.
 
     Branch-anchored: a Google review hangs off the Place ID, and the Place ID
     is the branch. Without that the address check would reject every review
     claim for want of an address reviews do not print.
     """
-    from . import source_reader
+    from . import review_selection, source_reader
     from .source_reader import PageRead
 
     if fetched.failed:
         return None
-    usable = fetched.with_text
-    if not usable:
+
+    chosen = review_selection.select(
+        fetched.reviews,
+        terms=list(terms or []),
+        # The same ceiling every fetched page is held to. Without it the
+        # reviews would be the only text in the extraction prompt that ignores
+        # the limit the rest obey.
+        budget_chars=source_reader.MAX_TEXT_CHARS,
+        render=_render_block,
+    )
+    if not chosen.kept:
         return None
-
-    blocks = []
-    for review in usable:
-        text = str(review.get("review_text") or "").strip()
-        who = str(review.get("author_name") or "").strip() or "an unnamed reviewer"
-        stars = review.get("rating")
-        if stars is None:
-            stars = review.get("review_rating")
-        when = _review_date(review)
-        # How much of a reviewer this is. One review from an account with four
-        # hundred behind it and one from an account with one are not the same
-        # evidence, and nothing downstream can tell them apart unless it is
-        # said here.
-        standing = []
-        count = review.get("author_review_count")
-        if isinstance(count, int) and count > 0:
-            standing.append(f"{count} reviews written")
-        level = review.get("author_local_guide_level")
-        if isinstance(level, int) and level > 0:
-            standing.append(f"Local Guide level {level}")
-
-        header = f"REVIEW by {who}"
-        if stars is not None:
-            header += f" — {stars} stars"
-        if when:
-            header += f" — written {when}"
-        if standing:
-            header += f" — {', '.join(standing)}"
-        block = f"{header}\n{text}"
-        owner = str(review.get("owner_response_text") or "").strip()
-        if owner:
-            owner_when = _iso_date(review.get("owner_response_datetime_utc"))
-            block += f"\nOWNER REPLY" + (f" ({owner_when})" if owner_when else "")
-            block += f": {owner}"
-        blocks.append(block)
-
-    # The same ceiling every fetched page is held to. Reviews arrive as one
-    # page, so without this the reviews would be the only text in the prompt
-    # that ignores the limit the rest obey -- and at `limit=100` one page would
-    # be five times the size of any other.
-    #
-    # Whole reviews are dropped rather than the text being cut at the ceiling.
-    # A review sliced in half is worse than a review left out: the passage
-    # check downstream asks whether a quoted sentence is really in this text,
-    # and half a review can fail that check for a sentence the reviewer
-    # actually wrote.
-    kept: list[str] = []
-    spent = 0
-    for block in blocks:
-        if kept and spent + len(block) + 2 > source_reader.MAX_TEXT_CHARS:
-            break
-        kept.append(block)
-        spent += len(block) + 2
-    dropped = len(blocks) - len(kept)
-
-    bought = len(fetched.reviews)
-    silent = bought - len(usable)
-    note = f"{len(kept)} review(s) with text"
-    if silent:
-        note += f", from {bought} bought ({silent} were a star rating only)"
-    if dropped:
-        note += (
-            f"; {dropped} more were bought and left out of this page for "
-            f"length"
-        )
-    note += ". Reviews Google returned for this Place ID, in the order asked for."
 
     return PageRead(
         requested_url=REVIEWS_URL.format(place_id=place_id),
@@ -357,13 +348,42 @@ def reviews_as_page(fetched: ReviewFetch, place_id: str, place_name: str = ""):
             "Google reviews for "
             f"{place_name or fetched.place_name or 'this place'}"
         ),
-        text="\n\n".join(kept),
+        text="\n\n".join(_render_block(review) for review in chosen.kept),
         # The page has no publication date of its own. Each review carries its
         # own, inline, and a claim drawn from one takes that as its event date.
         published_at="",
         origin="google_reviews",
         branch_anchored=True,
-        note=note,
+        note=_page_note(chosen),
+    )
+
+
+def _page_note(chosen) -> str:
+    """What was bought, what was kept, and why the rest was not.
+
+    Written out rather than summarised because a thin page has several very
+    different causes -- a quiet place, a place whose reviewers talk about
+    something else, a budget that ran out -- and a reader deciding whether to
+    trust six findings needs to know which one happened.
+    """
+    parts = [f"{len(chosen.kept)} review(s) of {chosen.bought} bought"]
+    if chosen.terms:
+        parts.append(
+            f"{chosen.on_topic} of them mention {' / '.join(chosen.terms)}"
+        )
+    else:
+        parts.append("no subject terms were available, so none were filtered by topic")
+    if chosen.silent:
+        parts.append(f"{chosen.silent} were a star rating with no words")
+    if chosen.too_short:
+        parts.append(f"{chosen.too_short} were too short to carry a claim")
+    if chosen.dropped_for_space:
+        parts.append(
+            f"{chosen.dropped_for_space} ranked lower and did not fit the page"
+        )
+    return (
+        "; ".join(parts)
+        + ". Chosen by subject, then by the reviewer's standing, then by length."
     )
 
 

@@ -115,6 +115,9 @@ interface ResearchViewerProps {
    *  button that spends it, because a cap nobody can see before pressing is
    *  not a cap. */
   reviewsBudget?: ListicleReviewsBudget | null
+  /** The words the reviews are asked for in. Derived from the run's own
+   *  searches, so they are shown rather than assumed correct. */
+  subjectTerms?: string[]
   onGapResearch?: (question: string) => void
   onClose: () => void
 }
@@ -128,6 +131,7 @@ export function ResearchViewer({
   canResearch,
   researching,
   reviewsBudget,
+  subjectTerms,
   onGapResearch,
   onClose,
 }: ResearchViewerProps) {
@@ -390,6 +394,8 @@ export function ResearchViewer({
                 )}
               </details>
             )}
+
+            <SubjectTerms terms={subjectTerms ?? []} />
 
             {reviewsBudget && <ReviewsAllowance budget={reviewsBudget} />}
 
@@ -905,6 +911,23 @@ function PossibleAngles({
  *  At zero this is a statement, not a warning to act on: research still runs
  *  and still reads pages, it just buys no customer reviews. Nothing here can
  *  overspend -- the cap is enforced on the server before the call goes out. */
+/** The words the reviews were asked for in.
+ *
+ *  Shown because they are derived, not typed: they come from this run's own
+ *  search evidence, and if they come out wrong the reviews that were bought are
+ *  the wrong ones. A person reading a thin result needs to be able to see
+ *  whether the question was asked in the right language before concluding
+ *  anything about the place. */
+function SubjectTerms({ terms }: { terms: string[] }) {
+  if (terms.length === 0) return null
+  return (
+    <p className="lp-muted">
+      Reviews were asked for as <strong>{terms.join(', ')}</strong> — read off
+      this list's own searches, not translated.
+    </p>
+  )
+}
+
 function ReviewsAllowance({ budget }: { budget: ListicleReviewsBudget }) {
   return (
     <section className="lp-research-block">

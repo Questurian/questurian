@@ -83,6 +83,58 @@ level, website and editorial summary to the whole-run pass. Only the reviews
 moved. `places.reviews_as_page` is deleted rather than left beside its
 replacement.
 
+### Something chooses which reviews are worth the page
+
+Twenty reviews handed whole to the extraction is shovelling, not research. Most
+of any twenty Google reviews are about the parking, the music and the service;
+a list about chicken wings is written from the six that are about chicken
+wings. Before `review_selection` nothing chose: the reviews entered the prompt
+in the order the API returned them and were cut at the first twelve thousand
+characters, so the material that decided what got written was whatever happened
+to be near the top.
+
+**The subject's words are read off the run's own search evidence.** The API can
+filter reviews by text, but only if it is told what the subject is called
+*where the reviews were written*. This list's topic is "chicken wings"; every
+review of it is in Spanish. Asking for "chicken wings" finds almost nothing.
+
+Nothing translates it and no model is asked. The sentences that put these
+places on the board say `alitas` under sixty-five candidates, `wings` under
+sixteen and `salsas` under eight — a measurement of how the subject is actually
+written about, taken from data the run already paid for, costing no call and no
+translation table that would be wrong for the next city. Two rules keep the
+list clean: calendar words are excluded by name (`agosto` otherwise outranks
+real subject words and marks any review mentioning August as on-topic), and a
+term must clear a tenth of the dominant term's count — which is what separates
+`salsas` at eight from `sede`, Spanish for "branch", at six.
+
+**Subject decides the order, never survival.** The first version of this
+filtered on those terms and that was a bug with teeth: the terms are *derived*,
+so a run whose terms came out narrow silently destroyed real material and
+produced no page — a place with opinions reading as a place with none. A review
+reading "las alitas estaban con mal sabor" would have been deleted by terms
+that happened to come out as `pollo, salsas`.
+
+So the only hard refusal is a review with too few words to carry a passage a
+check could stand on. Everything else is ranked — subject, then substance, then
+the reviewer's standing, then length — and the page budget does the cutting.
+What it cuts is whatever ranked last, which is a statement about crowding and
+not a judgement that a review was worthless.
+
+**The reviewer's standing is carried because it is invisible in the text.** One
+review from an account with four hundred behind it and one from an account with
+a single review are not the same witness, and nothing downstream could tell
+them apart unless the block says so.
+
+**The page note says what was bought, what was kept, and why the rest was
+not** — a star rating with no words, too short to carry a claim, or ranked
+lower and did not fit. A thin page has several very different causes, and a
+person deciding whether to trust six findings needs to know which one happened.
+
+**The derived terms are shown on the research drawer.** They are derived, not
+typed: if they come out wrong, the reviews that were bought are the wrong ones,
+and a thin result would otherwise read as a fact about the place.
+
 ### The cap, and the switch
 
 **The plan is billed per review object returned, not per request**, free up to
@@ -144,11 +196,19 @@ are a star rating and no words. They cost the same. The page record says how
 many of the bought reviews had text, so the gap is visible rather than
 discovered downstream.
 
-**Five reviews per place became twenty, and the sort and filter are unused so
-far.** `sort_by` defaults to `most_relevant` and `query` defaults to nothing —
-the same selection Places Details made, so the swap can be judged against the
-baseline without two variables moving at once. Choosing `newest`, or filtering
-to the subject, is a separate decision with its own evidence to gather.
+**`sort_by` is still unused.** It defaults to `most_relevant`. Asking for the
+newest reviews is the sharpest remaining answer to the dated-fact weakness and
+it is a separate decision: `most_relevant` is recency-weighted already (the
+twenty bought for BarBarian span 2017 to 2026), so what `newest` buys over it
+has to be measured rather than assumed. Buying both sorts is two calls and
+halves how many places the free allowance covers.
+
+**Selection is rules, not judgement.** Nothing here reads a review and decides
+whether it is any good — it counts words, matches terms and sorts. A review
+saying "las alitas estaban ricas" outranks one saying nothing about wings, and
+that is as far as it goes. What survives still has to be read by the extraction
+and checked in code. This removes the worst of the noise; it does not pick the
+best material.
 
 **The extraction's output ceiling was not raised, and nothing checks whether
 its reply was truncated.** `EXTRACTION_MAX_TOKENS` is 8,192 and the structured

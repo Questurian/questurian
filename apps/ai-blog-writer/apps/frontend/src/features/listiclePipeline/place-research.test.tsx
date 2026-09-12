@@ -329,6 +329,7 @@ function board(overrides: Partial<ListicleResearchBoard> = {}): ListicleResearch
       calls: 0,
       last_call_at: '',
     },
+    subject_terms: ['alitas', 'wings'],
     cards: [
       {
         candidate_id: 'cand-wings',
@@ -698,6 +699,16 @@ describe('the research viewer', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'View research' }))
     return screen.findByRole('dialog', { name: 'Research for Example Wings' })
   }
+
+  it('shows the words the reviews were actually asked for in', async () => {
+    const dialog = await openViewer()
+
+    // Derived from the run's own searches, not typed and not translated. If
+    // they come out wrong the wrong reviews were bought, so a person reading a
+    // thin result has to be able to see the question before judging the place.
+    expect(within(dialog).getByText(/alitas, wings/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/not translated/)).toBeInTheDocument()
+  })
 
   it('says how many more places the free reviews allowance covers', async () => {
     const dialog = await openViewer()

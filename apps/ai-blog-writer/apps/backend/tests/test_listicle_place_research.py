@@ -115,7 +115,7 @@ def _prepare(client, run_id, candidate_id, **extra):
     return response.json()
 
 
-def _no_reviews(place_id: str):
+def _no_reviews(place_id: str, **_kwargs):
     """The reviews API, asked nothing. The default for every test that is not
     about reviews, so no test reaches a billed endpoint by forgetting to."""
     from app.features.listicle_pipeline.reviews_api import ReviewFetch
@@ -127,7 +127,7 @@ def _reviews(*written: tuple[str, int, str]):
     """The reviews API, answering with the reviews a test names."""
     from app.features.listicle_pipeline.reviews_api import ReviewFetch
 
-    def answer(place_id: str):
+    def answer(place_id: str, **_kwargs):
         return ReviewFetch(
             business_id=place_id,
             place_name="Example Wings",

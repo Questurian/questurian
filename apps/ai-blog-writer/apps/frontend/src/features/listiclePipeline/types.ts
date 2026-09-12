@@ -605,6 +605,11 @@ export interface ListicleAttemptDetail extends ListicleAttemptSummary {
   brief: {
     version?: string
     intent?: string
+    /** The words this list's subject is actually written about in -- `alitas`
+     *  rather than `chicken wings`. Derived from the run's own search evidence,
+     *  never translated. Used to ask the reviews API for reviews about the
+     *  subject, and to rank what comes back. */
+    subject_terms?: string[]
     priority_questions?: string[]
     known_source_leads?: { url: string; origin: string; note: string }[]
     illustrative_queries?: string[]
@@ -673,6 +678,9 @@ export interface ListicleResearchBoard {
   exclusions: string
   active_attempt: ListicleAttemptSummary | null
   reviews_budget: ListicleReviewsBudget
+  /** The words this list's subject is actually written about in -- `alitas`
+   *  rather than `chicken wings`. Read off the run's own search evidence. */
+  subject_terms: string[]
   cards: ListicleResearchCard[]
 }
 

@@ -314,6 +314,7 @@ function researchBoard(candidates: ListicleCandidate[]): ListicleResearchBoard {
       calls: 0,
       last_call_at: '',
     },
+    subject_terms: ['cebiche'],
     cards: candidates.map(candidate => {
       const prep = PREP[candidate.candidate_id] ?? emptyPrep(candidate.candidate_id)
       PREP[candidate.candidate_id] = prep

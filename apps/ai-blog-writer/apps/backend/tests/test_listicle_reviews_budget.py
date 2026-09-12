@@ -249,7 +249,7 @@ def test_star_only_reviews_are_bought_even_though_they_cannot_be_read(
                 "data": {
                     "name": "Example Wings",
                     "reviews": [
-                        {"review_text": "Las alitas estaban buenas.", "rating": 5},
+                        {"review_text": "Las alitas estaban buenas y bien picantes.", "rating": 5},
                         {"review_text": None, "rating": 4},
                         {"review_text": "   ", "rating": 3},
                     ],
@@ -266,8 +266,8 @@ def test_star_only_reviews_are_bought_even_though_they_cannot_be_read(
     assert reviews_budget.status().spent == 3
 
     page = reviews_api.reviews_as_page(fetched, "ChIJ-anything")
-    assert "1 review(s) with text" in page.note
-    assert "2 were a star rating only" in page.note
+    assert "1 review(s) of 3 bought" in page.note
+    assert "2 were a star rating with no words" in page.note
 
 
 def test_a_place_whose_reviews_are_all_silent_yields_no_page(isolated_db):
@@ -296,7 +296,7 @@ def test_a_review_block_carries_its_own_date_link_and_standing(isolated_db):
             {
                 "author_name": "Handy",
                 "rating": 3,
-                "review_text": "Pedimos unas alitas y estaban con mal sabor.",
+                "review_text": "Pedimos unas alitas y estaban con mal sabor, como guardadas.",
                 "review_datetime_utc": "2020-01-08T15:04:05.000Z",
                 "review_link": "https://www.google.com/maps/reviews/data=!abc",
                 "author_review_count": 151,
@@ -331,7 +331,7 @@ def test_the_date_falls_back_to_the_timestamp(isolated_db):
             {
                 "author_name": "Ana",
                 "rating": 4,
-                "review_text": "Buen ambiente.",
+                "review_text": "Buen ambiente y buena musica en la noche.",
                 "review_timestamp": 1750000000,
             }
         ],
@@ -360,7 +360,7 @@ def test_an_older_response_shape_still_reads_as_reviews(isolated_db, monkeypatch
                 "data": {
                     "name": "Example",
                     "reviews_data": [
-                        {"review_text": "Muy bueno.", "review_rating": 5},
+                        {"review_text": "Muy bueno, las alitas valen la pena.", "review_rating": 5},
                     ],
                 },
             }
@@ -404,7 +404,7 @@ def test_the_reviews_page_obeys_the_same_ceiling_as_every_other_page(isolated_db
 
     assert len(page.text) <= source_reader.MAX_TEXT_CHARS
     # And it says what it left out, rather than quietly shortening itself.
-    assert "were bought and left out of this page for length" in page.note
+    assert "ranked lower and did not fit the page" in page.note
 
 
 def test_a_review_is_dropped_whole_rather_than_cut_in_half(isolated_db):

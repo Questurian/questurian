@@ -325,6 +325,13 @@ class ResearchRequest:
     topic_label: str = ""
     standard: str = ""
     exclusions: str = ""
+    # The words this list's own searches use for its subject -- `alitas` rather
+    # than `chicken wings` for a list about Lima. Derived once from the run's
+    # stored search evidence by `review_selection.subject_terms` and carried
+    # here rather than looked up inside `brief_of`, because the brief is
+    # hashed: a value read from the database mid-build would make an unchanged
+    # question hash differently every time the board moved.
+    subject_terms: list[str] = field(default_factory=list)
     # What the discovery searches said, and WHICH search said it. The angle was
     # dropped by the version before this one, so a place returned by "still
     # serving wings after midnight" and one returned by "aji amarillo instead
@@ -357,6 +364,7 @@ class ResearchRequest:
             "topic": self.topic,
             "standard": self.standard,
             "exclusions": self.exclusions,
+            "subject_terms": list(self.subject_terms),
             "sightings": [dict(item) for item in self.sightings],
             "existing_findings": [dict(item) for item in self.existing_findings],
             "source_links": list(self.source_links),
@@ -385,6 +393,7 @@ def brief_of(request: ResearchRequest) -> research_brief.ResearchBrief:
         exclusions=request.exclusions,
         mode=request.mode,
         gap_text=request.gap_text,
+        subject_terms=list(request.subject_terms),
         discovery_leads=[
             research_brief.DiscoveryLead(
                 snippet=str(item.get("snippet", "")),

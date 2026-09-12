@@ -131,6 +131,13 @@ class ResearchBrief:
     mode: str = "initial"
     gap_text: str = ""
 
+    # The words this list's own searches use for its subject -- `alitas` for a
+    # chicken-wings list written about Lima. Derived from the run's stored
+    # search evidence, never translated: see `review_selection`. Used to ask
+    # the reviews API for the reviews about the subject rather than the
+    # reviews about the bar, and to rank what comes back.
+    subject_terms: list[str] = field(default_factory=list)
+
     priority_questions: list[str] = field(default_factory=list)
     known_source_leads: list[SourceLead] = field(default_factory=list)
     illustrative_queries: list[str] = field(default_factory=list)
@@ -174,6 +181,7 @@ class ResearchBrief:
             "exclusions": self.exclusions,
             "mode": self.mode,
             "gap_text": self.gap_text,
+            "subject_terms": list(self.subject_terms),
             "priority_questions": list(self.priority_questions),
             "known_source_leads": [
                 {"url": lead.url, "origin": lead.origin, "note": lead.note}
@@ -332,6 +340,7 @@ def build_brief(
     held: list[HeldFinding],
     operator_links: list[str],
     audit_links: list[SourceLead] | None = None,
+    subject_terms: list[str] | None = None,
 ) -> ResearchBrief:
     """Assemble one request from what is already written down. No model call.
 
@@ -369,6 +378,7 @@ def build_brief(
         known_source_leads=leads[:MAX_SOURCE_LEADS],
         discovery_leads=list(discovery_leads)[:MAX_LEADS],
         held=list(held)[:MAX_HELD],
+        subject_terms=[_clean(term, 40) for term in (subject_terms or []) if _clean(term)],
     )
     brief.priority_questions = _priority_questions(
         topic_label=brief.topic_label, mode=brief.mode, gap_text=brief.gap_text

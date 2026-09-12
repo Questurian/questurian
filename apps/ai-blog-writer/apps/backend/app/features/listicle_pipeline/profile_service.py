@@ -39,6 +39,7 @@ from . import (
     profile_research,
     profile_store,
     research_store,
+    review_selection,
     reviews_api,
     reviews_budget,
     source_reader,
@@ -205,6 +206,13 @@ def board(run_id: str) -> dict:
         # is pressed from, and a budget nobody can see before pressing is not
         # a budget.
         "reviews_budget": reviews_budget.status().as_dict(),
+        # The words the reviews will be asked for in. Derived, not typed, so
+        # the screen has to be able to show them: if they come out wrong, the
+        # reviews that were bought are the wrong ones, and a thin result would
+        # otherwise read as a fact about the place.
+        "subject_terms": review_selection.subject_terms(
+            ctx.run_id, topic_label=ctx.topic_label
+        ),
         "cards": cards,
     }
 
@@ -676,6 +684,11 @@ def _build_request(
         topic_label=ctx.topic_label,
         standard=ctx.standard,
         exclusions=ctx.exclusions,
+        # Read once, here, from the run's own stored search evidence. Carried
+        # on the request so the brief stays a pure function of it.
+        subject_terms=review_selection.subject_terms(
+            ctx.run_id, topic_label=ctx.topic_label
+        ),
         # Each lead with the search that produced it. The version before this
         # one sent the snippet alone, so a place found by "still serving wings
         # after midnight" and one found by "ají amarillo instead of Buffalo
@@ -709,7 +722,7 @@ def _build_request(
     )
 
 
-def fetch_reviews(place_id: str):
+def fetch_reviews(place_id: str, *, query: str = ""):
     """What Google's reviewers said about this place.
 
     A seam of its own so a test can stand in front of it without standing in
@@ -721,7 +734,7 @@ def fetch_reviews(place_id: str):
     exact date. `reviews_api` refuses on its own if the free allowance is spent,
     so a caller never has to check the budget before asking.
     """
-    return reviews_api.fetch_reviews(place_id)
+    return reviews_api.fetch_reviews(place_id, query=query)
 
 
 def _default_extract(prompt: str):
@@ -917,9 +930,18 @@ def research(
     # overspends, so an exhausted budget arrives here as a place with no
     # reviews and a reason -- not as an exception and not as a charge.
     if brief.place_id:
-        fetched = fetch_reviews(brief.place_id)
+        # Asked for in the words the reviews are actually written in. Without
+        # this the API returns the twenty reviews Google thinks are most
+        # relevant *to the bar* -- the beer list, the music, the service -- and
+        # the extraction is left to ignore most of what was paid for.
+        fetched = fetch_reviews(
+            brief.place_id, query=brief.subject_terms[0] if brief.subject_terms else ""
+        )
         review_page = reviews_api.reviews_as_page(
-            fetched, brief.place_id, place_name=brief.name
+            fetched,
+            brief.place_id,
+            place_name=brief.name,
+            terms=brief.subject_terms,
         )
         if review_page is not None:
             pages.append(review_page)
