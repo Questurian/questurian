@@ -634,7 +634,7 @@ def report(path: Path, *, artifact: bool = False) -> int:
         "base_calls": 0, "base_tokens": 0, "base_findings": 0, "base_real": 0,
         "new_calls": 0, "new_tokens": 0, "new_findings": 0, "new_ready": 0,
         "new_real": 0, "pages": 0, "pages_read": 0, "grounded": 0,
-        "attributable_opinion": 0,
+        "attributable_opinion": 0, "base_wasted_calls": 0, "base_wasted_tokens": 0,
     }
     for row in rows:
         place = row["place"]
@@ -659,6 +659,14 @@ def report(path: Path, *, artifact: bool = False) -> int:
             1
             for finding in row["retest_findings"]
             if finding.validation == "evidence_ready"
+        )
+        # The two baseline attempts that answered in a shape nothing could
+        # read. They produced no findings and they were charged for, and a
+        # headline that counts only the three that worked understates what the
+        # old design actually cost.
+        totals["base_wasted_calls"] += len(row["invalid"])
+        totals["base_wasted_tokens"] += sum(
+            int(one.usage.get("total_tokens", 0) or 0) for one in row["invalid"]
         )
         totals["base_calls"] += base_calls
         totals["base_tokens"] += base_tokens
@@ -770,6 +778,7 @@ def report(path: Path, *, artifact: bool = False) -> int:
         else '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
     )
+    opener = "<main>" if artifact else "</head><body><main>"
     tail = "</main>" if artifact else "</main></body></html>"
     document = f"""{head}<title>Wings Research Retest</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -830,7 +839,7 @@ blockquote {{ margin:.25rem 0 .25rem .8rem; padding-left:.7rem;
 a {{ color:var(--accent); }}
 table {{ border-collapse:collapse; width:100%; margin:1rem 0; font-size:.9rem; }}
 th, td {{ text-align:left; padding:.4rem .6rem; border-bottom:1px solid var(--rule); }}
-</style></head><body><main>
+</style>{opener}
 <h1>Listicle research: before and after</h1>
 <p class="muted">Run <code>{RUN_ID}</code> · pilot <code>{PILOT_NAME}</code> ·
    generated {generated}</p>
@@ -842,13 +851,16 @@ a receipt.</p>
 
 <table>
 <tr><th></th><th>Baseline (ADR 0039)</th><th>Retest (ADR 0040)</th></tr>
-<tr><td>Model calls</td><td>{totals['base_calls']}</td><td>{totals['new_calls']}</td></tr>
-<tr><td>Grounded searches</td><td>{totals['base_calls']}</td><td>{totals['grounded']}</td></tr>
+<tr><td>Model calls</td><td>{totals['base_calls']} that produced these packets,
+  {totals['base_calls'] + totals['base_wasted_calls']} in total</td><td>{totals['new_calls']}</td></tr>
+<tr><td>Grounded searches</td><td>{totals['base_calls'] + totals['base_wasted_calls']}</td><td>{totals['grounded']}</td></tr>
 <tr><td>Pages opened</td><td>0</td><td>{totals['pages_read']} read of {totals['pages']} tried</td></tr>
 <tr><td>Findings in the packets</td><td>{totals['base_findings']}</td><td>{totals['new_findings']}</td></tr>
 <tr><td>Passed a passage check</td><td>0 — nothing could be checked</td><td>{totals['new_ready']}</td></tr>
 <tr><td>Citations to an address that resolves</td><td>{totals['base_real']}</td><td>{totals['new_real']}</td></tr>
-<tr><td>Tokens</td><td>{totals['base_tokens']:,}</td><td>{totals['new_tokens']:,}</td></tr>
+<tr><td>Tokens</td><td>{totals['base_tokens']:,} here, plus
+  {totals['base_wasted_tokens']:,} on {totals['base_wasted_calls']} calls that
+  came back unreadable</td><td>{totals['new_tokens']:,}</td></tr>
 </table>
 {body}
 {VERDICT}

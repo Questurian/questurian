@@ -63,7 +63,7 @@ th, td { text-align:left; padding:.4rem .6rem; border-bottom:1px solid var(--rul
 </style></head><body><main>
 <h1>Listicle research: before and after</h1>
 <p class="muted">Run <code>efd5a7cd</code> · pilot <code>three-place-2026-09-12</code> ·
-   generated 2026-09-12 15:06 UTC</p>
+   generated 2026-09-12 15:14 UTC</p>
 <p class="lede">Three places, researched once under ADR 0039 and once under
 ADR 0040. The left column is what was stored before: one grounded call, nothing
 opened, nothing checked. The right column is what the same place returns when
@@ -72,13 +72,16 @@ a receipt.</p>
 
 <table>
 <tr><th></th><th>Baseline (ADR 0039)</th><th>Retest (ADR 0040)</th></tr>
-<tr><td>Model calls</td><td>3</td><td>6</td></tr>
-<tr><td>Grounded searches</td><td>3</td><td>3</td></tr>
+<tr><td>Model calls</td><td>3 that produced these packets,
+  5 in total</td><td>6</td></tr>
+<tr><td>Grounded searches</td><td>5</td><td>3</td></tr>
 <tr><td>Pages opened</td><td>0</td><td>10 read of 22 tried</td></tr>
 <tr><td>Findings in the packets</td><td>13</td><td>19</td></tr>
 <tr><td>Passed a passage check</td><td>0 — nothing could be checked</td><td>17</td></tr>
 <tr><td>Citations to an address that resolves</td><td>0</td><td>22</td></tr>
-<tr><td>Tokens</td><td>27,694</td><td>56,663</td></tr>
+<tr><td>Tokens</td><td>27,694 here, plus
+  11,402 on 2 calls that
+  came back unreadable</td><td>56,663</td></tr>
 </table>
 
 <section class="place">
