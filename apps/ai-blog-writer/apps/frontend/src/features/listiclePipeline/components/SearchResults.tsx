@@ -122,17 +122,37 @@ export function SearchResults({
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const closeConfirm = useCallback(() => setConfirmId(null), [])
   const byId = new Map(results.candidates.map(candidate => [candidate.candidate_id, candidate]))
+  // Preparation, readiness and saved research for every place on this run.
+  // One read for the board: readiness is a property of the run, not of a card
+  // -- a duplicate settled on one card changes whether another can be
+  // researched -- and thirty-five cards each holding their own copy could not
+  // agree about it.
+  const research = usePlaceResearch(results.run_id)
+  const [researchId, setResearchId] = useState<string | null>(null)
+  const closeResearch = useCallback(() => setResearchId(null), [])
+  const researchCard = researchId ? research.cardFor(researchId) : undefined
+  const researchCandidate = researchId ? byId.get(researchId) : undefined
   const removedIds = new Set(board.removed.map(entry => entry.candidate_id))
   const distinct = new Set(board.distinct_pairs.map(([one, other]) => `${one}|${other}`))
   const judgedDifferent = (one: string, other: string) =>
     distinct.has(one < other ? `${one}|${other}` : `${other}|${one}`)
   // The duplicates still open against a place: flagged, still on the board,
   // and not already judged to be a different place.
-  const openDuplicates = (candidate: ListicleCandidate): ListicleCandidate[] =>
-    (candidate.possible_duplicate_ids ?? [])
+  //
+  // Two sources, and the second one matters more. Names flag rows that look
+  // alike; Google's Place ID flags rows that ARE the same building however
+  // they are spelled. On the wings board three rows -- "Wingman [Miraflores]",
+  // "Wigman Alitas Inc." and "Wingman [Barranco]" -- are one bar on Bolognesi
+  // 494, and no amount of name matching was ever going to pair them.
+  const openDuplicates = (candidate: ListicleCandidate): ListicleCandidate[] => {
+    const byName = candidate.possible_duplicate_ids ?? []
+    const byPlaceId =
+      research.cardFor(candidate.candidate_id)?.readiness.identity_twins ?? []
+    return [...new Set([...byName, ...byPlaceId])]
       .filter(id => !removedIds.has(id) && !judgedDifferent(candidate.candidate_id, id))
       .map(id => byId.get(id))
       .filter((other): other is ListicleCandidate => Boolean(other))
+  }
   const onBoard = results.candidates.filter(candidate => !removedIds.has(candidate.candidate_id))
   const removed = board.removed
     .map(entry => ({ entry, candidate: byId.get(entry.candidate_id) }))
@@ -144,16 +164,6 @@ export function SearchResults({
   // What Google said. Only places still on the board are worth paying to
   // look up, and only those Google has not already answered for.
   const google = useGoogleChecks(results.run_id)
-  // Preparation, readiness and saved research for every place on this run.
-  // One read for the board: readiness is a property of the run, not of a card
-  // -- a duplicate settled on one card changes whether another can be
-  // researched -- and thirty-five cards each holding their own copy could not
-  // agree about it.
-  const research = usePlaceResearch(results.run_id)
-  const [researchId, setResearchId] = useState<string | null>(null)
-  const closeResearch = useCallback(() => setResearchId(null), [])
-  const researchCard = researchId ? research.cardFor(researchId) : undefined
-  const researchCandidate = researchId ? byId.get(researchId) : undefined
   const answered = (id: string) => ['found', 'not_found'].includes(google.checks[id]?.status ?? '')
   const toCheck = onBoard.filter(candidate => !answered(candidate.candidate_id))
   const onBoardChecks = onBoard.map(candidate => google.checks[candidate.candidate_id]).filter(Boolean)

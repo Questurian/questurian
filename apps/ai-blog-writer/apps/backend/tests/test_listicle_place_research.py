@@ -1276,3 +1276,57 @@ def test_the_count_never_says_finished_while_something_is_blocking(client, run):
     readiness = _cards(client, run)[first["name"]]["readiness"]
     assert readiness["ready"] is False
     assert readiness["required_done"] < readiness["required_total"]
+
+
+def test_a_google_twin_can_be_settled_the_same_way_a_duplicate_is(client, run):
+    """Name matching cannot pair "Wingman [Barranco]" with "Wigman Alitas
+    Inc.", and on the real wings board those two are one bar on Bolognesi 494.
+
+    The Place ID finds them. The card then has to be able to offer the keep-one
+    action over them, or the only warning the operator can act on is one they
+    have to act on by hand.
+    """
+    cards = list(_cards(client, run).values())
+    first, second = cards[0], cards[1]
+    stored = store.load_google_checks(run)
+    twin = dict(stored[first["candidate_id"]])
+    twin["place_id"] = stored[second["candidate_id"]]["place_id"]
+    store.save_google_check(run, first["candidate_id"], twin)
+
+    readiness = _cards(client, run)[first["name"]]["readiness"]
+    assert readiness["identity_twins"] == [second["candidate_id"]]
+
+    # Settled the existing way: one of them stays, the other comes off.
+    service.resolve_duplicates(
+        run,
+        first["candidate_id"],
+        same=[second["candidate_id"]],
+        different=[],
+        keep=first["candidate_id"],
+    )
+    after = _cards(client, run)[first["name"]]["readiness"]
+    assert after["identity_twins"] == []
+    assert "identity_conflict" not in {b["code"] for b in after["blockers"]}
+
+
+def test_calling_two_google_twins_different_places_does_not_tick_the_problem_away(
+    client, run
+):
+    """If they are two venues, Google has matched at least one of them to the
+    wrong building — and research under a wrong identity buys evidence about
+    somewhere else. The warning changes; it does not clear."""
+    cards = list(_cards(client, run).values())
+    first, second = cards[0], cards[1]
+    stored = store.load_google_checks(run)
+    twin = dict(stored[first["candidate_id"]])
+    twin["place_id"] = stored[second["candidate_id"]]["place_id"]
+    store.save_google_check(run, first["candidate_id"], twin)
+
+    service.resolve_duplicates(
+        run, first["candidate_id"], same=[], different=[second["candidate_id"]]
+    )
+    codes = {
+        b["code"] for b in _cards(client, run)[first["name"]]["readiness"]["blockers"]
+    }
+    assert "identity_mismatch" in codes
+    assert "identity_conflict" not in codes

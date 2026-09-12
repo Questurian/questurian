@@ -289,6 +289,7 @@ function readinessFor(prep: ListiclePrep): ListicleResearchCard['readiness'] {
     google_name: 'Wingman',
     google_address: 'Av. Test 1',
     place_id: 'gid-open',
+    identity_twins: [],
   }
 }
 

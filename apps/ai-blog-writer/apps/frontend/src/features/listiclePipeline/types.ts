@@ -434,6 +434,11 @@ export interface ListicleReadiness {
   google_name: string
   google_address: string
   place_id: string
+  /** Other cards still on the board that Google resolves to this same
+   *  building. Name matching cannot find these — "Wingman [Barranco]" and
+   *  "Wigman Alitas Inc." share almost nothing — so the screen offers the
+   *  duplicate decision over them from here instead. */
+  identity_twins: string[]
 }
 
 export interface ListicleSourceLink {

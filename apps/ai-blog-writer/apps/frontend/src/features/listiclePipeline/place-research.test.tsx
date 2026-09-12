@@ -137,6 +137,7 @@ function readiness(overrides: Partial<ListicleReadiness> = {}): ListicleReadines
     google_name: 'Example Wings',
     google_address: 'Av. Brasil 100, Jesús María',
     place_id: 'gid-wings',
+    identity_twins: [],
     ...overrides,
   }
 }

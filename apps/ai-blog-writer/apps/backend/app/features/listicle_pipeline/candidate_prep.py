@@ -338,6 +338,14 @@ class Readiness:
     google_name: str = ""
     google_address: str = ""
     place_id: str = ""
+    # Other cards still on the board that Google resolves to THIS building.
+    #
+    # Carried rather than only described in a message, because the screen has
+    # to be able to offer the existing keep-one-remove-the-rest action over
+    # them. Name matching cannot find these pairs -- "Wingman [Barranco]" and
+    # "Wigman Alitas Inc." share almost nothing -- so without this the only
+    # warning the operator can act on is one they have to act on by hand.
+    identity_twins: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict:
         return {
@@ -359,6 +367,7 @@ class Readiness:
             "google_name": self.google_name,
             "google_address": self.google_address,
             "place_id": self.place_id,
+            "identity_twins": list(self.identity_twins),
         }
 
 
@@ -655,6 +664,7 @@ def readiness_of(
     # and "Bar Rovira del Callao" share no words -- and researching both buys
     # the same building twice and files it as two places.
     place_id = str(check.get("place_id") or "")
+    twins: list[str] = []
     if place_id:
         twins = [
             other_id
@@ -669,14 +679,39 @@ def readiness_of(
             names = ", ".join(
                 ctx.candidates[other].get("name", other) for other in twins
             )
-            blockers.append(
-                Blocker(
-                    "identity_conflict",
-                    f"Google resolves this and {names} to the same place. Two "
-                    "cards cannot be one building; settle that first.",
-                    "board",
-                )
+            # Already answered: the operator looked at these and said they are
+            # different venues. That settles what they are and unsettles
+            # something else -- if they are two places, Google has matched at
+            # least one of them to the wrong building, and research under a
+            # wrong identity buys evidence about somewhere else.
+            #
+            # So the warning changes rather than clearing. Saying "different
+            # places" must not become a way to tick away a broken identity.
+            all_judged_distinct = all(
+                (min(candidate_id, other), max(candidate_id, other)) in ctx.distinct
+                for other in twins
             )
+            if all_judged_distinct:
+                blockers.append(
+                    Blocker(
+                        "identity_mismatch",
+                        f"You said this and {names} are different places, and "
+                        "Google has them as one. At least one of these cards "
+                        "is matched to the wrong building — research would be "
+                        "about somewhere else. Check it on Google again, or "
+                        "take the wrong one off.",
+                        "board",
+                    )
+                )
+            else:
+                blockers.append(
+                    Blocker(
+                        "identity_conflict",
+                        f"Google resolves this and {names} to the same place. "
+                        "Two cards cannot be one building; settle that first.",
+                        "board",
+                    )
+                )
 
     # --- conditional: the cut ----------------------------------------------
     if candidate.get("barred"):
@@ -788,4 +823,5 @@ def readiness_of(
         google_name=str(check.get("google_name") or ""),
         google_address=str(check.get("address") or ""),
         place_id=place_id,
+        identity_twins=twins,
     )
