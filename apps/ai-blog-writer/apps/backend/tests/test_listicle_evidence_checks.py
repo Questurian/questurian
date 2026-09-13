@@ -784,6 +784,18 @@ def test_with_no_results_nothing_the_answer_typed_is_opened():
     assert any("no results" in issue for issue in anchored.issues)
 
 
+def test_searches_with_no_result_list_are_said_to_be_a_gap_in_the_reply():
+    """McCarthy's: eight searches reported and no result list; the same request
+    an hour later returned six results."""
+    from app.features.listicle_pipeline import profile_research
+
+    anchored = profile_research.anchor_to_search(
+        _discovered({"site": "rappi.com.pe", "title": "McCarthy's"}), [], [], searched=8
+    )
+    assert anchored.pages[0].url == ""
+    assert any("reported 8 search(es) but sent back no result list" in i for i in anchored.issues)
+
+
 def test_one_result_is_never_given_to_two_entries():
     from app.features.listicle_pipeline import profile_research
 

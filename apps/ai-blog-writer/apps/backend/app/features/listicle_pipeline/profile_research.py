@@ -294,7 +294,12 @@ def research_place(
 # ceiling died typing `rappi.com.pe/restaurantes/1000000...`, a numeric id it
 # had never seen. The address now comes from the search's own result list, and
 # the model names the site and the title so each entry can be matched to one.
-PROMPT_VERSION = "place-research/4"
+#
+# /5 stops asking the model to list what it searched -- the provider reports
+# that, and the model's copy of queries full of quote marks is where a finished
+# McCarthy's reply dropped a closing quote and broke the envelope -- and tells
+# it not to quote the street address, which cut La Casa's search to one result.
+PROMPT_VERSION = "place-research/5"
 
 # Raised from the 3,072 the whole-run pass used, on measurement rather than on
 # a guess. The second real request -- La Casa de las Alitas, eleven wing
@@ -531,6 +536,10 @@ Search in the local language of {brief.city or "the city"} first. Illustrative
 strings -- you choose your own; these say what kind of thing to look for:
 {queries}
 
+Search by name, district and subject. Do not put the street address in quotes:
+a quoted address finds only the pages that print it exactly, and most pages
+about a place do not.
+
 Scope, all of it load-bearing:
 {scope}
 
@@ -559,7 +568,6 @@ Return ONE JSON object and nothing else:
       "why": "one line: what this page is worth opening for"
     }}
   ],
-  "searched": ["what you actually searched for"],
   "not_found": ["a question nothing published seems to answer"],
   "notes": ["anything about identity: a title naming a different district, a chain with several branches"]
 }}
@@ -995,6 +1003,7 @@ def anchor_to_search(
     chunks: list[dict],
     supports: list[dict],
     text: str = "",
+    searched: int = 0,
 ) -> Discovery:
     """Give every page the address the search itself returned, or none.
 
@@ -1084,7 +1093,17 @@ def anchor_to_search(
         for result in results
         if result["index"] not in claimed
     ]
-    if not results and discovery.pages:
+    if not results and searched:
+        # Seen on McCarthy's: eight searches reported, no result list. The same
+        # request an hour later came back with six results, so this is a gap in
+        # the reply, not an answer about the place.
+        issues.append(
+            f"The provider reported {searched} search(es) but sent back no "
+            "result list, so no page the answer described could be opened. "
+            "That is a gap in the provider's reply, not a finding about the "
+            "place; pressing Research again may return one."
+        )
+    elif not results and discovery.pages:
         issues.append(
             "The search reported no results, so no page it described has an "
             "address to open. Nothing typed into the answer is read."

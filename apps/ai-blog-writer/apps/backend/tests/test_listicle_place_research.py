@@ -2174,6 +2174,49 @@ def test_the_page_opened_is_the_search_result_not_the_address_typed(
     assert attempt["discovery"]["pages"][0]["address_from"] == "search"
 
 
+def test_a_second_press_within_a_month_rereads_the_reviews_it_bought(
+    client, ready, monkeypatch
+):
+    """Every retest of a pilot place spent another twenty reviews it already
+    held, against an allowance that never resets."""
+    run_id, candidate_id, _ = ready
+    reviews = _counting(
+        _reviews(("Carlos Ruiz", 5, "Las alitas picantes son las mejores del barrio."))
+    )
+    monkeypatch.setattr(profile_service, "fetch_reviews", reviews)
+    monkeypatch.setattr(listicle_api, "_research_call", _Transport())
+    for key in ("reuse-reviews-01", "reuse-reviews-02"):
+        body = client.post(
+            f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+            json={"idempotency_key": key, "mode": "refresh"},
+        ).json()
+    assert len(reviews.calls) == 1
+    attempt = client.get(
+        f"{BASE}/research-attempts/{body['attempt']['attempt_id']}"
+    ).json()
+    kept = next(p for p in attempt["pages"] if p["origin"] == "google_reviews")
+    assert kept["reused"] is True
+    assert "not bought again" in kept["note"]
+
+
+def test_reviews_older_than_the_reuse_window_are_bought_again(
+    client, ready, monkeypatch
+):
+    run_id, candidate_id, _ = ready
+    reviews = _counting(
+        _reviews(("Carlos Ruiz", 5, "Las alitas picantes son las mejores del barrio."))
+    )
+    monkeypatch.setattr(profile_service, "fetch_reviews", reviews)
+    monkeypatch.setattr(listicle_api, "_research_call", _Transport())
+    monkeypatch.setattr(profile_service, "REVIEWS_REUSE_DAYS", 0)
+    for key in ("stale-reviews-01", "stale-reviews-02"):
+        client.post(
+            f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+            json={"idempotency_key": key, "mode": "refresh"},
+        )
+    assert len(reviews.calls) == 2
+
+
 def test_a_failed_search_never_reaches_the_extraction_call(
     client, ready, monkeypatch
 ):

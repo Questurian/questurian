@@ -295,7 +295,12 @@ def dry_run() -> int:
     return 0
 
 
-def spend(only: str = "", name: str = PILOT_NAME, extract_only: bool = False) -> int:
+def spend(
+    only: str = "",
+    name: str = PILOT_NAME,
+    extract_only: bool = False,
+    round_label: str = "",
+) -> int:
     """The authorised run. One action per place, in order, with a hard ceiling.
 
     `refresh` rather than `initial`, because asking the same question again on
@@ -353,8 +358,10 @@ def spend(only: str = "", name: str = PILOT_NAME, extract_only: bool = False) ->
         profile_service._build_request = with_audit
         # Its own key: the press that collected the pages already used the
         # plain one, and reusing it would replay that attempt.
-        key = f"pilot-{name}-{place['candidate_id'][:8]}" + (
-            "-extract" if extract_only else ""
+        key = (
+            f"pilot-{name}-{place['candidate_id'][:8]}"
+            + ("-extract" if extract_only else "")
+            + (f"-{round_label}" if round_label else "")
         )
         print(f"\n=== {place['who']} ===")
         started = datetime.now(timezone.utc)
@@ -984,6 +991,12 @@ def main() -> int:
         help="Which retest to spend on. Each has its own key and baselines.",
     )
     parser.add_argument(
+        "--round",
+        default="",
+        help="With --spend: a label added to the key, so pressing the same "
+        "retest again buys a new attempt instead of replaying the last one.",
+    )
+    parser.add_argument(
         "--extract-only",
         action="store_true",
         help="With --spend: re-read the pages the latest attempt kept. One "
@@ -1001,7 +1014,9 @@ def main() -> int:
     if args.report:
         return report(Path(args.report))
     if args.spend:
-        return spend(args.only, args.retest, extract_only=args.extract_only)
+        return spend(
+            args.only, args.retest, extract_only=args.extract_only, round_label=args.round
+        )
     return dry_run()
 
 

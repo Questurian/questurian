@@ -30,7 +30,7 @@ import re
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 from . import (
@@ -786,6 +786,45 @@ def _kept_pages(profile_id: str, topic: str) -> list:
     return out
 
 
+# How long reviews already bought for a place are re-read instead of bought
+# again. A month: reviews arrive slowly, the allowance is five hundred for good,
+# and a retest a week later that re-buys the same twenty has bought nothing.
+REVIEWS_REUSE_DAYS = 30
+
+
+def _kept_reviews(profile_id: str, topic: str):
+    """The latest reviews page any attempt on this place kept, if recent enough.
+
+    Returned marked `reused` with the day it was bought, so nothing downstream
+    presents a month-old page as a fresh check.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=REVIEWS_REUSE_DAYS)
+    for prior in research_store.for_profile(profile_id):
+        if prior.topic != topic or not prior.page_texts:
+            continue
+        for record in prior.pages:
+            if record.get("origin") != "google_reviews":
+                continue
+            text = prior.page_texts.get(
+                source_reader.normalise(record.get("requested_url", ""))
+            )
+            try:
+                bought = datetime.fromisoformat(record.get("retrieved_at", ""))
+            except ValueError:
+                continue
+            if text and bought >= cutoff:
+                return source_reader.PageRead.kept(
+                    record,
+                    text,
+                    note=(
+                        f"Bought {bought.date().isoformat()} by attempt "
+                        f"{prior.attempt_id}; re-read, not bought again. "
+                        f"{record.get('note', '')}"
+                    ).strip(),
+                )
+    return None
+
+
 def _default_extract(prompt: str):
     """The extraction call, when a caller did not hand one in.
 
@@ -982,8 +1021,15 @@ def research(
     # Never bought by `extract_only`. A recovery re-reads what an earlier
     # attempt kept, reviews included; buying them again is the cost it exists
     # to avoid.
+    #
+    # And not bought twice in a month for the same place. The allowance does
+    # not reset on its own, and every retest of a place was spending another
+    # twenty on reviews it already held.
+    kept_reviews = None if mode == "extract_only" else _kept_reviews(profile_id, ctx.topic)
     if mode == "extract_only":
         pages.extend(_kept_pages(profile_id, ctx.topic))
+    elif kept_reviews is not None:
+        pages.append(kept_reviews)
     elif brief.place_id:
         # Asked for in the words the reviews are actually written in. Without
         # this the API returns the twenty reviews Google thinks are most
@@ -1111,6 +1157,7 @@ def research(
                 list(result.grounding_chunks or []),
                 list(result.grounding_supports or []),
                 text=result.text or "",
+                searched=len(result.actual_queries or []),
             )
         except profile_research.ResponseInvalid as error:
             receipts.append(
