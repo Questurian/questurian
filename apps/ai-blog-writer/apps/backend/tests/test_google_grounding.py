@@ -172,3 +172,50 @@ def test_the_snake_case_spelling_is_read_too():
     under only one of them is a field that silently disappears."""
     response = {"grounding_metadata": {"web_search_queries": ["alitas lima"]}}
     assert google_grounding.extract_grounded_search_queries(response) == ["alitas lima"]
+
+
+def test_the_result_list_and_its_attribution_come_back_in_the_providers_order(monkeypatch):
+    """Supports name results by index, so the list must keep its order and its
+    duplicates. `source_urls` cannot stand in: it also collects any address the
+    model typed into its own answer."""
+    fake_session = _FakeSession(
+        [
+            _FakeResponse(
+                ok=True,
+                payload={
+                    "candidates": [
+                        {
+                            "content": {
+                                "role": "model",
+                                "parts": [{"text": '{"pages": [{"site": "rappi.com.pe"}]}'}],
+                            },
+                            "groundingMetadata": {
+                                "groundingChunks": [
+                                    {"web": {"uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/A", "title": "rappi.com.pe"}},
+                                    {"web": {"uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/B", "title": "elcomercio.pe"}},
+                                ],
+                                "groundingSupports": [
+                                    {
+                                        "segment": {"startIndex": 0, "endIndex": 20, "text": '"passage": "alitas bbq"'},
+                                        "groundingChunkIndices": [1, 0],
+                                    }
+                                ],
+                            },
+                        }
+                    ],
+                    "modelVersion": "gemini-2.5-flash",
+                },
+            )
+        ]
+    )
+    _reset_grounding_cache(monkeypatch)
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "demo-project")
+    monkeypatch.setenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+    monkeypatch.setattr(google_grounding, "google_auth", _FakeGoogleAuth)
+    monkeypatch.setattr(google_grounding, "AuthorizedSession", lambda _credentials: fake_session)
+
+    result = google_grounding.invoke_google_grounded_text("x", model_name="gemini-2.5-flash")
+
+    assert [chunk["title"] for chunk in result.grounding_chunks] == ["rappi.com.pe", "elcomercio.pe"]
+    assert result.grounding_chunks[0]["uri"].endswith("/A")
+    assert result.grounding_supports == [{"text": '"passage": "alitas bbq"', "chunks": [1, 0]}]

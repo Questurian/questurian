@@ -325,12 +325,46 @@ CurationState = Literal["unreviewed", "kept", "discarded"]
 # `unknown` is what a row stored before findings had an origin reads as. It is
 # not a fourth kind of author; it is the honest answer for material gathered
 # before anybody recorded who gathered it.
-FindingOrigin = Literal["research", "operator", "places", "unknown"]
+FindingOrigin = Literal["research", "operator", "places", "external_import", "unknown"]
 
 # How well attributed a finding is. Derived, never asserted: a finding with no
 # source of its own is `incomplete` and says so on screen, and it is never
 # handed the first URL the search happened to return.
 Attribution = Literal["attributed", "incomplete"]
+
+# What the checks made of a finding, after the pages it cites were read.
+#
+#   evidence_ready  every citation resolves to a page this attempt collected,
+#                   and the passage it quotes is in that page
+#   review_needed   something is off: a passage that is not there, a branch
+#                   claim no page anchors to this branch, a price with no
+#                   channel, a "review" with nobody behind it
+#   unsupported     no citation survived at all
+#   not_checked     nothing has checked it -- an operator finding, or a row
+#                   stored before checking existed
+#
+# Passing is not the same as being true. It means a person can open the page
+# and find the sentence, which is the only thing this pipeline is entitled to
+# claim it verified.
+ValidationState = Literal[
+    "evidence_ready", "review_needed", "unsupported", "not_checked"
+]
+
+# Who is behind a claim. The list's own standard asks for somebody other than
+# the business, so this is the difference between meeting it and not.
+SpeakerKind = Literal[
+    "business",
+    "publication",
+    "named_reviewer",
+    "anonymous_customer",
+    "aggregator",
+    "unknown",
+]
+
+# Where a price was observed. A delivery platform adds its own margin, and the
+# version of this that had no such field wrote delivery prices as the price.
+PriceChannel = Literal["dine_in", "delivery", "takeaway", "unknown"]
+
 
 # What a research request managed to cover, per topic and category.
 #
@@ -421,6 +455,22 @@ class ResearchFinding(BaseModel):
     valid_until: str = ""
     curation: CurationState = "unreviewed"
     origin: FindingOrigin = "research"
+    # What the checks made of it. Derived, never asserted, and never a reason
+    # to delete anything: `unsupported` material is exactly what somebody reads
+    # to judge whether a request was any good.
+    validation: ValidationState = "not_checked"
+    # Why it is not `evidence_ready`, in the words a person needs. Empty on a
+    # finding that passed and on one nothing has checked.
+    validation_notes: list[str] = Field(default_factory=list)
+    # Who is behind the claim. A menu is the business talking about itself; a
+    # named reviewer with a date is somebody else. The list's standard is
+    # written in terms of the second, and a packet that cannot tell them apart
+    # cannot say whether it met it.
+    who_said_it: SpeakerKind = "unknown"
+    who_name: str = ""
+    # Which channel a price was observed on. A delivery price is not the price
+    # at the table, and the two were being merged.
+    channel: PriceChannel = "unknown"
     # Bumped on every edit. What an optimistic save checks against, so two
     # tabs cannot overwrite each other silently.
     version: int = 1
@@ -442,7 +492,7 @@ class ResearchFinding(BaseModel):
     def expired(self, *, as_of: date | None = None) -> bool:
         """Past its own stated end. Only a promotion can be, and only when the
         reply gave a date -- nothing here guesses at one."""
-        if not self.valid_until:
+        if not self.valid_until or self.temporal_type != "promotion":
             return False
         try:
             ends = date.fromisoformat(self.valid_until[:10])
@@ -482,6 +532,43 @@ class CoverageNote(BaseModel):
     category: str = "other"
     state: CoverageState = "unsearched"
     note: str = ""
+
+
+class CallReceipt(BaseModel):
+    """One provider call, with what it cost and what it was for.
+
+    Its own row because one press of the button makes more than one, and
+    because the two are different kinds of call: a grounded search that reaches
+    the web, and an extraction that reads text this process already holds.
+    Reporting them as one model name and one token count -- which is what a
+    single `model` field on the attempt forces -- makes the more expensive of
+    the two invisible and the cheaper of the two look like the whole price.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    # `discovery` or `extraction`. What this call was for, not which provider
+    # served it.
+    stage: str = "discovery"
+    model: str = ""
+    # What the registry asked for, beside what answered. A substitution has to
+    # be visible as a difference between two names, not as an absence.
+    asked_for: str = ""
+    grounded: bool = False
+    usage: dict = Field(default_factory=dict)
+    duration_seconds: float | None = None
+    # `ok`, `salvaged`, `failed`, `invalid`, `skipped`. A skipped call is
+    # recorded with its reason, because "no extraction ran" and "extraction
+    # found nothing" are different facts about a packet. `salvaged` means the
+    # provider stopped mid-answer and whole entries were lifted out of what it
+    # had written -- a real result, and not the same as a clean one.
+    outcome: str = "ok"
+    reason: str = ""
+    # What the provider said about why it stopped, when it says anything.
+    # Silence here is itself worth seeing: a truncated answer that reports no
+    # finish reason is a call nobody can account for.
+    finish_reason: str = ""
+    started_at: datetime = Field(default_factory=_now)
 
 
 class ResearchAttempt(BaseModel):
@@ -527,6 +614,40 @@ class ResearchAttempt(BaseModel):
     requested_queries: list[str] = Field(default_factory=list)
     actual_queries: list[str] = Field(default_factory=list)
     raw_response: str = ""
+    # The brief this request was built from, as a dict. Stored because it is
+    # the only record of what was asked for that a person can read without
+    # reading a two-thousand-word prompt, and because a refresh compared with
+    # its baseline has to be comparable on the question as well as the answer.
+    brief: dict = Field(default_factory=dict)
+    # Prompt, brief and extraction versions together. One string, because the
+    # three move together and a packet is only reproducible if all three are
+    # known.
+    strategy_version: str = ""
+    # Every provider call this one action made, in order. A list rather than a
+    # single model/usage pair: the action makes at most two generations and
+    # both are charged, and an attempt that reports one of them is an attempt
+    # whose cost cannot be checked.
+    receipts: list["CallReceipt"] = Field(default_factory=list)
+    # Every page this action tried to open, readable or not.
+    pages: list[dict] = Field(default_factory=list)
+    # The text of every readable page, keyed by its normalised address. Apart
+    # from `pages` so a screen reading an attempt never carries text it does
+    # not show; kept at all because some of it was bought. The reviews page is
+    # billed per review, and an attempt that dropped its text made the recovery
+    # that should have re-read it buy it a second time.
+    page_texts: dict[str, str] = Field(default_factory=dict)
+    # What the search said before anything was opened. Kept apart from
+    # findings: it is the provider's transcription, not a quotation.
+    discovery: dict = Field(default_factory=dict)
+    # Coverage arithmetic over checked evidence, beside how the search itself
+    # went. Never merged with the model's own opinion of its coverage.
+    evidence_summary: dict = Field(default_factory=dict)
+    # The attempt a retest is being judged against, when somebody named one.
+    # Empty for ordinary work.
+    baseline_attempt_id: str = ""
+    # A named harness run, when this attempt came from one. Empty in normal
+    # use -- a pilot is a mode of the same path, never a branch inside it.
+    pilot: str = ""
     validation_issues: list[str] = Field(default_factory=list)
     coverage: list[CoverageNote] = Field(default_factory=list)
     open_questions: list[str] = Field(default_factory=list)

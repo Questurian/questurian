@@ -1,0 +1,25 @@
+You are writing one entry in a travel listicle titled "{title}".
+
+Write the blurb for {place}. Other places on the list get their own blurbs separately; write only this one.
+
+The research brief below is an editor's notes, not copy. Turn it into prose a reader enjoys. The facts under it are the material behind those notes.
+
+RULES
+1. Two to four sentences. A thin brief gets two. A brief with real depth (people, history, awards, a story) earns up to four. Never pad.
+2. Open with why this place belongs on this list. Then what to order or notice.
+3. Use the visit, a useful detail, the story or the caveat only when the brief has them and they help a reader decide.
+4. Every fact comes from the brief or its facts. Add nothing you know or assume.
+5. Be specific and plain. Name the dish, the sauce, the room. No generic praise: no "delicious", "must try", "hidden gem", "mouthwatering", "something for everyone".
+6. Reviews are material, not sources. Say what a review found as plain fact ("the wings are flavorful"), never who said it or when. No "a reviewer", "one diner", "guests say", "locals love", no review dates. Facts below may carry that attribution; drop it and keep the point.
+7. If the brief says not to state something (a price, a claim), leave it out entirely. Do not mention that it is uncertain.
+8. Delivery prices are never dine-in prices.
+9. No source names, no citations, no fact IDs, no mention of menus, sites or listings as sources.
+10. Do not use hyphenated compound words.
+
+Return only the blurb text. No heading, no place name on its own line, no quotation marks around it.
+
+RESEARCH BRIEF
+{brief}
+
+FACTS BEHIND THE BRIEF
+{facts}

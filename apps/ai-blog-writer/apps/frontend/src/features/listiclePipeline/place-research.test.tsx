@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * one call" is a thing a test can say.
  */
 
+const openResearchWorkspace = vi.fn()
 const loadBoard = vi.fn()
 const loadGoogleChecks = vi.fn()
 const loadPlacesAllowance = vi.fn()
@@ -27,6 +28,7 @@ vi.mock('./api', async importOriginal => {
   const actual = await importOriginal<typeof import('./api')>()
   return {
     ...actual,
+    openResearchWorkspace: (...args: unknown[]) => openResearchWorkspace(...args),
     loadBoard: (...args: unknown[]) => loadBoard(...args),
     loadGoogleChecks: (...args: unknown[]) => loadGoogleChecks(...args),
     loadPlacesAllowance: (...args: unknown[]) => loadPlacesAllowance(...args),
@@ -44,6 +46,7 @@ vi.mock('./api', async importOriginal => {
 import { ResearchBlockedError } from './api'
 import { SearchResults } from './components/SearchResults'
 import type {
+  ListicleAttemptDetail,
   ListicleAttemptSummary,
   ListicleFinding,
   ListiclePrep,
@@ -180,6 +183,129 @@ function attempt(overrides: Partial<ListicleAttemptSummary> = {}): ListicleAttem
     finished_at: '2026-09-12T00:21:00+00:00',
     model: 'gemini-2.5-flash',
     running: false,
+    receipts: [
+      {
+        stage: 'discovery',
+        model: 'gemini-2.5-flash',
+        asked_for: 'gemini-2.5-flash',
+        grounded: true,
+        outcome: 'ok',
+        reason: '3 page(s) named, 4 search(es) reported.',
+        finish_reason: 'STOP',
+        usage: { total_tokens: 9000 },
+        duration_seconds: 31.2,
+      },
+      {
+        stage: 'extraction',
+        model: 'gemini-2.5-pro',
+        asked_for: 'gemini-2.5-pro',
+        grounded: false,
+        outcome: 'ok',
+        reason: '4 claim(s) from 3 readable page(s).',
+        finish_reason: 'STOP',
+        usage: { total_tokens: 14000 },
+        duration_seconds: 22.4,
+      },
+    ],
+    generations: 2,
+    grounded_calls: 1,
+    pages_read: 3,
+    pages_attempted: 4,
+    evidence_ready: 3,
+    strategy_version: 'place-research/3+research-brief/1+evidence-extract/1',
+    pilot: '',
+    baseline_attempt_id: '',
+    ...overrides,
+  }
+}
+
+function attemptDetail(
+  overrides: Partial<ListicleAttemptDetail> = {},
+): ListicleAttemptDetail {
+  return {
+    ...attempt(),
+    topic: 'chicken-wings',
+    requested_queries: ['"Example Wings" alitas carta'],
+    actual_queries: [],
+    validation_issues: [],
+    coverage: [],
+    usage: { total_tokens: 900 },
+    duration_seconds: 12.5,
+    prompt_version: 'place-research/3',
+    gap_text: '',
+    raw_response: '{"pages": []}',
+    prompt: 'Find pages about Example Wings…',
+    brief: {
+      version: 'research-brief/1',
+      intent: 'Check Example Wings\u2019s chicken wings.',
+      priority_questions: ['Is it a regular item?'],
+      discovery_leads: [
+        {
+          snippet: 'bar, wings, open until 3am',
+          angle: 'Lima bars still serving wings after midnight',
+          attempt_id: '627fb0e7d4a3',
+          status: 'unverified_lead',
+        },
+      ],
+    },
+    pages: [
+      {
+        requested_url:
+          'https://vertexaisearch.cloud.google.com/grounding-api-redirect/abc',
+        final_url: 'https://elcomercio.pe/alitas',
+        state: 'ok',
+        http_status: 200,
+        title: 'Las mejores alitas',
+        published_at: '2025-04-02',
+        retrieved_at: '2026-09-12T00:20:00+00:00',
+        content_hash: 'deadbeef',
+        byte_count: 41000,
+        origin: 'discovered',
+        reused: false,
+        branch_anchored: false,
+        note: '',
+        chars: 4200,
+      },
+      {
+        requested_url: 'https://rappi.com.pe/example',
+        final_url: 'https://rappi.com.pe/example',
+        state: 'blocked',
+        http_status: 403,
+        title: '',
+        published_at: '',
+        retrieved_at: '2026-09-12T00:20:00+00:00',
+        content_hash: '',
+        byte_count: 0,
+        origin: 'discovered',
+        reused: false,
+        branch_anchored: false,
+        note: 'The page answered 403.',
+        chars: 0,
+      },
+    ],
+    discovery: {
+      pages: [
+        {
+          url: 'https://elcomercio.pe/alitas',
+          publisher: 'El Comercio',
+          title: 'Las mejores alitas',
+          published_at: '2025-04-02',
+          provider_snippet: 'doble fritura y glaseado de rocoto',
+          scope: 'branch',
+          why: 'a review of the wings',
+        },
+      ],
+      searched: ['alitas jesus maria'],
+      not_found: [],
+      notes: [],
+    },
+    evidence_summary: {
+      subject_evidence_ready: 3,
+      review_needed: 1,
+      unsupported: 0,
+      pages_read: 1,
+      pages_attempted: 2,
+    },
     ...overrides,
   }
 }
@@ -192,6 +318,20 @@ function board(overrides: Partial<ListicleResearchBoard> = {}): ListicleResearch
     topic_label: 'chicken wings',
     exclusions: 'no delivery-only kitchens',
     active_attempt: null,
+    reviews_budget: {
+      ceiling: 500,
+      spent: 0,
+      remaining: 500,
+      ours_remaining: 500,
+      reported_remaining: null,
+      reported_limit: null,
+      places_left: 25,
+      exhausted: false,
+      disagrees: false,
+      calls: 0,
+      last_call_at: '',
+    },
+    subject_terms: ['alitas', 'wings'],
     cards: [
       {
         candidate_id: 'cand-wings',
@@ -223,6 +363,11 @@ function finding(overrides: Partial<ListicleFinding> = {}): ListicleFinding {
     curation: 'unreviewed',
     origin: 'research',
     version: 1,
+    validation: 'evidence_ready',
+    validation_notes: [],
+    who_said_it: 'publication',
+    who_name: 'El Comercio',
+    channel: 'unknown',
     attribution: 'attributed',
     author: '',
     observed_at: '',
@@ -283,6 +428,11 @@ function show() {
 }
 
 beforeEach(() => {
+  openResearchWorkspace.mockReset().mockResolvedValue({
+    profile_id: 'prof-1', version: 0, context_key: 'ctx',
+    slots: { why_it_belongs: null, what_to_order_or_notice: [], visit_character: null, useful_detail: null, story_depth: null, caveat: null },
+    supporting_findings: {}, prompt: 'Saved branch prompt', ready: false, stale: false,
+  })
   loadBoard.mockReset().mockResolvedValue({ removed: [], distinct_pairs: [] })
   loadGoogleChecks.mockReset().mockResolvedValue({ checks: {}, running: false })
   loadPlacesAllowance
@@ -364,8 +514,12 @@ describe('the card', () => {
       }),
     )
     show()
+    // Two numbers, not one: how much material came back, and how much of it
+    // rests on a page somebody can open and check.
     expect(
-      await screen.findByText(/4 findings · 1 unresolved question/),
+      await screen.findByText(
+        /4 findings · 3 check out · 3 of 4 pages read · 1 unresolved question/,
+      ),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'View research' })).toBeInTheDocument()
   })
@@ -453,7 +607,12 @@ describe('the card', () => {
     startPlaceResearch.mockResolvedValue({ attempt: attempt(), profile: profile() })
     show()
     const button = await screen.findByRole('button', { name: 'Research Example Wings' })
-    expect(screen.getByText(/One grounded request. No automatic retries./)).toBeInTheDocument()
+    // The budget, said before the press rather than discovered after it.
+    expect(
+      screen.getByText(
+        /Google.s reviews, one web search and one reading pass — two model calls at most, up to eight pages opened\. No automatic retries\./,
+      ),
+    ).toBeInTheDocument()
 
     await userEvent.click(button)
 
@@ -545,14 +704,125 @@ describe('the research viewer', () => {
     )
     show()
     await userEvent.click(await screen.findByRole('button', { name: 'View research' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Automated research (existing)' }))
     return screen.findByRole('dialog', { name: 'Research for Example Wings' })
   }
+
+  it('shows the words the reviews were actually asked for in', async () => {
+    const dialog = await openViewer()
+
+    // Derived from the run's own searches, not typed and not translated. If
+    // they come out wrong the wrong reviews were bought, so a person reading a
+    // thin result has to be able to see the question before judging the place.
+    expect(within(dialog).getByText(/alitas, wings/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/not translated/)).toBeInTheDocument()
+  })
+
+  it('says how many more places the free reviews allowance covers', async () => {
+    const dialog = await openViewer()
+
+    // The unit a decision is made in. "500 reviews" is arithmetic somebody has
+    // to do first; "25 more places" is the answer.
+    expect(within(dialog).getByText(/About 25 more places/)).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(/500 of 500 reviews left on the free plan/),
+    ).toBeInTheDocument()
+  })
+
+  it('says the allowance is spent without implying anything broke', async () => {
+    loadResearchBoard.mockResolvedValue(
+      board({
+        cards: [
+          {
+            candidate_id: 'cand-wings',
+            name: 'Example Wings',
+            district: 'Jesús María',
+            prep: prep(),
+            readiness: readiness(),
+            profile: profile(),
+            last_attempt: attempt(),
+          },
+        ],
+        reviews_budget: {
+          ceiling: 500,
+          spent: 500,
+          remaining: 0,
+          ours_remaining: 0,
+          reported_remaining: 0,
+          reported_limit: 500,
+          places_left: 0,
+          exhausted: true,
+          disagrees: false,
+          calls: 25,
+          last_call_at: '2026-09-12T18:00:00Z',
+        },
+      }),
+    )
+    show()
+    await userEvent.click(await screen.findByRole('button', { name: 'View research' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Automated research (existing)' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Research for Example Wings',
+    })
+
+    // Research is not blocked -- only the reviews are. Saying "you cannot
+    // research" here would be false, and would stop somebody doing work that
+    // costs nothing extra.
+    expect(
+      within(dialog).getByText(/will not fetch customer reviews/),
+    ).toBeInTheDocument()
+    expect(within(dialog).getByText(/will not start charging/)).toBeInTheDocument()
+  })
+
+  it('shows both counts when the key is being spent somewhere else', async () => {
+    loadResearchBoard.mockResolvedValue(
+      board({
+        cards: [
+          {
+            candidate_id: 'cand-wings',
+            name: 'Example Wings',
+            district: 'Jesús María',
+            prep: prep(),
+            readiness: readiness(),
+            profile: profile(),
+            last_attempt: attempt(),
+          },
+        ],
+        reviews_budget: {
+          ceiling: 500,
+          spent: 20,
+          remaining: 100,
+          ours_remaining: 480,
+          reported_remaining: 100,
+          reported_limit: 500,
+          places_left: 5,
+          exhausted: false,
+          disagrees: true,
+          calls: 1,
+          last_call_at: '2026-09-12T18:00:00Z',
+        },
+      }),
+    )
+    show()
+    await userEvent.click(await screen.findByRole('button', { name: 'View research' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Automated research (existing)' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Research for Example Wings',
+    })
+
+    // The lower number is the one that gates, but hiding the disagreement
+    // would hide that another app is on the same key.
+    expect(within(dialog).getByText(/About 5 more places/)).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(/Our count says 480 and RapidAPI says 100/),
+    ).toBeInTheDocument()
+  })
 
   it('opens free, and shows each finding with its source and dates', async () => {
     const dialog = await openViewer()
     expect(loadProfileResearch).toHaveBeenCalledWith('prof-1')
     expect(startPlaceResearch).not.toHaveBeenCalled()
-    expect(within(dialog).getByText(/fried twice/)).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: /fried twice/ })).toBeInTheDocument()
     expect(within(dialog).getByRole('link', { name: 'El Comercio' })).toBeInTheDocument()
     expect(within(dialog).getByText('Published 2025-04-02')).toBeInTheDocument()
   })
@@ -568,7 +838,7 @@ describe('the research viewer', () => {
 
   it('opens a row to its supporting passage and provenance', async () => {
     const dialog = await openViewer()
-    await userEvent.click(within(dialog).getByText(/fried twice/))
+    await userEvent.click(within(dialog).getByRole('button', { name: /fried twice/ }))
     expect(
       within(dialog).getByText('doble fritura y glaseado de rocoto'),
     ).toBeInTheDocument()
@@ -656,26 +926,13 @@ describe('the research viewer', () => {
     const dialog = await openViewer()
     // The close button takes focus when the drawer opens, so tabbing reaches
     // the controls in order without a mouse.
-    expect(within(dialog).getByRole('button', { name: 'Close research' })).toHaveFocus()
+    expect(within(dialog).getByRole('tab', { name: 'Automated research (existing)' })).toHaveFocus()
     await userEvent.tab()
     expect(document.activeElement).not.toBe(document.body)
   })
 
   it('shows what was asked for apart from what the provider says it searched', async () => {
-    loadResearchAttempt.mockResolvedValue({
-      ...attempt(),
-      topic: 'chicken-wings',
-      requested_queries: ['"Example Wings" alitas carta'],
-      actual_queries: [],
-      validation_issues: [],
-      coverage: [],
-      usage: { total_tokens: 900 },
-      duration_seconds: 12.5,
-      prompt_version: 'place-research/1',
-      gap_text: '',
-      raw_response: '{"findings": []}',
-      prompt: 'Research Example Wings…',
-    })
+    loadResearchAttempt.mockResolvedValue(attemptDetail())
     const dialog = await openViewer()
     await userEvent.click(within(dialog).getByText(/Research history/))
     await userEvent.click(
@@ -686,6 +943,89 @@ describe('the research viewer', () => {
     ).toBeInTheDocument()
     expect(
       within(dialog).getByText(/it did not say. What was asked for is not evidence/),
+    ).toBeInTheDocument()
+  })
+
+  it('shows every call the action made, not just the one that answered', async () => {
+    loadResearchAttempt.mockResolvedValue(attemptDetail())
+    const dialog = await openViewer()
+    await userEvent.click(within(dialog).getByText(/Research history/))
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: /initial · completed/ }),
+    )
+    // Two generations, on two models, each with its own cost. One press, one
+    // bill, and the bill has two lines on it.
+    expect(await within(dialog).findByText(/searched the web/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/read collected text/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/gemini-2.5-pro/)).toBeInTheDocument()
+  })
+
+  it('separates a page it could not open from a subject nothing is published about', async () => {
+    loadResearchAttempt.mockResolvedValue(attemptDetail())
+    const dialog = await openViewer()
+    await userEvent.click(within(dialog).getByText(/Research history/))
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: /initial · completed/ }),
+    )
+    await userEvent.click(await within(dialog).findByText(/Pages opened/))
+    expect(within(dialog).getByText('blocked')).toBeInTheDocument()
+    // The address the redirects ended at, which is the link a citation should
+    // carry -- not the grounding redirect that expires.
+    expect(
+      within(dialog).getByRole('link', { name: 'Las mejores alitas' }),
+    ).toHaveAttribute('href', 'https://elcomercio.pe/alitas')
+    expect(within(dialog).getByText(/published 2025-04-02/)).toBeInTheDocument()
+  })
+
+  it('keeps what the search reported apart from what the pages say', async () => {
+    loadResearchAttempt.mockResolvedValue(attemptDetail())
+    const dialog = await openViewer()
+    await userEvent.click(within(dialog).getByText(/Research history/))
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: /initial · completed/ }),
+    )
+    expect(
+      await within(dialog).findByText(/What the search reported, unverified/),
+    ).toBeInTheDocument()
+  })
+
+  it('says how a finding was checked, and why it was not', async () => {
+    loadProfileResearch.mockResolvedValue(
+      research({
+        findings: [
+          finding(),
+          finding({
+            finding_id: 'f2',
+            text: 'The chain charges S/ 19.00 for eight wings everywhere.',
+            validation: 'review_needed',
+            validation_notes: [
+              'Marked as this branch, but no page carrying it shows this branch.',
+            ],
+          }),
+        ],
+      }),
+    )
+    const dialog = await openViewer()
+    expect(within(dialog).getByText('Checks out')).toBeInTheDocument()
+    expect(within(dialog).getByText('Needs a look')).toBeInTheDocument()
+    // The count line says both numbers: how much came back, and how much of it
+    // rests on a page somebody can open.
+    expect(
+      within(dialog).getByText(
+        (_, element) =>
+          element?.className === 'lp-muted lp-research-count' &&
+          /2 findings · 1 checks out · 1 need a look/.test(
+            element.textContent ?? '',
+          ),
+      ),
+    ).toBeInTheDocument()
+    await userEvent.click(
+      within(dialog).getByRole('button', {
+        name: /The chain charges/,
+      }),
+    )
+    expect(
+      await within(dialog).findByText(/no page carrying it shows this branch/),
     ).toBeInTheDocument()
   })
 })

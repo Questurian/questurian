@@ -301,6 +301,20 @@ function researchBoard(candidates: ListicleCandidate[]): ListicleResearchBoard {
     topic_label: 'cevicherias',
     exclusions: 'no chains',
     active_attempt: null,
+    reviews_budget: {
+      ceiling: 500,
+      spent: 0,
+      remaining: 500,
+      ours_remaining: 500,
+      reported_remaining: null,
+      reported_limit: null,
+      places_left: 25,
+      exhausted: false,
+      disagrees: false,
+      calls: 0,
+      last_call_at: '',
+    },
+    subject_terms: ['cebiche'],
     cards: candidates.map(candidate => {
       const prep = PREP[candidate.candidate_id] ?? emptyPrep(candidate.candidate_id)
       PREP[candidate.candidate_id] = prep

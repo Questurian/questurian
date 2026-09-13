@@ -18,6 +18,8 @@ in three listicles a year apart.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
+
 import hashlib
 import json
 import re
@@ -585,6 +587,19 @@ _FINDING_COLUMNS: tuple[tuple[str, str], ...] = (
     ("author", "TEXT NOT NULL DEFAULT ''"),
     ("observed_at", "TEXT NOT NULL DEFAULT ''"),
     ("updated_at", "TEXT NOT NULL DEFAULT ''"),
+    # What the checks made of it, and why. `not_checked` is the honest default
+    # for every row written before checking existed and for every row somebody
+    # typed: neither has been checked, and reading either as passing would be
+    # the same mistake as an unchecked place reading as one that came back
+    # clean.
+    ("validation", "TEXT NOT NULL DEFAULT 'not_checked'"),
+    ("validation_notes", "TEXT NOT NULL DEFAULT '[]'"),
+    # Who is behind the claim, and -- for a price -- which channel it was seen
+    # on. Both were absent, and both were being lost: a menu's own description
+    # read as a customer observation, and a delivery price read as the price.
+    ("who_said_it", "TEXT NOT NULL DEFAULT 'unknown'"),
+    ("who_name", "TEXT NOT NULL DEFAULT ''"),
+    ("channel", "TEXT NOT NULL DEFAULT 'unknown'"),
 )
 
 # Something published, once per profile. Kept apart from the finding because
@@ -733,6 +748,18 @@ def finding_text_key(text: str, scope: str = "unknown") -> str:
     ).hexdigest()
 
 
+def _passage_words(text: str) -> str:
+    """A quoted passage as bare words, accents folded, for matching it again."""
+    folded = unicodedata.normalize("NFKD", (text or "").lower())
+    folded = "".join(ch for ch in folded if not unicodedata.combining(ch))
+    return " ".join(re.findall(r"[a-z0-9]+", folded))
+
+
+# Fewer words than this and two claims quoting it may well be different
+# claims: "alitas BBQ" supports a flavour and an opinion alike.
+_SAME_PASSAGE_MIN_WORDS = 5
+
+
 def _url_key(url: str) -> str:
     return hashlib.sha1(url.strip().lower().encode("utf-8")).hexdigest()
 
@@ -783,6 +810,11 @@ def _hydrate_finding(conn: sqlite3.Connection, row: sqlite3.Row) -> ResearchFind
         attempt_id=row["attempt_id"] or "",
         author=row["author"] or "",
         observed_at=row["observed_at"] or "",
+        validation=row["validation"] or "not_checked",
+        validation_notes=_list(row["validation_notes"]),
+        who_said_it=row["who_said_it"] or "unknown",
+        who_name=row["who_name"] or "",
+        channel=row["channel"] or "unknown",
         evidence=evidence,
         created_at=_parse(row["found_at"]),
         updated_at=_parse(updated),
@@ -845,16 +877,17 @@ def sources(profile_id: str) -> list[ResearchSource]:
     ]
 
 
-def save_source(profile_id: str, source: ResearchSource) -> str:
+def save_source(profile_id: str, source: ResearchSource, *, connection: sqlite3.Connection | None = None) -> str:
     """Record one publication, or find the one already recorded.
 
     Returns the id it is stored under, which may not be the id handed in: the
     same article found by two requests is one source, and the second request's
     findings hang off the first request's row.
     """
-    ensure_research_tables()
+    if connection is None:
+        ensure_research_tables()
     key = _url_key(source.url) if source.url else f"noturl:{source.source_id}"
-    with get_db_connection() as conn:
+    with (nullcontext(connection) if connection is not None else get_db_connection()) as conn:
         existing = conn.execute(
             "SELECT source_id FROM listicle_research_sources WHERE profile_id = ? "
             "AND url_key = ?",
@@ -899,10 +932,11 @@ def save_source(profile_id: str, source: ResearchSource) -> str:
     return source.source_id
 
 
-def attach_evidence(finding_id: str, evidence: FindingEvidence) -> bool:
+def attach_evidence(finding_id: str, evidence: FindingEvidence, *, connection: sqlite3.Connection | None = None) -> bool:
     """Hang one source under one finding. False when it was already there."""
-    ensure_research_tables()
-    with get_db_connection() as conn:
+    if connection is None:
+        ensure_research_tables()
+    with (nullcontext(connection) if connection is not None else get_db_connection()) as conn:
         cursor = conn.execute(
             "INSERT OR IGNORE INTO listicle_finding_sources (finding_id, "
             "source_id, supporting_excerpt, evidence_scope, attached_at) "
@@ -918,7 +952,7 @@ def attach_evidence(finding_id: str, evidence: FindingEvidence) -> bool:
     return bool(cursor.rowcount)
 
 
-def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
+def save_finding(finding_to_save: ResearchFinding, *, connection: sqlite3.Connection | None = None) -> tuple[str, bool]:
     """Write one finding, or recognise the one already held.
 
     Returns (id, is_new). A finding whose words and scope match one already on
@@ -930,15 +964,24 @@ def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
     topics, categories and sources -- it cannot change the text, the dates or
     the curation state of a row somebody has already worked on.
     """
-    ensure_research_tables()
+    if connection is None:
+        ensure_research_tables()
     key = finding_text_key(finding_to_save.text, finding_to_save.scope)
     now = _iso(datetime.now(timezone.utc))
-    with get_db_connection() as conn:
+    with (nullcontext(connection) if connection is not None else get_db_connection()) as conn:
         existing = conn.execute(
             "SELECT * FROM listicle_profile_claims WHERE profile_id = ? "
             "AND text_key = ?",
             (finding_to_save.profile_id, key),
         ).fetchone()
+        # The same passage from the same source, reworded. A model never writes
+        # a sentence the same way twice, so matching on words alone stored
+        # BarBarian's twenty reviews again on every press -- 42 rows for what
+        # was one packet and its retests.
+        by_passage = False
+        if existing is None:
+            existing = _same_passage(conn, finding_to_save)
+            by_passage = existing is not None
         if existing is not None:
             topics = sorted(
                 {*_list(existing["topics"]), *finding_to_save.topics}
@@ -951,6 +994,50 @@ def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
                 "updated_at = ? WHERE claim_id = ?",
                 (_json(topics), _json(categories), now, existing["claim_id"]),
             )
+            # A later pass re-checked the same sentence. Its verdict replaces
+            # the old one ONLY on a row nobody has touched: `version` is bumped
+            # by every hand edit, so version 1 and origin `research` together
+            # mean "written by a request, never corrected". A row somebody has
+            # worked on keeps what they left, and the new pass's provenance is
+            # attached above either way.
+            if (
+                int(existing["version"] or 1) == 1
+                and (existing["origin"] or "") in {"research", "external_import"}
+                and finding_to_save.validation != "not_checked"
+            ):
+                conn.execute(
+                    "UPDATE listicle_profile_claims SET validation = ?, "
+                    "validation_notes = ?, who_said_it = ?, who_name = ?, "
+                    "channel = ?, scope = ?, temporal_type = ?, "
+                    "source_published_at = ? WHERE claim_id = ?",
+                    (
+                        finding_to_save.validation,
+                        _json(finding_to_save.validation_notes),
+                        finding_to_save.who_said_it,
+                        finding_to_save.who_name,
+                        finding_to_save.channel,
+                        finding_to_save.scope,
+                        finding_to_save.temporal_type,
+                        finding_to_save.source_published_at,
+                        existing["claim_id"],
+                    ),
+                )
+                # Matched by passage, so the words differ. An untouched row
+                # takes the newer wording: the extraction's rules move (a
+                # dated observation now says its year), and a row nobody
+                # corrected has no wording anybody chose.
+                if by_passage:
+                    conn.execute(
+                        "UPDATE listicle_profile_claims SET text = ?, text_key = ?, "
+                        "event_date = ?, about_year = ? WHERE claim_id = ?",
+                        (
+                            finding_to_save.text,
+                            key,
+                            finding_to_save.event_date,
+                            _year_of(finding_to_save.event_date),
+                            existing["claim_id"],
+                        ),
+                    )
             found_id = str(existing["claim_id"])
         else:
             found_id = finding_to_save.finding_id
@@ -959,8 +1046,10 @@ def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
                 "text, source_name, source_url, found_at, about_year, text_key, "
                 "categories, topics, scope, temporal_type, event_date, "
                 "source_published_at, valid_until, curation, origin, version, "
-                "attempt_id, author, observed_at, updated_at) VALUES "
-                "(?, ?, ?, ?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "attempt_id, author, observed_at, updated_at, validation, "
+                "validation_notes, who_said_it, who_name, channel) VALUES "
+                "(?, ?, ?, ?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+                "?, ?, ?, ?, ?)",
                 (
                     found_id,
                     finding_to_save.profile_id,
@@ -983,12 +1072,49 @@ def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
                     finding_to_save.author,
                     finding_to_save.observed_at,
                     now,
+                    finding_to_save.validation,
+                    _json(finding_to_save.validation_notes),
+                    finding_to_save.who_said_it,
+                    finding_to_save.who_name,
+                    finding_to_save.channel,
                 ),
             )
-    for item in finding_to_save.evidence:
-        attach_evidence(found_id, item)
-    _touch(finding_to_save.profile_id)
+        for item in finding_to_save.evidence:
+            attach_evidence(found_id, item, connection=conn)
+        conn.execute("UPDATE listicle_place_profiles SET updated_at=? WHERE profile_id=?",
+                     (now, finding_to_save.profile_id))
     return found_id, existing is None
+
+
+def _same_passage(conn, finding_to_save: ResearchFinding):
+    """An existing finding on this profile quoting the same source the same way.
+
+    Same source record, same passage word for word once spacing and accents are
+    set aside, same scope. The scope is kept for the reason it is in the text
+    key: a brand sentence and a branch sentence are different assertions.
+    """
+    for item in finding_to_save.evidence:
+        words = _passage_words(item.supporting_excerpt)
+        if len(words.split()) < _SAME_PASSAGE_MIN_WORDS:
+            continue
+        rows = conn.execute(
+            "SELECT c.*, s.supporting_excerpt AS matched_excerpt "
+            "FROM listicle_profile_claims c JOIN listicle_finding_sources s "
+            "ON s.finding_id = c.claim_id WHERE c.profile_id = ? "
+            "AND s.source_id = ? AND c.scope = ? AND c.attempt_id != ?",
+            (
+                finding_to_save.profile_id,
+                item.source_id,
+                finding_to_save.scope,
+                # Two claims one packet draws from one sentence are two
+                # claims; only a later pass rewording the same one is a repeat.
+                finding_to_save.attempt_id,
+            ),
+        ).fetchall()
+        for row in rows:
+            if _passage_words(row["matched_excerpt"]) == words:
+                return row
+    return None
 
 
 def _year_of(value: str) -> int | None:

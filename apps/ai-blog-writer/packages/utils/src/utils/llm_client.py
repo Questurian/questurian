@@ -161,6 +161,7 @@ def _invoke_gemini_structured_tool(
     input_schema: dict[str, Any],
     max_tokens: int,
     project: Optional[str] = None,
+    usage_out: Optional[dict[str, Any]] = None,
 ) -> tuple[dict[str, Any], str]:
     return _invoke_gemini_tool(
         prompt=prompt,
@@ -170,6 +171,7 @@ def _invoke_gemini_structured_tool(
         input_schema=input_schema,
         max_tokens=max_tokens,
         project=project,
+        usage_out=usage_out,
     )
 
 
@@ -216,6 +218,7 @@ def invoke_structured_tool(
     input_schema: dict[str, Any],
     max_tokens: int = 4096,
     project: Optional[str] = None,
+    usage_out: Optional[dict[str, Any]] = None,
 ) -> tuple[dict[str, Any], str]:
     """Force a schema-shaped tool payload from whichever provider serves
     ``model_name``. Callers get the same ``(payload, resolved_model)`` contract
@@ -246,6 +249,7 @@ def invoke_structured_tool(
         input_schema=input_schema,
         max_tokens=max_tokens,
         project=project,
+        usage_out=usage_out,
     )
 
 

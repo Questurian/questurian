@@ -1,5 +1,12 @@
 # One place, one request, one profile
 
+> **Amended by [ADR 0040](0040-a-research-request-reads-its-sources.md).** The
+> one-generation budget below is now one grounded search plus one ungrounded
+> extraction over pages the request has actually fetched and can check. Nothing
+> else in this decision changed: the button is still the authorisation, one
+> request still runs at a time, nothing still retries, and curation is still not
+> deletion.
+
 ## Context
 
 The board tells you a place exists and that several searches found it. It does

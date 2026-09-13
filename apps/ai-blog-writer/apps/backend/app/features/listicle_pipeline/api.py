@@ -7,6 +7,7 @@ the event loop freezes the whole server for the length of it.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -18,7 +19,7 @@ from app.core.staff_auth import require_staff
 from ..prompt2blog.contracts_v4 import GrillState
 from ..prompt2blog.dependencies import DefaultPrompt2BlogLLM
 from ..prompt2blog.grill_v4 import GrillDependencies, GrillUnusableResponse
-from . import service
+from . import entry_blurb, research_workspace, service
 from .shapes import SHAPES, SHAPES_BY_KEY
 
 logger = logging.getLogger(__name__)
@@ -758,6 +759,7 @@ def _research_call(prompt: str):
 
     from .profile_research import (
         PLACE_RESEARCH_MAX_TOKENS,
+        PLACE_RESEARCH_TEMPERATURE,
         PLACE_RESEARCH_TIMEOUT_SECONDS,
     )
     from .profile_service import TransportResult
@@ -766,6 +768,7 @@ def _research_call(prompt: str):
         "listicle.profile_research",
         prompt,
         max_tokens=PLACE_RESEARCH_MAX_TOKENS,
+        temperature=PLACE_RESEARCH_TEMPERATURE,
         timeout_seconds=PLACE_RESEARCH_TIMEOUT_SECONDS,
         endpoint="generateContent:googleSearch",
     )
@@ -789,7 +792,64 @@ def _research_call(prompt: str):
         # asked for: those are stored separately and are not evidence that
         # anything was searched.
         actual_queries=list(getattr(result, "search_queries", []) or []),
+        # Why it stopped. A reply cut off at the token ceiling and a reply that
+        # finished look identical from their text, and one of the two failures
+        # this pipeline has actually seen was exactly that.
+        finish_reason=str(getattr(result, "finish_reason", "") or ""),
+        grounding_chunks=list(getattr(result, "grounding_chunks", []) or []),
+        grounding_supports=list(getattr(result, "grounding_supports", []) or []),
     )
+
+
+def _extract_call(prompt: str):
+    """Collected page text in, checkable claims out. No search tool.
+
+    Its own job id, so the reading half of a research action is legible beside
+    the searching half -- they run on different models for different reasons and
+    a single number over both hides which one is expensive.
+
+    A schema the provider holds the reply to, rather than free text. Two of the
+    five real calls this work is measured against came back as unparseable JSON
+    after spending their whole output budget.
+
+    A response schema rather than a forced tool call. The first real extraction
+    under the reviews API (002330f8b00c) read the pages well and died as
+    `MALFORMED_FUNCTION_CALL`: gemini-2.5-pro wrote
+    `print(default_api.record_evidence(...))` as text, cut off mid-entry, under
+    an 8,192-token ceiling its own thinking is charged against. The listicle
+    review call hit the same transport failure first and left forced tools for
+    the same reason (`_review_call`).
+    """
+    from app.shared.model_calls import schema_json
+
+    from .evidence import EXTRACTION_MAX_TOKENS, EXTRACTION_SCHEMA
+    from .profile_service import TransportResult
+
+    result = schema_json(
+        "listicle.evidence_extract",
+        prompt=prompt,
+        schema=EXTRACTION_SCHEMA,
+        max_tokens=EXTRACTION_MAX_TOKENS,
+        endpoint="evidence_extract",
+    )
+    return TransportResult(
+        text=json.dumps(getattr(result, "payload", {}) or {}, ensure_ascii=False),
+        model=str(getattr(result, "model_name", "") or ""),
+        usage=dict(getattr(result, "usage", {}) or {}),
+    )
+
+
+def _read_pages(urls, *, budget, already_read=None):
+    """The pages one research action opens.
+
+    Named here, beside the two provider calls, because it is the third thing
+    this feature does to the outside world and it belongs where the other two
+    are replaced. A test that cannot stand in front of it is a test that reaches
+    the real web.
+    """
+    from .source_reader import read_pages
+
+    return read_pages(urls, budget=budget, already_read=already_read)
 
 
 def _staff_name(staff) -> str:
@@ -912,6 +972,8 @@ def research_one_listicle_place(
         candidate_id,
         idempotency_key=req.idempotency_key,
         transport=_research_call,
+        extract=_extract_call,
+        reader=_read_pages,
         mode=req.mode,
         gap_text=req.gap_text,
         expected_prep_version=req.expected_prep_version,
@@ -999,3 +1061,35 @@ def edit_listicle_possible_angle(
         angle_id,
         req.model_dump(exclude_unset=True),
     )
+
+
+# Manual article-entry research. Reads and preview never invoke a provider.
+@router.get("/board/{run_id}/candidates/{candidate_id}/workspace")
+def get_research_workspace(run_id: str, candidate_id: str, _staff=Depends(require_staff)):
+    return _research(research_workspace.view, run_id, candidate_id)
+
+
+@router.post("/board/{run_id}/candidates/{candidate_id}/workspace/preview")
+def preview_research_workspace(run_id: str, candidate_id: str, body: research_workspace.PreviewInput, _staff=Depends(require_staff)):
+    return _research(research_workspace.preview, run_id, candidate_id, body)
+
+
+@router.post("/board/{run_id}/candidates/{candidate_id}/workspace/open")
+def open_research_workspace(run_id: str, candidate_id: str, _staff=Depends(require_staff)):
+    return _research(research_workspace.open_workspace, run_id, candidate_id)
+
+
+@router.post("/board/{run_id}/candidates/{candidate_id}/workspace/apply")
+def apply_research_workspace(run_id: str, candidate_id: str, body: research_workspace.ApplyInput, staff=Depends(require_staff)):
+    return _research(research_workspace.apply, run_id, candidate_id, body, staff=_staff_name(staff))
+
+
+@router.patch("/board/{run_id}/candidates/{candidate_id}/workspace")
+def edit_research_workspace(run_id: str, candidate_id: str, body: research_workspace.EditInput, _staff=Depends(require_staff)):
+    return _research(research_workspace.edit, run_id, candidate_id, body)
+
+
+@router.put("/board/{run_id}/candidates/{candidate_id}/workspace/blurb")
+def save_entry_blurb(run_id: str, candidate_id: str, body: entry_blurb.SaveInput, _staff=Depends(require_staff)):
+    """Save the blurb the operator pasted back or typed. The app calls no model."""
+    return _research(entry_blurb.save, run_id, candidate_id, body)

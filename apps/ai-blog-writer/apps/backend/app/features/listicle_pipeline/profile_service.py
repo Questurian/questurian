@@ -30,11 +30,24 @@ import re
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
-from . import candidate_prep, profile_research, profile_store, research_store
+from . import (
+    candidate_prep,
+    evidence,
+    profile_research,
+    profile_store,
+    research_store,
+    review_selection,
+    reviews_api,
+    reviews_budget,
+    source_reader,
+)
 from .candidate_prep import BoardContext, Prep
 from .profiles import (
+    CallReceipt,
+    CoverageNote,
     FindingEvidence,
     PossibleAngle,
     ResearchAttempt,
@@ -45,7 +58,37 @@ from .profiles import (
 
 logger = logging.getLogger(__name__)
 
-RESEARCH_MODES = ("initial", "gap", "refresh")
+# `extract_only` is the recovery mode ADR 0040 asks for: read the pages this
+# attempt's predecessor already collected, extract from them again, and buy no
+# search. It exists because an extraction that comes back malformed must not
+# cost a second search to fix, and because "run it again" has to mean something
+# narrower than "buy the whole thing again".
+RESEARCH_MODES = ("initial", "gap", "refresh", "extract_only")
+
+# Prompt, brief and extraction versions together. Stored on every attempt: a
+# packet is only reproducible when all three are known, and a comparison
+# between two packets is only honest when it can say which of the three moved.
+STRATEGY_VERSION = (
+    f"{profile_research.PROMPT_VERSION}+"
+    f"{profile_research.research_brief.BRIEF_VERSION}+"
+    f"{evidence.EXTRACTION_VERSION}"
+)
+
+# The closed vocabulary a finding's `kind` has to come from. An invented label
+# is filed as `other` rather than stored, because a taxonomy nobody applies
+# consistently cannot be counted -- and counting is the only thing done with it.
+_CLAIM_KINDS = {
+    "award",
+    "recognition",
+    "review",
+    "history",
+    "person",
+    "signature",
+    "setting",
+    "practice",
+    "price",
+    "other",
+}
 
 
 @dataclass
@@ -62,10 +105,21 @@ class TransportResult:
     source_urls: list[str] = field(default_factory=list)
     source_titles: list[str] = field(default_factory=list)
     model: str = ""
+    # What the registry asked for, when that differs from what answered.
+    asked_for: str = ""
     usage: dict = field(default_factory=dict)
     # What the provider says it searched, when it says anything. Never mixed
     # with the directions we asked for.
     actual_queries: list[str] = field(default_factory=list)
+    # Why the provider stopped. A reply truncated at the token ceiling and a
+    # reply that finished are indistinguishable from their text alone, and one
+    # of the two real failures this pipeline has seen was exactly that.
+    finish_reason: str = ""
+    # The search's own results and the provider's attribution of the answer to
+    # them. Where a discovered page's address comes from: an address the model
+    # typed is a guess, and it is never opened.
+    grounding_chunks: list[dict] = field(default_factory=list)
+    grounding_supports: list[dict] = field(default_factory=list)
 
 
 class Blocked(ValueError):
@@ -152,6 +206,24 @@ def board(run_id: str) -> dict:
         "topic_label": ctx.topic_label,
         "exclusions": ctx.exclusions,
         "active_attempt": _attempt_summary(active) if active else None,
+        # What is left of the free reviews allowance, said in places rather
+        # than in objects. On the board because this is the screen the button
+        # is pressed from, and a budget nobody can see before pressing is not
+        # a budget.
+        "reviews_budget": {
+            **reviews_budget.status().as_dict(),
+            # Said on the board because nothing else says it. The app backend
+            # reads apps/backend/.env, the key was put in the app root's, and
+            # every press from the screen quietly bought no reviews.
+            "key_configured": bool(reviews_api.api_key()),
+        },
+        # The words the reviews will be asked for in. Derived, not typed, so
+        # the screen has to be able to show them: if they come out wrong, the
+        # reviews that were bought are the wrong ones, and a thin result would
+        # otherwise read as a fact about the place.
+        "subject_terms": review_selection.subject_terms(
+            ctx.run_id, topic_label=ctx.topic_label
+        ),
         "cards": cards,
     }
 
@@ -180,6 +252,12 @@ def _profile_summary(profile_id: str, topic: str) -> dict:
         "district": profile.district,
         "findings_total": len(findings),
         "findings_this_topic": len(for_topic),
+        # Beside the count above and over the same rows, so a card can say how
+        # many of the findings it counts check out without mixing a profile
+        # total with one attempt's number.
+        "ready_this_topic": sum(
+            1 for item in for_topic if item.validation == "evidence_ready"
+        ),
         "kept": sum(1 for item in for_topic if item.curation == "kept"),
         "unreviewed": sum(1 for item in for_topic if item.curation == "unreviewed"),
         "unattributed": sum(
@@ -215,6 +293,50 @@ def _attempt_summary(attempt: ResearchAttempt) -> dict:
         "finished_at": _iso(attempt.finished_at) if attempt.finished_at else "",
         "model": attempt.model,
         "running": attempt.state == "running",
+        # What the action actually cost, on the summary rather than only in the
+        # detail: one press makes up to two generations, and a card showing one
+        # model name is a card showing half the bill.
+        "receipts": [
+            {
+                "stage": receipt.stage,
+                "model": receipt.model,
+                "asked_for": receipt.asked_for,
+                "grounded": receipt.grounded,
+                "outcome": receipt.outcome,
+                "reason": receipt.reason,
+                "finish_reason": receipt.finish_reason,
+                "usage": dict(receipt.usage),
+                "duration_seconds": receipt.duration_seconds,
+            }
+            for receipt in attempt.receipts
+        ],
+        "generations": sum(
+            1 for receipt in attempt.receipts if receipt.outcome != "skipped"
+        ),
+        "grounded_calls": sum(
+            1
+            for receipt in attempt.receipts
+            if receipt.grounded and receipt.outcome != "skipped"
+        ),
+        "pages_read": sum(
+            1 for page in attempt.pages if page.get("state") == "ok"
+        ),
+        "pages_attempted": len(attempt.pages),
+        # Completion is operational. Evidence is separate and always will be:
+        # a request that ran is not a request that found anything, and the two
+        # were the same number on the screen this replaces.
+        "evidence_ready": int(
+            attempt.evidence_summary.get("subject_evidence_ready", 0) or 0
+        ),
+        # Every claim that checks out, the subject or not. Beside the subject
+        # count because the two differ, and a screen that shows only the
+        # smaller one under "findings" reads as claims failing.
+        "evidence_ready_total": int(
+            attempt.evidence_summary.get("evidence_ready_total", 0) or 0
+        ),
+        "strategy_version": attempt.strategy_version,
+        "pilot": attempt.pilot,
+        "baseline_attempt_id": attempt.baseline_attempt_id,
     }
 
 
@@ -241,6 +363,16 @@ def attempt_view(attempt_id: str) -> dict:
             # and the screen keeps it closed.
             "raw_response": attempt.raw_response,
             "prompt": attempt.prompt,
+            # The request, as a person can read it without reading the prompt.
+            "brief": dict(attempt.brief),
+            # Every page this action tried to open, readable or not. An
+            # unreadable page is the honest shape of an access gap and is the
+            # thing the screen before this one could not show at all.
+            "pages": list(attempt.pages),
+            # What the search said before anything was opened, kept apart from
+            # what the pages turned out to say.
+            "discovery": dict(attempt.discovery),
+            "evidence_summary": dict(attempt.evidence_summary),
         }
     )
     return view
@@ -324,6 +456,14 @@ def _finding_view(finding: ResearchFinding, sources: dict) -> dict:
         "curation": finding.curation,
         "origin": finding.origin,
         "version": finding.version,
+        # What the checks made of it, and why. Shown beside curation and never
+        # instead of it: one is what a machine could establish, the other is
+        # what a person decided, and neither substitutes for the other.
+        "validation": finding.validation,
+        "validation_notes": list(finding.validation_notes),
+        "who_said_it": finding.who_said_it,
+        "who_name": finding.who_name,
+        "channel": finding.channel,
         "attribution": finding.attribution,
         "author": finding.author,
         "observed_at": finding.observed_at,
@@ -567,19 +707,167 @@ def _build_request(
         topic_label=ctx.topic_label,
         standard=ctx.standard,
         exclusions=ctx.exclusions,
+        # Read once, here, from the run's own stored search evidence. Carried
+        # on the request so the brief stays a pure function of it.
+        subject_terms=review_selection.subject_terms(
+            ctx.run_id, topic_label=ctx.topic_label
+        ),
+        # Each lead with the search that produced it. The version before this
+        # one sent the snippet alone, so a place found by "still serving wings
+        # after midnight" and one found by "ají amarillo instead of Buffalo
+        # sauce" produced an identical request.
         sightings=[
-            sighting.get("evidence", "")
+            {
+                "snippet": str(sighting.get("evidence", "")),
+                "angle": str(sighting.get("angle", "")),
+                "attempt_id": str(sighting.get("sighting_id", "")).split("#")[0],
+            }
             for sighting in candidate.get("sightings", [])
-            if sighting.get("evidence")
+            if str(sighting.get("evidence", "")).strip()
         ],
         # Versioned, so a refresh over edited material is a different input.
+        # Discarded findings are left out entirely: somebody threw them away,
+        # and sending them back as context is how a rejected claim returns
+        # wearing the profile's own authority.
         existing_findings=[
-            f"{item.text} [v{item.version}]" for item in held
+            {
+                "text": item.text,
+                "version": item.version,
+                "curation": item.curation,
+                "attributed": item.attribution == "attributed",
+            }
+            for item in held
+            if item.curation != "discarded"
         ],
         source_links=links,
         mode=mode,
         gap_text=gap_text,
     )
+
+
+def fetch_reviews(place_id: str, *, query: str = ""):
+    """What Google's reviewers said about this place.
+
+    A seam of its own so a test can stand in front of it without standing in
+    front of the whole reviews module, and so the one paid call this stage
+    makes is visible at the top of the file rather than buried in the sequence.
+
+    Reads through the Local Business Data API rather than Places Details: same
+    reviews, twenty of them instead of five, each with its own link and its own
+    exact date. `reviews_api` refuses on its own if the free allowance is spent,
+    so a caller never has to check the budget before asking.
+    """
+    return reviews_api.fetch_reviews(place_id, query=query)
+
+
+def _one_per_address(pages: list) -> list:
+    """Drop a page read a second time under a different address.
+
+    A search result is a redirect, so it cannot be recognised as a page
+    already held until it has been followed. McCarthy's read its Rappi listing
+    and its Perú Retail article twice -- once from the audit's link, once from
+    the search -- and handed both copies to the extraction. The first read
+    stays; later readable copies of the same final address go.
+    """
+    seen: set[str] = set()
+    out = []
+    for page in pages:
+        address = source_reader.normalise(page.final_url or page.requested_url)
+        if page.readable and address in seen:
+            continue
+        if page.readable:
+            seen.add(address)
+        out.append(page)
+    return out
+
+
+def _texts_of(pages: list) -> dict[str, str]:
+    """The text worth keeping, keyed the way a later read looks it up."""
+    return {
+        source_reader.normalise(page.requested_url): page.text
+        for page in pages
+        if page.readable
+    }
+
+
+def _kept_pages(profile_id: str, topic: str) -> list:
+    """The readable pages the latest attempt on this place kept, re-handed.
+
+    Whatever that attempt ended as. The attempts worth recovering from are the
+    ones that failed after something was collected.
+    """
+    prior = research_store.last_collected(profile_id, topic)
+    if prior is None:
+        return []
+    out = []
+    for record in prior.pages:
+        text = prior.page_texts.get(
+            source_reader.normalise(record.get("requested_url", ""))
+        )
+        if not text:
+            continue
+        out.append(
+            source_reader.PageRead.kept(
+                record,
+                text,
+                note=(
+                    f"Kept by attempt {prior.attempt_id}; re-read, not bought or "
+                    f"fetched again. {record.get('note', '')}"
+                ).strip(),
+            )
+        )
+    return out
+
+
+# How long reviews already bought for a place are re-read instead of bought
+# again. A month: reviews arrive slowly, the allowance is five hundred for good,
+# and a retest a week later that re-buys the same twenty has bought nothing.
+REVIEWS_REUSE_DAYS = 30
+
+
+def _kept_reviews(profile_id: str, topic: str):
+    """The latest reviews page any attempt on this place kept, if recent enough.
+
+    Returned marked `reused` with the day it was bought, so nothing downstream
+    presents a month-old page as a fresh check.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=REVIEWS_REUSE_DAYS)
+    for prior in research_store.for_profile(profile_id):
+        if prior.topic != topic or not prior.page_texts:
+            continue
+        for record in prior.pages:
+            if record.get("origin") != "google_reviews":
+                continue
+            text = prior.page_texts.get(
+                source_reader.normalise(record.get("requested_url", ""))
+            )
+            try:
+                bought = datetime.fromisoformat(record.get("retrieved_at", ""))
+            except ValueError:
+                continue
+            if text and bought >= cutoff:
+                return source_reader.PageRead.kept(
+                    record,
+                    text,
+                    note=(
+                        f"Bought {bought.date().isoformat()} by attempt "
+                        f"{prior.attempt_id}; re-read, not bought again. "
+                        f"{record.get('note', '')}"
+                    ).strip(),
+                )
+    return None
+
+
+def _default_extract(prompt: str):
+    """The extraction call, when a caller did not hand one in.
+
+    Imported here rather than at module scope because `api.py` owns the
+    provider wiring and the tests replace it. A service module that reaches for
+    a provider at import time is one no test can run without a key.
+    """
+    from .api import _extract_call
+
+    return _extract_call(prompt)
 
 
 def research(
@@ -588,18 +876,33 @@ def research(
     *,
     idempotency_key: str,
     transport,
+    extract=None,
+    reader=None,
     mode: str = "initial",
     gap_text: str = "",
     expected_prep_version: int | None = None,
     expected_order_revision: int | None = None,
     staff: str = "",
+    baseline_attempt_id: str = "",
+    pilot: str = "",
 ) -> dict:
-    """Research one place. Exactly one provider call, or none at all.
+    """Research one place. At most one search and one extraction, or neither.
 
-    None at all is the common case and is not a failure: a repeated key, an
+    Neither is the common case and is not a failure: a repeated key, an
     unchanged input already answered, or a card that is not ready all return
-    without spending. The call happens when a person pressed the button on a
-    card that passes the same readiness check the card itself was drawn from.
+    without spending. When the call does happen it is a fixed sequence with a
+    ceiling nobody inside it can raise:
+
+        read the pages already known   -> no generation
+        one grounded search            -> one generation, unless mode is
+                                          extract_only
+        read the pages it named        -> no generation
+        one extraction over the text   -> one generation, and only when there
+                                          is text to extract from
+
+    Nothing retries. Nothing loops. There is no path through this function that
+    makes a third generation, and the receipts on the attempt say which of the
+    two ran, what each cost, and why either was skipped.
     """
     if mode not in RESEARCH_MODES:
         raise ValueError(f"Unknown research mode {mode!r}.")
@@ -677,6 +980,7 @@ def research(
     )
     snapshot = request.snapshot()
     input_hash = _input_hash(snapshot)
+    brief = profile_research.brief_of(request)
 
     if mode == "initial":
         done = research_store.completed_for_input(profile_id, input_hash, mode)
@@ -690,7 +994,7 @@ def research(
                 "reused": True,
             }
 
-    prompt = profile_research.build_place_research_prompt(request)
+    prompt = profile_research.build_discovery_prompt(brief)
     attempt = ResearchAttempt(
         attempt_id=research_store.new_attempt_id(),
         idempotency_key=idempotency_key,
@@ -705,7 +1009,11 @@ def research(
         input_snapshot=snapshot,
         prompt=prompt,
         prompt_version=profile_research.PROMPT_VERSION,
-        requested_queries=profile_research.requested_directions(request),
+        strategy_version=STRATEGY_VERSION,
+        brief=brief.as_dict(),
+        requested_queries=list(brief.illustrative_queries),
+        baseline_attempt_id=baseline_attempt_id,
+        pilot=pilot,
         owner_token=research_store.new_token(),
         started_by=staff,
         started_at=_now(),
@@ -716,60 +1024,396 @@ def research(
     attempt = research_store.reserve(attempt)
 
     started = time.monotonic()
-    try:
-        result = transport(prompt)
-    except Exception as error:  # noqa: BLE001 -- every failure is recorded
-        logger.warning("Research call failed for %s: %s", candidate_id, error)
+    read_pages = reader or source_reader.read_pages
+    pages: list[source_reader.PageRead] = []
+    receipts: list[CallReceipt] = []
+
+    # --- What Google's own reviewers said, before anything is searched -------
+    #
+    # The one source of customer voice that is not a model's transcription of a
+    # page and cannot be a review platform's refusal: the text itself, with the
+    # reviewer's name, their rating and the day they wrote it. Attached to the
+    # Place ID, so it is about this branch by identity rather than by an address
+    # printed somewhere in body text.
+    #
+    # Google's reviews, but fetched through a vendor who scrapes and resells
+    # them (ADR 0041). That changes who bills for the fetch and nothing about
+    # what may be done with the words.
+    #
+    # The three-place pilot found zero attributable opinion about its subject
+    # while every review platform the reader touched answered 403 or 404 -- and
+    # this call was one line away the whole time, already written, wired only
+    # into the old whole-run pass.
+    #
+    # Billed per review returned, against a free allowance of five hundred, and
+    # it does not spend the page budget: nothing is fetched over HTTP. The
+    # allowance is enforced inside `reviews_api`, which refuses rather than
+    # overspends, so an exhausted budget arrives here as a place with no
+    # reviews and a reason -- not as an exception and not as a charge.
+    #
+    # Never bought by `extract_only`. A recovery re-reads what an earlier
+    # attempt kept, reviews included; buying them again is the cost it exists
+    # to avoid.
+    #
+    # And not bought twice in a month for the same place. The allowance does
+    # not reset on its own, and every retest of a place was spending another
+    # twenty on reviews it already held.
+    kept_reviews = None if mode == "extract_only" else _kept_reviews(profile_id, ctx.topic)
+    if mode == "extract_only":
+        pages.extend(_kept_pages(profile_id, ctx.topic))
+    elif kept_reviews is not None:
+        pages.append(kept_reviews)
+    elif brief.place_id:
+        # Asked for in the words the reviews are actually written in. Without
+        # this the API returns the twenty reviews Google thinks are most
+        # relevant *to the bar* -- the beer list, the music, the service -- and
+        # the extraction is left to ignore most of what was paid for.
+        fetched = fetch_reviews(
+            brief.place_id, query=brief.subject_terms[0] if brief.subject_terms else ""
+        )
+        review_page = reviews_api.reviews_as_page(
+            fetched,
+            brief.place_id,
+            place_name=brief.name,
+            terms=brief.subject_terms,
+        )
+        if review_page is not None:
+            pages.append(review_page)
+            # Written down before the search is bought. Whatever the search
+            # does next -- loop to its ceiling, time out, take the process
+            # with it -- the reviews are paid for and must still be readable.
+            research_store.keep_pages(
+                attempt.model_copy(
+                    update={
+                        "pages": [page.as_dict() for page in pages],
+                        "page_texts": _texts_of(pages),
+                    }
+                )
+            )
+        elif fetched.failed:
+            logger.warning(
+                "Google reviews unavailable for %s: %s",
+                candidate_id,
+                fetched.reason,
+            )
+            # On the attempt as well as in a log nobody reads: a packet with no
+            # customer voice has to say whether nobody wrote any or none were
+            # fetched.
+            pages.append(
+                source_reader.PageRead(
+                    requested_url=(
+                        "https://search.google.com/local/reviews?placeid="
+                        + brief.place_id
+                    ),
+                    state="error",
+                    origin="google_reviews",
+                    branch_anchored=True,
+                    note=f"Reviews not fetched: {fetched.reason}",
+                )
+            )
+
+    # --- Known pages, before anything is bought ------------------------------
+    #
+    # The operator's links and anything an earlier audit noted. Read first
+    # because they cost nothing and because a search bought to rediscover a
+    # menu this request is already holding is a search bought for nothing.
+    lead_budget = max(
+        0, source_reader.PAGE_BUDGET - source_reader.DISCOVERED_RESERVE
+    )
+    if brief.known_source_leads and lead_budget:
+        held = {source_reader.normalise(page.requested_url): page for page in pages}
+        known = read_pages(
+            [(lead.url, lead.origin) for lead in brief.known_source_leads],
+            budget=lead_budget,
+            already_read=held,
+        )
+        # A kept page asked for again comes back as itself; list it once.
+        pages.extend(
+            page
+            for page in known
+            if not (page.reused and source_reader.normalise(page.requested_url) in held)
+        )
+
+    # --- One grounded search -------------------------------------------------
+    discovery = profile_research.Discovery()
+    if mode == "extract_only":
+        kept = sum(1 for page in pages if page.reused)
+        receipts.append(
+            CallReceipt(
+                stage="discovery",
+                outcome="skipped",
+                grounded=True,
+                reason=(
+                    "Extraction only. This action was authorised to re-read the "
+                    "pages already collected and to buy no search"
+                    + (
+                        f", and re-read {kept} page(s) an earlier attempt kept, "
+                        "reviews included, without buying them again."
+                        if kept
+                        else ". No earlier attempt on this place kept any page."
+                    )
+                ),
+            )
+        )
+    else:
+        already_read = [
+            (page.final_url or page.requested_url, page.state) for page in pages
+        ]
+        prompt = profile_research.build_discovery_prompt(
+            brief, already_read=already_read
+        )
+        attempt = attempt.model_copy(update={"prompt": prompt})
+        search_started = time.monotonic()
+        try:
+            result = transport(prompt)
+        except Exception as error:  # noqa: BLE001 -- every failure is recorded
+            logger.warning("Research search failed for %s: %s", candidate_id, error)
+            receipts.append(
+                CallReceipt(
+                    stage="discovery",
+                    grounded=True,
+                    outcome="failed",
+                    reason=f"{type(error).__name__}",
+                    duration_seconds=round(time.monotonic() - search_started, 2),
+                )
+            )
+            return _finish(
+                attempt,
+                state="failed",
+                reason_code="provider_failed",
+                reason=(
+                    f"The search call did not come back ({type(error).__name__}). "
+                    "Nothing was saved. It may still have been charged for."
+                ),
+                duration=time.monotonic() - started,
+                topic=ctx.topic,
+                receipts=receipts,
+                pages=pages,
+            )
+        search_duration = round(time.monotonic() - search_started, 2)
+        attempt = attempt.model_copy(
+            update={
+                "raw_response": result.text or "",
+                "model": result.model,
+                "usage": dict(result.usage or {}),
+                "actual_queries": list(result.actual_queries or []),
+            }
+        )
+        try:
+            discovery = profile_research.anchor_to_search(
+                profile_research.parse_discovery(result.text or ""),
+                list(result.grounding_chunks or []),
+                list(result.grounding_supports or []),
+                text=result.text or "",
+                searched=len(result.actual_queries or []),
+            )
+        except profile_research.ResponseInvalid as error:
+            receipts.append(
+                CallReceipt(
+                    stage="discovery",
+                    grounded=True,
+                    model=result.model,
+                    usage=dict(result.usage or {}),
+                    duration_seconds=search_duration,
+                    outcome="invalid",
+                    reason=str(error),
+                    finish_reason=str(getattr(result, "finish_reason", "") or ""),
+                )
+            )
+            return _finish(
+                attempt,
+                state="response_invalid",
+                reason_code="response_invalid",
+                reason=(
+                    f"The search answered in a shape this pipeline cannot read: "
+                    f"{error} It is kept as it arrived; nothing was read out of "
+                    "it, and no second call was made."
+                ),
+                duration=time.monotonic() - started,
+                topic=ctx.topic,
+                receipts=receipts,
+                pages=pages,
+            )
+        receipts.append(
+            CallReceipt(
+                stage="discovery",
+                grounded=True,
+                model=result.model,
+                asked_for=str(getattr(result, "asked_for", "") or ""),
+                usage=dict(result.usage or {}),
+                duration_seconds=search_duration,
+                outcome="ok",
+                reason=(
+                    f"{len(discovery.pages)} page(s) named, "
+                    f"{len(result.actual_queries or [])} search(es) reported."
+                ),
+                finish_reason=str(getattr(result, "finish_reason", "") or ""),
+            )
+        )
+        # --- Read what it named ---------------------------------------------
+        # Reviews are not a page fetched over HTTP and do not spend this
+        # budget; counting a freshly bought reviews page here cut Wingsbox's
+        # reading to seven pages and reported the budget as seven.
+        remaining = source_reader.PAGE_BUDGET - sum(
+            1
+            for page in pages
+            if not page.reused and page.origin != "google_reviews"
+        )
+        if any(page.url for page in discovery.pages) and remaining > 0:
+            held = {
+                source_reader.normalise(page.requested_url): page for page in pages
+            }
+            pages.extend(
+                read_pages(
+                    [(page.url, "discovered") for page in discovery.pages if page.url],
+                    budget=remaining,
+                    already_read=held,
+                )
+            )
+            pages = _one_per_address(pages)
+
+    # --- One extraction, over text this process holds ------------------------
+    readable = [page for page in pages if page.readable]
+    if not readable:
+        receipts.append(
+            CallReceipt(
+                stage="extraction",
+                outcome="skipped",
+                reason=(
+                    "No page could be read, so there was no collected text to "
+                    "extract from. Asking a model to restate its own search "
+                    "answer would buy a second opinion about a first one."
+                ),
+            )
+        )
         return _finish(
             attempt,
-            state="failed",
-            reason_code="provider_failed",
+            state="completed_empty",
+            reason_code="no_readable_source",
             reason=(
-                f"The research call did not come back ({type(error).__name__}). "
-                "Nothing was saved. It may still have been charged for."
+                f"{len(pages)} page(s) were tried and none could be read. That "
+                "is a fact about access, not about what is published, and not a "
+                "verdict on the place."
             ),
             duration=time.monotonic() - started,
             topic=ctx.topic,
+            receipts=receipts,
+            pages=pages,
+            discovery=discovery,
         )
 
-    duration = time.monotonic() - started
+    extraction_prompt = evidence.build_extraction_prompt(
+        brief, pages, discovery_notes=discovery.summary()
+    )
+    run_extraction = extract or _default_extract
+    extract_started = time.monotonic()
+    try:
+        extracted = run_extraction(extraction_prompt)
+    except Exception as error:  # noqa: BLE001 -- every failure is recorded
+        logger.warning("Extraction failed for %s: %s", candidate_id, error)
+        receipts.append(
+            CallReceipt(
+                stage="extraction",
+                outcome="failed",
+                # The message as well as the class. "WriterModelError" alone
+                # sent the last reader to a terminal log to find out the model
+                # had written its answer as Python.
+                reason=f"{type(error).__name__}: {str(error)[:500]}",
+                duration_seconds=round(time.monotonic() - extract_started, 2),
+            )
+        )
+        return _finish(
+            attempt,
+            state="failed",
+            reason_code="extraction_failed",
+            reason=(
+                f"The pages were collected and the extraction call did not come "
+                f"back ({type(error).__name__}). The pages are kept: running "
+                "extraction again over them buys no search."
+            ),
+            duration=time.monotonic() - started,
+            topic=ctx.topic,
+            receipts=receipts,
+            pages=pages,
+            discovery=discovery,
+        )
+    extract_duration = round(time.monotonic() - extract_started, 2)
+    raw_extraction = getattr(extracted, "text", extracted)
     attempt = attempt.model_copy(
         update={
-            "raw_response": result.text or "",
-            "model": result.model,
-            "usage": dict(result.usage or {}),
-            "actual_queries": list(result.actual_queries or []),
+            "raw_response": (
+                (attempt.raw_response or "")
+                + "\n\n--- EXTRACTION ---\n"
+                + (
+                    raw_extraction
+                    if isinstance(raw_extraction, str)
+                    else json.dumps(raw_extraction, ensure_ascii=False)
+                )
+            )
         }
     )
-
     try:
-        parsed = profile_research.parse_place_research(
-            result.text or "",
-            profile_id=profile_id,
-            attempt_id=attempt.attempt_id,
-            topic=ctx.topic,
+        packet = evidence.check(raw_extraction, brief=brief, pages=pages)
+    except evidence.ExtractionInvalid as error:
+        receipts.append(
+            CallReceipt(
+                stage="extraction",
+                model=str(getattr(extracted, "model", "") or ""),
+                usage=dict(getattr(extracted, "usage", {}) or {}),
+                duration_seconds=extract_duration,
+                outcome="invalid",
+                reason=str(error),
+                finish_reason=str(getattr(extracted, "finish_reason", "") or ""),
+            )
         )
-    except profile_research.ResponseInvalid as error:
         return _finish(
             attempt,
             state="response_invalid",
             reason_code="response_invalid",
             reason=(
-                f"The answer was not the shape this pipeline asked for: {error} "
-                "It is kept as it arrived; nothing was read out of it."
+                f"The extraction answered in a shape this pipeline cannot read: "
+                f"{error} The pages it was given are kept, and extraction can be "
+                "run again over them without buying a search."
             ),
-            duration=duration,
+            duration=time.monotonic() - started,
             topic=ctx.topic,
+            receipts=receipts,
+            pages=pages,
+            discovery=discovery,
         )
+    receipts.append(
+        CallReceipt(
+            stage="extraction",
+            model=str(getattr(extracted, "model", "") or ""),
+            asked_for=str(getattr(extracted, "asked_for", "") or ""),
+            usage=dict(getattr(extracted, "usage", {}) or {}),
+            duration_seconds=extract_duration,
+            outcome="ok",
+            reason=(
+                f"{len(packet.claims)} claim(s) from {len(readable)} readable "
+                f"page(s)."
+            ),
+            finish_reason=str(getattr(extracted, "finish_reason", "") or ""),
+        )
+    )
 
-    added, seen, sources_added = _save_findings(profile_id, parsed)
-    state = "completed" if parsed.findings else "completed_empty"
+    added, seen, sources_added = _save_packet(
+        profile_id,
+        packet,
+        pages=pages,
+        discovery=discovery,
+        topic=ctx.topic,
+        attempt_id=attempt.attempt_id,
+    )
+    summary = evidence.derived_coverage(packet, brief=brief, pages=pages)
+    state = "completed" if packet.claims else "completed_empty"
     reason = (
         ""
-        if parsed.findings
+        if packet.claims
         else (
-            "The request ran and returned no findings. That is an answer about "
-            "what is published, not a failure and not a verdict on the place."
+            "The pages were read and carried nothing assertable about this "
+            "subject. That is an answer about what those pages say, not a "
+            "verdict on the place."
         )
     )
     return _finish(
@@ -777,50 +1421,138 @@ def research(
         state=state,
         reason_code="",
         reason=reason,
-        duration=duration,
+        duration=time.monotonic() - started,
         topic=ctx.topic,
-        parsed=parsed,
+        packet=packet,
         added=added,
         seen=seen,
         sources_added=sources_added,
+        receipts=receipts,
+        pages=pages,
+        discovery=discovery,
+        summary=summary,
     )
 
 
-def _save_findings(profile_id: str, parsed) -> tuple[int, int, int]:
-    """Write what came back, without overwriting anything a person wrote.
+def _publisher_of(url: str, fallback: str = "") -> str:
+    """Who published a page, from its address when nothing else says.
 
-    A finding already held gains this pass's topics and provenance and keeps
-    its own text, dates and curation. That is what makes a refresh safe: the
-    material is added to, never replaced.
+    A hostname is a worse answer than a masthead and a far better one than
+    nothing: "elcomercio.pe" still means something in two years, where a
+    grounding redirect means nothing the moment it expires.
+    """
+    if fallback.strip():
+        return fallback.strip()[:160]
+    host = urlparse(url).hostname or ""
+    return host[4:] if host.startswith("www.") else host
+
+
+def _save_packet(
+    profile_id: str,
+    packet,
+    *,
+    pages: list,
+    discovery,
+    topic: str,
+    attempt_id: str,
+) -> tuple[int, int, int]:
+    """Write the checked packet, without overwriting anything a person wrote.
+
+    Sources are the pages that were actually read, under the address the
+    redirects ended at -- so a citation points at the publisher's own page
+    rather than at a grounding redirect that expires. A page that could not be
+    read becomes no source at all: an unreadable lead is a lead, and giving it
+    a source record would make it look like something was consulted.
     """
     protected = profile_store.edited_finding_ids(profile_id)
-    source_ids: dict[str, str] = {}
+    described = {
+        source_reader.normalise(page.url): page
+        for page in discovery.pages
+        if page.url
+    }
+    now = datetime.now(timezone.utc)
+    source_ids: dict[int, str] = {}
     sources_added = 0
-    for source in parsed.sources:
-        stored = profile_store.save_source(profile_id, source)
-        source_ids[source.source_id] = stored
-        sources_added += int(stored == source.source_id)
-    added = 0
-    for finding in parsed.findings:
-        translated = finding.model_copy(
-            update={
-                "evidence": [
-                    FindingEvidence(
-                        source_id=source_ids.get(item.source_id, item.source_id),
-                        supporting_excerpt=item.supporting_excerpt,
-                        evidence_scope=item.evidence_scope,
+    for index, page in enumerate(
+        [page for page in pages if page.readable], start=1
+    ):
+        told = described.get(
+            source_reader.normalise(page.final_url or page.requested_url)
+        ) or described.get(source_reader.normalise(page.requested_url))
+        # Google's reviews are not a publisher's page and a hostname is a poor
+        # name for them. "Google reviews" is what the attribution should still
+        # say in two years.
+        from_reviews = page.origin == "google_reviews"
+        stored = profile_store.save_source(
+            profile_id,
+            ResearchSource(
+                source_id=uuid.uuid4().hex[:12],
+                url=page.final_url or page.requested_url,
+                publisher=(
+                    "Google reviews"
+                    if from_reviews
+                    else _publisher_of(
+                        page.final_url or page.requested_url,
+                        getattr(told, "publisher", "") or "",
                     )
-                    for item in finding.evidence
-                ]
-            }
+                ),
+                source_type=(
+                    "review_platform"
+                    if from_reviews
+                    else getattr(told, "source_type", "") or ""
+                ),
+                title=page.title,
+                # The page's own date, read off the page. Never the day it was
+                # fetched, and never the provider's guess at it.
+                published_at=page.published_at
+                or (getattr(told, "published_at", "") or ""),
+                retrieved_at=page.retrieved_at,
+            ),
         )
-        stored_id, is_new = profile_store.save_finding(translated)
+        source_ids[index] = stored
+        sources_added += 1
+
+    added = 0
+    for claim in packet.claims:
+        finding = ResearchFinding(
+            finding_id=uuid.uuid4().hex[:12],
+            profile_id=profile_id,
+            text=claim.text,
+            kind=claim.kind if claim.kind in _CLAIM_KINDS else "other",
+            categories=list(claim.categories) or ["other"],
+            topics=sorted({topic} - {""}) if claim.about_subject else [],
+            scope=claim.scope,
+            temporal_type=claim.temporal_type,
+            event_date=claim.event_date,
+            source_published_at=claim.source_published_at,
+            valid_until=claim.valid_until,
+            curation="unreviewed",
+            origin="research",
+            validation=claim.validation,
+            validation_notes=list(claim.notes),
+            who_said_it=claim.who_said_it,
+            who_name=claim.who_name,
+            channel=claim.channel,
+            attempt_id=attempt_id,
+            evidence=[
+                FindingEvidence(
+                    source_id=source_ids[item.page_index],
+                    supporting_excerpt=item.excerpt,
+                    evidence_scope=item.scope,
+                )
+                for item in claim.support
+                if item.passage_found and item.page_index in source_ids
+            ],
+            created_at=now,
+            updated_at=now,
+        )
+        stored_id, is_new = profile_store.save_finding(finding)
         if stored_id in protected and not is_new:
-            # The row this finding matched has been edited by hand. Its new
-            # provenance is attached above; nothing else about it is touched.
+            # The row this claim matched has been edited by hand. Its new
+            # provenance is attached; nothing else about it is touched.
             continue
         added += int(is_new)
-    return added, len(parsed.findings), sources_added
+    return added, len(packet.claims), sources_added
 
 
 def _finish(
@@ -831,10 +1563,14 @@ def _finish(
     reason: str,
     duration: float,
     topic: str,
-    parsed=None,
+    packet=None,
     added: int = 0,
     seen: int = 0,
     sources_added: int = 0,
+    receipts: list | None = None,
+    pages: list | None = None,
+    discovery=None,
+    summary: dict | None = None,
 ) -> dict:
     finished = attempt.model_copy(
         update={
@@ -845,9 +1581,28 @@ def _finish(
             "findings_added": added,
             "findings_seen": seen,
             "sources_added": sources_added,
-            "validation_issues": list(parsed.issues) if parsed else [],
-            "coverage": list(parsed.coverage) if parsed else [],
-            "open_questions": list(parsed.open_questions) if parsed else [],
+            "validation_issues": list(packet.issues) if packet else [],
+            "coverage": (
+                [CoverageNote(**note) for note in packet.coverage] if packet else []
+            ),
+            "open_questions": list(packet.unresolved) if packet else [],
+            "receipts": list(receipts or []),
+            "pages": [page.as_dict() for page in (pages or [])],
+            "page_texts": _texts_of(pages or []),
+            "discovery": (
+                {
+                    "pages": [page.as_dict() for page in discovery.pages],
+                    "searched": list(discovery.searched),
+                    "not_found": list(discovery.not_found),
+                    "notes": list(discovery.notes),
+                    "issues": list(discovery.issues),
+                    "results": list(discovery.results),
+                    "supports": list(discovery.supports),
+                }
+                if discovery is not None
+                else {}
+            ),
+            "evidence_summary": dict(summary or {}),
             "finished_at": _now(),
         }
     )

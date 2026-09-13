@@ -476,6 +476,8 @@ export interface ListicleProfileSummary {
   district: string
   findings_total: number
   findings_this_topic: number
+  /** Of those, how many check out. Same rows, so the two sit side by side. */
+  ready_this_topic?: number
   kept: number
   unreviewed: number
   unattributed: number
@@ -501,6 +503,60 @@ export type ListicleAttemptState =
   | 'response_invalid'
   | 'interrupted'
 
+/** One provider call inside one research action.
+ *
+ *  A list rather than a single model/usage pair on the attempt, because one
+ *  press makes up to two generations and both are charged. A card showing one
+ *  model name is a card showing half the bill. */
+export interface ListicleCallReceipt {
+  /** `discovery` or `extraction`. What the call was for, not who served it. */
+  stage: string
+  model: string
+  asked_for: string
+  grounded: boolean
+  /** `ok`, `failed`, `invalid` or `skipped`. A skipped call still has a
+   *  receipt, with its reason: "no extraction ran" and "extraction found
+   *  nothing" are different facts about a packet. */
+  outcome: string
+  reason: string
+  /** Why the provider stopped. Empty means it did not say, which is itself
+   *  worth seeing on a truncated answer. */
+  finish_reason: string
+  usage: Record<string, number>
+  duration_seconds: number | null
+}
+
+/** One page a research action tried to open. */
+export interface ListicleReadPage {
+  requested_url: string
+  /** Where the redirects ended — the publisher's own address, for a grounding
+   *  redirect. This is the link a citation should carry. */
+  final_url: string
+  /** `ok`, `blocked`, `not_found`, `unsupported_type`, `budget_exhausted`… An
+   *  unreadable page is an access gap, never evidence that nothing exists. */
+  state: string
+  http_status: number | null
+  title: string
+  /** What the page itself says it was published on. Never the day we read it. */
+  published_at: string
+  retrieved_at: string
+  content_hash: string
+  byte_count: number
+  /** `lead`, `discovered`, `operator`, or `google_reviews` — the last of
+   *  which was never fetched over HTTP and spends none of the page budget. */
+  origin: string
+  /** True when the text came from a page this attempt already held rather than
+   *  from a second fetch. A refresh must not present cached text as newly
+   *  checked. */
+  reused: boolean
+  /** True when the source belongs to this branch by identity rather than by an
+   *  address printed on it — a Google review hangs off the Place ID, and the
+   *  Place ID is the branch. */
+  branch_anchored: boolean
+  note: string
+  chars: number
+}
+
 export interface ListicleAttemptSummary {
   attempt_id: string
   run_id: string
@@ -517,6 +573,21 @@ export interface ListicleAttemptSummary {
   finished_at: string
   model: string
   running: boolean
+  receipts: ListicleCallReceipt[]
+  /** Provider calls actually made. The ceiling is two. */
+  generations: number
+  grounded_calls: number
+  pages_read: number
+  pages_attempted: number
+  /** Claims about this list's subject that passed checking. Separate from
+   *  `state` on purpose: a request that ran is not a request that found
+   *  anything, and the screen this replaces showed one number for both. */
+  evidence_ready: number
+  /** Every claim that checks out, about the subject or not. */
+  evidence_ready_total?: number
+  strategy_version: string
+  pilot: string
+  baseline_attempt_id: string
 }
 
 export interface ListicleAttemptDetail extends ListicleAttemptSummary {
@@ -533,6 +604,66 @@ export interface ListicleAttemptDetail extends ListicleAttemptSummary {
   gap_text: string
   raw_response: string
   prompt: string
+  /** The request, worked out before anything was bought. Readable without
+   *  reading the prompt. */
+  brief: {
+    version?: string
+    intent?: string
+    /** The words this list's subject is actually written about in -- `alitas`
+     *  rather than `chicken wings`. Derived from the run's own search evidence,
+     *  never translated. Used to ask the reviews API for reviews about the
+     *  subject, and to rank what comes back. */
+    subject_terms?: string[]
+    priority_questions?: string[]
+    known_source_leads?: { url: string; origin: string; note: string }[]
+    illustrative_queries?: string[]
+    discovery_leads?: {
+      snippet: string
+      angle: string
+      attempt_id: string
+      status: string
+    }[]
+    scope_notes?: string[]
+    completion_criteria?: string[]
+    [key: string]: unknown
+  }
+  pages: ListicleReadPage[]
+  /** What the search said before anything was opened. A provider snippet is a
+   *  transcription, and it never becomes a citation. */
+  discovery: {
+    pages?: {
+      url: string
+      publisher: string
+      title: string
+      published_at: string
+      provider_snippet: string
+      scope: string
+      why: string
+      site?: string
+      /** `search`, `search_only`, or `none`: described but matched to no
+       *  search result, and therefore never opened. */
+      address_from?: string
+    }[]
+    searched?: string[]
+    not_found?: string[]
+    notes?: string[]
+    issues?: string[]
+  }
+  /** Arithmetic over checked evidence, kept apart from how the search went. */
+  evidence_summary: {
+    subject_evidence_ready?: number
+    evidence_ready_total?: number
+    review_needed?: number
+    unsupported?: number
+    attributable_opinion?: number
+    business_only?: number
+    pages_read?: number
+    pages_attempted?: number
+    pages_unreachable?: { url: string; state: string }[]
+    unresolved_questions?: string[]
+    priority_questions?: string[]
+    by_category?: Record<string, number>
+  }
 }
 
 export interface ListicleResearchCard {
@@ -554,7 +685,39 @@ export interface ListicleResearchBoard {
   topic_label: string
   exclusions: string
   active_attempt: ListicleAttemptSummary | null
+  reviews_budget: ListicleReviewsBudget
+  /** The words this list's subject is actually written about in -- `alitas`
+   *  rather than `chicken wings`. Read off the run's own search evidence. */
+  subject_terms: string[]
   cards: ListicleResearchCard[]
+}
+
+/** What is left of the free customer-reviews allowance.
+ *
+ *  The reviews API is billed per review returned against a free cap, so this
+ *  is a hard stop rather than a running cost: at zero, research still runs but
+ *  buys no reviews. Shown on the board because that is where the button is. */
+export interface ListicleReviewsBudget {
+  /** False when the backend has no reviews key: research runs, buys none. */
+  key_configured?: boolean
+  /** The cap, in review objects. */
+  ceiling: number
+  spent: number
+  /** The spendable number: the stricter of our ledger and RapidAPI's own count. */
+  remaining: number
+  ours_remaining: number
+  /** RapidAPI's count, or null when no answer has carried the header yet.
+   *  Null is "not known", never "none left". */
+  reported_remaining: number | null
+  reported_limit: number | null
+  /** `remaining` said in the unit decisions are made in. */
+  places_left: number
+  exhausted: boolean
+  /** The two counters have drifted, which usually means another app is
+   *  spending the same key. Worth showing rather than resolving. */
+  disagrees: boolean
+  calls: number
+  last_call_at: string
 }
 
 /** One source under one finding, with the source's own dates beside it. */
@@ -587,6 +750,24 @@ export interface ListicleFinding {
   curation: 'unreviewed' | 'kept' | 'discarded' | string
   origin: string
   version: number
+  /** What the checks made of it. `evidence_ready` means a person can open the
+   *  page and find the sentence — a lower bar than true, and the name says so.
+   *  `not_checked` is the honest answer for a typed finding and for anything
+   *  stored before checking existed. */
+  validation:
+    | 'evidence_ready'
+    | 'review_needed'
+    | 'unsupported'
+    | 'not_checked'
+    | string
+  /** Why it is not evidence-ready, in the words a person needs. */
+  validation_notes: string[]
+  /** Who is behind the claim. A menu is the business talking about itself. */
+  who_said_it: string
+  who_name: string
+  /** Which channel a price was seen on. A delivery price is not the price at
+   *  the table. */
+  channel: string
   /** `attributed` or `incomplete`. Derived from whether it actually has a
    *  source — never asserted, and never filled in from the search's own URL
    *  list. */
@@ -641,4 +822,77 @@ export interface ListicleProfileResearch {
   coverage: { topic: string; category: string; state: string; note: string }[]
   open_questions: string[]
   runs: { run_id: string; candidate_id: string; name: string; linked_at: string }[]
+}
+
+export interface EntryResearchSlots {
+  why_it_belongs: string | null
+  what_to_order_or_notice: string[]
+  visit_character: string | null
+  useful_detail: string | null
+  story_depth: string | null
+  caveat: string | null
+}
+export type EntryResearchField = keyof EntryResearchSlots
+export interface EntryResearchWorkspace {
+  imports?: {
+    import_key: string
+    created_at: string
+    stale_or_rejected_claims: { claim: string; reason: string }[]
+    open_questions: string[]
+  }[]
+  profile_id: string
+  version: number
+  context_key: string
+  order_revision: number
+  slots: EntryResearchSlots
+  supporting_findings: Partial<Record<EntryResearchField, string[]>>
+  ready: boolean
+  stale: boolean
+  prompt: string
+  title?: string
+  place_name?: string
+  blurb?: EntryBlurb
+}
+/** One place's blurb. `prompt` is built from the current brief; `stale` means the brief changed since the blurb was saved. */
+export interface EntryBlurb {
+  version: number
+  text: string
+  prompt: string
+  stale: boolean
+}
+export interface ExternalResearchFact {
+  id: string
+  category: string
+  text: string
+  why_useful: string
+  scope: 'branch' | 'brand' | 'unknown'
+  temporal_type: 'current' | 'historical' | 'dated_observation' | 'unknown'
+  observed_or_published_at: string | null
+  source: { url: string; publisher: string; title: string }
+}
+export interface ResearchImportPreview {
+  version: number
+  context_key: string
+  can_apply: boolean
+  warnings: string[]
+  changes: {
+    field: EntryResearchField
+    before: string | string[] | null
+    after: string | string[] | null
+  }[]
+  packet: {
+    identity_match: {
+      status: 'matched' | 'uncertain' | 'wrong_branch'
+      note: string
+    }
+    fit: {
+      status: 'strong' | 'usable' | 'weak'
+      why: string
+      source_urls: string[]
+    }
+    facts: ExternalResearchFact[]
+    editorial_take: EntryResearchSlots
+    stale_or_rejected_claims: { claim: string; reason: string }[]
+    open_questions: string[]
+  }
 }

@@ -56,6 +56,70 @@ class GroundedGenerationResult:
     # this is the only evidence about what was really run. Empty means the
     # response did not say, which is not the same as "it searched nothing".
     search_queries: list[str] = field(default_factory=list)
+    # Why the model stopped: `STOP` for a finished answer, `MAX_TOKENS` for one
+    # cut off at the ceiling. The two are indistinguishable from the text alone
+    # -- a truncated JSON object and a model that wrote three characters both
+    # arrive as "this is not the shape asked for" -- and one real call spent
+    # 2,423 thinking tokens and returned one output token with nobody able to
+    # say why. Empty means the response did not carry one.
+    finish_reason: str = ""
+    # The search results themselves, in the provider's order, as
+    # `{"uri", "title"}`. Kept in order and undeduplicated because the
+    # supports below point at them by index. `source_urls` above cannot stand
+    # in for this: it also sweeps up any address the model typed into its own
+    # answer, and a typed address is a guess.
+    grounding_chunks: list[dict] = field(default_factory=list)
+    # Which stretch of the answer each result supports, as
+    # `{"text", "chunks": [index, ...]}`. The provider's own attribution, and
+    # the only link between a sentence the model wrote and the page it read.
+    grounding_supports: list[dict] = field(default_factory=list)
+
+
+def _grounding_structure(response: Any) -> tuple[list[dict], list[dict]]:
+    """Results and supports off a REST generateContent response, in order."""
+    if not isinstance(response, dict):
+        return [], []
+    chunks: list[dict] = []
+    supports: list[dict] = []
+    for candidate in response.get("candidates") or []:
+        if not isinstance(candidate, dict):
+            continue
+        metadata = candidate.get("groundingMetadata") or candidate.get("grounding_metadata")
+        if not isinstance(metadata, dict):
+            continue
+        offset = len(chunks)
+        for chunk in metadata.get("groundingChunks") or metadata.get("grounding_chunks") or []:
+            web = chunk.get("web") if isinstance(chunk, dict) else None
+            web = web if isinstance(web, dict) else {}
+            chunks.append(
+                {
+                    "uri": str(web.get("uri") or "").strip(),
+                    "title": str(web.get("title") or "").strip(),
+                }
+            )
+        for support in metadata.get("groundingSupports") or metadata.get("grounding_supports") or []:
+            if not isinstance(support, dict):
+                continue
+            segment = support.get("segment") if isinstance(support.get("segment"), dict) else {}
+            indices = support.get("groundingChunkIndices") or support.get("grounding_chunk_indices") or []
+            supports.append(
+                {
+                    "text": str(segment.get("text") or "").strip(),
+                    "chunks": [offset + index for index in indices if isinstance(index, int) and index >= 0],
+                }
+            )
+    return chunks, supports
+
+
+def _finish_reason(response: Any) -> str:
+    if not isinstance(response, dict):
+        return ""
+    for candidate in response.get("candidates") or []:
+        if isinstance(candidate, dict):
+            reason = candidate.get("finishReason") or candidate.get("finish_reason")
+            if isinstance(reason, str) and reason:
+                return reason
+    return ""
 
 
 def _usage_counts(response: Any) -> tuple[int | None, int | None, int | None]:
@@ -422,11 +486,15 @@ def invoke_google_grounded_text(
         return None
 
     input_tokens, output_tokens, total_tokens = _usage_counts(response)
+    chunks, supports = _grounding_structure(response)
     return GroundedGenerationResult(
         text=_safe_text(response),
         source_urls=extract_grounded_urls_from_response(response),
         source_titles=extract_grounded_source_titles(response),
         search_queries=extract_grounded_search_queries(response),
+        finish_reason=_finish_reason(response),
+        grounding_chunks=chunks,
+        grounding_supports=supports,
         model_name=response.get("modelVersion", effective_model_name),
         input_tokens=input_tokens,
         output_tokens=output_tokens,

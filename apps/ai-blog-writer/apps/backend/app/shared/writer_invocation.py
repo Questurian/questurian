@@ -78,10 +78,12 @@ def invoke_anthropic_structured(
     except ImportError as exc:
         raise WriterModelError("LLM helper unavailable") from exc
 
+    counted: dict = {}
     try:
         payload, resolved_model = invoke_structured_tool(
             prompt=prompt,
             model_name=model_name,
+            usage_out=counted,
             tool_name=tool_name,
             tool_description=tool_description,
             input_schema=input_schema,
@@ -90,7 +92,11 @@ def invoke_anthropic_structured(
     except Exception as exc:  # noqa: BLE001
         raise WriterModelError(f"Structured writer call failed: {exc}") from exc
 
-    return StructuredWriterResult(payload=payload, model_name=resolved_model)
+    # Empty when the provider reported nothing, which is not the same as zero.
+    # A caller must be able to tell "cost nothing" from "cost unknown".
+    return StructuredWriterResult(
+        payload=payload, model_name=resolved_model, usage=counted or None
+    )
 
 
 def invoke_writer_model(
