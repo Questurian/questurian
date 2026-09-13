@@ -210,7 +210,13 @@ def board(run_id: str) -> dict:
         # than in objects. On the board because this is the screen the button
         # is pressed from, and a budget nobody can see before pressing is not
         # a budget.
-        "reviews_budget": reviews_budget.status().as_dict(),
+        "reviews_budget": {
+            **reviews_budget.status().as_dict(),
+            # Said on the board because nothing else says it. The app backend
+            # reads apps/backend/.env, the key was put in the app root's, and
+            # every press from the screen quietly bought no reviews.
+            "key_configured": bool(reviews_api.api_key()),
+        },
         # The words the reviews will be asked for in. Derived, not typed, so
         # the screen has to be able to show them: if they come out wrong, the
         # reviews that were bought are the wrong ones, and a thin result would
@@ -1089,6 +1095,21 @@ def research(
                 "Google reviews unavailable for %s: %s",
                 candidate_id,
                 fetched.reason,
+            )
+            # On the attempt as well as in a log nobody reads: a packet with no
+            # customer voice has to say whether nobody wrote any or none were
+            # fetched.
+            pages.append(
+                source_reader.PageRead(
+                    requested_url=(
+                        "https://search.google.com/local/reviews?placeid="
+                        + brief.place_id
+                    ),
+                    state="error",
+                    origin="google_reviews",
+                    branch_anchored=True,
+                    note=f"Reviews not fetched: {fetched.reason}",
+                )
             )
 
     # --- Known pages, before anything is bought ------------------------------

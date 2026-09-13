@@ -698,6 +698,8 @@ export interface ListicleResearchBoard {
  *  is a hard stop rather than a running cost: at zero, research still runs but
  *  buys no reviews. Shown on the board because that is where the button is. */
 export interface ListicleReviewsBudget {
+  /** False when the backend has no reviews key: research runs, buys none. */
+  key_configured?: boolean
   /** The cap, in review objects. */
   ceiling: number
   spent: number

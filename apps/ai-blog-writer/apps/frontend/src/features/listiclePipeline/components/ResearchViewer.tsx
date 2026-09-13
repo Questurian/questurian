@@ -932,6 +932,13 @@ function ReviewsAllowance({ budget }: { budget: ListicleReviewsBudget }) {
   return (
     <section className="lp-research-block">
       <h4 className="lp-eyebrow">Customer reviews left to buy</h4>
+      {budget.key_configured === false && (
+        <p className="lp-muted">
+          <strong>No reviews key on this server.</strong> Research runs without
+          customer reviews. Add <code>RAPID_API_KEY</code> to{' '}
+          <code>apps/backend/.env</code> and restart the backend.
+        </p>
+      )}
       {budget.exhausted ? (
         <p className="lp-muted">
           The free allowance of {budget.ceiling} reviews is spent. Research still

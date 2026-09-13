@@ -1684,8 +1684,9 @@ def test_a_page_that_could_not_be_read_is_recorded_as_that(client, ready, monkey
     attempt = client.get(
         f"{BASE}/research-attempts/{body['attempt']['attempt_id']}"
     ).json()
-    assert [page["state"] for page in attempt["pages"]] == ["blocked"]
-    assert attempt["pages"][0]["http_status"] == 403
+    web = [page for page in attempt["pages"] if page["origin"] != "google_reviews"]
+    assert [page["state"] for page in web] == ["blocked"]
+    assert web[0]["http_status"] == 403
     # Nothing readable came back, so there was nothing to extract from and no
     # second generation was bought to restate the search's own answer.
     assert extract.calls == 0
@@ -2007,7 +2008,8 @@ def test_a_failed_extraction_keeps_the_pages_and_buys_no_second_search(
         f"{BASE}/research-attempts/{body['attempt']['attempt_id']}"
     ).json()
     # The pages survive the failure, and the receipt says which call died.
-    assert [page["state"] for page in attempt["pages"]] == ["ok", "ok"]
+    web = [page for page in attempt["pages"] if page["origin"] != "google_reviews"]
+    assert [page["state"] for page in web] == ["ok", "ok"]
     outcomes = {r["stage"]: r["outcome"] for r in attempt["receipts"]}
     assert outcomes == {"discovery": "ok", "extraction": "failed"}
 
@@ -2573,6 +2575,31 @@ def test_a_claim_a_reviewer_did_not_write_still_fails(client, ready, monkeypatch
     ).json()
     invented = next(f for f in profile["findings"] if "best in Lima" in f["text"])
     assert invented["validation"] == "unsupported"
+
+
+def test_reviews_that_could_not_be_fetched_are_said_on_the_attempt(
+    client, ready, monkeypatch
+):
+    """The app backend had no reviews key and every press from the screen
+    bought no reviews, with nothing on the attempt to say so."""
+    run_id, candidate_id, _ = ready
+    monkeypatch.setattr(listicle_api, "_research_call", _Transport())
+    body = client.post(
+        f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+        json={"idempotency_key": "reviews-missing-01"},
+    ).json()
+    attempt = client.get(
+        f"{BASE}/research-attempts/{body['attempt']['attempt_id']}"
+    ).json()
+    missing = next(p for p in attempt["pages"] if p["origin"] == "google_reviews")
+    assert missing["state"] == "error"
+    assert missing["note"] == "Reviews not fetched: not in this test"
+
+
+def test_the_board_says_whether_a_reviews_key_is_configured(client, run, monkeypatch):
+    monkeypatch.delenv("RAPID_API_KEY", raising=False)
+    body = client.get(f"{BASE}/board/{run}/research").json()
+    assert body["reviews_budget"]["key_configured"] is False
 
 
 def test_a_place_with_no_reviews_is_not_a_failure(client, ready, monkeypatch):

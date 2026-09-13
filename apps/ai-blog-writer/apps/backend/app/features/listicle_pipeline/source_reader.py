@@ -102,6 +102,8 @@ _NOT_A_SOURCE = (
     "googleusercontent.com/",
 )
 
+_GROUNDING_REDIRECT_HOST = "vertexaisearch.cloud.google.com"
+
 _HTML_TYPES = ("text/html", "application/xhtml+xml", "text/plain")
 
 
@@ -425,9 +427,17 @@ def _fetch_once(client, url: str, *, deadline: float) -> PageRead:
         page.published_at = published
         page.text = body
         page.state = "ok" if body.strip() else "empty"
-        if page.state == "ok" and urlparse(page.requested_url).path.rstrip(
-            "/"
-        ) not in (parsed.path.rstrip("/"), ""):
+        # A search result is a Google redirect, so every one of them ends
+        # somewhere other than the path requested. That is the redirect doing
+        # its job, not a swapped page -- and the note is read by the
+        # extraction, which was told of every search page that it was "not the
+        # page the search named".
+        requested = urlparse(page.requested_url)
+        if (
+            page.state == "ok"
+            and requested.hostname != _GROUNDING_REDIRECT_HOST
+            and requested.path.rstrip("/") not in (parsed.path.rstrip("/"), "")
+        ):
             # Rappi answers an unknown menu slug with its restaurant index, at
             # 200. The text is real and it is not the page anybody asked for,
             # and a reader that does not say so has quietly swapped the source.
