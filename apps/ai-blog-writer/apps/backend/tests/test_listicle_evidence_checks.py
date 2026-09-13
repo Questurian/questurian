@@ -141,6 +141,42 @@ def test_a_passage_matches_across_accents_and_whitespace():
     assert packet.claims[0].validation == "evidence_ready"
 
 
+def test_a_claim_speaking_for_several_people_on_one_quote_needs_a_look():
+    """JUNO WINGS: "Reviewers in 2025 and 2026 noted long wait times for food",
+    resting on one review."""
+    pages = [
+        page(
+            "REVIEW by Antonio Izaguirre — 4 stars — written 2026-05-02\n"
+            "La espera fue de unos 35 minutos pero valió la pena.\n"
+            "REVIEW by Ana P — 3 stars — written 2025-03-01\n"
+            "Esperamos veinte minutos por las alitas, demasiado."
+        )
+    ]
+    one_quote = claim(
+        text="Reviewers in 2025 and 2026 noted long wait times for food.",
+        support=[{"page_id": "p1", "excerpt": "La espera fue de unos 35 minutos pero valió la pena"}],
+    )
+    two_quotes = claim(
+        text="Reviewers in 2025 and 2026 noted long wait times for food.",
+        support=[
+            {"page_id": "p1", "excerpt": "La espera fue de unos 35 minutos pero valió la pena"},
+            {"page_id": "p1", "excerpt": "Esperamos veinte minutos por las alitas, demasiado"},
+        ],
+    )
+    named = claim(
+        text="In a May 2026 review, Antonio Izaguirre said the wait was about 35 minutes.",
+        support=[{"page_id": "p1", "excerpt": "La espera fue de unos 35 minutos pero valió la pena"}],
+    )
+    packet = evidence.check(
+        {"claims": [one_quote, two_quotes, named]}, brief=brief(), pages=pages
+    )
+    verdicts = [c.validation for c in packet.claims]
+    assert verdicts[0] == "review_needed"
+    assert "quotes one" in packet.claims[0].notes[-1]
+    assert not any("quotes one" in n for n in packet.claims[1].notes)
+    assert not any("quotes one" in n for n in packet.claims[2].notes)
+
+
 # --------------------------------------------------------------------------
 # One branch's price is not the brand's
 # --------------------------------------------------------------------------

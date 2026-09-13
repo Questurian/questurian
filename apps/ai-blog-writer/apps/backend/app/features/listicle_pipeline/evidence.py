@@ -90,6 +90,14 @@ _TEMPORAL = {
 # separates them.
 MIN_PASSAGE_WORDS = 5
 
+# A claim that opens by speaking for a group.
+_SPEAKS_FOR_SEVERAL = re.compile(
+    r"^\s*(?:(?:in|according to)\b[^,]*,\s*)?"
+    r"(?:many|several|some|most|multiple|various|other|two|three)?\s*"
+    r"(?:reviewers|customers|diners|visitors|guests|patrons|people|users)\b",
+    re.I,
+)
+
 
 def _normalise(value: str) -> str:
     """Words only, accents folded, for comparing a passage with a page.
@@ -607,6 +615,21 @@ def check(
             claim.notes.append(
                 "Filed as a review with nobody identifiable behind it. Keywords "
                 "and aggregator prose are not testimony."
+            )
+            claim.validation = "review_needed"
+
+        # "Reviewers in 2025 and 2026 noted long waits", resting on one review.
+        # The extraction is told three people saying a thing is three people;
+        # a sentence that speaks for several and quotes one is how a writer
+        # ends up with "customers complain" from a single complaint.
+        if (
+            held
+            and _SPEAKS_FOR_SEVERAL.match(claim.text or "")
+            and len({item.excerpt for item in held}) < 2
+        ):
+            claim.notes.append(
+                "Speaks for several people but quotes one. Name the reviewer, "
+                "or cite each person it counts."
             )
             claim.validation = "review_needed"
 
