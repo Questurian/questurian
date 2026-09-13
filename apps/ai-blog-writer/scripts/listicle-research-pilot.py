@@ -103,6 +103,13 @@ RETESTS: dict[str, dict[str, str] | None] = {
     # The same comparison again, after ADR 0042. The first press under the name
     # above (99acd08ac6bb) died in discovery, and its key would replay it.
     "reviews-api-2026-09-12-b": {"BarBarian": "0e07e0e64514"},
+    # The other two pilot places, once BarBarian's packet was judged worth it.
+    # Judged against their three-place pilot attempts: the same page-reading
+    # design, before reviews, ADR 0042 and ADR 0043.
+    "reviews-api-2026-09-12-casa-mccarthy": {
+        "La Casa de las Alitas": "f5339abdc2f7",
+        "McCarthy's Irish Pub": "fd4e27e54af8",
+    },
 }
 
 
