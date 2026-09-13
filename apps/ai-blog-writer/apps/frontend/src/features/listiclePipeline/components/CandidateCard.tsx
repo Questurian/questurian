@@ -575,13 +575,13 @@ function ResearchAction({
               ? 'Research again'
               : 'Research this place'}
         </button>
-        {hasResearch && (
+        {(hasResearch || card.readiness.place_id) && (
           <button
             type="button"
             className="lp-tool lp-tool-quiet"
             onClick={onOpenResearch}
           >
-            {running ? 'Open research' : 'View research'}
+            {hasResearch ? (running ? 'Open research' : 'View research') : 'Research workspace'}
           </button>
         )}
       </div>

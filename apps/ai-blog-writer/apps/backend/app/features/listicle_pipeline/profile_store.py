@@ -18,6 +18,8 @@ in three listicles a year apart.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
+
 import hashlib
 import json
 import re
@@ -875,16 +877,17 @@ def sources(profile_id: str) -> list[ResearchSource]:
     ]
 
 
-def save_source(profile_id: str, source: ResearchSource) -> str:
+def save_source(profile_id: str, source: ResearchSource, *, connection: sqlite3.Connection | None = None) -> str:
     """Record one publication, or find the one already recorded.
 
     Returns the id it is stored under, which may not be the id handed in: the
     same article found by two requests is one source, and the second request's
     findings hang off the first request's row.
     """
-    ensure_research_tables()
+    if connection is None:
+        ensure_research_tables()
     key = _url_key(source.url) if source.url else f"noturl:{source.source_id}"
-    with get_db_connection() as conn:
+    with (nullcontext(connection) if connection is not None else get_db_connection()) as conn:
         existing = conn.execute(
             "SELECT source_id FROM listicle_research_sources WHERE profile_id = ? "
             "AND url_key = ?",
@@ -929,10 +932,11 @@ def save_source(profile_id: str, source: ResearchSource) -> str:
     return source.source_id
 
 
-def attach_evidence(finding_id: str, evidence: FindingEvidence) -> bool:
+def attach_evidence(finding_id: str, evidence: FindingEvidence, *, connection: sqlite3.Connection | None = None) -> bool:
     """Hang one source under one finding. False when it was already there."""
-    ensure_research_tables()
-    with get_db_connection() as conn:
+    if connection is None:
+        ensure_research_tables()
+    with (nullcontext(connection) if connection is not None else get_db_connection()) as conn:
         cursor = conn.execute(
             "INSERT OR IGNORE INTO listicle_finding_sources (finding_id, "
             "source_id, supporting_excerpt, evidence_scope, attached_at) "
@@ -948,7 +952,7 @@ def attach_evidence(finding_id: str, evidence: FindingEvidence) -> bool:
     return bool(cursor.rowcount)
 
 
-def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
+def save_finding(finding_to_save: ResearchFinding, *, connection: sqlite3.Connection | None = None) -> tuple[str, bool]:
     """Write one finding, or recognise the one already held.
 
     Returns (id, is_new). A finding whose words and scope match one already on
@@ -960,10 +964,11 @@ def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
     topics, categories and sources -- it cannot change the text, the dates or
     the curation state of a row somebody has already worked on.
     """
-    ensure_research_tables()
+    if connection is None:
+        ensure_research_tables()
     key = finding_text_key(finding_to_save.text, finding_to_save.scope)
     now = _iso(datetime.now(timezone.utc))
-    with get_db_connection() as conn:
+    with (nullcontext(connection) if connection is not None else get_db_connection()) as conn:
         existing = conn.execute(
             "SELECT * FROM listicle_profile_claims WHERE profile_id = ? "
             "AND text_key = ?",
@@ -997,7 +1002,7 @@ def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
             # attached above either way.
             if (
                 int(existing["version"] or 1) == 1
-                and (existing["origin"] or "") == "research"
+                and (existing["origin"] or "") in {"research", "external_import"}
                 and finding_to_save.validation != "not_checked"
             ):
                 conn.execute(
@@ -1074,9 +1079,10 @@ def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
                     finding_to_save.channel,
                 ),
             )
-    for item in finding_to_save.evidence:
-        attach_evidence(found_id, item)
-    _touch(finding_to_save.profile_id)
+        for item in finding_to_save.evidence:
+            attach_evidence(found_id, item, connection=conn)
+        conn.execute("UPDATE listicle_place_profiles SET updated_at=? WHERE profile_id=?",
+                     (now, finding_to_save.profile_id))
     return found_id, existing is None
 
 

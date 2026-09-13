@@ -325,7 +325,7 @@ CurationState = Literal["unreviewed", "kept", "discarded"]
 # `unknown` is what a row stored before findings had an origin reads as. It is
 # not a fourth kind of author; it is the honest answer for material gathered
 # before anybody recorded who gathered it.
-FindingOrigin = Literal["research", "operator", "places", "unknown"]
+FindingOrigin = Literal["research", "operator", "places", "external_import", "unknown"]
 
 # How well attributed a finding is. Derived, never asserted: a finding with no
 # source of its own is `incomplete` and says so on screen, and it is never

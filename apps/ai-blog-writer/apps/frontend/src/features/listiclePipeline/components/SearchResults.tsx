@@ -619,9 +619,12 @@ export function SearchResults({
 
       {/* The research drawer sits over the board rather than replacing it, so
           closing it returns to the same place in the same list. */}
-      {researchId && researchCard?.profile?.profile_id && (
+      {researchId && researchCard && (
         <ResearchViewer
-          profileId={researchCard.profile.profile_id}
+          key={researchId}
+          runId={results.run_id}
+          candidateId={researchId}
+          profileId={researchCard.profile?.profile_id ?? ''}
           topic={research.board?.topic ?? ''}
           topicLabel={research.board?.topic_label ?? ''}
           placeName={researchCandidate?.name ?? researchCard.name}

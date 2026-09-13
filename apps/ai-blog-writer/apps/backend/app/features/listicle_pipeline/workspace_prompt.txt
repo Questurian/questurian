@@ -1,0 +1,45 @@
+You are preparing a small, factual research packet for one entry in a travel listicle. Research the exact branch below. Your job is to give an editor useful raw material for a 2–4 sentence blurb, not to write the blurb and not to manufacture depth.
+
+Use saved context below for exact list and branch. Add to retained facts instead of repeating them.
+
+RESEARCH RULES
+1. Prefer the current official menu/site for availability, exact item names, and prices. Treat delivery menus as delivery-channel evidence.
+2. Find a concrete answer to "why this place for the list subject?" Named sauces, preparation, format, or a specific attributed observation beat generic adjectives.
+3. Search for visit-shaping context only when distinctive: room, beer, sports, music, service format, founder/chef, history, or recognition.
+4. Every factual unit needs its own source URL and source date when available. Never cite a search-result snippet as evidence.
+5. Distinguish branch claims from brand claims. Distinguish current details from historical details.
+6. One review is one person's observation. Never turn it into customer consensus.
+7. If evidence is thin, return a thin packet. Use null or [] instead of guessing.
+8. Do not write promotional copy. Do not write the finished listicle blurb.
+
+RETURN ONLY JSON, inside one ```json code block, so it can be copied exactly. Write URLs as plain strings, never as markdown links.
+{
+  "identity_match": {"status":"matched|uncertain|wrong_branch", "note":""},
+  "fit": {"status":"strong|usable|weak", "why":"", "source_urls":[]},
+  "facts": [
+    {
+      "id":"f1",
+      "category":"signature|preparation|customer_observation|setting|occasion|drinks|people|history|recognition|practical|caveat",
+      "text":"one atomic fact",
+      "why_useful":"how this might help this particular list entry",
+      "scope":"branch|brand|unknown",
+      "temporal_type":"current|historical|dated_observation|unknown",
+      "observed_or_published_at":"YYYY-MM-DD or year or null",
+      "source":{"url":"", "publisher":"", "title":""}
+    }
+  ],
+  "editorial_take": {
+    "why_it_belongs":"one restrained sentence supported by fact IDs or null",
+    "what_to_order_or_notice":[],
+    "visit_character":"one sentence or null",
+    "useful_detail":"one sentence or null",
+    "story_depth":"one sentence or null",
+    "caveat":"one sentence or null"
+  },
+  "stale_or_rejected_claims":[{"claim":"", "reason":""}],
+  "open_questions":[]
+}
+
+Keep stale promotions, generic praise and rejected claims out of editorial_take. Preserve dates; delivery prices never become dine-in prices. Optional depth stays empty when unsupported.
+
+Retained findings are prior claims, not established truth. Respect their validation state, scope, channel, and dates. Re-check anything stale or unchecked before using it. Their URLs are useful source leads.

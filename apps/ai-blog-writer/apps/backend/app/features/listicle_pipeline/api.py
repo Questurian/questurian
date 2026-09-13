@@ -19,7 +19,7 @@ from app.core.staff_auth import require_staff
 from ..prompt2blog.contracts_v4 import GrillState
 from ..prompt2blog.dependencies import DefaultPrompt2BlogLLM
 from ..prompt2blog.grill_v4 import GrillDependencies, GrillUnusableResponse
-from . import service
+from . import entry_blurb, research_workspace, service
 from .shapes import SHAPES, SHAPES_BY_KEY
 
 logger = logging.getLogger(__name__)
@@ -1061,3 +1061,35 @@ def edit_listicle_possible_angle(
         angle_id,
         req.model_dump(exclude_unset=True),
     )
+
+
+# Manual article-entry research. Reads and preview never invoke a provider.
+@router.get("/board/{run_id}/candidates/{candidate_id}/workspace")
+def get_research_workspace(run_id: str, candidate_id: str, _staff=Depends(require_staff)):
+    return _research(research_workspace.view, run_id, candidate_id)
+
+
+@router.post("/board/{run_id}/candidates/{candidate_id}/workspace/preview")
+def preview_research_workspace(run_id: str, candidate_id: str, body: research_workspace.PreviewInput, _staff=Depends(require_staff)):
+    return _research(research_workspace.preview, run_id, candidate_id, body)
+
+
+@router.post("/board/{run_id}/candidates/{candidate_id}/workspace/open")
+def open_research_workspace(run_id: str, candidate_id: str, _staff=Depends(require_staff)):
+    return _research(research_workspace.open_workspace, run_id, candidate_id)
+
+
+@router.post("/board/{run_id}/candidates/{candidate_id}/workspace/apply")
+def apply_research_workspace(run_id: str, candidate_id: str, body: research_workspace.ApplyInput, staff=Depends(require_staff)):
+    return _research(research_workspace.apply, run_id, candidate_id, body, staff=_staff_name(staff))
+
+
+@router.patch("/board/{run_id}/candidates/{candidate_id}/workspace")
+def edit_research_workspace(run_id: str, candidate_id: str, body: research_workspace.EditInput, _staff=Depends(require_staff)):
+    return _research(research_workspace.edit, run_id, candidate_id, body)
+
+
+@router.put("/board/{run_id}/candidates/{candidate_id}/workspace/blurb")
+def save_entry_blurb(run_id: str, candidate_id: str, body: entry_blurb.SaveInput, _staff=Depends(require_staff)):
+    """Save the blurb the operator pasted back or typed. The app calls no model."""
+    return _research(entry_blurb.save, run_id, candidate_id, body)

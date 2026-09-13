@@ -1,3 +1,4 @@
+import { ResearchWorkspace } from './ResearchWorkspace'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addPossibleAngle,
@@ -100,6 +101,8 @@ const CHANNEL_LABELS: Record<string, string> = {
 }
 
 interface ResearchViewerProps {
+  runId?: string
+  candidateId?: string
   profileId: string
   /** This list's topic key and how to print it. The filter's default. */
   topic: string
@@ -123,7 +126,9 @@ interface ResearchViewerProps {
 }
 
 export function ResearchViewer({
-  profileId,
+  runId,
+  candidateId,
+  profileId: initialProfileId,
   topic,
   topicLabel,
   placeName,
@@ -135,6 +140,8 @@ export function ResearchViewer({
   onGapResearch,
   onClose,
 }: ResearchViewerProps) {
+  const [profileId, setProfileId] = useState(initialProfileId)
+  const [tab, setTab] = useState<'workspace' | 'automated'>(runId && candidateId ? 'workspace' : 'automated')
   const [research, setResearch] = useState<ListicleProfileResearch | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -153,6 +160,7 @@ export function ResearchViewer({
   }, [onClose])
 
   useEffect(() => {
+    if (!profileId) { setLoading(false); return }
     let live = true
     setLoading(true)
     void loadProfileResearch(profileId)
@@ -175,7 +183,7 @@ export function ResearchViewer({
     return () => {
       live = false
     }
-  }, [profileId, researching])
+  }, [profileId, researching, tab])
 
   const change = useCallback(async (work: () => Promise<ListicleProfileResearch>) => {
     setBusy(true)
@@ -224,7 +232,7 @@ export function ResearchViewer({
       onClick={event => event.target === event.currentTarget && onClose()}
     >
       <div
-        className="lp-modal lp-research"
+        className={`lp-modal lp-research${tab === 'workspace' ? ' lp-research-workbench' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={`Research for ${placeName}`}
@@ -248,6 +256,16 @@ export function ResearchViewer({
           </button>
         </header>
 
+        {runId && candidateId && <>
+          <div role="tablist" aria-label="Research views" className="lp-workspace-tabs">
+            <button role="tab" aria-selected={tab === 'workspace'} aria-controls="research-workspace-panel" id="research-workspace-tab" onClick={() => setTab('workspace')}>Research workspace</button>
+            <button role="tab" aria-selected={tab === 'automated'} aria-controls="research-automated-panel" id="research-automated-tab" onClick={() => setTab('automated')}>Automated research (existing)</button>
+          </div>
+          <div role="tabpanel" id="research-workspace-panel" aria-labelledby="research-workspace-tab" hidden={tab !== 'workspace'}>
+            <ResearchWorkspace runId={runId} candidateId={candidateId} onProfile={setProfileId} active={tab === 'workspace'} />
+          </div>
+        </>}
+        <div role="tabpanel" id="research-automated-panel" aria-labelledby={runId ? 'research-automated-tab' : undefined} hidden={tab !== 'automated'}>
         {error && (
           <p className="lp-error" role="alert">
             {error}
@@ -408,6 +426,7 @@ export function ResearchViewer({
             {research && <History research={research} />}
           </>
         )}
+        </div>
       </div>
     </div>
   )

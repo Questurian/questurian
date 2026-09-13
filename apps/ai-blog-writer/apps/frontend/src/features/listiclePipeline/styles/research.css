@@ -500,3 +500,163 @@
   border-radius: var(--radius-md);
   padding: 0.6rem;
 }
+
+/* Approved Workbench: tools, editorial slots, compact source shelf. */
+.lp-workspace-tabs {
+  display: flex;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--lp-rule);
+  margin-bottom: 1.5rem;
+}
+.lp-workspace-tabs button {
+  padding: 0.8rem 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.lp-workspace-tabs [aria-selected='true'] {
+  border-bottom-color: #3b5bdb;
+  color: #3b5bdb;
+}
+.lp-workspace {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) minmax(280px, 1.8fr) minmax(
+      170px,
+      1fr
+    );
+  gap: 1.5rem;
+  align-items: start;
+}
+.lp-workspace h4 {
+  font-size: 1.15rem;
+  margin: 0 0 0.6rem;
+}
+.lp-workspace p,
+.lp-workspace small {
+  line-height: 1.55;
+}
+.lp-workspace p {
+  font-size: 0.85rem;
+}
+.lp-workspace textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  padding: 0.7rem;
+  margin: 0.5rem 0;
+  border: 1px solid #c9c2b8;
+  background: #efe9de;
+  color: #1a1a1a;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.lp-workspace a {
+  color: #3b5bdb;
+  overflow-wrap: anywhere;
+}
+.lp-workspace :focus-visible,
+.lp-workspace-tabs :focus-visible {
+  outline: 2px solid #3b5bdb;
+  outline-offset: 3px;
+}
+.lp-workspace-tools {
+  display: grid;
+  gap: 0.75rem;
+}
+.lp-workspace-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.lp-workspace-heading span,
+.lp-workspace small {
+  font-size: 0.75rem;
+}
+.lp-workspace-slot {
+  display: block;
+  border-top: 1px solid #c9c2b8;
+  padding-top: 0.85rem;
+  margin: 1rem 0;
+}
+.lp-workspace-slot > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.lp-workspace-slot small {
+  font-weight: normal;
+}
+.lp-workspace-source {
+  border-top: 1px solid #c9c2b8;
+  padding: 0.6rem 0;
+}
+.lp-workspace-source a {
+  display: block;
+  font-size: 0.8rem;
+  margin-top: 0.4rem;
+}
+.lp-workspace-message,
+.lp-workspace-preview {
+  grid-column: 1 / -1;
+}
+.lp-workspace-preview {
+  border-top: 2px solid #3b5bdb;
+  padding-top: 1rem;
+}
+.lp-workspace-change {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.75rem;
+  padding: 0.8rem 0;
+  border-top: 1px solid #c9c2b8;
+  font-size: 0.85rem;
+}
+.lp-workspace-change span,
+.lp-workspace-change a {
+  grid-column: 2;
+  white-space: pre-wrap;
+}
+@media (max-width: 1000px) {
+  .lp-workspace {
+    grid-template-columns: minmax(180px, 1fr) minmax(260px, 1.7fr);
+  }
+  .lp-workspace-sources {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 650px) {
+  .lp-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lp-workspace-tabs {
+    gap: 1rem;
+  }
+}
+.lp-modal.lp-research-workbench { background: #F5F0E8; }
+.lp-workspace .lp-tool { background: #EFE9DE; border-color: #c9c2b8; }
+.lp-workspace .lp-tool:disabled { opacity: .5; cursor: default; }
+.lp-workspace-blurb {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+  border-top: 2px solid #3b5bdb;
+  padding-top: 1rem;
+}
+.lp-workspace-blurb textarea {
+  width: 100%;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+.lp-workspace-prompt {
+  white-space: pre-wrap;
+  font-size: 0.75rem;
+  max-height: 20rem;
+  overflow: auto;
+}

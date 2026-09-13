@@ -823,3 +823,76 @@ export interface ListicleProfileResearch {
   open_questions: string[]
   runs: { run_id: string; candidate_id: string; name: string; linked_at: string }[]
 }
+
+export interface EntryResearchSlots {
+  why_it_belongs: string | null
+  what_to_order_or_notice: string[]
+  visit_character: string | null
+  useful_detail: string | null
+  story_depth: string | null
+  caveat: string | null
+}
+export type EntryResearchField = keyof EntryResearchSlots
+export interface EntryResearchWorkspace {
+  imports?: {
+    import_key: string
+    created_at: string
+    stale_or_rejected_claims: { claim: string; reason: string }[]
+    open_questions: string[]
+  }[]
+  profile_id: string
+  version: number
+  context_key: string
+  order_revision: number
+  slots: EntryResearchSlots
+  supporting_findings: Partial<Record<EntryResearchField, string[]>>
+  ready: boolean
+  stale: boolean
+  prompt: string
+  title?: string
+  place_name?: string
+  blurb?: EntryBlurb
+}
+/** One place's blurb. `prompt` is built from the current brief; `stale` means the brief changed since the blurb was saved. */
+export interface EntryBlurb {
+  version: number
+  text: string
+  prompt: string
+  stale: boolean
+}
+export interface ExternalResearchFact {
+  id: string
+  category: string
+  text: string
+  why_useful: string
+  scope: 'branch' | 'brand' | 'unknown'
+  temporal_type: 'current' | 'historical' | 'dated_observation' | 'unknown'
+  observed_or_published_at: string | null
+  source: { url: string; publisher: string; title: string }
+}
+export interface ResearchImportPreview {
+  version: number
+  context_key: string
+  can_apply: boolean
+  warnings: string[]
+  changes: {
+    field: EntryResearchField
+    before: string | string[] | null
+    after: string | string[] | null
+  }[]
+  packet: {
+    identity_match: {
+      status: 'matched' | 'uncertain' | 'wrong_branch'
+      note: string
+    }
+    fit: {
+      status: 'strong' | 'usable' | 'weak'
+      why: string
+      source_urls: string[]
+    }
+    facts: ExternalResearchFact[]
+    editorial_take: EntryResearchSlots
+    stale_or_rejected_claims: { claim: string; reason: string }[]
+    open_questions: string[]
+  }
+}

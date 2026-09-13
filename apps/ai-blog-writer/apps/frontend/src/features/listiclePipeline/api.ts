@@ -505,3 +505,99 @@ export function editPossibleAngle(
     { method: 'PATCH', body: JSON.stringify(body) },
   )
 }
+
+async function workspaceCall<T>(
+  runId: string,
+  candidateId: string,
+  suffix = '',
+  method = 'GET',
+  body?: unknown
+): Promise<T> {
+  const response = await apiFetch(
+    `${BASE}/board/${encodeURIComponent(runId)}/candidates/${encodeURIComponent(candidateId)}/workspace${suffix}`,
+    {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) })
+    }
+  )
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new Error(
+      typeof data?.detail === 'string'
+        ? data.detail
+        : data?.detail?.message ||
+            'Research could not be saved. Reload and try again.'
+    )
+  }
+  return response.json() as Promise<T>
+}
+export const openResearchWorkspace = (runId: string, candidateId: string) =>
+  workspaceCall<import('./types').EntryResearchWorkspace>(
+    runId,
+    candidateId,
+    '/open',
+    'POST'
+  )
+export const loadResearchWorkspace = (runId: string, candidateId: string) =>
+  workspaceCall<import('./types').EntryResearchWorkspace>(runId, candidateId)
+export const previewResearchImport = (
+  runId: string,
+  candidateId: string,
+  rawJson: string
+) =>
+  workspaceCall<import('./types').ResearchImportPreview>(
+    runId,
+    candidateId,
+    '/preview',
+    'POST',
+    { raw_json: rawJson }
+  )
+export const applyResearchImport = (
+  runId: string,
+  candidateId: string,
+  body: {
+    raw_json: string
+    version: number
+    context_key: string
+    import_key: string
+    fields: import('./types').EntryResearchField[]
+    fact_ids: string[]
+  }
+) =>
+  workspaceCall<import('./types').EntryResearchWorkspace>(
+    runId,
+    candidateId,
+    '/apply',
+    'POST',
+    body
+  )
+export const saveEntryBlurb = (
+  runId: string,
+  candidateId: string,
+  body: { version: number; text: string }
+) =>
+  workspaceCall<import('./types').EntryResearchWorkspace>(
+    runId,
+    candidateId,
+    '/blurb',
+    'PUT',
+    body
+  )
+
+export const saveResearchWorkspace = (
+  runId: string,
+  candidateId: string,
+  body: {
+    version: number
+    context_key: string
+    slots: Partial<import('./types').EntryResearchSlots>
+  }
+) =>
+  workspaceCall<import('./types').EntryResearchWorkspace>(
+    runId,
+    candidateId,
+    '',
+    'PATCH',
+    body
+  )

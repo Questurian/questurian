@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PROTOTYPE — Listicle research workspace</title>
+  <style>
+    :root {
+      --ground:#f5f0e8; --paper:#efe9de; --paper-accent:#e8e8e3;
+      --ink:#1a1a1a; --muted:#6d685f; --rule:#c9c1b5; --rule-dark:#928a7d;
+      --accent:#3b5bdb; --accent-pale:#e4e9fb; --good:#2f6b4f;
+      --warn:#8a5a12; --white:#fffdf8; --shadow:0 20px 60px rgba(44,38,30,.16);
+    }
+    *{box-sizing:border-box}
+    html{background:var(--ground);color:var(--ink);font:16px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+    body{margin:0;min-height:100vh;background:var(--ground)}
+    button,input,textarea,select{font:inherit;color:inherit}
+    button{cursor:pointer}
+    button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid rgba(59,91,219,.35);outline-offset:2px}
+    .prototype-flag{background:var(--ink);color:var(--ground);padding:7px 24px;font-size:12px;text-align:center;letter-spacing:.03em}
+    .shell{max-width:1440px;margin:auto;padding:22px 28px 110px}
+    .crumbs{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:13px;margin-bottom:22px}
+    .crumbs button{border:0;background:transparent;color:var(--accent);padding:0}
+    .title-row{display:flex;gap:24px;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+    h1{font-family:Georgia,serif;font-size:clamp(30px,3vw,46px);line-height:1.05;font-weight:500;margin:0 0 8px}
+    .sub{margin:0;color:var(--muted)}
+    .identity{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;max-width:570px}
+    .identity span{border:1px solid var(--rule);padding:7px 10px;background:var(--paper);font-size:12px}
+    .tabs{display:flex;border-bottom:1px solid var(--rule);gap:26px;margin-bottom:22px}
+    .tab{border:0;background:transparent;padding:13px 2px;color:var(--muted);position:relative}
+    .tab.active{color:var(--ink);font-weight:700}
+    .tab.active:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:var(--accent)}
+    .workspace{display:grid;grid-template-columns:minmax(240px,320px) minmax(480px,1fr) minmax(240px,330px);gap:18px;align-items:start}
+    .panel{border:1px solid var(--rule);background:var(--paper);padding:18px}
+    .panel.white{background:var(--white)}
+    .panel h2,.panel h3{margin:0;font-family:Georgia,serif;font-weight:500}
+    .panel h2{font-size:23px}.panel h3{font-size:18px}
+    .lede{color:var(--muted);font-size:13px;margin:7px 0 16px}
+    .step{display:grid;grid-template-columns:28px 1fr;gap:10px;padding:14px 0;border-top:1px solid var(--rule)}
+    .step:first-of-type{border-top:0}
+    .num{width:26px;height:26px;border:1px solid var(--rule-dark);display:grid;place-items:center;font:12px Georgia,serif}
+    .step.done .num{background:var(--good);border-color:var(--good);color:white}
+    .step strong{display:block;font-size:14px}.step p{font-size:12px;color:var(--muted);margin:3px 0 9px}
+    .button{border:1px solid var(--accent);background:transparent;color:var(--accent);padding:9px 12px;font-weight:650;font-size:13px}
+    .button.primary{background:var(--accent);color:white}.button.dark{border-color:var(--ink);color:var(--ink)}
+    .button:disabled{opacity:.38;cursor:not-allowed}
+    .button-row{display:flex;flex-wrap:wrap;gap:8px}
+    .mini{font-size:11px;color:var(--muted)}
+    .coverage{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin:12px 0 7px}
+    .coverage i{height:5px;background:var(--rule)}.coverage i.on{background:var(--good)}.coverage i.optional{background:var(--accent);opacity:.35}
+    .brief-head{display:flex;justify-content:space-between;gap:16px;align-items:center;padding-bottom:14px;border-bottom:1px solid var(--rule)}
+    .ready{color:var(--good);font-size:13px;font-weight:700}
+    .slot{padding:18px 0;border-bottom:1px solid var(--rule)}
+    .slot:last-child{border-bottom:0}
+    .slot-head{display:flex;align-items:baseline;gap:9px;margin-bottom:9px}
+    .slot h3{font:600 14px/1.3 system-ui;margin:0}.need,.optional-label{font-size:11px}.need{color:var(--accent)}.optional-label{color:var(--muted)}
+    textarea,input[type=text],select{width:100%;background:transparent;border:1px solid var(--rule-dark);padding:10px 11px}
+    textarea{resize:vertical;min-height:78px;line-height:1.5}
+    .source-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .pill{border:1px solid var(--rule);background:var(--paper);padding:4px 7px;font-size:11px;color:var(--muted)}
+    .pill.good{color:var(--good);border-color:#8caf9b}.pill.warn{color:var(--warn);border-color:#c7a56e}
+    .order-list{display:grid;gap:8px}
+    .order-item{display:grid;grid-template-columns:1fr auto;gap:8px}.order-item button{border:0;background:transparent;color:var(--muted)}
+    details{border-top:1px solid var(--rule);padding:13px 0}summary{cursor:pointer;font-weight:650;font-size:13px;color:var(--accent)}
+    .fact-list{display:grid;gap:9px;margin-top:12px}
+    .fact{border-left:3px solid var(--rule-dark);padding:7px 0 7px 10px;font-size:12px}.fact b{display:block;margin-bottom:2px}.fact small{color:var(--muted)}
+    .source{padding:12px 0;border-top:1px solid var(--rule)}.source:first-of-type{border-top:0}.source strong{display:block;font-size:13px}.source a{font-size:12px;color:var(--accent)}
+    .source p{font-size:11px;color:var(--muted);margin:4px 0}
+    .add-source{display:grid;grid-template-columns:1fr auto;gap:7px;margin-top:12px}.add-source input{font-size:12px}.add-source button{padding:7px 9px}
+    .compact-actions{display:none;gap:8px;flex-wrap:wrap}
+    .automated{display:none}.automated.active{display:block}.manual.hidden{display:none}
+    .machine-note{background:var(--accent-pale);border-left:4px solid var(--accent);padding:13px 15px;margin-bottom:15px;font-size:13px}
+    table{width:100%;border-collapse:collapse;background:var(--white);font-size:12px}th{text-align:left;color:var(--muted);font-size:10px;letter-spacing:.06em;text-transform:uppercase}th,td{padding:11px;border-bottom:1px solid var(--rule);vertical-align:top}.state{color:var(--good);font-weight:650}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(26,26,26,.48);display:none;place-items:center;padding:24px;z-index:20}.modal-backdrop.open{display:grid}
+    .modal{background:var(--ground);width:min(900px,96vw);max-height:88vh;overflow:auto;box-shadow:var(--shadow);border:1px solid var(--rule-dark)}
+    .modal-head{display:flex;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid var(--rule)}.modal-head h2{font:500 25px Georgia,serif;margin:0}.close{border:0;background:transparent;font-size:26px}
+    .modal-body{padding:20px 22px}.prompt{background:#252525;color:#f5f0e8;padding:18px;white-space:pre-wrap;font:12px/1.6 ui-monospace,SFMono-Regular,monospace;max-height:52vh;overflow:auto}
+    .pastebox{min-height:290px;background:var(--white);font:12px/1.5 ui-monospace,monospace}
+    .import-preview{display:none;margin-top:14px;border-top:1px solid var(--rule);padding-top:14px}.import-preview.open{display:block}
+    .import-row{display:grid;grid-template-columns:24px 140px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:12px}
+    .toast{position:fixed;right:24px;top:24px;background:var(--ink);color:white;padding:12px 16px;z-index:40;opacity:0;transform:translateY(-8px);transition:.2s}.toast.show{opacity:1;transform:none}
+    .variant-bar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:white;display:flex;gap:4px;padding:7px;box-shadow:var(--shadow);z-index:10}
+    .variant-bar button{border:0;background:transparent;color:#cfcac1;padding:8px 12px;font-size:12px}.variant-bar button.active{background:var(--accent);color:white}
+    .variant-2 .workspace{grid-template-columns:250px minmax(520px,1fr)}.variant-2 .sources-panel{grid-column:1}.variant-2 .brief-panel{grid-column:2;grid-row:1/span 2}.variant-2 .prompt-panel{grid-column:1;grid-row:2}.variant-2 .slot{display:grid;grid-template-columns:170px 1fr;gap:18px}.variant-2 .slot-head{display:block}.variant-2 .slot-head span{display:block;margin-top:4px}
+    .variant-3 .workspace{display:block;max-width:920px;margin:auto}.variant-3 .prompt-panel{display:grid;grid-template-columns:170px 1fr auto;gap:20px;align-items:center;margin-bottom:14px}.variant-3 .prompt-panel .step,.variant-3 .prompt-panel>.mini,.variant-3 .prompt-panel>.coverage{display:none}.variant-3 .prompt-panel .lede{margin:5px 20px 5px 0}.variant-3 .compact-actions{display:flex}.variant-3 .brief-panel{padding:28px 44px}.variant-3 .brief-head{margin-bottom:4px}.variant-3 .slot{display:grid;grid-template-columns:190px 1fr;gap:22px}.variant-3 .sources-panel{margin-top:14px}.variant-3 .source-stack{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.variant-3 .source{border:1px solid var(--rule);padding:12px}
+    @media(max-width:1050px){.workspace,.variant-2 .workspace{grid-template-columns:1fr 1.7fr}.sources-panel{grid-column:1/-1}.variant-2 .sources-panel{grid-column:1}.variant-2 .prompt-panel{grid-column:1}.variant-2 .brief-panel{grid-column:2}.identity{justify-content:flex-start}.title-row{display:block}.identity{margin-top:14px}}
+    @media(max-width:740px){.shell{padding:18px 14px 100px}.workspace,.variant-2 .workspace{display:block}.panel{margin-bottom:12px}.variant-2 .slot,.variant-3 .slot{display:block}.variant-3 .brief-panel{padding:20px}.variant-3 .source-stack{display:block}.identity{display:none}.variant-bar{width:calc(100% - 20px);justify-content:center}.variant-bar button{padding:7px}.title-row{margin-bottom:12px}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  </style>
+</head>
+<body class="variant-1">
+  <div class="prototype-flag">THROWAWAY PROTOTYPE · fake interactions · no data is saved</div>
+  <main class="shell">
+    <div class="crumbs"><button>← Candidate board</button><span>/</span><span>35 places</span><span>/</span><span>Research</span></div>
+    <div class="title-row">
+      <div><h1>McCarthy’s Irish Pub</h1><p class="sub">Research for “The Best Chicken Wings in Lima Peru”</p></div>
+      <div class="identity"><span>Miraflores</span><span>C. 2 de Mayo 220</span><span>Google 4.3 · 565 ratings</span><span>Open · identity checked</span></div>
+    </div>
+    <nav class="tabs" aria-label="Research modes">
+      <button class="tab active" data-tab="manual">Research workspace</button>
+      <button class="tab" data-tab="automated">Automated research <span class="mini">(existing)</span></button>
+    </nav>
+
+    <section class="manual">
+      <div class="workspace">
+        <aside class="panel prompt-panel">
+          <h2>Bring back a small brief</h2>
+          <p class="lede">Use any strong web-enabled model. Its answer becomes an editable draft, never final truth.</p>
+          <div class="step done"><span class="num">✓</span><div><strong>Place context ready</strong><p>Identity, list angle, Google data, discovery leads, and saved sources included.</p></div></div>
+          <div class="step"><span class="num">2</span><div><strong>Research elsewhere</strong><p>Copy one purpose-built prompt. Better evidence can produce more depth; thin evidence stays short.</p><button class="button primary" id="openPrompt">Open & copy prompt</button></div></div>
+          <div class="step" id="pasteStep"><span class="num">3</span><div><strong>Paste the answer</strong><p>Preview every field before anything enters the brief.</p><button class="button" id="openPaste">Paste model answer</button></div></div>
+          <div class="coverage"><i class="on"></i><i class="on"></i><i class="optional"></i></div>
+          <p class="mini"><b>Minimum met:</b> why it belongs + what to order. Story depth optional.</p>
+          <div class="compact-actions"><button class="button primary" id="openPromptCompact">Copy prompt</button><button class="button" id="openPasteCompact">Paste answer</button></div>
+        </aside>
+
+        <article class="panel white brief-panel">
+          <header class="brief-head"><div><h2>Writer-ready research</h2><p class="lede">What the blurb writer should understand—not the research process.</p></div><span class="ready" id="readyLabel">Usable · 2 core details</span></header>
+          <div class="slot">
+            <div class="slot-head"><h3>Why it belongs</h3><span class="need">Required</span></div>
+            <textarea id="why">A rock-and-sports pub where wings are a main event, with a broad sauce lineup built for a group order.</textarea>
+            <div class="source-pills"><span class="pill good">Perú Retail · 2020</span><span class="pill warn">Current menu should be checked</span></div>
+          </div>
+          <div class="slot">
+            <div class="slot-head"><h3>What to order or notice</h3><span class="need">Required</span></div>
+            <div class="order-list" id="orders">
+              <div class="order-item"><input type="text" value="Rum with passion fruit and whisky barbecue sauces"><button aria-label="Remove">×</button></div>
+              <div class="order-item"><input type="text" value="Spicy honey, lemon pepper, and mango-lime were singled out by a diner"><button aria-label="Remove">×</button></div>
+            </div>
+            <button class="button dark" id="addOrder" style="margin-top:9px">+ Add detail</button>
+            <div class="source-pills"><span class="pill good">Perú Retail</span><span class="pill good">Google review · Jun 2022</span></div>
+          </div>
+          <div class="slot">
+            <div class="slot-head"><h3>What the visit feels like</h3><span class="optional-label">Use when distinctive</span></div>
+            <textarea id="experience">Rock-music pub with more than 25 screens and a live-concert stage; useful when the list needs a game-night option.</textarea>
+            <div class="source-pills"><span class="pill good">Perú Retail · branch-specific</span></div>
+          </div>
+          <div class="slot">
+            <div class="slot-head"><h3>Useful detail</h3><span class="optional-label">Only if it changes the visit</span></div>
+            <textarea id="practical" placeholder="Current price, ordering constraint, reservation note, or leave blank"></textarea>
+          </div>
+          <details open>
+            <summary>More depth when the place earns it</summary>
+            <div class="slot"><div class="slot-head"><h3>People, history, or recognition</h3><span class="optional-label">Optional</span></div><textarea id="story">The Miraflores pub opened in late 2020 as the Peruvian location of a Mexican chain founded in 2009. Its local sauce selection was adapted toward sweet-and-sour and spicy flavors.</textarea><div class="source-pills"><span class="pill good">Perú Retail · 2020</span></div></div>
+            <div class="slot"><div class="slot-head"><h3>Caveat</h3><span class="optional-label">Useful, not obligatory balance</span></div><textarea id="caveat" placeholder="A current, specific tradeoff—or leave blank"></textarea></div>
+          </details>
+        </article>
+
+        <aside class="panel sources-panel">
+          <h2>Source shelf</h2><p class="lede">Three useful sources beat thirty repeated findings. Open source; edit brief beside it.</p>
+          <div class="source-stack" id="sourceStack">
+            <div class="source"><strong>Perú Retail</strong><p>Opening story · Dec 28, 2020 · branch matched</p><a href="https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/" target="_blank" rel="noreferrer">Open source</a></div>
+            <div class="source"><strong>Google reviews</strong><p>Individual diner observations · 2022–2024</p><a href="https://search.google.com/local/reviews?placeid=ChIJP1dp8jHJBZERDi1K0qJvjEw" target="_blank" rel="noreferrer">Open reviews</a></div>
+            <div class="source"><strong>Discovery lead</strong><p>“13 tipos de salsas” · useful lead, not proof</p><a href="#">View original sighting</a></div>
+          </div>
+          <div class="add-source"><input id="sourceUrl" type="text" placeholder="Paste another source URL"><button class="button" id="addSource">Add</button></div>
+          <details><summary>Unused facts (4)</summary><div class="fact-list"><div class="fact"><b>Old Monday promotion</b><small>S/1.50 per wing in 2020. Too old for current advice.</small></div><div class="fact"><b>Generic praise</b><small>Several reviews say “good” or “tasty.” Adds no useful detail.</small></div><div class="fact"><b>Delivery listing</b><small>Rappi proves availability on one channel, not dine-in pricing.</small></div><div class="fact"><b>Panko caveat</b><small>One 2022 diner disliked the crunchy wings. Too thin to generalize.</small></div></div></details>
+        </aside>
+      </div>
+    </section>
+
+    <section class="automated">
+      <div class="machine-note"><b>This tab preserves the current system.</b> It remains the detailed audit trail: raw findings, citations, validation, coverage, and attempt history. Manual/imported facts should enter the same underlying store and appear here too.</div>
+      <div class="panel"><h2>Automated research</h2><p class="lede">44 findings · 37 check out · 4 need a look · 3 unchecked. Counts, not a score.</p>
+        <div style="overflow:auto"><table><thead><tr><th>Finding</th><th>About</th><th>Source</th><th>Date</th><th>State</th></tr></thead><tbody>
+          <tr><td>At opening, wings came with 13 sauce choices.</td><td>signature · preparation</td><td>Perú Retail</td><td>2020</td><td class="state">Checks out</td></tr>
+          <tr><td>The pub has more than 25 screens and a stage.</td><td>setting · occasion</td><td>Perú Retail</td><td>2020</td><td class="state">Checks out</td></tr>
+          <tr><td>A diner recommended spicy honey, lemon pepper, and mango lime.</td><td>customer · preparation</td><td>Google review</td><td>2022</td><td class="state">Checks out</td></tr>
+          <tr><td>Alitas Crunchy: 8 for S/28.90; 12 for S/36.90.</td><td>signature · value</td><td>Unknown</td><td>Unknown</td><td style="color:var(--warn);font-weight:650">Unchecked</td></tr>
+          <tr><td>Monday wings cost S/1.50 each.</td><td>value · promotion</td><td>Perú Retail</td><td>2020</td><td class="state">Checks out · old</td></tr>
+        </tbody></table></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="variant-bar" aria-label="Prototype layout variants"><button data-variant="1" class="active">A · Workbench</button><button data-variant="2">B · Editorial split</button><button data-variant="3">C · Reading page</button></div>
+  <div class="toast" id="toast">Copied</div>
+
+  <div class="modal-backdrop" id="promptModal"><section class="modal" role="dialog" aria-modal="true" aria-label="Research prompt"><header class="modal-head"><div><h2>Research prompt</h2><p class="sub">Built from this place + this list</p></div><button class="close" data-close="promptModal" aria-label="Close">×</button></header><div class="modal-body"><div class="button-row" style="margin-bottom:12px"><button class="button primary" id="copyPrompt">Copy prompt</button><button class="button" id="jumpPaste">I have the answer</button></div><pre class="prompt" id="promptText"></pre></div></section></div>
+
+  <div class="modal-backdrop" id="pasteModal"><section class="modal" role="dialog" aria-modal="true" aria-label="Paste model answer"><header class="modal-head"><div><h2>Paste model answer</h2><p class="sub">JSON preferred. Nothing changes until you approve the preview.</p></div><button class="close" data-close="pasteModal" aria-label="Close">×</button></header><div class="modal-body"><textarea class="pastebox" id="pasteBox"></textarea><div class="button-row" style="margin-top:10px"><button class="button primary" id="previewImport">Preview import</button><button class="button" id="loadSample">Load sample answer</button></div><div class="import-preview" id="importPreview"><h3>What will change</h3><div class="import-row"><input type="checkbox" checked><b>Why it belongs</b><span>Replace current text</span></div><div class="import-row"><input type="checkbox" checked><b>What to order</b><span>Add 2 details</span></div><div class="import-row"><input type="checkbox" checked><b>Experience</b><span>Replace current text</span></div><div class="import-row"><input type="checkbox" checked><b>Story</b><span>Add optional depth</span></div><div class="import-row"><input type="checkbox"><b>Old promotion</b><span>Keep unused; current status not established</span></div><button class="button primary" id="applyImport" style="margin-top:14px">Apply selected fields</button></div></div></section></div>
+
+  <script>
+    var promptText = `You are preparing a small, factual research packet for one entry in a travel listicle. Research the exact branch below. Your job is to give an editor useful raw material for a 2–4 sentence blurb, not to write the blurb and not to manufacture depth.
+
+LIST
+Title: The Best Chicken Wings in Lima Peru
+Inclusion standard: Wings must be a regular offering and there must be a concrete, wings-specific reason to include the place.
+Exclude: generic restaurant praise, delivery-only kitchens, stale promotions presented as current, claims about another branch.
+
+PLACE IDENTITY
+Name: McCarthy's Irish Pub
+Branch: C. 2 de Mayo 220, Miraflores 15074, Peru
+Google Place ID: ChIJP1dp8jHJBZERDi1K0qJvjEw
+Google status: OPERATIONAL
+Google categories: bar, restaurant
+Google rating snapshot: 4.3 from 565 ratings
+
+DISCOVERY LEAD — LEAD ONLY, NOT EVIDENCE
+The candidate search returned: "gran variedad de alitas, 13 tipos de salsas."
+
+KNOWN SOURCE LEADS
+https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/
+https://search.google.com/local/reviews?placeid=ChIJP1dp8jHJBZERDi1K0qJvjEw
+
+RESEARCH RULES
+1. Prefer the current official menu/site for availability, exact item names, and prices. Treat delivery menus as delivery-channel evidence.
+2. Find a concrete answer to "why these wings?" Named sauces, preparation, format, or a specific attributed observation beat generic adjectives.
+3. Search for visit-shaping context only when distinctive: room, beer, sports, music, service format, founder/chef, history, or recognition.
+4. Every factual unit needs its own source URL and source date when available. Never cite a search-result snippet as evidence.
+5. Distinguish branch claims from brand claims. Distinguish current details from historical details.
+6. One review is one person's observation. Never turn it into customer consensus.
+7. If evidence is thin, return a thin packet. Use null or [] instead of guessing.
+8. Do not write promotional copy. Do not write the finished listicle blurb.
+
+RETURN ONLY JSON
+{
+  "identity_match": {"status":"matched|uncertain|wrong_branch", "note":""},
+  "fit": {"status":"strong|usable|weak", "why":"", "source_urls":[]},
+  "facts": [
+    {
+      "id":"f1",
+      "category":"signature|preparation|customer_observation|setting|occasion|drinks|people|history|recognition|practical|caveat",
+      "text":"one atomic fact",
+      "why_useful":"how this might help this particular list entry",
+      "scope":"branch|brand|unknown",
+      "temporal_type":"current|historical|dated_observation|unknown",
+      "observed_or_published_at":"YYYY-MM-DD or year or null",
+      "source":{"url":"", "publisher":"", "title":""}
+    }
+  ],
+  "editorial_take": {
+    "why_it_belongs":"one restrained sentence supported by fact IDs or null",
+    "what_to_order_or_notice":[],
+    "visit_character":"one sentence or null",
+    "useful_detail":"one sentence or null",
+    "story_depth":"one sentence or null",
+    "caveat":"one sentence or null"
+  },
+  "stale_or_rejected_claims":[{"claim":"", "reason":""}],
+  "open_questions":[]
+}`;
+    var sample = {
+      identity_match:{status:'matched',note:'Miraflores address matches.'},
+      fit:{status:'strong',why:'Wings are central to the pub menu and differentiated by a wide, locally adapted sauce selection.',source_urls:['https://www.peru-retail.com/peru-mccarthys-irish-pub-abre-en-miraflores-y-sigue-creciendo-en-la-region/']},
+      editorial_take:{why_it_belongs:'A rock-and-sports pub where the wings stand out for a locally adapted sauce lineup rather than a single Buffalo-style default.',what_to_order_or_notice:['Rum with passion fruit and whisky-barbecue sauces','Spicy honey, lemon pepper, and mango-lime flavors mentioned by a diner'],visit_character:'More than 25 screens and a live-concert stage make this the game-night entry in the list.',useful_detail:null,story_depth:'The Miraflores branch opened in 2020 as the Peruvian outpost of a Mexican pub chain founded in 2009.',caveat:null},
+      stale_or_rejected_claims:[{claim:'Monday wings for S/1.50',reason:'Published in 2020; current promotion not established.'}],open_questions:['Is the 13-sauce lineup still current?']
+    };
+    document.getElementById('promptText').textContent = promptText;
+    function openModal(id){document.getElementById(id).classList.add('open')}
+    function closeModal(id){document.getElementById(id).classList.remove('open')}
+    function toast(message){var el=document.getElementById('toast');el.textContent=message;el.classList.add('show');setTimeout(function(){el.classList.remove('show')},1500)}
+    document.getElementById('openPrompt').onclick=function(){openModal('promptModal')};
+    document.getElementById('openPaste').onclick=function(){openModal('pasteModal')};
+    document.getElementById('openPromptCompact').onclick=function(){openModal('promptModal')};
+    document.getElementById('openPasteCompact').onclick=function(){openModal('pasteModal')};
+    document.getElementById('jumpPaste').onclick=function(){closeModal('promptModal');openModal('pasteModal')};
+    document.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){closeModal(b.dataset.close)}});
+    document.querySelectorAll('.modal-backdrop').forEach(function(m){m.onclick=function(e){if(e.target===m)closeModal(m.id)}});
+    document.getElementById('copyPrompt').onclick=async function(){try{await navigator.clipboard.writeText(promptText);toast('Prompt copied')}catch(e){toast('Select and copy the prompt')}};
+    document.getElementById('loadSample').onclick=function(){document.getElementById('pasteBox').value=JSON.stringify(sample,null,2)};
+    document.getElementById('previewImport').onclick=function(){var box=document.getElementById('pasteBox');try{JSON.parse(box.value);document.getElementById('importPreview').classList.add('open')}catch(e){toast('That is not valid JSON yet')}};
+    document.getElementById('applyImport').onclick=function(){var data=JSON.parse(document.getElementById('pasteBox').value);var take=data.editorial_take||{};if(take.why_it_belongs)document.getElementById('why').value=take.why_it_belongs;if(take.visit_character)document.getElementById('experience').value=take.visit_character;if(take.useful_detail)document.getElementById('practical').value=take.useful_detail;if(take.story_depth)document.getElementById('story').value=take.story_depth;if(take.caveat)document.getElementById('caveat').value=take.caveat;if(take.what_to_order_or_notice){document.getElementById('orders').innerHTML='';take.what_to_order_or_notice.forEach(addOrder)}document.getElementById('pasteStep').classList.add('done');document.getElementById('pasteStep').querySelector('.num').textContent='✓';closeModal('pasteModal');toast('Draft imported — everything remains editable')};
+    function addOrder(value){var row=document.createElement('div');row.className='order-item';var input=document.createElement('input');input.type='text';input.value=value||'';var button=document.createElement('button');button.textContent='×';button.setAttribute('aria-label','Remove');button.onclick=function(){row.remove()};row.append(input,button);document.getElementById('orders').append(row);if(!value)input.focus()}
+    document.getElementById('addOrder').onclick=function(){addOrder('')};document.querySelectorAll('.order-item button').forEach(function(b){b.onclick=function(){b.parentElement.remove()}});
+    document.getElementById('addSource').onclick=function(){var input=document.getElementById('sourceUrl');if(!input.value.trim())return;var div=document.createElement('div');div.className='source';div.innerHTML='<strong>Operator source</strong><p>Added manually · not checked yet</p><a target="_blank" rel="noreferrer">Open source</a>';div.querySelector('a').href=input.value.trim();document.getElementById('sourceStack').append(div);input.value='';toast('Source added to prototype')};
+    document.querySelectorAll('.tab').forEach(function(tab){tab.onclick=function(){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});tab.classList.add('active');var auto=tab.dataset.tab==='automated';document.querySelector('.manual').classList.toggle('hidden',auto);document.querySelector('.automated').classList.toggle('active',auto)}});
+    function setVariant(v){document.body.className='variant-'+v;document.querySelectorAll('[data-variant]').forEach(function(b){b.classList.toggle('active',b.dataset.variant===v)});var url=new URL(location.href);url.searchParams.set('variant',v);history.replaceState({},'',url)}
+    document.querySelectorAll('[data-variant]').forEach(function(b){b.onclick=function(){setVariant(b.dataset.variant)}});setVariant(new URLSearchParams(location.search).get('variant')||'1');
+  </script>
+</body>
+</html>

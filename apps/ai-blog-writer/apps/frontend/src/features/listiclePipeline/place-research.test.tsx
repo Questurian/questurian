@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * one call" is a thing a test can say.
  */
 
+const openResearchWorkspace = vi.fn()
 const loadBoard = vi.fn()
 const loadGoogleChecks = vi.fn()
 const loadPlacesAllowance = vi.fn()
@@ -27,6 +28,7 @@ vi.mock('./api', async importOriginal => {
   const actual = await importOriginal<typeof import('./api')>()
   return {
     ...actual,
+    openResearchWorkspace: (...args: unknown[]) => openResearchWorkspace(...args),
     loadBoard: (...args: unknown[]) => loadBoard(...args),
     loadGoogleChecks: (...args: unknown[]) => loadGoogleChecks(...args),
     loadPlacesAllowance: (...args: unknown[]) => loadPlacesAllowance(...args),
@@ -426,6 +428,11 @@ function show() {
 }
 
 beforeEach(() => {
+  openResearchWorkspace.mockReset().mockResolvedValue({
+    profile_id: 'prof-1', version: 0, context_key: 'ctx',
+    slots: { why_it_belongs: null, what_to_order_or_notice: [], visit_character: null, useful_detail: null, story_depth: null, caveat: null },
+    supporting_findings: {}, prompt: 'Saved branch prompt', ready: false, stale: false,
+  })
   loadBoard.mockReset().mockResolvedValue({ removed: [], distinct_pairs: [] })
   loadGoogleChecks.mockReset().mockResolvedValue({ checks: {}, running: false })
   loadPlacesAllowance
@@ -697,6 +704,7 @@ describe('the research viewer', () => {
     )
     show()
     await userEvent.click(await screen.findByRole('button', { name: 'View research' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Automated research (existing)' }))
     return screen.findByRole('dialog', { name: 'Research for Example Wings' })
   }
 
@@ -752,6 +760,7 @@ describe('the research viewer', () => {
     )
     show()
     await userEvent.click(await screen.findByRole('button', { name: 'View research' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Automated research (existing)' }))
     const dialog = await screen.findByRole('dialog', {
       name: 'Research for Example Wings',
     })
@@ -796,6 +805,7 @@ describe('the research viewer', () => {
     )
     show()
     await userEvent.click(await screen.findByRole('button', { name: 'View research' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Automated research (existing)' }))
     const dialog = await screen.findByRole('dialog', {
       name: 'Research for Example Wings',
     })
@@ -812,7 +822,7 @@ describe('the research viewer', () => {
     const dialog = await openViewer()
     expect(loadProfileResearch).toHaveBeenCalledWith('prof-1')
     expect(startPlaceResearch).not.toHaveBeenCalled()
-    expect(within(dialog).getByText(/fried twice/)).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: /fried twice/ })).toBeInTheDocument()
     expect(within(dialog).getByRole('link', { name: 'El Comercio' })).toBeInTheDocument()
     expect(within(dialog).getByText('Published 2025-04-02')).toBeInTheDocument()
   })
@@ -828,7 +838,7 @@ describe('the research viewer', () => {
 
   it('opens a row to its supporting passage and provenance', async () => {
     const dialog = await openViewer()
-    await userEvent.click(within(dialog).getByText(/fried twice/))
+    await userEvent.click(within(dialog).getByRole('button', { name: /fried twice/ }))
     expect(
       within(dialog).getByText('doble fritura y glaseado de rocoto'),
     ).toBeInTheDocument()
@@ -916,7 +926,7 @@ describe('the research viewer', () => {
     const dialog = await openViewer()
     // The close button takes focus when the drawer opens, so tabbing reaches
     // the controls in order without a mouse.
-    expect(within(dialog).getByRole('button', { name: 'Close research' })).toHaveFocus()
+    expect(within(dialog).getByRole('tab', { name: 'Automated research (existing)' })).toHaveFocus()
     await userEvent.tab()
     expect(document.activeElement).not.toBe(document.body)
   })
