@@ -88,6 +88,35 @@ PILOT = [
 
 PILOT_NAME = "three-place-2026-09-12"
 
+# Later retests of the same places, each under its own name. The name is part
+# of the idempotency key, and a key that was used before replays the stored
+# attempt and buys nothing -- so a retest that reused the first pilot's name
+# would silently not run. Each retest names the places it covers and the
+# attempt each is judged against: the one that differs from it in the single
+# thing being tested. `None` means every place, against the PILOT baselines.
+RETESTS: dict[str, dict[str, str] | None] = {
+    PILOT_NAME: None,
+    # ADR 0041: the reviews API instead of the 5-review source. Attempt
+    # 0e07e0e64514 is the same place researched the day before with the old
+    # source; Casa and McCarthy never had reviews, so they cannot isolate it.
+    "reviews-api-2026-09-12": {"BarBarian": "0e07e0e64514"},
+    # The same comparison again, after ADR 0042. The first press under the name
+    # above (99acd08ac6bb) died in discovery, and its key would replay it.
+    "reviews-api-2026-09-12-b": {"BarBarian": "0e07e0e64514"},
+}
+
+
+def _retest_places(name: str) -> list[dict]:
+    overrides = RETESTS[name]
+    if overrides is None:
+        return PILOT
+    return [
+        {**place, "baseline": overrides[place["who"]], "invalid_baselines": []}
+        for place in PILOT
+        if place["who"] in overrides
+    ]
+
+
 # The whole authorisation, as a number this script enforces rather than as a
 # sentence it hopes somebody read. Three places, one action each.
 MAX_GENERATIONS = 6
@@ -259,7 +288,7 @@ def dry_run() -> int:
     return 0
 
 
-def spend(only: str = "") -> int:
+def spend(only: str = "", name: str = PILOT_NAME) -> int:
     """The authorised run. One action per place, in order, with a hard ceiling.
 
     `refresh` rather than `initial`, because asking the same question again on
@@ -275,14 +304,23 @@ def spend(only: str = "") -> int:
     )
 
     ctx = candidate_prep.context(RUN_ID)
-    problems = [line for place in PILOT for line in _check_identity(ctx, place)]
+    places = [
+        place
+        for place in _retest_places(name)
+        if not only or only.lower() in place["who"].lower()
+    ]
+    if not places:
+        print(f"Nothing to run: retest {name!r} covers no place matching {only!r}.")
+        return 1
+    problems = [line for place in places for line in _check_identity(ctx, place)]
     if problems:
         print("Refusing to spend: the board has moved since the handoff.")
         for line in problems:
             print(f"  ! {line}")
         return 1
 
-    _print_reviews_budget(len([p for p in PILOT if not only or only.lower() in p["who"].lower()]))
+    print(f"Retest {name}")
+    _print_reviews_budget(len(places))
     print()
 
     audit = _audit_links_by_profile()
@@ -290,9 +328,7 @@ def spend(only: str = "") -> int:
     spent_generations = 0
     spent_grounded = 0
 
-    for place in PILOT:
-        if only and only.lower() not in place["who"].lower():
-            continue
+    for place in places:
         if spent_generations >= MAX_GENERATIONS:
             print(f"Stopping before {place['who']}: the pilot ceiling is reached.")
             break
@@ -303,7 +339,7 @@ def spend(only: str = "") -> int:
             return request
 
         profile_service._build_request = with_audit
-        key = f"pilot-{PILOT_NAME}-{place['candidate_id'][:8]}"
+        key = f"pilot-{name}-{place['candidate_id'][:8]}"
         print(f"\n=== {place['who']} ===")
         started = datetime.now(timezone.utc)
         try:
@@ -315,9 +351,9 @@ def spend(only: str = "") -> int:
                 extract=listicle_api._extract_call,
                 reader=listicle_api._read_pages,
                 mode="refresh",
-                staff=PILOT_NAME,
+                staff=name,
                 baseline_attempt_id=place["baseline"],
-                pilot=PILOT_NAME,
+                pilot=name,
             )
         finally:
             profile_service._build_request = original
@@ -924,6 +960,12 @@ def main() -> int:
         help="Make the authorised calls. Three places, six generations at most.",
     )
     parser.add_argument("--only", default="", help="One place, by name.")
+    parser.add_argument(
+        "--retest",
+        default=PILOT_NAME,
+        choices=sorted(RETESTS),
+        help="Which retest to spend on. Each has its own key and baselines.",
+    )
     parser.add_argument("--report", default="", help="Write the HTML comparison.")
     parser.add_argument(
         "--artifact",
@@ -936,7 +978,7 @@ def main() -> int:
     if args.report:
         return report(Path(args.report))
     if args.spend:
-        return spend(args.only)
+        return spend(args.only, args.retest)
     return dry_run()
 
 

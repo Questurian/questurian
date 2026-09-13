@@ -102,11 +102,34 @@ board payload, research drawer, and `--dry-run`.
 
 ## What is left, in the order it should be decided
 
-### 1. Nobody has pressed the button yet
+### 1. The button was pressed once, and the search broke
 
-**This is the whole point and it has not happened.** No place has been
-researched through this path. Everything above is a design with tests behind
-it, not a result.
+**Update, same evening.** BarBarian was pressed once, as retest
+`reviews-api-2026-09-12` (`--spend --retest reviews-api-2026-09-12 --only
+BarBarian`), attempt `99acd08ac6bb`. It bought 20 reviews (allowance now
+**454**, RapidAPI agrees), then discovery on `gemini-2.5-flash` looped writing
+a Rappi URL of zeros until `MAX_TOKENS`: `response_invalid`, 0 findings, no
+extraction. Issue #560's failure, again.
+
+It exposed two money bugs, now fixed:
+
+- **A failed attempt threw away the review text it had bought.** Readable page
+  text is now stored on the attempt (`page_texts`, not served to screens), and
+  the reviews page is written down the moment it arrives, before the search is
+  bought (`research_store.keep_pages`).
+- **`extract_only` bought the reviews again**, and had no earlier pages to
+  re-read despite its comment. It now re-reads the latest kept pages for the
+  place and topic (`research_store.last_collected`) and never calls the
+  reviews API.
+
+`99acd08ac6bb` predates the fix, so its 20 reviews are gone. The next press
+buys 20 again; from then on a failed search costs its one generation and
+nothing more, and recovery is one extraction call.
+
+The pilot script's first name had already used BarBarian's idempotency key
+(`1bf1f3bba036`); a reused key replays the stored attempt and buys nothing.
+Hence `RETESTS` in `scripts/listicle-research-pilot.py`, each with its own name
+and baselines. `--report` still only knows the three-place pilot.
 
 **BarBarian is the honest comparison** — it was researched yesterday
 (`0e07e0e64514`) with the old 5-review source and produced 6 findings. Same
