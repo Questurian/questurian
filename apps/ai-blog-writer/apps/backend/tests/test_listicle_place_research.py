@@ -12,6 +12,7 @@ Every call is a stub that counts itself. Nothing here reaches the web.
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, timezone
 
 import pytest
@@ -153,10 +154,11 @@ class _Transport:
     """The grounded search, counting itself and answering with whatever it was
     handed. One of the three things standing where the outside world would be."""
 
-    def __init__(self, reply: object = None):
+    def __init__(self, reply: object = None, results: list[dict] | None = None):
         self.calls = 0
         self.prompts: list[str] = []
         self.reply = reply
+        self.results = results
 
     def __call__(self, prompt: str):
         self.calls += 1
@@ -165,12 +167,25 @@ class _Transport:
             raise self.reply
         if callable(self.reply):
             return self.reply(prompt)
+        text = self.reply if isinstance(self.reply, str) else _DISCOVERY
+        # Unless a test says otherwise, the search returned exactly the pages
+        # its answer names. Only a result's address is ever opened, so a stub
+        # with no results would read nothing at all.
+        results = (
+            self.results
+            if self.results is not None
+            else [
+                {"uri": url, "title": url.split("/")[2]}
+                for url in dict.fromkeys(re.findall(r'https?://[^"\s]+', text))
+            ]
+        )
         return profile_service.TransportResult(
-            text=self.reply if isinstance(self.reply, str) else _DISCOVERY,
+            text=text,
             model="stub-search",
             usage={"total_tokens": 1234},
             actual_queries=["alitas jesus maria"],
             finish_reason="STOP",
+            grounding_chunks=results,
         )
 
 
@@ -2027,6 +2042,136 @@ def test_extract_only_re_reads_what_was_collected_and_buys_no_search(
     )
     assert skipped["outcome"] == "skipped"
     assert "buy no search" in skipped["reason"]
+
+
+def _counting(answer):
+    """A reviews stub that also counts how often the paid call was made."""
+    calls: list[str] = []
+
+    def fetch(place_id: str, **kwargs):
+        calls.append(place_id)
+        return answer(place_id, **kwargs)
+
+    fetch.calls = calls
+    return fetch
+
+
+def test_the_reviews_are_written_down_before_the_search_is_bought(
+    client, ready, monkeypatch
+):
+    """BarBarian, 2026-09-12: twenty reviews bought, then a search that looped
+    until its token ceiling. The attempt kept only a note saying the reviews
+    had existed, and the one way to read them again was to buy them again."""
+    from app.features.listicle_pipeline import research_store
+
+    run_id, candidate_id, _ = ready
+    monkeypatch.setattr(
+        profile_service,
+        "fetch_reviews",
+        _reviews(
+            ("Carlos Ruiz", 5, "Las alitas picantes son las mejores del barrio.")
+        ),
+    )
+    held_while_searching: list[str] = []
+
+    def search_that_dies(prompt):
+        running = research_store.load(research_store.active().attempt_id)
+        held_while_searching.extend(running.page_texts.values())
+        raise RuntimeError("the search took the process with it")
+
+    monkeypatch.setattr(listicle_api, "_research_call", _Transport(search_that_dies))
+    body = client.post(
+        f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+        json={"idempotency_key": "reviews-kept-01"},
+    ).json()
+    assert body["attempt"]["state"] == "failed"
+    assert any("alitas picantes" in text for text in held_while_searching)
+    kept = research_store.load(body["attempt"]["attempt_id"]).page_texts
+    assert any("alitas picantes" in text for text in kept.values())
+    # The text is stored, not served: a screen reading the attempt never
+    # carries it.
+    attempt = client.get(
+        f"{BASE}/research-attempts/{body['attempt']['attempt_id']}"
+    ).json()
+    assert "page_texts" not in attempt
+
+
+def test_extract_only_re_reads_the_reviews_and_buys_none(client, ready, monkeypatch):
+    run_id, candidate_id, _ = ready
+    reviews = _counting(
+        _reviews(("Carlos Ruiz", 5, "Las alitas picantes son las mejores del barrio."))
+    )
+    monkeypatch.setattr(profile_service, "fetch_reviews", reviews)
+    # What Flash sent back on BarBarian: a URL of zeros, cut at the ceiling.
+    looped = '```json\n{\n  "pages": [ {"url": "https://x.test/1000000000000'
+    search, extract = _Transport(looped), _Extract()
+    monkeypatch.setattr(listicle_api, "_research_call", search)
+    monkeypatch.setattr(listicle_api, "_extract_call", extract)
+    first = client.post(
+        f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+        json={"idempotency_key": "reviews-recover-01"},
+    ).json()
+    assert first["attempt"]["state"] == "response_invalid"
+    assert len(reviews.calls) == 1 and extract.calls == 0
+
+    again = client.post(
+        f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+        json={"idempotency_key": "reviews-recover-02", "mode": "extract_only"},
+    ).json()
+    assert len(reviews.calls) == 1
+    assert search.calls == 1
+    assert extract.calls == 1
+    assert "REVIEW by Carlos Ruiz" in extract.prompts[0]
+    attempt = client.get(
+        f"{BASE}/research-attempts/{again['attempt']['attempt_id']}"
+    ).json()
+    kept = next(p for p in attempt["pages"] if p["origin"] == "google_reviews")
+    assert kept["reused"] is True
+    assert first["attempt"]["attempt_id"] in kept["note"]
+    skipped = next(r for r in attempt["receipts"] if r["stage"] == "discovery")
+    assert "without buying them again" in skipped["reason"]
+
+
+def test_the_page_opened_is_the_search_result_not_the_address_typed(
+    client, ready, monkeypatch
+):
+    run_id, candidate_id, _ = ready
+    answer = json.dumps(
+        {
+            "pages": [
+                {
+                    "site": "press.test",
+                    "url": "https://press.test/restaurantes/1000000000",
+                    "title": "Las mejores alitas",
+                    "passage": "doble fritura y glaseado de rocoto",
+                }
+            ]
+        }
+    )
+    search = _Transport(
+        answer, results=[{"uri": "https://press.test/wings-review", "title": "press.test"}]
+    )
+    reader = _Reader()
+    monkeypatch.setattr(listicle_api, "_research_call", search)
+    monkeypatch.setattr(listicle_api, "_read_pages", reader)
+    body = client.post(
+        f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+        json={"idempotency_key": "anchored-01"},
+    ).json()
+    assert "https://press.test/wings-review" in reader.asked
+    assert not any("1000000000" in url for url in reader.asked)
+    # The prompt no longer asks for an address to be typed at all.
+    assert "Do not write web addresses" in search.prompts[0]
+    assert "publisher's own URL" not in search.prompts[0]
+    attempt = client.get(
+        f"{BASE}/research-attempts/{body['attempt']['attempt_id']}"
+    ).json()
+    # What the search really returned is kept, so matching can be checked
+    # later without buying the search again.
+    assert attempt["discovery"]["results"] == [
+        {"uri": "https://press.test/wings-review", "title": "press.test"}
+    ]
+    assert attempt["discovery"]["pages"][0]["address_from"] == "search"
 
 
 def test_a_failed_search_never_reaches_the_extraction_call(

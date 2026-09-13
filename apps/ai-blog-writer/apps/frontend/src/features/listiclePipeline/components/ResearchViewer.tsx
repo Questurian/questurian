@@ -1169,7 +1169,13 @@ function History({ research }: { research: ListicleProfileResearch }) {
                     <ul className="lp-research-coverage">
                       {(detail.discovery.pages ?? []).map((page, index) => (
                         <li key={index}>
-                          {page.publisher || 'publisher not named'} — {page.why}
+                          {page.publisher || page.site || 'publisher not named'} — {page.why}
+                          {page.address_from === 'none' && (
+                            <span className="lp-muted">
+                              {' '}
+                              Matched no search result, so it was not opened.
+                            </span>
+                          )}
                           {page.provider_snippet && (
                             <span className="lp-muted">
                               {' '}

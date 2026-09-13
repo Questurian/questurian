@@ -286,7 +286,15 @@ def research_place(
 # carries the angle each discovery lead came from, asks for page addresses
 # somebody can open rather than whatever the grounding layer hands back, and
 # stops asking a narrow follow-up for the room and the street.
-PROMPT_VERSION = "place-research/3"
+#
+# /4 stops asking for addresses at all. /3 asked the model to write "the
+# publisher's own URL", which a grounded model does not see -- it sees redirect
+# links -- so it guessed. In the runs that parsed, 7 of 23 guessed addresses
+# were a 404 or a host that does not exist; both runs that looped to the token
+# ceiling died typing `rappi.com.pe/restaurantes/1000000...`, a numeric id it
+# had never seen. The address now comes from the search's own result list, and
+# the model names the site and the title so each entry can be matched to one.
+PROMPT_VERSION = "place-research/4"
 
 # Raised from the 3,072 the whole-run pass used, on measurement rather than on
 # a guess. The second real request -- La Casa de las Alitas, eleven wing
@@ -295,6 +303,13 @@ PROMPT_VERSION = "place-research/3"
 # is lost, not its last row.
 PLACE_RESEARCH_MAX_TOKENS = 8_192
 PLACE_RESEARCH_TIMEOUT_SECONDS = 180
+
+# The provider's default, instead of the 0.05 every grounded call inherited.
+# Near-greedy decoding is the setting under which a model that has written one
+# `0` finds another `0` the likeliest next token, forever. Not yet measured:
+# this goes in with the address change above, and the next real run is the
+# first evidence either way.
+PLACE_RESEARCH_TEMPERATURE = 1.0
 
 
 @dataclass
@@ -519,10 +534,12 @@ strings -- you choose your own; these say what kind of thing to look for:
 Scope, all of it load-bearing:
 {scope}
 
-What to return, and this is the part that matters: **pages, with addresses
-somebody can open.** A `vertexaisearch.cloud.google.com` redirect is not an
-address anybody can open next year. Give the publisher's own URL wherever you
-can see it. For each page, say which question it answers and quote the sentence
+What to return, and this is the part that matters: **the pages your search
+found, each named so it can be matched to the search result it came from.**
+Do not write web addresses. The search tool already records every page it
+returned, with its address; an address typed from memory is a guess, and it is
+never opened. Name the site and the page title exactly as the search result
+shows them. For each page, say which question it answers and quote the sentence
 in it that does, so the value of opening the page is visible before it is
 opened.
 
@@ -531,7 +548,7 @@ Return ONE JSON object and nothing else:
 {{
   "pages": [
     {{
-      "url": "the publisher's own address if you can see it",
+      "site": "the website as the search result names it, e.g. rappi.com.pe",
       "publisher": "who publishes it",
       "type": "official|press|review_platform|social|aggregator|unknown",
       "title": "the page title",
@@ -548,7 +565,7 @@ Return ONE JSON object and nothing else:
 }}
 
 Rules:
-- Do not invent a URL, a date or a publisher. Unknown is null.
+- Do not write a URL. Do not invent a date or a publisher. Unknown is null.
 - A page whose title names a different district is not automatically the wrong
   place. Say what address it carries and let the reading settle it.
 - A menu establishes availability, not quality. Return both kinds of page.
@@ -637,6 +654,7 @@ class _PageIn(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     url: str = ""
+    site: str = ""
     publisher: str = ""
     type: str = ""
     title: str = ""
@@ -672,10 +690,21 @@ class DiscoveredPage:
     passage: str = ""
     scope: str = "unknown"
     why: str = ""
+    # The website as the answer named it. What matches an entry to a search
+    # result now that the answer carries no address.
+    site: str = ""
+    # Where `url` came from. `search`: a result the answer described.
+    # `search_only`: a result the search returned and the answer never
+    # described. `answer`: typed by the model and not yet matched to a result
+    # (only before `anchor_to_search`). `none`: described, matched to nothing,
+    # and therefore not read.
+    address_from: str = "answer"
 
     def as_dict(self) -> dict:
         return {
             "url": self.url,
+            "site": self.site,
+            "address_from": self.address_from,
             "publisher": self.publisher,
             "source_type": self.source_type,
             "title": self.title,
@@ -701,6 +730,11 @@ class Discovery:
     # whatever it had not written yet is simply absent -- and a screen that
     # does not say so reports a partial answer as a complete one.
     salvaged: bool = False
+    # The provider's result list and attribution, exactly as they arrived.
+    # Kept so a later reader can see which pages the search really returned
+    # and check the matching, without paying for the search again.
+    results: list[dict] = field(default_factory=list)
+    supports: list[dict] = field(default_factory=list)
 
     def summary(self) -> str:
         """The discovery, as context for extraction. Labelled as a claim.
@@ -714,7 +748,8 @@ class Discovery:
             if page.passage:
                 lines.append(
                     f"  - the search REPORTED, unverified, that "
-                    f"{page.url or '(no address)'} says: {page.passage[:300]}"
+                    f"{page.site or page.publisher or page.url or '(unnamed)'} "
+                    f"says: {page.passage[:300]}"
                 )
         for line in self.not_found:
             lines.append(f"  - the search reported finding nothing for: {line}")
@@ -805,18 +840,23 @@ def parse_discovery(raw: str) -> Discovery:
     seen: set[str] = set()
     for given in envelope.pages:
         url = (given.url or "").strip()
+        site = (given.site or "").strip()
         if not url.lower().startswith(("http://", "https://")):
+            url = ""
+        if not url and not site:
             issues.append(
-                f"A page with no usable address ({url or 'nothing'}) was dropped."
+                f"A page naming neither a site nor a usable address "
+                f"({given.url or 'nothing'}) was dropped."
             )
             continue
-        if url.lower() in seen:
+        identity = (url or f"{site}|{given.title.strip()}").lower()
+        if identity in seen:
             continue
-        seen.add(url.lower())
+        seen.add(identity)
         published = str(given.published_at or "").strip()[:10]
         if published and not _DATE.match(published):
             issues.append(
-                f"Publication date {given.published_at!r} for {url} is not a date "
+                f"Publication date {given.published_at!r} for {url or site} is not a date "
                 "that can be read; dropped."
             )
             published = ""
@@ -831,6 +871,7 @@ def parse_discovery(raw: str) -> Discovery:
                 passage=given.passage.strip()[:1000],
                 scope=given.scope if given.scope in _SCOPES else "unknown",
                 why=given.why.strip()[:300],
+                site=site[:200],
             )
         )
     if salvaged and rescued_count != len(pages):
@@ -848,6 +889,165 @@ def parse_discovery(raw: str) -> Discovery:
         notes=[line.strip()[:400] for line in envelope.notes if line.strip()],
         issues=issues,
         salvaged=salvaged,
+    )
+
+
+_REDIRECT_HOST = "vertexaisearch.cloud.google.com"
+_DOMAIN = re.compile(r"^[a-z0-9-]+(\.[a-z0-9-]+)+$")
+
+
+def _host(value: str) -> str:
+    """A bare lowercase hostname, from a URL, a hostname, or a site name.
+
+    `www.` is dropped so `rappi.com.pe` and `www.rappi.com.pe` are one site.
+    Anything that does not look like a hostname is nothing, rather than a
+    wrong match waiting to happen.
+    """
+    text = (value or "").strip().lower()
+    if "://" in text:
+        text = text.split("://", 1)[1]
+    text = text.split("/", 1)[0].split("?", 1)[0].split(":", 1)[0]
+    text = text.removeprefix("www.")
+    return text if _DOMAIN.match(text) else ""
+
+
+def _words(text: str) -> str:
+    return " ".join(re.findall(r"\w+", (text or "").lower()))
+
+
+def anchor_to_search(
+    discovery: Discovery, chunks: list[dict], supports: list[dict]
+) -> Discovery:
+    """Give every page the address the search itself returned, or none.
+
+    The model's answer describes pages; the provider's result list says which
+    pages exist and where. Only the second is opened. An entry is matched, in
+    order of how much the match can be trusted:
+
+    1. **The provider's own attribution.** A support whose text is part of the
+       entry -- its passage, title or reason -- names the results behind it.
+    2. **The same address,** when the answer copied a result's link verbatim.
+    3. **The same site,** by the result's title (a grounded result's title is
+       its domain) or its own host.
+
+    A result is given to one entry at most. An entry that matches nothing keeps
+    its description, loses any address it typed, and is not read: an address
+    typed from memory was a 404 or a host that does not exist in 7 of 23
+    cases. A result no entry described is still a page the search used, and is
+    read after the described ones, so the budget goes to described pages first.
+
+    With no results at all, nothing is opened. A grounded answer with no
+    grounding is an answer written from memory.
+    """
+    issues = list(discovery.issues)
+    results = [
+        {
+            "index": index,
+            "uri": chunk.get("uri", ""),
+            "title": chunk.get("title", ""),
+            "host": _host(chunk.get("title", ""))
+            or (
+                ""
+                if _host(chunk.get("uri", "")) == _REDIRECT_HOST
+                else _host(chunk.get("uri", ""))
+            ),
+        }
+        for index, chunk in enumerate(chunks or [])
+        if str(chunk.get("uri", "")).lower().startswith(("http://", "https://"))
+    ]
+    by_index = {result["index"]: result for result in results}
+    claimed: set[int] = set()
+
+    def attributed(page: DiscoveredPage) -> list[int]:
+        # The answer is JSON, so a support's segment is a stretch of JSON. The
+        # quoted values inside it are what the model wrote; keys and brackets
+        # are not. Fifteen characters keeps key names from matching anything.
+        said = _words(" ".join((page.passage, page.title, page.why)))
+        found: list[int] = []
+        for support in supports or []:
+            segment = support.get("text", "")
+            quoted = re.findall(r'"([^"]{15,})"', segment) or [segment]
+            if any(
+                len(_words(value)) >= 15 and _words(value) in said for value in quoted
+            ):
+                found.extend(
+                    index for index in support.get("chunks", []) if index in by_index
+                )
+        return found
+
+    anchored: list[DiscoveredPage] = []
+    unmatched = 0
+    for page in discovery.pages:
+        site = _host(page.site) or _host(page.url)
+        candidates = (
+            attributed(page)
+            or [r["index"] for r in results if page.url and r["uri"] == page.url]
+            or [r["index"] for r in results if site and r["host"] == site]
+        )
+        chosen = [index for index in dict.fromkeys(candidates) if index not in claimed]
+        if not chosen:
+            unmatched += 1
+            anchored.append(
+                DiscoveredPage(
+                    **{**page.__dict__, "url": "", "address_from": "none"}
+                )
+            )
+            continue
+        first, *more = chosen
+        claimed.update(chosen)
+        anchored.append(
+            DiscoveredPage(
+                **{
+                    **page.__dict__,
+                    "url": by_index[first]["uri"],
+                    "site": page.site or by_index[first]["host"],
+                    "address_from": "search",
+                }
+            )
+        )
+        # Several results on one site, and nothing to say which the entry
+        # meant. Each is a real page; the description goes with the first.
+        for index in more:
+            anchored.append(
+                DiscoveredPage(
+                    url=by_index[index]["uri"],
+                    publisher=by_index[index]["title"],
+                    site=by_index[index]["host"],
+                    why="Another result on the same site as a page the answer described.",
+                    address_from="search",
+                )
+            )
+    for result in results:
+        if result["index"] in claimed:
+            continue
+        anchored.append(
+            DiscoveredPage(
+                url=result["uri"],
+                publisher=result["title"],
+                site=result["host"],
+                why="The search returned this page; the answer did not describe it.",
+                address_from="search_only",
+            )
+        )
+    if not results and discovery.pages:
+        issues.append(
+            "The search reported no results, so no page it described has an "
+            "address to open. Nothing typed into the answer is read."
+        )
+    elif unmatched:
+        issues.append(
+            f"{unmatched} described page(s) matched no search result and were "
+            "not read. What the answer said about them is kept, unverified."
+        )
+    return Discovery(
+        pages=anchored,
+        searched=list(discovery.searched),
+        not_found=list(discovery.not_found),
+        notes=list(discovery.notes),
+        issues=issues,
+        salvaged=discovery.salvaged,
+        results=list(chunks or []),
+        supports=list(supports or []),
     )
 
 

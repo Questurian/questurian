@@ -103,6 +103,7 @@ _ATTEMPT_COLUMNS: tuple[tuple[str, str], ...] = (
     ("evidence_summary", "TEXT NOT NULL DEFAULT '{}'"),
     ("baseline_attempt_id", "TEXT NOT NULL DEFAULT ''"),
     ("pilot", "TEXT NOT NULL DEFAULT ''"),
+    ("page_texts", "TEXT NOT NULL DEFAULT '{}'"),
 )
 
 _INDEXES = (
@@ -215,6 +216,7 @@ def _row_to_attempt(row) -> ResearchAttempt:
         evidence_summary=json.loads(row["evidence_summary"] or "{}"),
         baseline_attempt_id=row["baseline_attempt_id"] or "",
         pilot=row["pilot"] or "",
+        page_texts=json.loads(row["page_texts"] or "{}"),
         owner_token=row["owner_token"],
         lease_until=row["lease_until"] or "",
         started_by=row["started_by"],
@@ -271,6 +273,7 @@ def _values(attempt: ResearchAttempt) -> tuple:
         json.dumps(attempt.evidence_summary, ensure_ascii=False),
         attempt.baseline_attempt_id,
         attempt.pilot,
+        json.dumps(attempt.page_texts, ensure_ascii=False),
         attempt.owner_token,
         attempt.lease_until,
         attempt.started_by,
@@ -286,7 +289,7 @@ _COLUMNS = (
     "validation_issues, coverage, open_questions, findings_added, "
     "findings_seen, sources_added, model, usage, duration_seconds, "
     "brief, strategy_version, receipts, pages, discovery, evidence_summary, "
-    "baseline_attempt_id, pilot, "
+    "baseline_attempt_id, pilot, page_texts, "
     "owner_token, lease_until, started_by, started_at, finished_at"
 )
 
@@ -434,7 +437,7 @@ def finish(attempt: ResearchAttempt) -> ResearchAttempt:
             "actual_queries = ?, requested_queries = ?, prompt = ?, "
             "brief = ?, strategy_version = ?, receipts = ?, pages = ?, "
             "discovery = ?, evidence_summary = ?, baseline_attempt_id = ?, "
-            "pilot = ?, "
+            "pilot = ?, page_texts = ?, "
             "lease_until = '', finished_at = ? WHERE attempt_id = ?",
             (
                 finished.state,
@@ -461,6 +464,7 @@ def finish(attempt: ResearchAttempt) -> ResearchAttempt:
                 values[32],
                 values[33],
                 values[34],
+                values[35],
                 _iso(finished.finished_at),
                 finished.attempt_id,
             ),
@@ -470,6 +474,52 @@ def finish(attempt: ResearchAttempt) -> ResearchAttempt:
             (SLOT, attempt.owner_token),
         )
     return finished
+
+
+def keep_pages(attempt: ResearchAttempt) -> None:
+    """Write down the pages a running attempt holds, before it finishes.
+
+    Called the moment something paid for is in hand. The reviews page is billed
+    per review against an allowance that does not come back, and an attempt
+    that kept it only in memory lost it to the first thing that went wrong
+    after -- a search that looped until its ceiling threw away twenty reviews
+    on BarBarian, and the only way to read them again was to buy them again.
+
+    Refuses quietly rather than raising when the attempt is no longer this
+    caller's: the pages are then somebody else's problem, and `finish` will
+    say so loudly.
+    """
+    ensure_tables()
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE listicle_research_attempts SET pages = ?, page_texts = ? "
+            "WHERE attempt_id = ? AND owner_token = ? AND state = 'running'",
+            (
+                json.dumps(attempt.pages, ensure_ascii=False),
+                json.dumps(attempt.page_texts, ensure_ascii=False),
+                attempt.attempt_id,
+                attempt.owner_token,
+            ),
+        )
+
+
+def last_collected(profile_id: str, topic: str) -> ResearchAttempt | None:
+    """The most recent attempt on this place and subject that kept page text.
+
+    What `extract_only` re-reads. Whatever state that attempt ended in: a
+    failed search and a malformed extraction are exactly the attempts whose
+    pages are worth reading again. Ties on the second are broken by insertion
+    order, so two presses in one second still pick the later.
+    """
+    ensure_tables()
+    with get_db_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM listicle_research_attempts WHERE profile_id = ? "
+            "AND topic = ? AND page_texts NOT IN ('', '{}') "
+            "ORDER BY started_at DESC, rowid DESC LIMIT 1",
+            (profile_id, topic),
+        ).fetchone()
+    return None if row is None else _row_to_attempt(row)
 
 
 def load(attempt_id: str) -> ResearchAttempt | None:

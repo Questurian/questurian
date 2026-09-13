@@ -163,6 +163,36 @@ class PageRead:
             "chars": len(self.text),
         }
 
+    @classmethod
+    def kept(cls, record: dict, text: str, *, note: str) -> "PageRead":
+        """A page an earlier attempt read, handed back without a request.
+
+        Marked `reused`, and it keeps the day it was originally retrieved: a
+        recovery re-reads old text, and dating it today would present a
+        month-old review page as a fresh check.
+        """
+        retrieved = record.get("retrieved_at") or ""
+        try:
+            retrieved_at = datetime.fromisoformat(retrieved)
+        except ValueError:
+            retrieved_at = datetime.now(timezone.utc)
+        return cls(
+            requested_url=record.get("requested_url", ""),
+            final_url=record.get("final_url", ""),
+            state=record.get("state", "ok"),
+            http_status=record.get("http_status"),
+            title=record.get("title", ""),
+            text=text,
+            published_at=record.get("published_at", ""),
+            retrieved_at=retrieved_at,
+            content_hash=record.get("content_hash", ""),
+            byte_count=record.get("byte_count", 0),
+            origin=record.get("origin", "lead"),
+            reused=True,
+            branch_anchored=bool(record.get("branch_anchored", False)),
+            note=note,
+        )
+
 
 def is_worth_fetching(url: str) -> bool:
     """Whether a URL is a page at all, before anything is spent on it."""

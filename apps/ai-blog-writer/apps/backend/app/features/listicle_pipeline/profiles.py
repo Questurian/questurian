@@ -630,6 +630,12 @@ class ResearchAttempt(BaseModel):
     receipts: list["CallReceipt"] = Field(default_factory=list)
     # Every page this action tried to open, readable or not.
     pages: list[dict] = Field(default_factory=list)
+    # The text of every readable page, keyed by its normalised address. Apart
+    # from `pages` so a screen reading an attempt never carries text it does
+    # not show; kept at all because some of it was bought. The reviews page is
+    # billed per review, and an attempt that dropped its text made the recovery
+    # that should have re-read it buy it a second time.
+    page_texts: dict[str, str] = Field(default_factory=dict)
     # What the search said before anything was opened. Kept apart from
     # findings: it is the provider's transcription, not a quotation.
     discovery: dict = Field(default_factory=dict)

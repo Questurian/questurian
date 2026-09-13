@@ -115,6 +115,11 @@ class TransportResult:
     # reply that finished are indistinguishable from their text alone, and one
     # of the two real failures this pipeline has seen was exactly that.
     finish_reason: str = ""
+    # The search's own results and the provider's attribution of the answer to
+    # them. Where a discovered page's address comes from: an address the model
+    # typed is a guess, and it is never opened.
+    grounding_chunks: list[dict] = field(default_factory=list)
+    grounding_supports: list[dict] = field(default_factory=list)
 
 
 class Blocked(ValueError):
@@ -737,6 +742,44 @@ def fetch_reviews(place_id: str, *, query: str = ""):
     return reviews_api.fetch_reviews(place_id, query=query)
 
 
+def _texts_of(pages: list) -> dict[str, str]:
+    """The text worth keeping, keyed the way a later read looks it up."""
+    return {
+        source_reader.normalise(page.requested_url): page.text
+        for page in pages
+        if page.readable
+    }
+
+
+def _kept_pages(profile_id: str, topic: str) -> list:
+    """The readable pages the latest attempt on this place kept, re-handed.
+
+    Whatever that attempt ended as. The attempts worth recovering from are the
+    ones that failed after something was collected.
+    """
+    prior = research_store.last_collected(profile_id, topic)
+    if prior is None:
+        return []
+    out = []
+    for record in prior.pages:
+        text = prior.page_texts.get(
+            source_reader.normalise(record.get("requested_url", ""))
+        )
+        if not text:
+            continue
+        out.append(
+            source_reader.PageRead.kept(
+                record,
+                text,
+                note=(
+                    f"Kept by attempt {prior.attempt_id}; re-read, not bought or "
+                    f"fetched again. {record.get('note', '')}"
+                ).strip(),
+            )
+        )
+    return out
+
+
 def _default_extract(prompt: str):
     """The extraction call, when a caller did not hand one in.
 
@@ -929,7 +972,13 @@ def research(
     # allowance is enforced inside `reviews_api`, which refuses rather than
     # overspends, so an exhausted budget arrives here as a place with no
     # reviews and a reason -- not as an exception and not as a charge.
-    if brief.place_id:
+    #
+    # Never bought by `extract_only`. A recovery re-reads what an earlier
+    # attempt kept, reviews included; buying them again is the cost it exists
+    # to avoid.
+    if mode == "extract_only":
+        pages.extend(_kept_pages(profile_id, ctx.topic))
+    elif brief.place_id:
         # Asked for in the words the reviews are actually written in. Without
         # this the API returns the twenty reviews Google thinks are most
         # relevant *to the bar* -- the beer list, the music, the service -- and
@@ -945,6 +994,17 @@ def research(
         )
         if review_page is not None:
             pages.append(review_page)
+            # Written down before the search is bought. Whatever the search
+            # does next -- loop to its ceiling, time out, take the process
+            # with it -- the reviews are paid for and must still be readable.
+            research_store.keep_pages(
+                attempt.model_copy(
+                    update={
+                        "pages": [page.as_dict() for page in pages],
+                        "page_texts": _texts_of(pages),
+                    }
+                )
+            )
         elif fetched.failed:
             logger.warning(
                 "Google reviews unavailable for %s: %s",
@@ -961,16 +1021,23 @@ def research(
         0, source_reader.PAGE_BUDGET - source_reader.DISCOVERED_RESERVE
     )
     if brief.known_source_leads and lead_budget:
+        held = {source_reader.normalise(page.requested_url): page for page in pages}
+        known = read_pages(
+            [(lead.url, lead.origin) for lead in brief.known_source_leads],
+            budget=lead_budget,
+            already_read=held,
+        )
+        # A kept page asked for again comes back as itself; list it once.
         pages.extend(
-            read_pages(
-                [(lead.url, lead.origin) for lead in brief.known_source_leads],
-                budget=lead_budget,
-            )
+            page
+            for page in known
+            if not (page.reused and source_reader.normalise(page.requested_url) in held)
         )
 
     # --- One grounded search -------------------------------------------------
     discovery = profile_research.Discovery()
     if mode == "extract_only":
+        kept = sum(1 for page in pages if page.reused)
         receipts.append(
             CallReceipt(
                 stage="discovery",
@@ -978,7 +1045,13 @@ def research(
                 grounded=True,
                 reason=(
                     "Extraction only. This action was authorised to re-read the "
-                    "pages already collected and to buy no search."
+                    "pages already collected and to buy no search"
+                    + (
+                        f", and re-read {kept} page(s) an earlier attempt kept, "
+                        "reviews included, without buying them again."
+                        if kept
+                        else ". No earlier attempt on this place kept any page."
+                    )
                 ),
             )
         )
@@ -1027,7 +1100,11 @@ def research(
             }
         )
         try:
-            discovery = profile_research.parse_discovery(result.text or "")
+            discovery = profile_research.anchor_to_search(
+                profile_research.parse_discovery(result.text or ""),
+                list(result.grounding_chunks or []),
+                list(result.grounding_supports or []),
+            )
         except profile_research.ResponseInvalid as error:
             receipts.append(
                 CallReceipt(
@@ -1075,13 +1152,13 @@ def research(
         remaining = source_reader.PAGE_BUDGET - sum(
             1 for page in pages if not page.reused
         )
-        if discovery.pages and remaining > 0:
+        if any(page.url for page in discovery.pages) and remaining > 0:
             held = {
                 source_reader.normalise(page.requested_url): page for page in pages
             }
             pages.extend(
                 read_pages(
-                    [(page.url, "discovered") for page in discovery.pages],
+                    [(page.url, "discovered") for page in discovery.pages if page.url],
                     budget=remaining,
                     already_read=held,
                 )
@@ -1278,7 +1355,9 @@ def _save_packet(
     """
     protected = profile_store.edited_finding_ids(profile_id)
     described = {
-        source_reader.normalise(page.url): page for page in discovery.pages
+        source_reader.normalise(page.url): page
+        for page in discovery.pages
+        if page.url
     }
     now = datetime.now(timezone.utc)
     source_ids: dict[int, str] = {}
@@ -1398,6 +1477,7 @@ def _finish(
             "open_questions": list(packet.unresolved) if packet else [],
             "receipts": list(receipts or []),
             "pages": [page.as_dict() for page in (pages or [])],
+            "page_texts": _texts_of(pages or []),
             "discovery": (
                 {
                     "pages": [page.as_dict() for page in discovery.pages],
@@ -1405,6 +1485,8 @@ def _finish(
                     "not_found": list(discovery.not_found),
                     "notes": list(discovery.notes),
                     "issues": list(discovery.issues),
+                    "results": list(discovery.results),
+                    "supports": list(discovery.supports),
                 }
                 if discovery is not None
                 else {}

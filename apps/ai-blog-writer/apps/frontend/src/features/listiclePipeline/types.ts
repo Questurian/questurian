@@ -635,6 +635,10 @@ export interface ListicleAttemptDetail extends ListicleAttemptSummary {
       provider_snippet: string
       scope: string
       why: string
+      site?: string
+      /** `search`, `search_only`, or `none`: described but matched to no
+       *  search result, and therefore never opened. */
+      address_from?: string
     }[]
     searched?: string[]
     not_found?: string[]

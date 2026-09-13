@@ -14,6 +14,7 @@ Nothing here reaches the web or a provider. The pages are strings.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 import pytest
@@ -628,6 +629,107 @@ def test_a_restarted_answer_does_not_count_its_pages_twice():
     parsed = profile_research.parse_discovery(reply)
     assert len(parsed.pages) == 1
     assert any("same page written twice" in issue for issue in parsed.issues)
+
+
+# --------------------------------------------------------------------------
+# Addresses come from the search, never from the answer
+# --------------------------------------------------------------------------
+
+_REDIRECT = "https://vertexaisearch.cloud.google.com/grounding-api-redirect/"
+
+
+def _discovered(*entries: dict):
+    from app.features.listicle_pipeline import profile_research
+
+    return profile_research.parse_discovery(json.dumps({"pages": list(entries)}))
+
+
+def test_a_typed_address_is_replaced_by_the_search_result_for_that_site():
+    """BarBarian, twice: the model died typing
+    `rappi.com.pe/restaurantes/1000000...`, an id it had never seen. The page
+    it meant was in the result list the whole time."""
+    from app.features.listicle_pipeline import profile_research
+
+    anchored = profile_research.anchor_to_search(
+        _discovered(
+            {
+                "site": "www.rappi.com.pe",
+                "url": "https://www.rappi.com.pe/restaurantes/1000000000",
+                "passage": "alitas bbq",
+            }
+        ),
+        [{"uri": _REDIRECT + "rappi", "title": "rappi.com.pe"}],
+        [],
+    )
+    assert [(p.url, p.address_from) for p in anchored.pages] == [
+        (_REDIRECT + "rappi", "search")
+    ]
+
+
+def test_the_providers_attribution_decides_between_two_results_on_one_site():
+    from app.features.listicle_pipeline import profile_research
+
+    passage = "las alitas anticucheras vienen con salsa de rocoto"
+    anchored = profile_research.anchor_to_search(
+        _discovered({"site": "restaurantguru.com", "passage": passage}),
+        [
+            {"uri": _REDIRECT + "other-branch", "title": "restaurantguru.com"},
+            {"uri": _REDIRECT + "this-branch", "title": "restaurantguru.com"},
+        ],
+        [{"text": f'"passage": "{passage}",', "chunks": [1]}],
+    )
+    assert anchored.pages[0].url == _REDIRECT + "this-branch"
+    # The other result is still a page the search used, read after.
+    assert [(p.url, p.address_from) for p in anchored.pages[1:]] == [
+        (_REDIRECT + "other-branch", "search_only")
+    ]
+
+
+def test_a_page_no_result_matches_is_kept_and_never_opened():
+    """An invented host -- `mccarthysirishpub.com.mx` was one -- has nothing in
+    the result list to match, so it has no address to open."""
+    from app.features.listicle_pipeline import profile_research
+
+    anchored = profile_research.anchor_to_search(
+        _discovered(
+            {
+                "site": "mccarthysirishpub.com.mx",
+                "url": "https://mccarthysirishpub.com.mx/menu/",
+                "passage": "chicken wings",
+            }
+        ),
+        [{"uri": _REDIRECT + "x", "title": "elcomercio.pe"}],
+        [],
+    )
+    described, extra = anchored.pages
+    assert (described.url, described.address_from) == ("", "none")
+    assert described.passage == "chicken wings"
+    assert extra.address_from == "search_only"
+    assert any("matched no search result" in issue for issue in anchored.issues)
+
+
+def test_with_no_results_nothing_the_answer_typed_is_opened():
+    from app.features.listicle_pipeline import profile_research
+
+    anchored = profile_research.anchor_to_search(
+        _discovered({"url": "https://press.test/a", "site": "press.test"}), [], []
+    )
+    assert [page.url for page in anchored.pages] == [""]
+    assert any("no results" in issue for issue in anchored.issues)
+
+
+def test_one_result_is_never_given_to_two_entries():
+    from app.features.listicle_pipeline import profile_research
+
+    anchored = profile_research.anchor_to_search(
+        _discovered(
+            {"site": "elcomercio.pe", "title": "Las mejores alitas"},
+            {"site": "elcomercio.pe", "title": "Otra nota"},
+        ),
+        [{"uri": _REDIRECT + "one", "title": "elcomercio.pe"}],
+        [],
+    )
+    assert [p.url for p in anchored.pages] == [_REDIRECT + "one", ""]
 
 
 def test_a_reply_that_finishes_cleanly_is_not_marked_salvaged():

@@ -759,6 +759,7 @@ def _research_call(prompt: str):
 
     from .profile_research import (
         PLACE_RESEARCH_MAX_TOKENS,
+        PLACE_RESEARCH_TEMPERATURE,
         PLACE_RESEARCH_TIMEOUT_SECONDS,
     )
     from .profile_service import TransportResult
@@ -767,6 +768,7 @@ def _research_call(prompt: str):
         "listicle.profile_research",
         prompt,
         max_tokens=PLACE_RESEARCH_MAX_TOKENS,
+        temperature=PLACE_RESEARCH_TEMPERATURE,
         timeout_seconds=PLACE_RESEARCH_TIMEOUT_SECONDS,
         endpoint="generateContent:googleSearch",
     )
@@ -794,6 +796,8 @@ def _research_call(prompt: str):
         # finished look identical from their text, and one of the two failures
         # this pipeline has actually seen was exactly that.
         finish_reason=str(getattr(result, "finish_reason", "") or ""),
+        grounding_chunks=list(getattr(result, "grounding_chunks", []) or []),
+        grounding_supports=list(getattr(result, "grounding_supports", []) or []),
     )
 
 
