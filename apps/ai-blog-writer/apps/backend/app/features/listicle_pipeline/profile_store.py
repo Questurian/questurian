@@ -746,6 +746,18 @@ def finding_text_key(text: str, scope: str = "unknown") -> str:
     ).hexdigest()
 
 
+def _passage_words(text: str) -> str:
+    """A quoted passage as bare words, accents folded, for matching it again."""
+    folded = unicodedata.normalize("NFKD", (text or "").lower())
+    folded = "".join(ch for ch in folded if not unicodedata.combining(ch))
+    return " ".join(re.findall(r"[a-z0-9]+", folded))
+
+
+# Fewer words than this and two claims quoting it may well be different
+# claims: "alitas BBQ" supports a flavour and an opinion alike.
+_SAME_PASSAGE_MIN_WORDS = 5
+
+
 def _url_key(url: str) -> str:
     return hashlib.sha1(url.strip().lower().encode("utf-8")).hexdigest()
 
@@ -957,6 +969,14 @@ def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
             "AND text_key = ?",
             (finding_to_save.profile_id, key),
         ).fetchone()
+        # The same passage from the same source, reworded. A model never writes
+        # a sentence the same way twice, so matching on words alone stored
+        # BarBarian's twenty reviews again on every press -- 42 rows for what
+        # was one packet and its retests.
+        by_passage = False
+        if existing is None:
+            existing = _same_passage(conn, finding_to_save)
+            by_passage = existing is not None
         if existing is not None:
             topics = sorted(
                 {*_list(existing["topics"]), *finding_to_save.topics}
@@ -997,6 +1017,22 @@ def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
                         existing["claim_id"],
                     ),
                 )
+                # Matched by passage, so the words differ. An untouched row
+                # takes the newer wording: the extraction's rules move (a
+                # dated observation now says its year), and a row nobody
+                # corrected has no wording anybody chose.
+                if by_passage:
+                    conn.execute(
+                        "UPDATE listicle_profile_claims SET text = ?, text_key = ?, "
+                        "event_date = ?, about_year = ? WHERE claim_id = ?",
+                        (
+                            finding_to_save.text,
+                            key,
+                            finding_to_save.event_date,
+                            _year_of(finding_to_save.event_date),
+                            existing["claim_id"],
+                        ),
+                    )
             found_id = str(existing["claim_id"])
         else:
             found_id = finding_to_save.finding_id
@@ -1042,6 +1078,37 @@ def save_finding(finding_to_save: ResearchFinding) -> tuple[str, bool]:
         attach_evidence(found_id, item)
     _touch(finding_to_save.profile_id)
     return found_id, existing is None
+
+
+def _same_passage(conn, finding_to_save: ResearchFinding):
+    """An existing finding on this profile quoting the same source the same way.
+
+    Same source record, same passage word for word once spacing and accents are
+    set aside, same scope. The scope is kept for the reason it is in the text
+    key: a brand sentence and a branch sentence are different assertions.
+    """
+    for item in finding_to_save.evidence:
+        words = _passage_words(item.supporting_excerpt)
+        if len(words.split()) < _SAME_PASSAGE_MIN_WORDS:
+            continue
+        rows = conn.execute(
+            "SELECT c.*, s.supporting_excerpt AS matched_excerpt "
+            "FROM listicle_profile_claims c JOIN listicle_finding_sources s "
+            "ON s.finding_id = c.claim_id WHERE c.profile_id = ? "
+            "AND s.source_id = ? AND c.scope = ? AND c.attempt_id != ?",
+            (
+                finding_to_save.profile_id,
+                item.source_id,
+                finding_to_save.scope,
+                # Two claims one packet draws from one sentence are two
+                # claims; only a later pass rewording the same one is a repeat.
+                finding_to_save.attempt_id,
+            ),
+        ).fetchall()
+        for row in rows:
+            if _passage_words(row["matched_excerpt"]) == words:
+                return row
+    return None
 
 
 def _year_of(value: str) -> int | None:

@@ -2217,6 +2217,47 @@ def test_reviews_older_than_the_reuse_window_are_bought_again(
     assert len(reviews.calls) == 2
 
 
+def test_a_page_reached_twice_under_two_addresses_is_read_once(
+    client, ready, monkeypatch
+):
+    """McCarthy's read its Rappi listing twice: once from a known link, once
+    from a search redirect ending at the same page."""
+    run_id, candidate_id, _ = ready
+    client.put(
+        f"{BASE}/board/{run_id}/candidates/{candidate_id}/prep",
+        json={"source_links": [{"label": "menu", "url": "https://press.test/wings-review"}]},
+    )
+    redirect = "https://vertexaisearch.cloud.google.com/grounding-api-redirect/abc"
+    answer = "PAGE\nSite: press.test\nTitle: Las mejores alitas\nPassage: doble fritura\n"
+
+    class _Redirecting(_Reader):
+        def __call__(self, urls, *, budget, already_read=None):
+            reads = super().__call__(
+                [("https://press.test/wings-review" if u == redirect else u, o) for u, o in urls],
+                budget=budget,
+                already_read=None,
+            )
+            return reads
+
+    monkeypatch.setattr(listicle_api, "_read_pages", _Redirecting())
+    monkeypatch.setattr(
+        listicle_api,
+        "_research_call",
+        _Transport(answer, results=[{"uri": redirect, "title": "press.test"}]),
+    )
+    extract = _Extract()
+    monkeypatch.setattr(listicle_api, "_extract_call", extract)
+    body = client.post(
+        f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+        json={"idempotency_key": "one-per-address-01"},
+    ).json()
+    attempt = client.get(
+        f"{BASE}/research-attempts/{body['attempt']['attempt_id']}"
+    ).json()
+    readable = [p for p in attempt["pages"] if p["state"] == "ok"]
+    assert [p["final_url"] for p in readable].count("https://press.test/wings-review") == 1
+
+
 def test_a_failed_search_never_reaches_the_extraction_call(
     client, ready, monkeypatch
 ):
@@ -2425,6 +2466,60 @@ def test_google_reviews_reach_the_extraction_without_being_fetched(
     assert said["evidence"][0]["url"].startswith(
         "https://search.google.com/local/reviews?placeid="
     )
+
+
+def test_a_retest_rewording_the_same_review_is_one_finding(client, ready, monkeypatch):
+    """BarBarian held 42 findings after three presses: the model never words a
+    claim the same way twice, and identity was the claim's words alone."""
+    run_id, candidate_id, _ = ready
+    monkeypatch.setattr(
+        profile_service,
+        "fetch_reviews",
+        _reviews(("Carlos Ruiz", 5, "Las alitas picantes son las mejores del barrio.")),
+    )
+    monkeypatch.setattr(listicle_api, "_research_call", _Transport())
+
+    def extraction(text):
+        return json.dumps(
+            {
+                "claims": [
+                    {
+                        "text": text,
+                        "kind": "review",
+                        "categories": ["customer_observations"],
+                        "about_subject": True,
+                        "scope": "branch",
+                        "who_said_it": "named_reviewer",
+                        "who_name": "Carlos Ruiz",
+                        "event_date": "2025-06-15",
+                        "support": [
+                            {"page_id": "p1", "excerpt": "Las alitas picantes son las mejores del barrio"}
+                        ],
+                    }
+                ],
+                "coverage": [],
+                "unresolved": [],
+            }
+        )
+
+    wordings = [
+        "Carlos Ruiz called the spicy wings the best in the neighbourhood.",
+        "In a June 2025 review, Carlos Ruiz said the spicy wings were the best in the area.",
+    ]
+    for index, wording in enumerate(wordings):
+        monkeypatch.setattr(listicle_api, "_extract_call", _Extract(extraction(wording)))
+        body = client.post(
+            f"{BASE}/board/{run_id}/candidates/{candidate_id}/research",
+            json={"idempotency_key": f"reworded-{index}", "mode": "refresh"},
+        ).json()
+    profile = client.get(
+        f"{BASE}/profiles/{body['attempt']['profile_id']}/research"
+    ).json()
+    said = [f for f in profile["findings"] if "Carlos Ruiz" in f["text"]]
+    assert len(said) == 1
+    # Nobody edited it, so it carries the newer wording.
+    assert said[0]["text"] == wordings[1]
+    assert body["attempt"]["findings_added"] == 0
 
 
 def test_a_claim_a_reviewer_did_not_write_still_fails(client, ready, monkeypatch):

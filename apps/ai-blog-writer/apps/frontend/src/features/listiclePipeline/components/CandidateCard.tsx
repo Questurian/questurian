@@ -124,12 +124,12 @@ function attemptLine(card: ListicleResearchCard): string {
       // Two numbers, because they are two facts. How much material came back,
       // and how much of it rests on a page somebody can open and check. The
       // version of this card that showed one number showed the larger one.
-      // The second is only the ones about the list's subject: a finding about
-      // the room checks out too, and counting it under "found" and "check
-      // out" alike read as 21 of 24 failing when none had.
+      // Both counted over the profile's rows for this subject. The card once
+      // put the profile's total beside the last attempt's number and read as
+      // "42 findings, 15 check out" when none had failed.
       return `${found} ${found === 1 ? 'finding' : 'findings'} · ${
-        attempt.evidence_ready
-      } on the subject check out · ${attempt.pages_read} of ${attempt.pages_attempted} pages read${
+        profile?.ready_this_topic ?? attempt.evidence_ready
+      } check out · ${attempt.pages_read} of ${attempt.pages_attempted} pages read${
         open ? ` · ${open} unresolved ${open === 1 ? 'question' : 'questions'}` : ''
       }`
     }

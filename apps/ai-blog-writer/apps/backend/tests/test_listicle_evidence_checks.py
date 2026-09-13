@@ -796,6 +796,81 @@ def test_searches_with_no_result_list_are_said_to_be_a_gap_in_the_reply():
     assert any("reported 8 search(es) but sent back no result list" in i for i in anchored.issues)
 
 
+_BLOCKS = """PAGE
+Site: Restaurant Guru
+Title: McCarthy's Irish Pub, Miraflores - Menú
+Published: August 29 2026
+Answers: 1, 3
+Scope: branch
+Passage: Opiniones de los clientes. ricas alitas.
+José Gabriel Neyra hace 6 días en Google.
+Why: a recent review naming the wings
+
+PAGE
+Site: Rappi
+Title: McCarthy's - Surquillo Precios y Menú
+Published: unknown
+Answers: 1, 2, 4
+Scope: brand
+Passage: Alitas 8 Piezas. S/ 23.90.
+Why: the delivery menu
+
+NOT FOUND: 3. Nothing published names a local food writer on the wings.
+NOTE: The Rappi title says Surquillo but the address is Miraflores.
+"""
+
+
+def test_a_plain_text_reply_reads_into_pages_dates_and_notes():
+    """place-research/6. Gemini leaves the result list out of a reply that is
+    only a code block; the same request in plain blocks kept it 6 times in 7."""
+    from app.features.listicle_pipeline import profile_research
+
+    parsed = profile_research.parse_discovery(_BLOCKS)
+    guru, rappi = parsed.pages
+    assert (guru.site, guru.published_at, guru.answers, guru.scope) == (
+        "Restaurant Guru", "2026-08-29", [1, 3], "branch"
+    )
+    # A passage keeps a line the page broke it over.
+    assert guru.passage.endswith("José Gabriel Neyra hace 6 días en Google.")
+    assert rappi.published_at == "" and rappi.entry == 1
+    assert parsed.not_found == ["3. Nothing published names a local food writer on the wings."]
+    assert parsed.notes == ["The Rappi title says Surquillo but the address is Miraflores."]
+    assert parsed.issues == []
+
+
+def test_attribution_inside_plain_blocks_ties_each_result_to_its_block():
+    from app.features.listicle_pipeline import profile_research
+
+    parsed = profile_research.parse_discovery(_BLOCKS)
+    anchored = profile_research.anchor_to_search(
+        parsed,
+        [
+            {"uri": _REDIRECT + "guru", "title": "restaurantguru.com"},
+            {"uri": _REDIRECT + "rappi-a", "title": "rappi.com.pe"},
+            {"uri": _REDIRECT + "rappi-b", "title": "rappi.com.pe"},
+        ],
+        [
+            {"text": "PAGE\nSite: Restaurant Guru", "chunks": [0]},
+            {"text": "S/ 23.90.", "chunks": [2]},
+        ],
+        text=_BLOCKS,
+    )
+    by_title = {page.title: page.url for page in anchored.pages}
+    assert by_title["McCarthy's Irish Pub, Miraflores - Menú"] == _REDIRECT + "guru"
+    # Attribution, not the first rappi result, decides.
+    assert by_title["McCarthy's - Surquillo Precios y Menú"] == _REDIRECT + "rappi-b"
+
+
+def test_block_dates_are_read_in_the_forms_the_model_writes():
+    from app.features.listicle_pipeline.profile_research import _block_date
+
+    assert _block_date("2025-10-28") == "2025-10-28"
+    assert _block_date("October 28 2025") == "2025-10-28"
+    assert _block_date("28 de octubre de 2025") == "2025-10-28"
+    assert _block_date("2026 (based on copyright on related pages)") == "2026"
+    assert _block_date("unknown") == ""
+
+
 def test_one_result_is_never_given_to_two_entries():
     from app.features.listicle_pipeline import profile_research
 

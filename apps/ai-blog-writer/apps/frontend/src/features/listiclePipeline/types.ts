@@ -476,6 +476,8 @@ export interface ListicleProfileSummary {
   district: string
   findings_total: number
   findings_this_topic: number
+  /** Of those, how many check out. Same rows, so the two sit side by side. */
+  ready_this_topic?: number
   kept: number
   unreviewed: number
   unattributed: number

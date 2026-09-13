@@ -47,6 +47,15 @@ match the result they name; with no supports at all, seven do by name.
 brand-wide, then results nobody described. The same run spent reading budget on
 Rappi listings for three other branches because they came first.
 
+**The answer is plain-text PAGE blocks, not JSON** (`place-research/6`). Gemini
+leaves the result list out of a reply that is only a code block — a known,
+unresolved provider behaviour ([forum](https://discuss.ai.google.dev/t/search-grounding-metadata-is-empty-even-when-search-was-performed/79831)).
+Measured on this call, 2026-09-13: JSON replies carried a result list about half
+the time (and `gemini-2.5-pro` 0 of 3), plain blocks 6 of 7. A missing list
+still happens; it is reported as a gap in the provider's reply, and a second
+press costs a search and an extraction but no reviews (reviews bought in the
+last 30 days are re-read). Switching the discovery model does not fix it.
+
 **Only a search result's address is ever opened.** An entry that matches no
 result keeps its description, is marked `address_from: none`, and is not read. A
 result no entry described is read after the described ones. A call with no

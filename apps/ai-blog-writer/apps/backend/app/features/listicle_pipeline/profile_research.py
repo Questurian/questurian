@@ -299,7 +299,14 @@ def research_place(
 # that, and the model's copy of queries full of quote marks is where a finished
 # McCarthy's reply dropped a closing quote and broke the envelope -- and tells
 # it not to quote the street address, which cut La Casa's search to one result.
-PROMPT_VERSION = "place-research/5"
+#
+# /6 asks for plain-text PAGE blocks instead of a JSON object. Gemini leaves the
+# grounding result list out of a reply that is only a code block -- a known,
+# unresolved provider behaviour -- and on this call a JSON reply carried a
+# result list about half the time (0 of 3 on gemini-2.5-pro) while the same
+# request answered in plain blocks carried one 6 times in 7. Without the list
+# no page the search found can be opened.
+PROMPT_VERSION = "place-research/6"
 
 # Raised from the 3,072 the whole-run pass used, on measurement rather than on
 # a guess. The second real request -- La Casa de las Alitas, eleven wing
@@ -552,28 +559,26 @@ shows them. For each page, say which question it answers and quote the sentence
 in it that does, so the value of opening the page is visible before it is
 opened.
 
-Return ONE JSON object and nothing else:
+Write plain text, not JSON and not a code block. One block per page, exactly
+like this:
 
-{{
-  "pages": [
-    {{
-      "site": "the website as the search result names it, e.g. rappi.com.pe",
-      "publisher": "who publishes it",
-      "type": "official|press|review_platform|social|aggregator|unknown",
-      "title": "the page title",
-      "published_at": "YYYY-MM-DD or YYYY or null",
-      "answers": [1, 2],
-      "passage": "the sentence in that page that answers, in its own language",
-      "scope": "branch|brand|unknown",
-      "why": "one line: what this page is worth opening for"
-    }}
-  ],
-  "not_found": ["a question nothing published seems to answer"],
-  "notes": ["anything about identity: a title naming a different district, a chain with several branches"]
-}}
+PAGE
+Site: the website as the search result names it, e.g. rappi.com.pe
+Publisher: who publishes it
+Type: official, press, review_platform, social, aggregator or unknown
+Title: the page title
+Published: YYYY-MM-DD, YYYY, or unknown
+Answers: the question numbers it answers, e.g. 1, 2 -- or none
+Scope: branch, brand or unknown
+Passage: the sentence in that page that answers, in its own language
+Why: one line on what this page is worth opening for
+
+After the pages, one line for each question nothing published seems to answer,
+starting NOT FOUND:, and one line for each note about identity -- a title naming
+a different district, a chain with several branches -- starting NOTE:.
 
 Rules:
-- Do not write a URL. Do not invent a date or a publisher. Unknown is null.
+- Do not write a URL. Do not invent a date or a publisher. Unknown is unknown.
 - A page whose title names a different district is not automatically the wrong
   place. Say what address it carries and let the reading settle it.
 - A menu establishes availability, not quality. Return both kinds of page.
@@ -818,41 +823,45 @@ def parse_discovery(raw: str) -> Discovery:
             f"The model stopped after {len(text)} characters without writing an "
             "answer. The request ran and may still have been charged for."
         )
-    try:
-        # `strict=False` permits a raw newline or tab inside a quoted string.
-        # Gemini writes one whenever it quotes a passage that was laid out over
-        # two lines in the page -- a menu row, an address block -- and strict
-        # JSON refuses the whole envelope over it. A real reply was lost that
-        # way: "Invalid control character at: line 26 column 5520", six
-        # thousand characters of readable pages thrown out because one quoted
-        # sentence contained the line break it had on the page.
-        #
-        # This loosens what counts as JSON, not what counts as evidence. Every
-        # check downstream is unchanged, and a passage carrying a newline still
-        # has to be found in the page it names.
-        loaded = json.loads(text, strict=False)
-    except ValueError as error:
-        # The envelope is unfinished. Lift out the page entries it DID finish
-        # writing, and say how it ended -- a paid call that named four real
-        # pages before it stopped is not the same as one that named none, and
-        # throwing both away treats them as if it were.
-        #
-        # No repair, no second call, nothing invented: an object cut in half is
-        # dropped. And a salvaged page is still only an address to open, which
-        # is what makes this safe -- it has to be fetched, and a passage has to
-        # be found in it, before any of it becomes evidence.
-        rescued = _complete_objects(text, "pages")
-        if not rescued:
-            raise ResponseInvalid(f"The reply was not JSON: {error}") from error
-        salvaged = True
-        issues.append(
-            f"The reply stopped before it was finished ({error}). "
-            f"{len(rescued)} complete page entr{'y' if len(rescued) == 1 else 'ies'} "
-            "were read out of it; anything it had not written yet is missing, "
-            "and no second call was made."
-        )
-        loaded = {"pages": rescued}
-        rescued_count = len(rescued)
+    # Plain PAGE blocks are what the prompt asks for; a JSON object is what
+    # the older prompt asked for, and stored replies still carry it.
+    loaded = _page_blocks(text)
+    if loaded is None:
+        try:
+            # `strict=False` permits a raw newline or tab inside a quoted string.
+            # Gemini writes one whenever it quotes a passage that was laid out over
+            # two lines in the page -- a menu row, an address block -- and strict
+            # JSON refuses the whole envelope over it. A real reply was lost that
+            # way: "Invalid control character at: line 26 column 5520", six
+            # thousand characters of readable pages thrown out because one quoted
+            # sentence contained the line break it had on the page.
+            #
+            # This loosens what counts as JSON, not what counts as evidence. Every
+            # check downstream is unchanged, and a passage carrying a newline still
+            # has to be found in the page it names.
+            loaded = json.loads(text, strict=False)
+        except ValueError as error:
+            # The envelope is unfinished. Lift out the page entries it DID finish
+            # writing, and say how it ended -- a paid call that named four real
+            # pages before it stopped is not the same as one that named none, and
+            # throwing both away treats them as if it were.
+            #
+            # No repair, no second call, nothing invented: an object cut in half is
+            # dropped. And a salvaged page is still only an address to open, which
+            # is what makes this safe -- it has to be fetched, and a passage has to
+            # be found in it, before any of it becomes evidence.
+            rescued = _complete_objects(text, "pages")
+            if not rescued:
+                raise ResponseInvalid(f"The reply was not JSON: {error}") from error
+            salvaged = True
+            issues.append(
+                f"The reply stopped before it was finished ({error}). "
+                f"{len(rescued)} complete page entr{'y' if len(rescued) == 1 else 'ies'} "
+                "were read out of it; anything it had not written yet is missing, "
+                "and no second call was made."
+            )
+            loaded = {"pages": rescued}
+            rescued_count = len(rescued)
     if not isinstance(loaded, dict):
         raise ResponseInvalid("The reply was JSON but not an object.")
     try:
@@ -977,7 +986,7 @@ def _attribution_by_entry(
     Supports arrive in the order they occur, so each is looked for after the
     one before, and a repeated price lands in its own entry.
     """
-    spans = _object_spans(text, "pages")
+    spans = _block_spans(text) or _object_spans(text, "pages")
     out: dict[int, list[int]] = {}
     cursor = 0
     for support in supports or []:
@@ -1123,6 +1132,100 @@ def anchor_to_search(
         results=list(chunks or []),
         supports=list(supports or []),
     )
+
+
+_BLOCK_START = re.compile(r"^\s*PAGE\s*$", re.M)
+_TRAILER = re.compile(r"^\s*(NOT FOUND|NOTE)\s*:\s*(.*)$", re.M)
+_FIELD = re.compile(r"^\s*([A-Za-z]+)\s*:\s*(.*)$")
+_FIELDS = {
+    "site": "site",
+    "publisher": "publisher",
+    "type": "type",
+    "title": "title",
+    "published": "published_at",
+    "answers": "answers",
+    "scope": "scope",
+    "passage": "passage",
+    "why": "why",
+}
+_MONTHS = {
+    name: index
+    for index, names in enumerate(
+        [
+            ("january", "enero"), ("february", "febrero"), ("march", "marzo"),
+            ("april", "abril"), ("may", "mayo"), ("june", "junio"),
+            ("july", "julio"), ("august", "agosto"),
+            ("september", "septiembre", "setiembre"), ("october", "octubre"),
+            ("november", "noviembre"), ("december", "diciembre"),
+        ],
+        start=1,
+    )
+    for name in names
+}
+
+
+def _block_date(value: str) -> str:
+    """A date as the model wrote it, as `YYYY-MM-DD`, `YYYY-MM`, `YYYY` or ""."""
+    text = (value or "").strip().lower()
+    exact = re.search(r"\b(\d{4})-(\d{2})(?:-(\d{2}))?\b", text)
+    if exact:
+        return exact.group(0)
+    year = re.search(r"\b(19|20)\d{2}\b", text)
+    if not year:
+        return ""
+    month = next((_MONTHS[word] for word in re.findall(r"[a-z]+", text) if word in _MONTHS), 0)
+    day = re.search(r"\b(\d{1,2})\b", text.replace(year.group(0), ""))
+    if month and day:
+        return f"{year.group(0)}-{month:02d}-{int(day.group(1)):02d}"
+    if month:
+        return f"{year.group(0)}-{month:02d}"
+    return year.group(0)
+
+
+def _block_spans(text: str) -> list[tuple[int, int]]:
+    """Where each PAGE block starts and ends, by character, in order."""
+    starts = [match.start() for match in _BLOCK_START.finditer(text)]
+    trailer = _TRAILER.search(text, starts[-1]) if starts else None
+    ends = starts[1:] + [trailer.start() if trailer else len(text)]
+    return [(start, end - 1) for start, end in zip(starts, ends)]
+
+
+def _page_blocks(text: str) -> dict | None:
+    """A plain-text reply read into the same shape the JSON reply had.
+
+    None when the reply has no PAGE block and no NOT FOUND or NOTE line, so a
+    JSON reply -- the older prompt, or a model that ignored this one -- still
+    goes through the JSON reader. A field line starts a field; any other line
+    continues the one before, because a passage quoted from a menu keeps its
+    line breaks.
+    """
+    spans = _block_spans(text)
+    trailers = _TRAILER.findall(text)
+    if not spans and not trailers:
+        return None
+    pages = []
+    for start, end in spans:
+        entry: dict = {}
+        current = ""
+        for line in text[start : end + 1].splitlines()[1:]:
+            field_match = _FIELD.match(line)
+            key = _FIELDS.get(field_match.group(1).lower()) if field_match else None
+            if key:
+                current = key
+                entry[key] = field_match.group(2).strip()
+            elif current and line.strip():
+                entry[current] = f"{entry[current]} {line.strip()}".strip()
+        if not entry:
+            continue
+        entry["published_at"] = _block_date(entry.get("published_at", "")) or None
+        entry["answers"] = [int(n) for n in re.findall(r"\d+", entry.get("answers", ""))]
+        entry["scope"] = (entry.get("scope") or "unknown").strip().lower()
+        pages.append(entry)
+    return {
+        "pages": pages,
+        "not_found": [body for kind, body in trailers if kind == "NOT FOUND" and body.strip()],
+        "notes": [body for kind, body in trailers if kind == "NOTE" and body.strip()],
+    }
 
 
 class ResponseInvalid(ValueError):

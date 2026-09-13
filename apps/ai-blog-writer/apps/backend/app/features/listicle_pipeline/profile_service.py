@@ -246,6 +246,12 @@ def _profile_summary(profile_id: str, topic: str) -> dict:
         "district": profile.district,
         "findings_total": len(findings),
         "findings_this_topic": len(for_topic),
+        # Beside the count above and over the same rows, so a card can say how
+        # many of the findings it counts check out without mixing a profile
+        # total with one attempt's number.
+        "ready_this_topic": sum(
+            1 for item in for_topic if item.validation == "evidence_ready"
+        ),
         "kept": sum(1 for item in for_topic if item.curation == "kept"),
         "unreviewed": sum(1 for item in for_topic if item.curation == "unreviewed"),
         "unattributed": sum(
@@ -748,6 +754,27 @@ def fetch_reviews(place_id: str, *, query: str = ""):
     return reviews_api.fetch_reviews(place_id, query=query)
 
 
+def _one_per_address(pages: list) -> list:
+    """Drop a page read a second time under a different address.
+
+    A search result is a redirect, so it cannot be recognised as a page
+    already held until it has been followed. McCarthy's read its Rappi listing
+    and its Perú Retail article twice -- once from the audit's link, once from
+    the search -- and handed both copies to the extraction. The first read
+    stays; later readable copies of the same final address go.
+    """
+    seen: set[str] = set()
+    out = []
+    for page in pages:
+        address = source_reader.normalise(page.final_url or page.requested_url)
+        if page.readable and address in seen:
+            continue
+        if page.readable:
+            seen.add(address)
+        out.append(page)
+    return out
+
+
 def _texts_of(pages: list) -> dict[str, str]:
     """The text worth keeping, keyed the way a later read looks it up."""
     return {
@@ -1217,6 +1244,7 @@ def research(
                     already_read=held,
                 )
             )
+            pages = _one_per_address(pages)
 
     # --- One extraction, over text this process holds ------------------------
     readable = [page for page in pages if page.readable]
