@@ -288,7 +288,7 @@ def dry_run() -> int:
     return 0
 
 
-def spend(only: str = "", name: str = PILOT_NAME) -> int:
+def spend(only: str = "", name: str = PILOT_NAME, extract_only: bool = False) -> int:
     """The authorised run. One action per place, in order, with a hard ceiling.
 
     `refresh` rather than `initial`, because asking the same question again on
@@ -320,7 +320,12 @@ def spend(only: str = "", name: str = PILOT_NAME) -> int:
         return 1
 
     print(f"Retest {name}")
-    _print_reviews_budget(len(places))
+    if extract_only:
+        # Re-reads the pages the latest attempt on each place kept, reviews
+        # included. No search and no reviews are bought; one extraction is.
+        print("Extraction only: no search, no reviews bought.")
+    else:
+        _print_reviews_budget(len(places))
     print()
 
     audit = _audit_links_by_profile()
@@ -339,7 +344,11 @@ def spend(only: str = "", name: str = PILOT_NAME) -> int:
             return request
 
         profile_service._build_request = with_audit
-        key = f"pilot-{name}-{place['candidate_id'][:8]}"
+        # Its own key: the press that collected the pages already used the
+        # plain one, and reusing it would replay that attempt.
+        key = f"pilot-{name}-{place['candidate_id'][:8]}" + (
+            "-extract" if extract_only else ""
+        )
         print(f"\n=== {place['who']} ===")
         started = datetime.now(timezone.utc)
         try:
@@ -350,7 +359,7 @@ def spend(only: str = "", name: str = PILOT_NAME) -> int:
                 transport=listicle_api._research_call,
                 extract=listicle_api._extract_call,
                 reader=listicle_api._read_pages,
-                mode="refresh",
+                mode="extract_only" if extract_only else "refresh",
                 staff=name,
                 baseline_attempt_id=place["baseline"],
                 pilot=name,
@@ -966,6 +975,12 @@ def main() -> int:
         choices=sorted(RETESTS),
         help="Which retest to spend on. Each has its own key and baselines.",
     )
+    parser.add_argument(
+        "--extract-only",
+        action="store_true",
+        help="With --spend: re-read the pages the latest attempt kept. One "
+        "generation per place, no search, no reviews bought.",
+    )
     parser.add_argument("--report", default="", help="Write the HTML comparison.")
     parser.add_argument(
         "--artifact",
@@ -978,7 +993,7 @@ def main() -> int:
     if args.report:
         return report(Path(args.report))
     if args.spend:
-        return spend(args.only, args.retest)
+        return spend(args.only, args.retest, extract_only=args.extract_only)
     return dry_run()
 
 
