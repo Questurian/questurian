@@ -177,6 +177,36 @@ def test_a_claim_speaking_for_several_people_on_one_quote_needs_a_look():
     assert not any("quotes one" in n for n in packet.claims[2].notes)
 
 
+def test_only_a_promotion_carries_an_end_date():
+    """Held to a response schema, the extraction filled `valid_until` with the
+    review's own date on 75 claims, shown as "Offer ended"."""
+    pages = [page("Las alitas estaban muy saladas. 2x1 en alitas hasta el 30 de junio.")]
+    packet = evidence.check(
+        {
+            "claims": [
+                claim(
+                    text="In a February 2025 review, a customer said the wings were too salty.",
+                    temporal_type="observation",
+                    event_date="2025-02-18",
+                    valid_until="2025-02-18",
+                    support=[{"page_id": "p1", "excerpt": "Las alitas estaban muy saladas"}],
+                ),
+                claim(
+                    text="A two-for-one wings promotion ran until June 30.",
+                    temporal_type="promotion",
+                    valid_until="2025-06-30",
+                    support=[{"page_id": "p1", "excerpt": "2x1 en alitas hasta el 30 de junio"}],
+                ),
+            ]
+        },
+        brief=brief(),
+        pages=pages,
+    )
+    review, promotion = packet.claims
+    assert review.valid_until == ""
+    assert promotion.valid_until == "2025-06-30"
+
+
 # --------------------------------------------------------------------------
 # One branch's price is not the brand's
 # --------------------------------------------------------------------------

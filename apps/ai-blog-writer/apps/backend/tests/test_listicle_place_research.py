@@ -1978,7 +1978,12 @@ def test_the_reading_budget_is_a_ceiling_and_an_unread_lead_says_so(
     attempt = client.get(
         f"{BASE}/research-attempts/{body['attempt']['attempt_id']}"
     ).json()
-    fetched = [page for page in attempt["pages"] if page["state"] != "budget_exhausted"]
+    # Reviews come over an API, not a page fetch, and are outside the budget.
+    fetched = [
+        page
+        for page in attempt["pages"]
+        if page["state"] != "budget_exhausted" and page["origin"] != "google_reviews"
+    ]
     unread = [page for page in attempt["pages"] if page["state"] == "budget_exhausted"]
     assert len(fetched) == source_reader.PAGE_BUDGET
     # Past the ceiling a page is an unread lead, said as one. Silently

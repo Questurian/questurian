@@ -540,7 +540,14 @@ def check(
                 else "unknown"
             ),
             event_date=_date(given.get("event_date")),
-            valid_until=_date(given.get("valid_until")),
+            # Only a promotion ends. Held to a response schema the model fills
+            # every field, and it gave 75 reviews an end date equal to the day
+            # they were written -- shown on screen as "Offer ended".
+            valid_until=(
+                _date(given.get("valid_until"))
+                if str(given.get("temporal_type", "")) == "promotion"
+                else ""
+            ),
         )
 
         for item in given.get("support") or []:

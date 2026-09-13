@@ -534,8 +534,11 @@ def read_pages(
                         state="budget_exhausted",
                         origin=origin,
                         note=(
-                            f"This attempt's {budget}-page reading budget was "
-                            "already spent. The page is an unread lead."
+                            # `budget` is what was left for this batch, not
+                            # the attempt's whole allowance, and says so.
+                            f"The reading budget was already spent ({budget} "
+                            "page(s) were left for this batch). The page is an "
+                            "unread lead."
                         ),
                     )
                 )

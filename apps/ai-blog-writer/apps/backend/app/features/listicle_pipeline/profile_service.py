@@ -1251,8 +1251,13 @@ def research(
             )
         )
         # --- Read what it named ---------------------------------------------
+        # Reviews are not a page fetched over HTTP and do not spend this
+        # budget; counting a freshly bought reviews page here cut Wingsbox's
+        # reading to seven pages and reported the budget as seven.
         remaining = source_reader.PAGE_BUDGET - sum(
-            1 for page in pages if not page.reused
+            1
+            for page in pages
+            if not page.reused and page.origin != "google_reviews"
         )
         if any(page.url for page in discovery.pages) and remaining > 0:
             held = {

@@ -492,7 +492,7 @@ class ResearchFinding(BaseModel):
     def expired(self, *, as_of: date | None = None) -> bool:
         """Past its own stated end. Only a promotion can be, and only when the
         reply gave a date -- nothing here guesses at one."""
-        if not self.valid_until:
+        if not self.valid_until or self.temporal_type != "promotion":
             return False
         try:
             ends = date.fromisoformat(self.valid_until[:10])

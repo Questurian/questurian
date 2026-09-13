@@ -521,7 +521,9 @@ function FindingRow({
           <DateLine label="Published" value={finding.source_published_at} />
           <DateLine label="About" value={finding.event_date} />
           <DateLine label="Seen" value={finding.observed_at} />
-          {finding.valid_until && (
+          {/* Only a promotion ends. Stored rows from before that rule carry a
+              review's own date here, and read as an offer that ended. */}
+          {finding.valid_until && finding.temporal_type === 'promotion' && (
             <span className={finding.expired ? 'lp-research-warn' : 'lp-muted'}>
               {finding.expired ? 'Offer ended ' : 'Runs until '}
               {finding.valid_until}
