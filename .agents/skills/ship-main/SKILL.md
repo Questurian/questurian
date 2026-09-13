@@ -16,7 +16,6 @@ Goal: leave `main` clean, pushed, and up to date with `origin/main`, after commi
 - Stop and ask before merging when intent, ownership, conflicts, CI, review state, or changed files are unclear.
 - Prefer `main`. If repo default branch is not `main`, tell the user and ask before shipping another branch.
 - If network or GitHub checks are blocked, request approval/escalation instead of skipping silently.
-- Never add AI attribution trailers to commit, merge, or PR text. Disallowed examples include `Co-authored-by: Cursor <cursoragent@cursor.com>`, Claude, Codex, or any other AI tool identity.
 
 ## Preflight
 
@@ -52,7 +51,7 @@ If `gh` is unavailable, use `git remote show origin` for the default branch and 
 
 - If no local changes exist, skip commit and continue branch/remote sync.
 - Stage only intended files. Use `git add -A` only after auditing all untracked files.
-- Commit with a concise inferred message unless the user supplied one. Do not include any `Co-authored-by` trailers:
+- Commit with a concise inferred message unless the user supplied one:
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -127,7 +126,6 @@ If GitHub branch protection blocks direct push, use `gh pr merge` for the PR ins
 Run:
 
 ```bash
-if git log --format=%B origin/main..main | rg -i 'co-authored-by:.*(cursor|claude|codex)|cursoragent@cursor\.com'; then echo "Disallowed AI co-author trailer found; stop before push."; exit 1; fi
 git push origin main
 git fetch origin main --prune
 git status -sb
