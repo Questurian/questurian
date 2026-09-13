@@ -1104,6 +1104,7 @@ def research(
                 profile_research.parse_discovery(result.text or ""),
                 list(result.grounding_chunks or []),
                 list(result.grounding_supports or []),
+                text=result.text or "",
             )
         except profile_research.ResponseInvalid as error:
             receipts.append(
@@ -1207,7 +1208,10 @@ def research(
             CallReceipt(
                 stage="extraction",
                 outcome="failed",
-                reason=f"{type(error).__name__}",
+                # The message as well as the class. "WriterModelError" alone
+                # sent the last reader to a terminal log to find out the model
+                # had written its answer as Python.
+                reason=f"{type(error).__name__}: {str(error)[:500]}",
                 duration_seconds=round(time.monotonic() - extract_started, 2),
             )
         )

@@ -595,21 +595,15 @@ def degenerate_runs(text: str) -> list[tuple[int, int, str]]:
     ]
 
 
-def _complete_objects(text: str, key: str) -> list[dict]:
-    """Every whole `{...}` inside `"key": [ ... ]`, stopping at the first that
-    is not whole.
+def _object_spans(text: str, key: str) -> list[tuple[int, int]]:
+    """Where each whole `{...}` inside `"key": [ ... ]` starts and ends.
 
-    Deterministic salvage of a truncated array, and nothing more. No model is
-    asked to repair anything, no missing brace is invented, and an object that
-    was cut mid-way is dropped rather than guessed at. What this recovers is
-    what the reply actually finished writing.
-
-    It is safe *because of what happens next*: a recovered page is an address
-    to open, and it only becomes evidence once it has been fetched and once a
-    passage has been found in it. A bad salvage produces a page that fails to
-    load or a claim that fails its check -- not a false finding.
+    Character positions, first to last, stopping at the first object that is
+    not whole. Shared by the salvage below and by the matching of the
+    provider's attribution to entries, which needs to know which entry a
+    stretch of the answer sits in.
     """
-    found: list[dict] = []
+    spans: list[tuple[int, int]] = []
     for opening in [
         match.end()
         for match in re.finditer(rf'"{re.escape(key)}"\s*:\s*\[', text)
@@ -637,16 +631,34 @@ def _complete_objects(text: str, key: str) -> list[dict]:
             elif char == "}":
                 depth -= 1
                 if depth == 0 and start >= 0:
-                    try:
-                        found.append(
-                            json.loads(text[start : index + 1], strict=False)
-                        )
-                    except ValueError:
-                        pass
+                    spans.append((start, index))
                     start = -1
             elif char == "]" and depth == 0:
                 break
             index += 1
+    return spans
+
+
+def _complete_objects(text: str, key: str) -> list[dict]:
+    """Every whole `{...}` inside `"key": [ ... ]`, stopping at the first that
+    is not whole.
+
+    Deterministic salvage of a truncated array, and nothing more. No model is
+    asked to repair anything, no missing brace is invented, and an object that
+    was cut mid-way is dropped rather than guessed at. What this recovers is
+    what the reply actually finished writing.
+
+    It is safe *because of what happens next*: a recovered page is an address
+    to open, and it only becomes evidence once it has been fetched and once a
+    passage has been found in it. A bad salvage produces a page that fails to
+    load or a claim that fails its check -- not a false finding.
+    """
+    found: list[dict] = []
+    for start, end in _object_spans(text, key):
+        try:
+            found.append(json.loads(text[start : end + 1], strict=False))
+        except ValueError:
+            pass
     return [item for item in found if isinstance(item, dict)]
 
 
@@ -699,6 +711,10 @@ class DiscoveredPage:
     # (only before `anchor_to_search`). `none`: described, matched to nothing,
     # and therefore not read.
     address_from: str = "answer"
+    # Which entry of the answer's `pages` array this came from, counting from
+    # zero. How the provider's attribution, which points at stretches of the
+    # answer, is tied back to an entry. -1 for a page the answer never wrote.
+    entry: int = -1
 
     def as_dict(self) -> dict:
         return {
@@ -838,7 +854,7 @@ def parse_discovery(raw: str) -> Discovery:
 
     pages: list[DiscoveredPage] = []
     seen: set[str] = set()
-    for given in envelope.pages:
+    for entry, given in enumerate(envelope.pages):
         url = (given.url or "").strip()
         site = (given.site or "").strip()
         if not url.lower().startswith(("http://", "https://")):
@@ -872,6 +888,7 @@ def parse_discovery(raw: str) -> Discovery:
                 scope=given.scope if given.scope in _SCOPES else "unknown",
                 why=given.why.strip()[:300],
                 site=site[:200],
+                entry=entry,
             )
         )
     if salvaged and rescued_count != len(pages):
@@ -894,6 +911,17 @@ def parse_discovery(raw: str) -> Discovery:
 
 _REDIRECT_HOST = "vertexaisearch.cloud.google.com"
 _DOMAIN = re.compile(r"^[a-z0-9-]+(\.[a-z0-9-]+)+$")
+# The endings stripped to find the name a site goes by: `rappi.com.pe` is
+# "rappi", `carta.menu` is "carta". Not a public-suffix list, and it does not
+# need to be -- it only decides whether "Rappi" in the answer means the
+# `rappi.com.pe` result, and a miss costs a page read, not a false claim.
+_SITE_ENDINGS = {
+    "com", "net", "org", "co", "pe", "es", "mx", "ar", "cl", "uk", "io",
+    "menu", "info", "biz", "gob", "edu",
+}
+# How strongly the answer tied a page to this branch. Reading order within the
+# page budget, never a filter: a brand page is still read when there is room.
+_SCOPE_ORDER = {"branch": 0, "unknown": 1, "brand": 2}
 
 
 def _host(value: str) -> str:
@@ -911,12 +939,62 @@ def _host(value: str) -> str:
     return text if _DOMAIN.match(text) else ""
 
 
-def _words(text: str) -> str:
-    return " ".join(re.findall(r"\w+", (text or "").lower()))
+def _site_name(host: str) -> str:
+    parts = host.split(".")
+    while len(parts) > 1 and parts[-1] in _SITE_ENDINGS:
+        parts.pop()
+    return parts[-1] if host else ""
+
+
+def _name_key(value: str) -> str:
+    """A name with its spacing and punctuation gone: "The City Lane" is
+    "thecitylane", which is what `thecitylane.com` is called."""
+    return "".join(re.findall(r"[a-z0-9]+", (value or "").lower()))
+
+
+def _attribution_by_entry(
+    text: str, supports: list[dict]
+) -> dict[int, list[int]]:
+    """Which results the provider credits to each entry of the answer.
+
+    A support names a stretch of the answer, and the stretches are short and
+    fall where sentences end rather than where entries do: "Alitas.",
+    "S/ 37.80." (three times, in three entries), or the tail of one entry
+    running into the opening brace of the next. Measured on the first real
+    run of this matching (002330f8b00c), a stretch belongs to the entry its
+    LAST character sits in, or to the next entry when it ends between two --
+    the tail of the PedidosYa entry is credited to thecitylane.com, which is
+    the entry after it.
+
+    Supports arrive in the order they occur, so each is looked for after the
+    one before, and a repeated price lands in its own entry.
+    """
+    spans = _object_spans(text, "pages")
+    out: dict[int, list[int]] = {}
+    cursor = 0
+    for support in supports or []:
+        segment = support.get("text", "")
+        if not segment:
+            continue
+        at = text.find(segment, cursor)
+        if at < 0:
+            at = text.find(segment)
+        if at < 0:
+            continue
+        cursor = at + 1
+        last = at + len(segment) - 1
+        for index, (start, end) in enumerate(spans):
+            if last <= end:
+                out.setdefault(index, []).extend(support.get("chunks", []))
+                break
+    return out
 
 
 def anchor_to_search(
-    discovery: Discovery, chunks: list[dict], supports: list[dict]
+    discovery: Discovery,
+    chunks: list[dict],
+    supports: list[dict],
+    text: str = "",
 ) -> Discovery:
     """Give every page the address the search itself returned, or none.
 
@@ -924,78 +1002,67 @@ def anchor_to_search(
     pages exist and where. Only the second is opened. An entry is matched, in
     order of how much the match can be trusted:
 
-    1. **The provider's own attribution.** A support whose text is part of the
-       entry -- its passage, title or reason -- names the results behind it.
+    1. **The provider's own attribution** -- a support that falls inside the
+       entry, located in the answer `text`.
     2. **The same address,** when the answer copied a result's link verbatim.
-    3. **The same site,** by the result's title (a grounded result's title is
-       its domain) or its own host.
+    3. **The same site,** by hostname, or by name: an answer that says "Rappi"
+       means the result whose site is called rappi.
 
     A result is given to one entry at most. An entry that matches nothing keeps
     its description, loses any address it typed, and is not read: an address
     typed from memory was a 404 or a host that does not exist in 7 of 23
-    cases. A result no entry described is still a page the search used, and is
-    read after the described ones, so the budget goes to described pages first.
+    cases. A result no entry described is still a page the search used.
+
+    Reading order: described pages the answer tied to this branch, then those
+    it could not place, then brand-wide ones, then results nobody described.
+    The first real run spent half its budget on Rappi listings for other
+    branches because they came first in the list.
 
     With no results at all, nothing is opened. A grounded answer with no
     grounding is an answer written from memory.
     """
     issues = list(discovery.issues)
-    results = [
-        {
-            "index": index,
-            "uri": chunk.get("uri", ""),
-            "title": chunk.get("title", ""),
-            "host": _host(chunk.get("title", ""))
-            or (
-                ""
-                if _host(chunk.get("uri", "")) == _REDIRECT_HOST
-                else _host(chunk.get("uri", ""))
-            ),
-        }
-        for index, chunk in enumerate(chunks or [])
-        if str(chunk.get("uri", "")).lower().startswith(("http://", "https://"))
-    ]
+    results = []
+    for index, chunk in enumerate(chunks or []):
+        uri = str(chunk.get("uri", ""))
+        if not uri.lower().startswith(("http://", "https://")):
+            continue
+        host = _host(chunk.get("title", "")) or (
+            "" if _host(uri) == _REDIRECT_HOST else _host(uri)
+        )
+        results.append(
+            {
+                "index": index,
+                "uri": uri,
+                "title": chunk.get("title", ""),
+                "host": host,
+                "name": _site_name(host),
+            }
+        )
     by_index = {result["index"]: result for result in results}
+    credited = _attribution_by_entry(text, supports) if text else {}
     claimed: set[int] = set()
 
-    def attributed(page: DiscoveredPage) -> list[int]:
-        # The answer is JSON, so a support's segment is a stretch of JSON. The
-        # quoted values inside it are what the model wrote; keys and brackets
-        # are not. Fifteen characters keeps key names from matching anything.
-        said = _words(" ".join((page.passage, page.title, page.why)))
-        found: list[int] = []
-        for support in supports or []:
-            segment = support.get("text", "")
-            quoted = re.findall(r'"([^"]{15,})"', segment) or [segment]
-            if any(
-                len(_words(value)) >= 15 and _words(value) in said for value in quoted
-            ):
-                found.extend(
-                    index for index in support.get("chunks", []) if index in by_index
-                )
-        return found
-
-    anchored: list[DiscoveredPage] = []
-    unmatched = 0
+    described: list[DiscoveredPage] = []
+    unmatched: list[DiscoveredPage] = []
     for page in discovery.pages:
-        site = _host(page.site) or _host(page.url)
+        host = _host(page.site) or _host(page.url)
+        names = {_name_key(page.site), _name_key(page.publisher)} - {""}
         candidates = (
-            attributed(page)
+            [index for index in credited.get(page.entry, []) if index in by_index]
             or [r["index"] for r in results if page.url and r["uri"] == page.url]
-            or [r["index"] for r in results if site and r["host"] == site]
+            or [r["index"] for r in results if host and r["host"] == host]
+            or [r["index"] for r in results if r["name"] and r["name"] in names]
         )
         chosen = [index for index in dict.fromkeys(candidates) if index not in claimed]
         if not chosen:
-            unmatched += 1
-            anchored.append(
-                DiscoveredPage(
-                    **{**page.__dict__, "url": "", "address_from": "none"}
-                )
+            unmatched.append(
+                DiscoveredPage(**{**page.__dict__, "url": "", "address_from": "none"})
             )
             continue
-        first, *more = chosen
-        claimed.update(chosen)
-        anchored.append(
+        first = chosen[0]
+        claimed.add(first)
+        described.append(
             DiscoveredPage(
                 **{
                     **page.__dict__,
@@ -1005,30 +1072,18 @@ def anchor_to_search(
                 }
             )
         )
-        # Several results on one site, and nothing to say which the entry
-        # meant. Each is a real page; the description goes with the first.
-        for index in more:
-            anchored.append(
-                DiscoveredPage(
-                    url=by_index[index]["uri"],
-                    publisher=by_index[index]["title"],
-                    site=by_index[index]["host"],
-                    why="Another result on the same site as a page the answer described.",
-                    address_from="search",
-                )
-            )
-    for result in results:
-        if result["index"] in claimed:
-            continue
-        anchored.append(
-            DiscoveredPage(
-                url=result["uri"],
-                publisher=result["title"],
-                site=result["host"],
-                why="The search returned this page; the answer did not describe it.",
-                address_from="search_only",
-            )
+    described.sort(key=lambda page: _SCOPE_ORDER.get(page.scope, 1))
+    undescribed = [
+        DiscoveredPage(
+            url=result["uri"],
+            publisher=result["title"],
+            site=result["host"],
+            why="The search returned this page; the answer did not describe it.",
+            address_from="search_only",
         )
+        for result in results
+        if result["index"] not in claimed
+    ]
     if not results and discovery.pages:
         issues.append(
             "The search reported no results, so no page it described has an "
@@ -1036,11 +1091,11 @@ def anchor_to_search(
         )
     elif unmatched:
         issues.append(
-            f"{unmatched} described page(s) matched no search result and were "
-            "not read. What the answer said about them is kept, unverified."
+            f"{len(unmatched)} described page(s) matched no search result and "
+            "were not read. What the answer said about them is kept, unverified."
         )
     return Discovery(
-        pages=anchored,
+        pages=described + undescribed + unmatched,
         searched=list(discovery.searched),
         not_found=list(discovery.not_found),
         notes=list(discovery.notes),

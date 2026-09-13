@@ -170,6 +170,61 @@ def structured(
     return result
 
 
+def schema_json(
+    job_id: str,
+    *,
+    prompt: str,
+    schema: dict[str, Any],
+    max_tokens: int = 4096,
+    temperature: float = 1.0,
+    model: Optional[str] = None,
+    endpoint: str = "schema_json",
+) -> StructuredWriterResult:
+    """One JSON reply the provider holds to a schema. No tool, no retry.
+
+    The alternative to `structured` for Gemini, and the one to prefer there.
+    A forced tool call on Gemini fails as `MALFORMED_FUNCTION_CALL` in two
+    ways this backend has seen for real: the model writes
+    `print(default_api.<tool>(...))` as text instead of calling the tool, and
+    a call cut off by the output ceiling is reported the same way rather than
+    as a length problem. A response schema has neither transport.
+
+    The ceiling goes through `get_vertex_llm`, which raises it to the
+    backend's output floor; the forced-tool path sent the caller's number
+    straight to the provider, and on a thinking model the thinking is charged
+    against it too.
+
+    A reply cut off mid-value raises and says so. Nothing is asked twice.
+    """
+    resolved = resolve(job_id, model)
+    from utils import get_vertex_llm  # type: ignore
+
+    llm = get_vertex_llm(
+        temperature=temperature, max_tokens=max_tokens, model_name=resolved
+    )
+    invoke_json = getattr(llm, "invoke_json", None)
+    if not callable(invoke_json):
+        raise RuntimeError(f"{job_id}: {resolved} cannot hold a reply to a schema")
+    served = str(getattr(llm, "model_name", "") or resolved)
+    with observe_job_call(
+        job_id,
+        provider=_provider_for(served),
+        model=served,
+        endpoint=endpoint,
+    ) as observed:
+        try:
+            payload = invoke_json(prompt, input_schema=schema, max_tokens=max_tokens)
+        finally:
+            usage = getattr(llm, "last_usage_metadata", None)
+            if usage:
+                observed.record_usage(usage)
+            else:
+                observed.add_metadata(usageUnreported=True)
+    return StructuredWriterResult(
+        payload=payload, model_name=served, usage=dict(usage or {})
+    )
+
+
 def multimodal_text(
     job_id: str,
     parts: list[Any],

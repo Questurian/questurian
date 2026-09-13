@@ -31,9 +31,21 @@ plausibly, not to stop guessing.
 the search result shows them, and quotes the passage, as before.
 
 **Code matches each entry to a search result**, in order of how far the match
-can be trusted: the provider's own attribution (a grounding support whose quoted
-text is part of the entry), then an identical link, then the same site. A result
-goes to one entry at most.
+can be trusted: the provider's own attribution, then an identical link, then the
+same site by hostname or by name ("Rappi" is the result whose site is called
+rappi). A result goes to one entry at most.
+
+Attribution is found by position. On the first real run (`002330f8b00c`) the
+supports were short stretches of the answer — "Alitas.", "S/ 37.80." three
+times in three entries, and the tail of one entry running into the next — and
+the first version, which compared quoted text, matched none of them. A stretch
+belongs to the entry its last character sits in, or the next one when it ends
+between two. Replayed over that run's stored results, all nine described pages
+match the result they name; with no supports at all, seven do by name.
+
+**Described pages are read in order of scope**: this branch, then unplaced, then
+brand-wide, then results nobody described. The same run spent reading budget on
+Rappi listings for three other branches because they came first.
 
 **Only a search result's address is ever opened.** An entry that matches no
 result keeps its description, is marked `address_from: none`, and is not read. A
@@ -53,10 +65,10 @@ the likeliest next one.
 - Dead links from guessed addresses stop costing page budget.
 - Matching by site is coarse. Two results on one site with no provider
   attribution are both read, and the description goes with the first.
-- Whether Vertex emits grounding supports for a JSON answer is not yet known;
-  the site match is what holds if it does not.
+- Vertex does emit grounding supports for a JSON answer (nine, on the first
+  real run). Their stretches are placed by sentence, not by entry, so the
+  position rule is a measurement of one run and may need revisiting.
 
-**Not yet proven.** Every number above explains the old failures. None of it
-shows the new prompt succeeding: the next real run is the first evidence, for
-the address change and the temperature change together. If discovery still
-fails after that, issue #560's model question is live again.
+**First evidence.** The first run under this decision (`002330f8b00c`) finished
+with `STOP` at 7,129 tokens instead of looping, and every page it opened
+resolved to a real publisher address — no 404s and no invented hosts. One run.

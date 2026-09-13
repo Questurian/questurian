@@ -223,7 +223,7 @@
     {
       "id": "listicle.evidence_extract",
       "app": "ai-blog-writer",
-      "call": "structured",
+      "call": "json",
       "summary": "Read the pages one research action collected and write down what they say, each claim with the passage that carries it.",
       "site": "features/listicle_pipeline/api.py",
       "defaultModel": "gemini-2.5-pro"

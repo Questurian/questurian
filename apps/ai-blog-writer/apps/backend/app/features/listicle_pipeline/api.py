@@ -808,25 +808,27 @@ def _extract_call(prompt: str):
     the searching half -- they run on different models for different reasons and
     a single number over both hides which one is expensive.
 
-    A forced schema rather than free text. Two of the five real calls this work
-    is measured against came back as unparseable JSON after spending their whole
-    output budget; a provider that guarantees the shape removes that failure
-    rather than handling it.
+    A schema the provider holds the reply to, rather than free text. Two of the
+    five real calls this work is measured against came back as unparseable JSON
+    after spending their whole output budget.
+
+    A response schema rather than a forced tool call. The first real extraction
+    under the reviews API (002330f8b00c) read the pages well and died as
+    `MALFORMED_FUNCTION_CALL`: gemini-2.5-pro wrote
+    `print(default_api.record_evidence(...))` as text, cut off mid-entry, under
+    an 8,192-token ceiling its own thinking is charged against. The listicle
+    review call hit the same transport failure first and left forced tools for
+    the same reason (`_review_call`).
     """
-    from app.shared.model_calls import structured
+    from app.shared.model_calls import schema_json
 
     from .evidence import EXTRACTION_MAX_TOKENS, EXTRACTION_SCHEMA
     from .profile_service import TransportResult
 
-    result = structured(
+    result = schema_json(
         "listicle.evidence_extract",
         prompt=prompt,
-        tool_name="record_evidence",
-        tool_description=(
-            "Record what the supplied pages say, each claim with the passage "
-            "in the page that carries it."
-        ),
-        input_schema=EXTRACTION_SCHEMA,
+        schema=EXTRACTION_SCHEMA,
         max_tokens=EXTRACTION_MAX_TOKENS,
         endpoint="evidence_extract",
     )

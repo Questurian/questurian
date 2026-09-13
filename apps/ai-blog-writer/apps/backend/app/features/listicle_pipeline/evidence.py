@@ -43,10 +43,13 @@ from .source_reader import PageRead
 # stored packet can be told apart by what was asked AND by what was enforced.
 EXTRACTION_VERSION = "evidence-extract/1"
 
-# Enough for a well-sourced packet and not enough for a padded one. Bounded
-# because the input is bounded: eight pages do not contain forty distinct
-# assertions about one subject, and a reply that produces forty is splitting
-# one sentence into four.
+# What the call asks for. Since the extraction moved to `schema_json` the
+# backend's output floor raises it (64,000), so this is no longer a ceiling
+# that shapes the packet. It was one under the forced-tool path, and on
+# gemini-2.5-pro the model's thinking is charged against the same number: the
+# first reviews-API extraction was cut off inside it and reported as a
+# malformed function call. The page ceiling bounds the input; nothing here
+# bounds the reply below the floor, on purpose.
 EXTRACTION_MAX_TOKENS = 8_192
 EXTRACTION_TIMEOUT_SECONDS = 180
 

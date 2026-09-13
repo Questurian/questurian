@@ -666,22 +666,88 @@ def test_a_typed_address_is_replaced_by_the_search_result_for_that_site():
     ]
 
 
-def test_the_providers_attribution_decides_between_two_results_on_one_site():
+def _answer(*entries: dict) -> str:
+    """An answer laid out the way Gemini lays it out, so supports can be found."""
+    return "```json\n" + json.dumps({"pages": list(entries)}, indent=2, ensure_ascii=False) + "\n```"
+
+
+def test_the_providers_attribution_is_found_by_where_it_sits_in_the_answer():
+    """The shape of the first real run (002330f8b00c): supports are short
+    stretches -- "Alitas.", a price repeated in three entries -- and a stretch
+    running from the end of one entry into the next is credited to the next."""
     from app.features.listicle_pipeline import profile_research
 
-    passage = "las alitas anticucheras vienen con salsa de rocoto"
-    anchored = profile_research.anchor_to_search(
-        _discovered({"site": "restaurantguru.com", "passage": passage}),
-        [
-            {"uri": _REDIRECT + "other-branch", "title": "restaurantguru.com"},
-            {"uri": _REDIRECT + "this-branch", "title": "restaurantguru.com"},
-        ],
-        [{"text": f'"passage": "{passage}",', "chunks": [1]}],
+    text = _answer(
+        {"site": "Rappi", "title": "Barbarian - Miraflores", "passage": "Especialidad. Alitas.", "why": "wings on the menu", "scope": "branch"},
+        {"site": "Somewhere", "title": "BarBarian Miraflores - Carta", "passage": "Alas De Pollo", "scope": "branch"},
+        {"site": "Rappi", "title": "Barbarian - Cercado", "passage": "Alitas S/ 37.80.", "scope": "brand"},
+        {"site": "Rappi", "title": "Barbarian - Los Ficus", "passage": "Alitas S/ 37.80.", "scope": "brand"},
     )
-    assert anchored.pages[0].url == _REDIRECT + "this-branch"
-    # The other result is still a page the search used, read after.
-    assert [(p.url, p.address_from) for p in anchored.pages[1:]] == [
-        (_REDIRECT + "other-branch", "search_only")
+    parsed = profile_research.parse_discovery(text)
+    tail_of_first = text[text.index('wings on the menu'):text.index('BarBarian Miraflores - Carta') - 30]
+    chunks = [
+        {"uri": _REDIRECT + "rappi-miraflores", "title": "rappi.com.pe"},
+        {"uri": _REDIRECT + "carta", "title": "carta.menu"},
+        {"uri": _REDIRECT + "rappi-los-ficus", "title": "rappi.com.pe"},
+        {"uri": _REDIRECT + "rappi-cercado", "title": "rappi.com.pe"},
+    ]
+    supports = [
+        {"text": "Alitas.", "chunks": [0]},
+        {"text": tail_of_first.strip(), "chunks": [1]},
+        {"text": "S/ 37.80.", "chunks": [3]},
+        {"text": "S/ 37.80.", "chunks": [2]},
+    ]
+    anchored = profile_research.anchor_to_search(parsed, chunks, supports, text=text)
+    by_title = {page.title: page.url for page in anchored.pages}
+    assert by_title["Barbarian - Miraflores"] == _REDIRECT + "rappi-miraflores"
+    # A site the answer named wrongly still gets its page, through attribution.
+    assert by_title["BarBarian Miraflores - Carta"] == _REDIRECT + "carta"
+    # The same price in two entries lands in each entry, in order.
+    assert by_title["Barbarian - Cercado"] == _REDIRECT + "rappi-cercado"
+    assert by_title["Barbarian - Los Ficus"] == _REDIRECT + "rappi-los-ficus"
+
+
+def test_a_site_named_in_words_matches_its_result():
+    from app.features.listicle_pipeline import profile_research
+
+    anchored = profile_research.anchor_to_search(
+        _discovered(
+            {"site": "The City Lane", "title": "BarBarian, Miraflores"},
+            {"site": "Rappi", "title": "Barbarian - Miraflores"},
+        ),
+        [
+            {"uri": _REDIRECT + "rappi", "title": "rappi.com.pe"},
+            {"uri": _REDIRECT + "citylane", "title": "thecitylane.com"},
+        ],
+        [],
+    )
+    assert [(p.title, p.url) for p in anchored.pages] == [
+        ("BarBarian, Miraflores", _REDIRECT + "citylane"),
+        ("Barbarian - Miraflores", _REDIRECT + "rappi"),
+    ]
+
+
+def test_pages_about_this_branch_are_read_before_brand_wide_ones():
+    """The first real run read four Rappi listings for other branches because
+    they came first. Order only: a brand page is still read when there is room."""
+    from app.features.listicle_pipeline import profile_research
+
+    anchored = profile_research.anchor_to_search(
+        _discovered(
+            {"site": "rappi.com.pe", "title": "Barbarian - Cercado", "scope": "brand"},
+            {"site": "elcomercio.pe", "title": "Las alitas de Miraflores", "scope": "branch"},
+        ),
+        [
+            {"uri": _REDIRECT + "rappi", "title": "rappi.com.pe"},
+            {"uri": _REDIRECT + "comercio", "title": "elcomercio.pe"},
+            {"uri": _REDIRECT + "nobody", "title": "somewhere.pe"},
+        ],
+        [],
+    )
+    assert [p.url for p in anchored.pages] == [
+        _REDIRECT + "comercio",
+        _REDIRECT + "rappi",
+        _REDIRECT + "nobody",
     ]
 
 
@@ -701,7 +767,7 @@ def test_a_page_no_result_matches_is_kept_and_never_opened():
         [{"uri": _REDIRECT + "x", "title": "elcomercio.pe"}],
         [],
     )
-    described, extra = anchored.pages
+    extra, described = anchored.pages
     assert (described.url, described.address_from) == ("", "none")
     assert described.passage == "chicken wings"
     assert extra.address_from == "search_only"
