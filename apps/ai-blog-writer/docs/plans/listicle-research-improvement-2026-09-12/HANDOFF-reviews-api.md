@@ -1,5 +1,60 @@
 # Listicle reviews — handoff, 2026-09-12 (second session)
 
+## Status, 2026-09-13 morning — read this first
+
+**The research button works end to end, from the screen.** Five places have
+been researched through the current code, two of them never researched before
+and pressed through the live app backend (`POST .../candidates/{id}/research`),
+exactly as the button does:
+
+| place | attempt | pages read | findings (checked) | named reviewers |
+|---|---|---|---|---|
+| JUNO WINGS (new) | `e2d6a0fde872` | 5 | 14 (13) | 10 |
+| Wingsbox (new) | `2b554a306ad7` | 7 | 12 (7) | 4 + official menu |
+| BarBarian | `5b99fb137a08` | 7 | 18 (18) | reused reviews |
+| La Casa de las Alitas | `89ca1d7fca6d` | 9 | 14 (12) | reused reviews |
+| McCarthy's Irish Pub | `06c0331805f1` | 5 | 13 (11) | reused reviews |
+
+Every search in the last round came back `STOP`, every page opened was a real
+publisher page (no invented hosts, no 404s from guessed addresses), and every
+extraction parsed. Reviews: **142 of 500 spent, 358 left (~17 places)**.
+
+What was wrong, and is fixed (commits `2bb91f71`..`448ef7ef`, ADRs 0042, 0043):
+
+1. A failed search threw away the reviews it had bought; recovery bought them again.
+2. The search was told to type page addresses it cannot see — both token-ceiling
+   loops died typing a Rappi id of zeros. Addresses now come from Google's own
+   result list, matched by where Google's attribution sits in the answer.
+3. **Google leaves that result list out of a reply that is only a code block.**
+   The search now answers in plain-text PAGE blocks (JSON ≈ half the time,
+   plain blocks 6 of 7). `gemini-2.5-pro` did worse (0 of 3), so issue #560's
+   model switch would not have helped.
+4. The extraction used a forced tool call, which Gemini answers by writing
+   `print(default_api...)` as text, under an 8,192 cap its thinking also spends.
+   It is a response-schema JSON call now (`model_calls.schema_json`).
+5. **The app backend reads `apps/backend/.env`; the reviews key was only in the
+   app root `.env`.** Every press from the screen bought no reviews, silently.
+   The key is now in `apps/backend/.env`, the board reports `key_configured`, and
+   the reviews panel warns when it is missing.
+6. Reviews bought for a place in the last 30 days are re-read, not bought again.
+7. A reworded claim quoting the same passage of the same source is one finding.
+8. Smaller: dated wording, "speaks for several, quotes one" flagged, reviews no
+   longer shown as "Offer ended", reviews outside the page budget, card counts.
+
+### Still true, and known
+
+- **Google still sometimes omits the result list** (1 in 7 plain-text replies).
+  The attempt says so; pressing Research again costs a search and an extraction
+  and no reviews.
+- **BarBarian, La Casa and McCarthy's hold 41–49 findings** — near-copies from
+  the test rounds made before fix 7. New presses no longer add copies; the old
+  ones are still there. Nothing was merged or deleted. JUNO WINGS and Wingsbox
+  are the clean examples.
+- One review can still become several findings (one per checkable statement), by design.
+- Issue #560 is uncommented. Its premise ("the model cannot be fixed in this
+  repo") is contradicted by fixes 2–3.
+- Nothing is pushed or deployed.
+
 Supersedes the reviews half of `HANDOFF.md` beside this file. Everything that
 document says about the pilot, the baselines and the research sequence still
 holds. **What changed is where customer reviews come from and what happens to
@@ -26,7 +81,7 @@ e7b5e4a8 docs(listicle): hand off what is left   <- previous session ended here
 
 | | |
 |---|---|
-| backend pytest | **2,600 pass, 0 fail** (`cd apps/backend && ../../.venv/bin/python -m pytest tests -q`) |
+| backend pytest | **2,626 pass, 0 fail** (2026-09-13; was 2,600) (`cd apps/backend && ../../.venv/bin/python -m pytest tests -q`) |
 | frontend vitest | **966 pass** (`pnpm exec vitest run --config apps/frontend/vite.config.ts`) |
 | frontend tsc | clean (`pnpm exec tsc --noEmit -p apps/frontend/tsconfig.json`) |
 
