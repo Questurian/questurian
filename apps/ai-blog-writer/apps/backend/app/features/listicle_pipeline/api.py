@@ -19,7 +19,7 @@ from app.core.staff_auth import require_staff
 from ..prompt2blog.contracts_v4 import GrillState
 from ..prompt2blog.dependencies import DefaultPrompt2BlogLLM
 from ..prompt2blog.grill_v4 import GrillDependencies, GrillUnusableResponse
-from . import entry_blurb, research_workspace, service
+from . import entry_blurb, list_intro, research_workspace, service
 from .shapes import SHAPES, SHAPES_BY_KEY
 
 logger = logging.getLogger(__name__)
@@ -1123,3 +1123,16 @@ def edit_research_workspace(run_id: str, candidate_id: str, body: research_works
 def save_entry_blurb(run_id: str, candidate_id: str, body: entry_blurb.SaveInput, _staff=Depends(require_staff)):
     """Save the blurb the operator pasted back or typed. The app calls no model."""
     return _research(entry_blurb.save, run_id, candidate_id, body)
+
+
+@router.get("/board/{run_id}/intro")
+def get_list_intro(run_id: str, _staff=Depends(require_staff)):
+    """The intro: what still blocks it, its prompt once the list is done, and
+    whether the run is complete."""
+    return _research(list_intro.view, run_id)
+
+
+@router.put("/board/{run_id}/intro")
+def save_list_intro(run_id: str, body: list_intro.SaveInput, _staff=Depends(require_staff)):
+    """Save the intro the operator pasted back. The app calls no model."""
+    return _research(list_intro.save, run_id, body)

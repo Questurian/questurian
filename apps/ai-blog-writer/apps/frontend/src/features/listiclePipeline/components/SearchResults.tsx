@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import type {
   ListicleAngleResult,
   ListicleCandidate,
+  ListIntro,
   ListicleSearchResults,
   ListicleType
 } from '../types'
@@ -15,6 +16,8 @@ import { useGoogleChecks } from '../useGoogleChecks'
 import { usePlaceResearch } from '../usePlaceResearch'
 import { LISTICLE_TYPES, useLocationManager } from '../locationManager'
 import { ResearchViewer } from './ResearchViewer'
+import { ListIntroPanel } from './ListIntro'
+import { useListIntro } from '../useListIntro'
 
 /**
  * What the searches found.
@@ -135,6 +138,11 @@ export function SearchResults({
   // agree about it.
   const research = usePlaceResearch(results.run_id)
   const locationManager = useLocationManager(results.run_id)
+  const intro = useListIntro(
+    results.run_id,
+    research.board,
+    locationManager.board
+  )
   const [researchId, setResearchId] = useState<string | null>(null)
   const refreshResearch = research.refresh
   const closeResearch = useCallback(() => {
@@ -394,6 +402,7 @@ export function SearchResults({
                 locationManager.placeFor(candidate.candidate_id)
               )
             )}
+            intro={intro.intro}
             locationManagerError={locationManager.error}
             checkingLocationManager={locationManager.checking}
             onCheckLocationManager={() => void locationManager.refresh()}
@@ -584,6 +593,14 @@ export function SearchResults({
           )}
         </div>
       </details>
+
+      {research.board && onBoard.length > 0 && (
+        <ListIntroPanel
+          intro={intro.intro}
+          error={intro.error}
+          onSave={intro.save}
+        />
+      )}
 
       <ol className="lp-candidates">
         {onBoard.map((candidate) => {
@@ -839,11 +856,13 @@ function ListicleTypePicker({
 
 function BoardProgress({
   states,
+  intro,
   locationManagerError,
   checkingLocationManager,
   onCheckLocationManager
 }: {
   states: ReturnType<typeof cardState>[]
+  intro: ListIntro | null
   /** Set when Location Manager could not be asked. Nothing counts as done
    *  then, and the line says why instead of reading as zero progress. */
   locationManagerError: string
@@ -864,9 +883,18 @@ function BoardProgress({
             Location Manager
           </span>
         )}
-        {left === 0 && (
-          <span className="lp-board-done"> · ready to read through</span>
-        )}
+        {left === 0 &&
+          (intro?.complete ? (
+            <span className="lp-board-done">
+              {' '}
+              · intro written · list 100% ready
+            </span>
+          ) : (
+            <span className="lp-muted">
+              {' '}
+              · {intro?.text ? 'intro out of date' : 'write the intro'}
+            </span>
+          ))}
       </p>
       {locationManagerError && (
         <p className="lp-board-lm-error" role="alert">

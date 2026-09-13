@@ -18,6 +18,7 @@ import type {
   ListicleSearchResults,
   ListicleSourceLink,
   ListicleType,
+  ListIntro,
   LocationManagerBoard,
 } from './types'
 
@@ -411,6 +412,23 @@ export function loadLocationManagerStatus(
   return researchCall<LocationManagerBoard>(
     `${BASE}/board/${runId}/location-manager`,
   )
+}
+
+/** The list's intro: what still blocks it, its prompt once every place is
+ *  done, and whether the run is complete. */
+export function loadListIntro(runId: string): Promise<ListIntro> {
+  return researchCall<ListIntro>(`${BASE}/board/${runId}/intro`)
+}
+
+/** Save the intro the operator pasted back. The app calls no model. */
+export function saveListIntro(
+  runId: string,
+  body: { version: number; text: string },
+): Promise<ListIntro> {
+  return researchCall<ListIntro>(`${BASE}/board/${runId}/intro`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
 }
 
 /** Save one card's preparation. Every field is optional and absent means

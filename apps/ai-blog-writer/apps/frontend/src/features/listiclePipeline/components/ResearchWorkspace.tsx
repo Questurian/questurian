@@ -856,7 +856,7 @@ function StageMark({ number, done }: { number: number; done: boolean }) {
   )
 }
 
-function FlowMark({ number, done }: { number: number; done: boolean }) {
+export function FlowMark({ number, done }: { number: number; done: boolean }) {
   return (
     <span
       className={done ? 'lp-flow-mark lp-flow-mark-done' : 'lp-flow-mark'}
@@ -884,7 +884,7 @@ function Tick() {
 
 /** A copy button that answers on itself. The label turns into "Copied" for a
  *  moment, in the same footprint, so nothing around it moves. */
-function CopyButton({
+export function CopyButton({
   label,
   text,
   disabled,

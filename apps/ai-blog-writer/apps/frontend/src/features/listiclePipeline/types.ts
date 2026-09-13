@@ -943,3 +943,16 @@ export interface LocationManagerBoard {
   error: string
   places: Record<string, LocationManagerPlace>
 }
+
+/** The list's intro. Locked (`ready_to_write` false, `prompt` empty) until
+ *  every place is done; `complete` is the run being 100% ready. */
+export interface ListIntro {
+  ready_to_write: boolean
+  blockers: { code: string; message: string }[]
+  prompt: string
+  version: number
+  text: string
+  /** The list changed after this intro was saved. */
+  stale: boolean
+  complete: boolean
+}

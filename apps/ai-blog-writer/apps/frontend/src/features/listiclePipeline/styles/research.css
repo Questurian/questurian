@@ -1001,3 +1001,19 @@
 .lp-type-picker-options button:focus-visible { outline: 2px solid #3B5BDB; outline-offset: 2px; }
 .lp-type-picker-hint { flex-basis: 100%; margin: 0; font-size: .8125rem; color: #8a4b12; }
 .lp-lm-missing > .lp-lm-elsewhere { flex-basis: 100%; font-size: .8125rem; color: var(--muted); font-weight: 400; }
+
+/* ---------- the list intro, above the places ---------- */
+.lp-intro {
+  margin: var(--space-3) 0 var(--space-4);
+  padding: 1.5rem 1.75rem;
+  background: #EFE9DE;
+  border: 1px solid #DDD5C9;
+  border-radius: 8px;
+}
+/* Finished closes its whole edge in blue, like a written blurb. */
+.lp-intro-complete { border-color: #3B5BDB; box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.08); }
+.lp-intro-title { margin: 0; font-size: 1.2rem; }
+.lp-intro .lp-tool.lp-tool-primary { background: #3B5BDB; border-color: #3B5BDB; color: #fff; }
+.lp-intro .lp-tool:disabled { opacity: .5; cursor: default; }
+.lp-intro-why { margin: .75rem 0 .25rem; }
+.lp-intro-blockers { margin: .25rem 0 0; padding-left: 1.1rem; color: var(--muted); font-size: .9rem; }

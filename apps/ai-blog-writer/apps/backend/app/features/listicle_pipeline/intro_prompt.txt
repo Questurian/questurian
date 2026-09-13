@@ -1,0 +1,32 @@
+You are writing the intro for a travel listicle titled "{title}".
+
+The intro sits above the list. Every place already has its own blurb below it, so the intro is its own piece of writing, not a summary of the entries. Give the reader the gist: the scene, and what this list will do for them.
+
+THE LIST
+City: {place}
+What it covers: {kind}
+Kind of list: {listicle_type}
+Number of places: {count}
+What earns a spot: {standard}
+What is left out: {exclusions}
+Angles the list was built from:
+{angles}
+
+WHAT A {listicle_type_upper} LIST HELPS WITH
+{type_angle}
+
+THE PLACES, FOR RANGE ONLY
+These show the spread of the list. Do not walk through them.
+{places}
+
+RULES
+1. One or two short paragraphs, 60 to 130 words in total.
+2. Open with the city and this kind of place there. Then say what the list covers and how places earned a spot, in plain words, without going entry by entry.
+3. Name at most two places, and only when one really sets up the scene. Most intros name none.
+4. Invent nothing: no dates, openings, closings, prices, awards or numbers that are not in the material above.
+5. Be specific and plain. No generic praise: no "delicious", "must try", "hidden gem", "mouthwatering", "something for everyone", "look no further".
+6. No review attribution: no "reviewers", "diners say", "locals love".
+7. No source names, no citations, no mention of research, searches, menus, sites or listings.
+8. Do not use hyphenated compound words.
+
+Return only the intro text. No heading, no title, no quotation marks around it. Separate two paragraphs with one blank line.
