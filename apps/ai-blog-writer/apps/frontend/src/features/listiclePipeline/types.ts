@@ -909,3 +909,37 @@ export interface ResearchImportPreview {
     open_questions: string[]
   }
 }
+
+/** Where one place stands in Location Manager, matched on Google's Place ID.
+ *  `unchecked` means Location Manager could not be asked -- never "missing". */
+export type LocationManagerStatus =
+  | 'present'
+  | 'several'
+  | 'missing'
+  | 'no_place_id'
+  | 'no_type'
+  | 'unchecked'
+
+/** The four listicle types. A run is exactly one, and a place only counts as
+ *  in Location Manager when it is there as that type. */
+export type ListicleType = 'dining' | 'nightlife' | 'accommodations' | 'attractions'
+
+export interface LocationManagerPlace {
+  status: LocationManagerStatus
+  place_id: string
+  /** Matches in the run's type. Only these count. */
+  locations: { id: number; name: string; category: string }[]
+  /** Matches in other types: shown for context, never counted. */
+  elsewhere: { id: number; name: string; category: string }[]
+  /** What Location Manager's Add form is opened with. */
+  prefill: { name: string; address: string; tripadvisor_url: string }
+}
+
+export interface LocationManagerBoard {
+  run_id: string
+  /** Empty until the operator chooses one. */
+  listicle_type: ListicleType | ''
+  available: boolean
+  error: string
+  places: Record<string, LocationManagerPlace>
+}

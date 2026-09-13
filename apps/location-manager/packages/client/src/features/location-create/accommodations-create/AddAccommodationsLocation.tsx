@@ -23,6 +23,7 @@ import {
 import { AccommodationsFormSections } from "./form/AccommodationsForm";
 import { clearAccommodationsDraftFromStorage } from "./draft/accommodations-draft-storage";
 import { useAccommodationsDraft } from "./draft/useAccommodationsDraft";
+import { useLinkPrefill } from "../lib/link-prefill";
 import { useAccommodationsPrefill } from "./enrichment/useAccommodationsPrefill";
 import { getAccommodationsFormProgress } from "./form/accommodations-form-progress";
 import { useCreateAccommodations } from "./submission/useCreateAccommodations";
@@ -94,6 +95,14 @@ export function AddAccommodationsLocation() {
     setAutoFillProgress: suggestions.setAutoFillProgress,
   });
   useAccommodationsDraft({ form, prefillSignature, setPrefillSignature, setPrefillMessage, setPrefillError });
+  // Opened from the listicle pipeline with the place already named. A fresh
+  // form, not the old draft with a new name on it.
+  useLinkPrefill(({ name, address }) => {
+    form.reset({ ...ACCOMMODATIONS_FORM_DEFAULT_VALUES, name, address });
+    setPrefillSignature(null);
+    setPrefillError(null);
+    setPrefillMessage("Filled in from the listicle. Check the details, then run Google lookup.");
+  });
 
   const photoReady = photoSession?.ready ?? false;
   const photoCount = photoSession?.cropped.length ?? 0;

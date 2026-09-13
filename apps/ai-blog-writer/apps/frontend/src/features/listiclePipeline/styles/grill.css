@@ -1701,34 +1701,112 @@
   color: var(--lp-accent);
 }
 
-/* Remove by hand: in the card's corner, quiet until pointed at, and red only
-   then -- it is a decision, not a lookup. */
+/* The place's settings: one quiet gear in the card's corner. What the searches
+   said and taking the place off the list live behind it -- neither is a step in
+   writing the place up. */
 .lp-candidate-main {
   position: relative;
 }
 
 .lp-candidate-main .lp-candidate-head {
-  padding-right: 5.5rem;
+  padding-right: 3rem;
 }
 
-.lp-tool.lp-tool-remove {
+.lp-place-settings {
+  position: relative;
+}
+
+.lp-candidate-main > .lp-place-settings {
   position: absolute;
   top: var(--space-4);
   right: var(--space-4);
-  height: 2rem;
-  padding: 0 0.75rem;
-  font-size: 0.8125rem;
-  border-color: transparent;
-  background: transparent;
-  color: var(--muted);
-  box-shadow: none;
+  z-index: 2;
 }
 
-.lp-tool.lp-tool-remove:hover {
-  border-color: rgba(180, 35, 24, 0.35);
-  background: #fef3f2;
+.lp-place-settings summary {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.lp-place-settings summary::-webkit-details-marker {
+  display: none;
+}
+
+.lp-place-settings summary:hover,
+.lp-place-settings[open] summary {
+  color: var(--lp-card-ink);
+  background: rgba(45, 42, 38, 0.06);
+  border-color: rgba(45, 42, 38, 0.14);
+}
+
+.lp-place-settings summary:focus-visible {
+  outline: 2px solid #3b5bdb;
+  outline-offset: 2px;
+}
+
+.lp-place-settings-menu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 5;
+  display: grid;
+  min-width: 13rem;
+  padding: 0.3rem;
+  background: #fbf8f3;
+  border: 1px solid rgba(45, 42, 38, 0.16);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px -10px rgba(45, 42, 38, 0.35);
+}
+
+.lp-place-settings-menu button {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--lp-card-ink);
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lp-place-settings-menu button:hover,
+.lp-place-settings-menu button:focus-visible {
+  background: rgba(45, 42, 38, 0.06);
+  outline: none;
+}
+
+.lp-place-settings-menu .lp-place-settings-remove {
   color: #b42318;
-  box-shadow: none;
+}
+
+.lp-place-settings-menu .lp-place-settings-remove:hover,
+.lp-place-settings-menu .lp-place-settings-remove:focus-visible {
+  background: #fef3f2;
+}
+
+/* Back to the finished card, set in from the edge like everything else. */
+.lp-candidate-back {
+  align-self: flex-start;
+  padding: 0;
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.lp-candidate-back:hover {
+  text-decoration: underline;
 }
 
 .lp-confirm-modal {

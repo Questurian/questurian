@@ -20,6 +20,7 @@ const loadGoogleChecks = vi.fn()
 const checkOnGoogle = vi.fn()
 const loadPlacesAllowance = vi.fn()
 const loadResearchBoard = vi.fn()
+const loadLocationManagerStatus = vi.fn()
 const saveCandidatePrep = vi.fn()
 const startPlaceResearch = vi.fn()
 const loadProfileResearch = vi.fn()
@@ -45,6 +46,7 @@ vi.mock('./api', async importOriginal => {
     checkOnGoogle: (...args: unknown[]) => checkOnGoogle(...args),
     loadPlacesAllowance: (...args: unknown[]) => loadPlacesAllowance(...args),
     loadResearchBoard: (...args: unknown[]) => loadResearchBoard(...args),
+    loadLocationManagerStatus: (...args: unknown[]) => loadLocationManagerStatus(...args),
     saveCandidatePrep: (...args: unknown[]) => saveCandidatePrep(...args),
     startPlaceResearch: (...args: unknown[]) => startPlaceResearch(...args),
     loadProfileResearch: (...args: unknown[]) => loadProfileResearch(...args),
@@ -355,6 +357,9 @@ beforeEach(() => {
   listRuns.mockReset().mockResolvedValue([])
   setRunHidden.mockReset().mockResolvedValue(undefined)
   loadBoard.mockReset().mockResolvedValue({ removed: [], distinct_pairs: [] })
+  loadLocationManagerStatus
+    .mockReset()
+    .mockResolvedValue({ run_id: '', listicle_type: 'dining', available: true, error: '', places: {} })
   resolveDuplicates.mockReset()
   restoreCandidate.mockReset()
   removeCandidate.mockReset()

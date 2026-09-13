@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useLinkPrefill } from "../lib/link-prefill";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import {
@@ -166,6 +167,15 @@ export function useAddAttractionsFlow() {
     setPrefillError(null);
     hasHydratedDraftRef.current = true;
   }, [addForm]);
+
+  // Opened from the listicle pipeline with the place already named. A fresh
+  // form, not the old draft with a new name on it.
+  useLinkPrefill(({ name, address, tripadvisorUrl }) => {
+    addForm.reset({ ...ATTRACTIONS_FORM_DEFAULT_VALUES, name, address, tripadvisorUrl });
+    setPrefillSignature(null);
+    setPrefillError(null);
+    setPrefillMessage("Filled in from the listicle. Check the details, then run Google lookup.");
+  });
 
   useEffect(() => {
     const subscription = addForm.watch((value) => {

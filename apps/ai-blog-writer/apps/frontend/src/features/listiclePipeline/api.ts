@@ -17,6 +17,8 @@ import type {
   ListicleRunSummary,
   ListicleSearchResults,
   ListicleSourceLink,
+  ListicleType,
+  LocationManagerBoard,
 } from './types'
 
 /**
@@ -388,6 +390,27 @@ async function researchCall<T>(path: string, init?: RequestInit): Promise<T> {
  *  web — opening a screen is not a decision to spend. */
 export function loadResearchBoard(runId: string): Promise<ListicleResearchBoard> {
   return researchCall<ListicleResearchBoard>(`${BASE}/board/${runId}/research`)
+}
+
+/** Which places on a run Location Manager already has, by Google Place ID.
+ *  Its own request: the board draws without it, and a Location Manager that is
+ *  down comes back as `available: false`. */
+export async function setListicleType(
+  runId: string,
+  listicleType: ListicleType,
+): Promise<void> {
+  await researchCall(`${BASE}/runs/${runId}/listicle-type`, {
+    method: 'PUT',
+    body: JSON.stringify({ listicle_type: listicleType }),
+  })
+}
+
+export function loadLocationManagerStatus(
+  runId: string,
+): Promise<LocationManagerBoard> {
+  return researchCall<LocationManagerBoard>(
+    `${BASE}/board/${runId}/location-manager`,
+  )
 }
 
 /** Save one card's preparation. Every field is optional and absent means

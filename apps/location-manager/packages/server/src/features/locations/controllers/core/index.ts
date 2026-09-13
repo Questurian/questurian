@@ -7,3 +7,4 @@ export * from "./tours.controller";
 export * from "./tour-import.controller";
 export * from "./tour-media.controller";
 export * from "./types.controller";
+export * from "./place-ids.controller";

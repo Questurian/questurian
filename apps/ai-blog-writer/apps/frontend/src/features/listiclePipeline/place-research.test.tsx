@@ -16,6 +16,8 @@ const loadBoard = vi.fn()
 const loadGoogleChecks = vi.fn()
 const loadPlacesAllowance = vi.fn()
 const loadResearchBoard = vi.fn()
+const loadLocationManagerStatus = vi.fn()
+const setListicleType = vi.fn()
 const saveCandidatePrep = vi.fn()
 const startPlaceResearch = vi.fn()
 const loadProfileResearch = vi.fn()
@@ -33,6 +35,8 @@ vi.mock('./api', async importOriginal => {
     loadGoogleChecks: (...args: unknown[]) => loadGoogleChecks(...args),
     loadPlacesAllowance: (...args: unknown[]) => loadPlacesAllowance(...args),
     loadResearchBoard: (...args: unknown[]) => loadResearchBoard(...args),
+    loadLocationManagerStatus: (...args: unknown[]) => loadLocationManagerStatus(...args),
+    setListicleType: (...args: unknown[]) => setListicleType(...args),
     saveCandidatePrep: (...args: unknown[]) => saveCandidatePrep(...args),
     startPlaceResearch: (...args: unknown[]) => startPlaceResearch(...args),
     loadProfileResearch: (...args: unknown[]) => loadProfileResearch(...args),
@@ -445,6 +449,10 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ available: true, free: 1000, left: 900, month_start: '', as_of: '' })
   loadResearchBoard.mockReset().mockResolvedValue(board())
+  loadLocationManagerStatus
+    .mockReset()
+    .mockResolvedValue({ run_id: '', listicle_type: 'dining', available: true, error: '', places: {} })
+  setListicleType.mockReset().mockResolvedValue(undefined)
   saveCandidatePrep.mockReset()
   startPlaceResearch.mockReset()
   loadProfileResearch.mockReset().mockResolvedValue(research())
@@ -1053,4 +1061,67 @@ it('shows saved writing on a collapsed card and refreshes after editing', async 
   await userEvent.keyboard('{Escape}')
   expect(await screen.findByRole('button', {name: 'Review blurb'})).toBeVisible()
   expect(screen.getByText('Saved writing.')).toBeVisible()
+})
+
+it('a finished blurb is not done until Location Manager has the place, and offers to add it', async () => {
+  const saved = board()
+  saved.cards[0].entry = {ready: true, stale: false, blurb: {text: 'Saved writing.', stale: false}}
+  loadResearchBoard.mockResolvedValue(saved)
+  const missing = {
+    status: 'missing',
+    place_id: 'place-1',
+    locations: [],
+    elsewhere: [{id: 164, name: 'Example Wings', category: 'nightlife'}],
+    prefill: {name: 'Example Wings', address: 'Av. Brasil 100, Jesús María', tripadvisor_url: ''},
+  }
+  loadLocationManagerStatus.mockResolvedValue({
+    run_id: 'r', listicle_type: 'dining', available: true, error: '', places: {[saved.cards[0].candidate_id]: missing},
+  })
+  render(<SearchResults results={results()} busy={false} onRun={() => {}} />)
+
+  // Held only as nightlife: a dining list does not count it.
+  expect(await screen.findByText('Not in Location Manager as dining')).toBeVisible()
+  expect(screen.getByText(/It is there as nightlife, which does not count for this list/)).toBeVisible()
+  const add = screen.getByRole('link', {name: 'Add to Location Manager'})
+  const url = new URL(add.getAttribute('href') ?? '')
+  expect(url.pathname).toBe('/add/dining')
+  expect(url.searchParams.get('name')).toBe('Example Wings')
+  expect(screen.getByRole('img', {name: '0 of 1 places done'})).toBeInTheDocument()
+  expect(screen.getByText(/1 blurb is waiting on Location Manager/)).toBeInTheDocument()
+  // One type per list: no way to add it as something else from here.
+  expect(screen.queryByRole('link', {name: /nightlife/i})).not.toBeInTheDocument()
+})
+
+it('asks which of the four types the list is, and checks Location Manager only after', async () => {
+  loadLocationManagerStatus.mockResolvedValue({
+    run_id: 'r', listicle_type: '', available: true, error: '',
+    places: {[board().cards[0].candidate_id]: {
+      status: 'no_type', place_id: 'place-1', locations: [], elsewhere: [],
+      prefill: {name: 'Example Wings', address: '', tripadvisor_url: ''},
+    }},
+  })
+  render(<SearchResults results={results()} busy={false} onRun={() => {}} />)
+  const group = await screen.findByRole('group', {name: 'What type of list is this?'})
+  expect(within(group).getAllByRole('button').map(button => button.textContent)).toEqual(
+    ['Dining', 'Nightlife', 'Accommodations', 'Attractions'],
+  )
+  loadLocationManagerStatus.mockResolvedValue({
+    run_id: 'r', listicle_type: 'nightlife', available: true, error: '', places: {},
+  })
+  await userEvent.click(within(group).getByRole('button', {name: 'Nightlife'}))
+  expect(setListicleType).toHaveBeenCalledWith(expect.any(String), 'nightlife')
+  expect(
+    await screen.findByRole('button', {name: 'Nightlife', pressed: true}),
+  ).toBeInTheDocument()
+})
+
+it('says Location Manager could not be checked instead of calling every place missing', async () => {
+  loadLocationManagerStatus.mockResolvedValue({
+    run_id: 'r', listicle_type: 'dining', available: false, error: 'refused', places: {},
+  })
+  render(<SearchResults results={results()} busy={false} onRun={() => {}} />)
+  expect(
+    await screen.findByText(/Location Manager could not be checked, so no place counts as done/),
+  ).toBeInTheDocument()
+  expect(screen.queryByText('Not in Location Manager')).not.toBeInTheDocument()
 })

@@ -259,6 +259,21 @@ CREATE TABLE IF NOT EXISTS listicle_google_checks (
 )
 """
 
+# Which of the four listicle types a run is: dining, nightlife, accommodations
+# or attractions. One per run, because a published list is one type -- and
+# because Location Manager keeps a place that is both a restaurant and a bar as
+# two separate locations, so the type decides which of them the list needs.
+# Chosen by the operator once places are found; nothing infers it.
+LISTICLE_TYPES = ("dining", "nightlife", "accommodations", "attractions")
+
+_RUN_TYPES_TABLE = """
+CREATE TABLE IF NOT EXISTS listicle_run_types (
+    run_id        TEXT PRIMARY KEY,
+    listicle_type TEXT NOT NULL,
+    set_at        TEXT NOT NULL
+)
+"""
+
 _MIGRATIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS listicle_migrations (
     name       TEXT PRIMARY KEY,
@@ -307,6 +322,7 @@ def ensure_tables() -> None:
         conn.execute(_BOARD_REMOVALS_TABLE)
         conn.execute(_BOARD_DISTINCT_TABLE)
         conn.execute(_GOOGLE_CHECKS_TABLE)
+        conn.execute(_RUN_TYPES_TABLE)
         conn.execute(_MIGRATIONS_TABLE)
         for statement in _ATTEMPT_INDEXES:
             conn.execute(statement)
@@ -544,6 +560,33 @@ def set_hidden(run_id: str, hidden: bool) -> None:
             conn.execute(
                 "DELETE FROM listicle_hidden_runs WHERE run_id = ?", (run_id,)
             )
+
+
+def listicle_type(run_id: str) -> str:
+    """The run's listicle type, or "" when nobody has chosen one yet."""
+    ensure_tables()
+    with get_db_connection() as conn:
+        row = conn.execute(
+            "SELECT listicle_type FROM listicle_run_types WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+    return row["listicle_type"] if row else ""
+
+
+def set_listicle_type(run_id: str, value: str) -> None:
+    """Choose the run's listicle type. Replaces any earlier choice."""
+    if value not in LISTICLE_TYPES:
+        raise ValueError(
+            f"A listicle is one of {', '.join(LISTICLE_TYPES)}, not {value!r}."
+        )
+    ensure_tables()
+    with get_db_connection() as conn:
+        conn.execute(
+            "INSERT INTO listicle_run_types (run_id, listicle_type, set_at) "
+            "VALUES (?, ?, ?) ON CONFLICT(run_id) DO UPDATE SET "
+            "listicle_type = excluded.listicle_type, set_at = excluded.set_at",
+            (run_id, value, _now()),
+        )
 
 
 def load_board(run_id: str) -> dict:

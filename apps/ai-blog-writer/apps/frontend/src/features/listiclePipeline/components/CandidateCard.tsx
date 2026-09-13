@@ -2,11 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import { handOffWheel } from '../scrollHandoff'
 import { LookupLinks } from './LookupLinks'
 import { isTripAdvisorPlaceLink } from '../tripadvisor'
+import {
+  addToLocationManagerUrl,
+  locationManagerEditUrl
+} from '../locationManager'
 import type { PrepPatch, SaveState } from '../usePlaceResearch'
 import type {
   ListicleCandidate,
   ListicleGoogleCheck,
-  ListicleResearchCard
+  ListicleResearchCard,
+  ListicleType,
+  LocationManagerPlace
 } from '../types'
 
 /** Preparation stays editable; checked places become compact writing entries. */
@@ -54,6 +60,11 @@ interface CandidateCardProps {
    *  the board is still being read, in which case the card shows the place and
    *  no checklist rather than a checklist that cannot be saved. */
   research?: CandidateResearch
+  /** Whether Location Manager already has this place. A list can only be
+   *  published about places it has, so a blurb is not the end of a card. */
+  locationManager?: LocationManagerPlace
+  /** The run's one listicle type, once chosen. */
+  listicleType?: ListicleType
 }
 
 /** What Google said about whether the place is open, in words, and how
@@ -145,7 +156,9 @@ export function CandidateCard({
   google,
   onRemove,
   onRemoveNotAVenue,
-  research
+  research,
+  locationManager,
+  listicleType
 }: CandidateCardProps) {
   const [reviewLocation, setReviewLocation] = useState(false)
   const scroller = useRef<HTMLDivElement>(null)
@@ -186,7 +199,7 @@ export function CandidateCard({
   // no TripAdvisor page is not held back by it and the bar does not imply that
   // something is unfinished.
   const blockers = readiness?.blockers ?? []
-  const state = cardState(research?.card)
+  const state = cardState(research?.card, locationManager)
   const has = (code: string) =>
     blockers.some((blocker) => blocker.code === code)
   const prepBlockers = blockers.filter(
@@ -223,9 +236,16 @@ export function CandidateCard({
             <h3 className="lp-candidate-name">{candidate.name}</h3>
             <p className="lp-muted">{candidate.district}</p>
           </div>
-          <button className="lp-tool" onClick={research.onOpenResearch}>
-            {nextAction}
-          </button>
+          <div className="lp-entry-actions">
+            <button className="lp-tool" onClick={research.onOpenResearch}>
+              {nextAction}
+            </button>
+            <PlaceSettings
+              name={candidate.name}
+              onDetails={onDetails}
+              onRemove={onRemove}
+            />
+          </div>
         </header>
         {entry?.blurb.text && (
           <p className="lp-entry-text">{entry.blurb.text}</p>
@@ -239,34 +259,41 @@ export function CandidateCard({
           <p role="status">Automated research running…</p>
         )}
         {research.saveError && <p role="alert">{research.saveError}</p>}
-        <button
-          className="lp-link-button"
-          onClick={() => setReviewLocation(true)}
-        >
-          Review location
-        </button>
+        <footer className="lp-entry-foot">
+          {locationManager && (
+            <LocationManagerLine
+              place={locationManager}
+              listicleType={listicleType}
+            />
+          )}
+          <button
+            className="lp-link-button"
+            onClick={() => setReviewLocation(true)}
+          >
+            Review location
+          </button>
+        </footer>
       </li>
     )
 
   return (
     <li className={`lp-candidate lp-candidate-${state}`}>
-      {checked && (
-        <button className="lp-tool" onClick={() => setReviewLocation(false)}>
-          Close location review
-        </button>
-      )}
       <div className="lp-candidate-scroll" ref={scroller}>
         <div className="lp-candidate-main">
           {/* In the corner, apart from the lookups: removing is a decision
               about the place, not a way of looking it up. */}
-          {onRemove && (
+          <PlaceSettings
+            name={candidate.name}
+            onDetails={onDetails}
+            onRemove={onRemove}
+          />
+          {checked && (
             <button
               type="button"
-              className="lp-tool lp-tool-remove"
-              aria-label={`Remove ${candidate.name}`}
-              onClick={onRemove}
+              className="lp-link-button lp-candidate-back"
+              onClick={() => setReviewLocation(false)}
             >
-              Remove
+              <span aria-hidden="true">←</span> Close location review
             </button>
           )}
           <header className="lp-candidate-head">
@@ -343,18 +370,6 @@ export function CandidateCard({
               place={place}
               placeId={found?.place_id}
             />
-            {/* The descriptions, the search behind each one and any cut
-                warning. Discovery, read one place at a time -- not the same
-                thing as the research below. */}
-            <button
-              type="button"
-              className="lp-tool lp-tool-quiet"
-              aria-label={`Discovery details for ${candidate.name}`}
-              onClick={onDetails}
-            >
-              <NotesIcon />
-              Discovery details
-            </button>
           </div>
 
           {/* Shown rather than resolved. This step cannot tell a second
@@ -767,18 +782,138 @@ function ResearchAction({
   )
 }
 
-/** Completion means a current saved blurb, never a count of findings. */
-export type CardState = 'open' | 'ready' | 'done'
+/** Completion means a current saved blurb for a place Location Manager has.
+ *  A blurb about a place it does not have is `written`: finished writing that
+ *  cannot be published yet. Never a count of findings. */
+export type CardState = 'open' | 'ready' | 'written' | 'done'
 
-export function cardState(card?: ListicleResearchCard): CardState {
+export function cardState(
+  card?: ListicleResearchCard,
+  locationManager?: LocationManagerPlace
+): CardState {
   if (!card) return 'open'
   if (
     card.entry?.blurb.text &&
     !card.entry.blurb.stale &&
     card.readiness.blockers.every((b) => b.where === 'execution')
   )
-    return 'done'
+    return locationManager?.status === 'present' ? 'done' : 'written'
   return card.readiness.ready ? 'ready' : 'open'
+}
+
+/** One line under a checked place: is it in Location Manager as this list's
+ *  type, and if not, the way to put it there. */
+function LocationManagerLine({
+  place,
+  listicleType
+}: {
+  place: LocationManagerPlace
+  listicleType?: ListicleType
+}) {
+  const typeName = listicleType ? TYPE_NAMES[listicleType] : ''
+  switch (place.status) {
+    case 'present':
+      return (
+        <p className="lp-lm lp-lm-present">
+          <LmMark />
+          In Location Manager as {typeName}
+          <a
+            className="lp-lm-link"
+            href={locationManagerEditUrl(place.locations[0])}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open
+          </a>
+        </p>
+      )
+    case 'several':
+      return (
+        <p className="lp-lm lp-lm-warn">
+          In Location Manager {place.locations.length} times as {typeName}.
+          Settle the duplicate there:
+          {place.locations.map((location, index) => (
+            <a
+              key={location.id}
+              className="lp-lm-link"
+              href={locationManagerEditUrl(location)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              copy {index + 1}
+            </a>
+          ))}
+        </p>
+      )
+    case 'missing':
+      return (
+        <div className="lp-lm lp-lm-missing">
+          <span>Not in Location Manager as {typeName}</span>
+          {listicleType && (
+            <a
+              className="lp-tool lp-tool-primary"
+              href={addToLocationManagerUrl(place.prefill, listicleType)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Add to Location Manager
+            </a>
+          )}
+          {place.elsewhere.length > 0 && (
+            <span className="lp-lm-elsewhere">
+              It is there as{' '}
+              {[...new Set(place.elsewhere.map((row) => row.category))].join(
+                ', '
+              )}
+              , which does not count for this list.
+            </span>
+          )}
+        </div>
+      )
+    case 'no_place_id':
+      return (
+        <p className="lp-lm lp-lm-muted">
+          No Google Place ID, so Location Manager cannot be checked. Check this
+          place on Google first.
+        </p>
+      )
+    case 'no_type':
+      return (
+        <p className="lp-lm lp-lm-muted">
+          Choose the list type above to check Location Manager.
+        </p>
+      )
+    default:
+      return (
+        <p className="lp-lm lp-lm-muted">
+          Location Manager could not be checked.
+        </p>
+      )
+  }
+}
+
+const TYPE_NAMES: Record<ListicleType, string> = {
+  dining: 'dining',
+  nightlife: 'nightlife',
+  accommodations: 'accommodations',
+  attractions: 'attractions'
+}
+
+function LmMark() {
+  return (
+    <span className="lp-lm-mark" aria-hidden="true">
+      <svg viewBox="0 0 16 16" width="10" height="10">
+        <path
+          d="M3.5 8.5l3 3 6-7"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  )
 }
 
 /** The mark in the corner: how many required checks are in, and what that
@@ -799,10 +934,12 @@ function StateMark({
 }) {
   const label =
     state === 'done'
-      ? 'Blurb ready'
-      : state === 'ready'
-        ? 'Ready to research'
-        : `${done} of ${total} checked`
+      ? 'Done'
+      : state === 'written'
+        ? 'Blurb ready'
+        : state === 'ready'
+          ? 'Ready to research'
+          : `${done} of ${total} checked`
   return (
     <p className="lp-candidate-state">
       <span className="lp-candidate-pips" aria-hidden="true">
@@ -810,7 +947,9 @@ function StateMark({
           <span
             key={index}
             className={
-              state === 'done' || index < done ? 'lp-pip lp-pip-on' : 'lp-pip'
+              state === 'done' || state === 'written' || index < done
+                ? 'lp-pip lp-pip-on'
+                : 'lp-pip'
             }
           />
         ))}
@@ -835,6 +974,115 @@ function CheckBox() {
         />
       </svg>
     </span>
+  )
+}
+
+/** The place's own settings, behind one quiet gear: what the searches said
+ *  about it, and taking it off the list. Neither is a step in writing it. */
+function PlaceSettings({
+  name,
+  onDetails,
+  onRemove
+}: {
+  name: string
+  onDetails: () => void
+  onRemove?: () => void
+}) {
+  const menu = useRef<HTMLDetailsElement>(null)
+  const [open, setOpen] = useState(false)
+
+  // A menu that stays open after you look away is one you have to hunt for.
+  useEffect(() => {
+    if (!open) return
+    const close = (event: MouseEvent | KeyboardEvent) => {
+      if (event instanceof KeyboardEvent && event.key !== 'Escape') return
+      if (
+        event instanceof MouseEvent &&
+        menu.current?.contains(event.target as Node)
+      )
+        return
+      if (menu.current) menu.current.open = false
+    }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('keydown', close)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      document.removeEventListener('keydown', close)
+    }
+  }, [open])
+
+  const pick = (work: () => void) => {
+    if (menu.current) menu.current.open = false
+    work()
+  }
+
+  return (
+    <details
+      ref={menu}
+      className="lp-place-settings"
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary aria-label={`Settings for ${name}`} title="Settings">
+        <GearIcon />
+      </summary>
+      <div className="lp-place-settings-menu">
+        {/* The descriptions, the search behind each one and any cut warning.
+            Discovery, read one place at a time -- not the research. */}
+        <button
+          type="button"
+          aria-label={`Discovery details for ${name}`}
+          onClick={() => pick(onDetails)}
+        >
+          <NotesIcon />
+          Discovery details
+        </button>
+        {onRemove && (
+          <button
+            type="button"
+            className="lp-place-settings-remove"
+            aria-label={`Remove ${name}`}
+            onClick={() => pick(onRemove)}
+          >
+            <RemoveIcon />
+            Remove from list
+          </button>
+        )}
+      </div>
+    </details>
+  )
+}
+
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true">
+      <path
+        d="M10 12.6a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M16.2 11.9a1.3 1.3 0 0 0 .26 1.43l.05.05a1.58 1.58 0 1 1-2.23 2.23l-.05-.05a1.3 1.3 0 0 0-1.43-.26 1.3 1.3 0 0 0-.79 1.19v.14a1.58 1.58 0 1 1-3.16 0v-.07a1.3 1.3 0 0 0-.85-1.19 1.3 1.3 0 0 0-1.43.26l-.05.05a1.58 1.58 0 1 1-2.23-2.23l.05-.05a1.3 1.3 0 0 0 .26-1.43 1.3 1.3 0 0 0-1.19-.79h-.14a1.58 1.58 0 1 1 0-3.16h.07a1.3 1.3 0 0 0 1.19-.85 1.3 1.3 0 0 0-.26-1.43l-.05-.05A1.58 1.58 0 1 1 6.46 3.5l.05.05a1.3 1.3 0 0 0 1.43.26h.06a1.3 1.3 0 0 0 .79-1.19v-.14a1.58 1.58 0 1 1 3.16 0v.07a1.3 1.3 0 0 0 .79 1.19 1.3 1.3 0 0 0 1.43-.26l.05-.05a1.58 1.58 0 1 1 2.23 2.23l-.05.05a1.3 1.3 0 0 0-.26 1.43v.06a1.3 1.3 0 0 0 1.19.79h.14a1.58 1.58 0 1 1 0 3.16h-.07a1.3 1.3 0 0 0-1.19.79Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+    </svg>
+  )
+}
+
+function RemoveIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+      <path
+        d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 

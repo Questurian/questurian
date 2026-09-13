@@ -2634,3 +2634,149 @@ def test_reading_the_board_never_calls_google(client, run, monkeypatch):
     client.get(f"{BASE}/board/{run}/research")
     client.get(f"{BASE}/board/{run}/research")
     assert calls == []
+
+
+# --------------------------------------------------------------------------
+# Location Manager: is each place already there?
+# --------------------------------------------------------------------------
+
+
+class _LocationManager:
+    """Location Manager's by-place-ids answer, from a fixed table. Counts calls."""
+
+    def __init__(self, rows: dict[str, list[dict]] | None = None, fail=None):
+        self.rows = rows or {}
+        self.fail = fail
+        self.asked: list[list[str]] = []
+
+    def __call__(self, url, json, timeout):
+        import requests
+
+        if self.fail:
+            raise self.fail
+        self.asked.append(json["placeIds"])
+        body = {
+            "success": True,
+            "data": {
+                "results": [
+                    {"placeId": place_id, "locations": self.rows.get(place_id, [])}
+                    for place_id in json["placeIds"]
+                ]
+            },
+        }
+        response = requests.Response()
+        response.status_code = 200
+        response._content = __import__("json").dumps(body).encode()
+        return response
+
+
+def _lm_status(client, run_id, monkeypatch, fake, listicle_type="dining"):
+    from app.features.listicle_pipeline import location_manager
+
+    monkeypatch.setattr(location_manager.requests, "post", fake)
+    if listicle_type:
+        response = client.put(
+            f"{BASE}/runs/{run_id}/listicle-type",
+            json={"listicle_type": listicle_type},
+        )
+        assert response.status_code == 200
+    body = client.get(f"{BASE}/board/{run_id}/location-manager").json()
+    names = {card["candidate_id"]: card["name"] for card in body_cards(client, run_id)}
+    return body, {names[cid]: place for cid, place in body["places"].items()}
+
+
+def body_cards(client, run_id):
+    return client.get(f"{BASE}/board/{run_id}/research").json()["cards"]
+
+
+def test_location_manager_matches_places_by_place_id_not_by_name(
+    client, run, monkeypatch
+):
+    fake = _LocationManager(
+        {
+            "place-canta-rana": [
+                {"id": 7, "name": "Canta Rana Barranco", "category": "dining"}
+            ]
+        }
+    )
+    body, places = _lm_status(client, run, monkeypatch, fake)
+
+    assert body["available"] is True
+    assert places["Canta Rana"]["status"] == "present"
+    assert places["Canta Rana"]["locations"][0]["id"] == 7
+    # Not there: the Add form opens with what the board already knows.
+    assert places["Al Toke Pez"]["status"] == "missing"
+    assert places["Al Toke Pez"]["prefill"] == {
+        "name": "Al Toke Pez",
+        "address": "Av. Test 1, Surquillo",
+        "tripadvisor_url": "",
+    }
+    assert sorted(fake.asked[0]) == ["place-al-toke-pez", "place-canta-rana"]
+
+
+def test_two_location_manager_rows_on_one_place_id_are_shown_not_picked(
+    client, run, monkeypatch
+):
+    rows = [
+        {"id": 24, "name": "Canta Rana", "category": "dining"},
+        {"id": 25, "name": "Canta Rana (copy)", "category": "dining"},
+    ]
+    _, places = _lm_status(
+        client, run, monkeypatch, _LocationManager({"place-canta-rana": rows})
+    )
+    assert places["Canta Rana"]["status"] == "several"
+    assert [row["id"] for row in places["Canta Rana"]["locations"]] == [24, 25]
+
+
+def test_a_place_held_only_as_another_type_is_missing_for_this_list(
+    client, run, monkeypatch
+):
+    """Location Manager keeps a restaurant-bar as two locations. A dining list
+    needs the dining one; the nightlife one is said, never counted."""
+    rows = [{"id": 164, "name": "Canta Rana", "category": "nightlife"}]
+    _, dining = _lm_status(
+        client, run, monkeypatch, _LocationManager({"place-canta-rana": rows})
+    )
+    assert dining["Canta Rana"]["status"] == "missing"
+    assert dining["Canta Rana"]["locations"] == []
+    assert dining["Canta Rana"]["elsewhere"] == rows
+
+    _, nightlife = _lm_status(
+        client,
+        run,
+        monkeypatch,
+        _LocationManager({"place-canta-rana": rows}),
+        listicle_type="nightlife",
+    )
+    assert nightlife["Canta Rana"]["status"] == "present"
+
+
+def test_no_listicle_type_means_nothing_is_matched_and_nothing_is_asked(
+    client, run, monkeypatch
+):
+    fake = _LocationManager({"place-canta-rana": [{"id": 1, "name": "x", "category": "dining"}]})
+    body, places = _lm_status(client, run, monkeypatch, fake, listicle_type="")
+
+    assert body["listicle_type"] == ""
+    assert {place["status"] for place in places.values()} == {"no_type"}
+    assert fake.asked == []
+
+
+def test_a_listicle_is_one_of_the_four_types(client, run):
+    response = client.put(
+        f"{BASE}/runs/{run}/listicle-type", json={"listicle_type": "restaurants"}
+    )
+    assert response.status_code == 422
+
+
+def test_location_manager_down_reads_as_unchecked_never_missing(
+    client, run, monkeypatch
+):
+    import requests
+
+    fake = _LocationManager(fail=requests.ConnectionError("refused"))
+    body, places = _lm_status(client, run, monkeypatch, fake)
+
+    assert body["available"] is False
+    assert "refused" in body["error"]
+    assert {place["status"] for place in places.values()} == {"unchecked"}

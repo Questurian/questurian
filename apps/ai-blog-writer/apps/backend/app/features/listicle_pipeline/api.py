@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -471,6 +471,22 @@ def hide_listicle_run(
     return {"run_id": run_id, "hidden": req.hidden}
 
 
+class ListicleTypeRequest(BaseModel):
+    listicle_type: Literal["dining", "nightlife", "accommodations", "attractions"]
+
+
+@router.put("/runs/{run_id}/listicle-type")
+def set_listicle_run_type(
+    run_id: str, req: ListicleTypeRequest, _staff=Depends(require_staff)
+):
+    """Say which of the four listicle types this run is.
+
+    It decides which Location Manager category a place has to be in to count.
+    """
+    _report(service.set_listicle_type, run_id, req.listicle_type)
+    return {"run_id": run_id, "listicle_type": req.listicle_type}
+
+
 class DuplicateAnswer(BaseModel):
     """One answer to "might be the same place", from the card it was asked on."""
 
@@ -924,6 +940,20 @@ def get_listicle_research_board(run_id: str, _staff=Depends(require_staff)):
     from . import profile_service
 
     return _research(profile_service.board, run_id)
+
+
+@router.get("/board/{run_id}/location-manager")
+def get_listicle_location_manager_status(
+    run_id: str, _staff=Depends(require_staff)
+):
+    """Which places on this run Location Manager already has, by Place ID.
+
+    Its own request so the board still opens when Location Manager is down; a
+    failure comes back as `available: false`, not as an error page.
+    """
+    from . import location_manager
+
+    return _research(location_manager.board_status, run_id)
 
 
 @router.put("/board/{run_id}/candidates/{candidate_id}/prep")

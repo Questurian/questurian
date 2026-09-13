@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ListicleCandidate } from '../types'
+import { useLockPageScroll } from '../useLockPageScroll'
 import { LookupLinks } from './LookupLinks'
 
 /**
@@ -71,6 +72,7 @@ export function DuplicateReview({
   const [verdicts, setVerdicts] = useState<Record<string, Verdict>>({})
   const [keep, setKeep] = useState('')
   const closeButton = useRef<HTMLButtonElement>(null)
+  useLockPageScroll()
 
   useEffect(() => {
     closeButton.current?.focus()

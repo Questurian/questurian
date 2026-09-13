@@ -31,6 +31,7 @@ import {
   payloadMediaSetsQuerySchema,
 } from "../validation/schemas/payload.schemas";
 import { locationsByPayloadRefsSchema } from "../validation/schemas/payload-refs.schemas";
+import { locationsByPlaceIdsSchema } from "../validation/schemas/place-ids.schemas";
 import type { LocationCategory } from "../models/location";
 import { getLocationByIdForUpdate } from "../repositories/core";
 
@@ -38,7 +39,7 @@ import { getLocationByIdForUpdate } from "../repositories/core";
 import {
   // Core
   getLocations, getLocationsBasic, getLocationById, deleteLocationById,
-  refetchPlaceId,
+  refetchPlaceId, postLocationsByPlaceIds,
   getTours, getTour, postTour, patchTour, postTourMediaSet, postTourImportPreview,
   postTourTitleSuggestion, getTourSourceImage,
   getDiningTypes, getAccommodationsTypes, getAttractionsTypes, getNightlifeTypes, getKeyLocationsTypes,
@@ -314,6 +315,14 @@ app.get("/api/payload/sync-status", getSyncStatus);
 app.get("/api/payload/sync-status/:id", getSyncStatus);
 app.get("/api/payload/test-connection", getTestConnection);
 app.delete("/api/payload/sync-state", deletePayloadSyncState);
+// Which Google Place IDs are already here. Asked by the listicle pipeline, which
+// holds a Place ID for every place it has checked on Google.
+app.post(
+  "/api/locations/by-place-ids",
+  validateBody(locationsByPlaceIdsSchema),
+  postLocationsByPlaceIds
+);
+
 app.post(
   "/api/payload/locations/by-refs",
   validateBody(locationsByPayloadRefsSchema),

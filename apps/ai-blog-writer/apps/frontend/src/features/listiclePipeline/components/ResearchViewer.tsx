@@ -1,4 +1,6 @@
 import { ResearchWorkspace } from './ResearchWorkspace'
+import { useLockPageScroll } from '../useLockPageScroll'
+import { revealSoon, scrollModalToTop } from '../revealInModal'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addPossibleAngle,
@@ -108,8 +110,6 @@ interface ResearchViewerProps {
   topic: string
   topicLabel: string
   placeName: string
-  /** The branch this profile is about, as Google resolved it. */
-  branch?: string
   /** Whether a further paid request is allowed right now. False keeps the
    *  follow-up box closed and says why. */
   canResearch: boolean
@@ -132,7 +132,6 @@ export function ResearchViewer({
   topic,
   topicLabel,
   placeName,
-  branch,
   canResearch,
   researching,
   reviewsBudget,
@@ -151,6 +150,40 @@ export function ResearchViewer({
   const [openRow, setOpenRow] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const closeButton = useRef<HTMLButtonElement>(null)
+  const backButton = useRef<HTMLButtonElement>(null)
+  const modal = useRef<HTMLDivElement>(null)
+  useLockPageScroll()
+
+  // Anything folded that opens inside the pop-up is scrolled to, so opening a
+  // section near the bottom does not happen out of sight. `toggle` does not
+  // bubble, hence the capture.
+  useEffect(() => {
+    const box = modal.current
+    if (!box) return
+    const onToggle = (event: Event) => {
+      const details = event.target
+      if (details instanceof HTMLDetailsElement && details.open)
+        revealSoon(() => details)
+    }
+    box.addEventListener('toggle', onToggle, true)
+    return () => box.removeEventListener('toggle', onToggle, true)
+  }, [])
+
+  // A new tab starts at its top.
+  useEffect(() => {
+    scrollModalToTop(modal.current)
+  }, [tab])
+
+  useEffect(() => {
+    if (openRow)
+      revealSoon(() => modal.current?.querySelector('.lp-research-detail'))
+  }, [openRow])
+
+  // The button that opened automated research is hidden with the editor, so
+  // the keyboard lands on the way back instead of on nothing.
+  useEffect(() => {
+    if (tab === 'automated') backButton.current?.focus()
+  }, [tab])
 
   useEffect(() => {
     closeButton.current?.focus()
@@ -242,18 +275,14 @@ export function ResearchViewer({
       onClick={(event) => event.target === event.currentTarget && onClose()}
     >
       <div
+        ref={modal}
         className={`lp-modal lp-research${tab === 'workspace' ? ' lp-research-workbench' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={`Research for ${placeName}`}
       >
         <header className="lp-modal-head">
-          <div>
-            <h3 className="lp-modal-title">{placeName}</h3>
-            <p className="lp-muted lp-modal-sub">
-              {branch || research?.district || 'branch not recorded'}
-            </p>
-          </div>
+          <h3 className="lp-modal-title">{placeName}</h3>
           <button
             ref={closeButton}
             type="button"
@@ -267,21 +296,12 @@ export function ResearchViewer({
 
         {runId && candidateId && (
           <>
-            <details className="lp-more-tools">
-              <summary>More tools</summary>
-              <button
-                className="lp-tool"
-                onClick={() =>
-                  setTab(tab === 'workspace' ? 'automated' : 'workspace')
-                }
-              >
-                {tab === 'workspace'
-                  ? 'Automated research'
-                  : 'Back to place editor'}
-              </button>
-            </details>
             {tab === 'automated' && (
-              <button className="lp-tool" onClick={() => setTab('workspace')}>
+              <button
+                ref={backButton}
+                className="lp-tool"
+                onClick={() => setTab('workspace')}
+              >
                 Back to place editor
               </button>
             )}
@@ -292,6 +312,13 @@ export function ResearchViewer({
                 onProfile={setProfileId}
                 active={tab === 'workspace'}
               />
+              {/* Secondary, so it waits under the editor instead of above it. */}
+              <details className="lp-more-tools lp-workspace-more">
+                <summary>More tools</summary>
+                <button className="lp-tool" onClick={() => setTab('automated')}>
+                  Automated research
+                </button>
+              </details>
             </div>
           </>
         )}

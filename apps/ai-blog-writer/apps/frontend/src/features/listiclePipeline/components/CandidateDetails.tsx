@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { ListicleCandidate, ListicleSighting } from '../types'
+import { useLockPageScroll } from '../useLockPageScroll'
 
 /**
  * Everything the SEARCHES said about one place, opened on request.
@@ -31,6 +32,7 @@ export function CandidateDetails({
   onClose,
 }: CandidateDetailsProps) {
   const closeButton = useRef<HTMLButtonElement>(null)
+  useLockPageScroll()
 
   useEffect(() => {
     closeButton.current?.focus()

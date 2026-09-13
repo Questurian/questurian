@@ -21,6 +21,7 @@ import { NightlifeFormSections } from "./form/NightlifeForm";
 import type { NightlifeFormState } from "./form/nightlife-form.types";
 import { findFirstNightlifeErrorSection, getNightlifeFormProgress, getNightlifeSectionFields } from "./form/nightlife-form-progress";
 import { useCreateNightlife } from "./submission/useCreateNightlife";
+import { useLinkPrefill } from "../lib/link-prefill";
 
 export function AddNightlifeLocation() {
   const [activeSection, setActiveSection] = useState<NightlifeFormSection>('step1');
@@ -129,6 +130,14 @@ export function AddNightlifeLocation() {
     setPrefillError,
   });
   useNightlifeDraft({ form, prefillSignature, setPrefillSignature, setPrefillMessage, setPrefillError });
+  // Opened from the listicle pipeline with the place already named. A fresh
+  // form, not the old draft with a new name on it.
+  useLinkPrefill(({ name, address, tripadvisorUrl }) => {
+    form.reset({ ...NIGHTLIFE_FORM_DEFAULT_VALUES, name, location: address, tripadvisorUrl });
+    setPrefillSignature(null);
+    setPrefillError(null);
+    setPrefillMessage("Filled in from the listicle. Check the details, then run Google lookup.");
+  });
 
   const onInvalidSubmit = (errors: FieldErrors<AddNightlifeFormData>) => {
     const firstErrorSection = findFirstNightlifeErrorSection(errors);

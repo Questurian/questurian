@@ -234,11 +234,35 @@
 
 /* ---------- the drawer ---------- */
 
+/* One size, whatever is inside. Opening a section or switching a tab scrolls
+   the content instead of resizing the frame around it. */
 .lp-research {
-  max-width: 68rem;
-  width: min(68rem, 94vw);
-  max-height: 88vh;
+  box-sizing: border-box;
+  width: min(84rem, 96vw);
+  max-width: none;
+  height: min(58rem, calc(100vh - 2rem));
+  max-height: none;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: 0;
+  scrollbar-gutter: stable;
+}
+
+/* The place name and the close button stay put while the content scrolls. */
+.lp-research > .lp-modal-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin: 0 calc(-1 * var(--space-6)) var(--space-4);
+  padding: var(--space-5) var(--space-6) var(--space-3);
+  background: inherit;
+  border-bottom: 1px solid rgba(45, 42, 38, 0.1);
+}
+
+/* Over the app's own sticky bar, not tucked under it. */
+.lp-modal-overlay {
+  z-index: 150;
+  padding: 1rem;
 }
 
 .lp-research-filter {
@@ -671,16 +695,193 @@
 .lp-entry-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
 .lp-entry-status { color: #3B5BDB; font-size: .8rem; font-weight: 600; margin: 0 0 .6rem; }
 .lp-entry-text { white-space: pre-wrap; max-width: 72ch; font-size: 1.05rem; line-height: 1.75; margin: 1.2rem 0; }
-.lp-candidates .lp-entry-written { border-left: 4px solid #3B5BDB; }
+/* A finished blurb closes its whole edge in blue. One even border, not a rail
+   down one side. */
+.lp-candidates .lp-entry-written { border-color: #3B5BDB; box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.08); }
+.lp-candidates .lp-entry { overflow: visible; }
+.lp-entry-actions { display: flex; align-items: center; gap: .4rem; }
 .lp-more-tools { margin: .75rem 0; font-size: .85rem; }
 .lp-more-tools summary, .lp-workspace summary { cursor: pointer; padding: .5rem 0; }
-.lp-workspace { display: block; max-width: 760px; margin: 0 auto; }
+.lp-workspace { display: block; max-width: 920px; margin: 0 auto; }
 .lp-workspace [hidden] { display: none; }
 .lp-workspace-tools { margin-bottom: 1.5rem; }
 .lp-workspace-tabs [aria-pressed='true'] { border-bottom-color: #3B5BDB; color: #3B5BDB; }
 .lp-workspace-sources { border-top: 1px solid #c9c2b8; margin-top: 1.5rem; padding-top: .5rem; }
-.lp-workspace-blurb { margin-top: 0; border-top: 0; }
-.lp-workspace-preview { margin-top: 1.5rem; }
+.lp-modal.lp-research-workbench { overscroll-behavior: contain; }
+.lp-workspace .lp-tool.lp-tool-primary,
+.lp-entry .lp-tool.lp-tool-primary { background: #3B5BDB; border-color: #3B5BDB; color: #fff; }
+.lp-workspace .lp-tool.lp-tool-primary:hover { background: #3450c4; }
+.lp-workspace .lp-link-button { padding: 0; font-size: .85rem; color: #3B5BDB; }
+.lp-workspace-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.lp-workspace-more { margin: 1.25rem auto 0; max-width: 920px; color: var(--muted); }
+
+/* ---------- the place editor: stages, then parts, then steps ----------
+   Two stages across the top (Research, Blurb). Inside a stage, Part 1 is the
+   work that fetches material and Part 2 is the thing it produces. The two
+   parts look different on purpose: steps sit on a numbered rail, the result
+   sits on its own sheet. */
+
+/* The stages: a small progress line, not tabs. */
+.lp-workspace-tabs {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  border-bottom: 0;
+  margin-bottom: 1.75rem;
+}
+.lp-workspace-tabs button {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .55rem .9rem .55rem .55rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  text-align: left;
+}
+.lp-workspace-tabs button:hover { background: rgba(45, 42, 38, 0.05); }
+.lp-workspace-tabs [aria-pressed='true'] {
+  background: #FBF8F3;
+  border-color: #DDD5C9;
+  color: inherit;
+  box-shadow: 0 1px 2px rgba(45, 42, 38, 0.06);
+}
+.lp-stage-join { flex: 1 1 2rem; max-width: 5rem; height: 1px; background: #CFC6B8; }
+.lp-stage-text { display: grid; line-height: 1.2; }
+.lp-stage-name { font-weight: 600; font-size: .95rem; }
+.lp-stage-state { font-size: .75rem; color: var(--muted); }
+.lp-stage-mark,
+.lp-flow-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 1.5px solid #CFC6B8;
+  background: #F5F0E8;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1;
+}
+.lp-workspace-tabs [aria-pressed='true'] .lp-stage-mark { border-color: #3B5BDB; color: #3B5BDB; background: #fff; }
+.lp-stage-mark-done,
+.lp-workspace-tabs [aria-pressed='true'] .lp-stage-mark-done,
+.lp-flow-mark-done { background: #3B5BDB; border-color: #3B5BDB; color: #fff; }
+
+/* Part labels, shared by both parts. */
+.lp-part-kicker {
+  margin: 0 0 .2rem;
+  font-size: .7rem !important;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #3B5BDB;
+}
+.lp-gather-head,
+.lp-brief-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.lp-gather-head h4,
+.lp-brief-head h4 { margin: 0 0 .2rem; font-size: 1.3rem; }
+.lp-gather-head p:not(.lp-part-kicker),
+.lp-brief-head p:not(.lp-part-kicker) { margin: 0; color: var(--muted); }
+
+/* Part 1: the work. No sheet of its own -- a rail of numbered steps. */
+.lp-gather { padding: 0 .25rem; }
+.lp-flow { list-style: none; margin: 1.25rem 0 0; padding: 0; }
+.lp-flow-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  gap: .9rem;
+  padding-bottom: 1.4rem;
+}
+.lp-flow-step:last-child { padding-bottom: 0; }
+/* The rail joining one number to the next. */
+.lp-flow-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: calc(.875rem - 1px);
+  top: 2rem;
+  bottom: .25rem;
+  width: 2px;
+  border-radius: 1px;
+  background: #DDD5C9;
+}
+.lp-flow-done:not(:last-child)::before { background: #3B5BDB; opacity: .45; }
+.lp-flow-body { min-width: 0; padding-top: .2rem; }
+.lp-flow-body h5 { margin: 0 0 .6rem; font-size: .95rem; font-weight: 600; font-family: var(--font-body); }
+.lp-flow-hint { margin: 0 0 .5rem; color: var(--muted); }
+.lp-flow-waiting .lp-flow-body h5 { color: var(--muted); font-weight: 500; }
+.lp-flow-waiting .lp-flow-mark { border-style: dashed; }
+.lp-flow textarea { background: #FBF8F3; border-color: #DDD5C9; border-radius: 8px; }
+.lp-flow .lp-workspace-prompt {
+  margin: .75rem 0 0;
+  padding: .75rem;
+  background: #FBF8F3;
+  border: 1px solid #DDD5C9;
+  border-radius: 8px;
+}
+.lp-flow .lp-workspace-preview {
+  margin-top: 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid #DDD5C9;
+  border-radius: 8px;
+  background: #FBF8F3;
+}
+
+/* The handoff: an arrow down from the work to what it makes. */
+.lp-handoff {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: 1.75rem 0;
+  color: var(--muted);
+  font-size: .75rem;
+  letter-spacing: .04em;
+}
+.lp-handoff::before,
+.lp-handoff::after { content: ''; flex: 1; height: 1px; background: #CFC6B8; }
+.lp-handoff span::after { content: ' \2193'; }
+
+/* Part 2: the result, on its own sheet. */
+.lp-brief {
+  padding: 1.35rem 1.5rem 1.1rem;
+  background: #FFFDF9;
+  border: 1px solid #D6CDBF;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(45, 42, 38, 0.05), 0 8px 24px -16px rgba(45, 42, 38, 0.25);
+}
+.lp-brief-head { padding-bottom: 1rem; margin-bottom: .25rem; border-bottom: 1px solid #E6DFD4; }
+.lp-brief-head > span { flex: none; font-size: .75rem; color: var(--muted); padding-top: .2rem; }
+.lp-brief-head > .lp-workspace-pill-ready { color: #3B5BDB; font-weight: 600; }
+.lp-brief textarea { background: #F7F3EC; border-color: #DDD5C9; border-radius: 8px; }
+.lp-brief .lp-workspace-slot { border-top-color: #EEE8DE; }
+.lp-brief-head + .lp-workspace-slot,
+.lp-brief-head + [role='alert'] + .lp-workspace-slot { border-top: 0; }
+.lp-brief-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin: 1rem -1.5rem -1.1rem;
+  padding: .85rem 1.5rem;
+  border-top: 1px solid #E6DFD4;
+  background: #F9F5EE;
+  border-radius: 0 0 12px 12px;
+}
+.lp-brief-foot .lp-workspace-actions { justify-content: flex-end; }
+.lp-workspace-blurb { display: block; margin-top: 0; border-top: 0; padding-top: 0; }
+.lp-workspace-blurb .lp-brief textarea { margin-top: 1rem; }
+@media (max-width: 650px) {
+  .lp-stage-state { display: none; }
+  .lp-brief { padding: 1rem; }
+  .lp-brief-foot { margin: 1rem -1rem -1rem; padding: .75rem 1rem; }
+  .lp-gather-head, .lp-brief-head { flex-direction: column; }
+}
 @media (max-width: 650px) {
   .lp-entry-heading { flex-direction: column; }
   .lp-candidates .lp-entry { padding: 1rem; }
@@ -691,3 +892,112 @@
 .lp-candidate-done::after { display: none; }
 .lp-tick-done { background: #3B5BDB; }
 .lp-entry .lp-link-button { color: #3B5BDB; }
+
+/* Copy buttons answer on themselves: the label swaps, the width does not. */
+.lp-copy-labels { display: grid; }
+.lp-copy-labels > span {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  transition: opacity .15s ease;
+}
+.lp-copy-labels > span[aria-hidden='true'] { visibility: hidden; opacity: 0; }
+.lp-workspace .lp-tool.lp-copy-copied,
+.lp-workspace .lp-tool.lp-copy-copied:hover { background: #2f6b4f; border-color: #2f6b4f; }
+.lp-workspace .lp-tool.lp-copy-failed,
+.lp-workspace .lp-tool.lp-copy-failed:hover { background: #b42318; border-color: #b42318; }
+
+/* The header is one line now: the name, and the close button centred on it. */
+.lp-research > .lp-modal-head { align-items: center; }
+.lp-research .lp-modal-close {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border-radius: 8px;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.lp-research .lp-modal-close:hover { background: rgba(45, 42, 38, 0.06); }
+
+/* ---------- Location Manager, under each checked place ---------- */
+.lp-entry-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem 1rem;
+  margin-top: 1rem;
+  padding-top: .9rem;
+  border-top: 1px solid rgba(45, 42, 38, 0.1);
+}
+.lp-entry-foot > .lp-link-button { padding: 0; }
+.lp-lm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem .6rem;
+  margin: 0;
+  font-size: .875rem;
+}
+.lp-lm-present { color: #3B5BDB; font-weight: 600; }
+.lp-lm-mark {
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: #3B5BDB;
+  color: #fff;
+}
+.lp-lm-link { color: #3B5BDB; font-weight: 500; }
+.lp-lm-missing > span { color: #8a4b12; font-weight: 600; }
+.lp-lm-missing .lp-tool { height: 2rem; padding: 0 .8rem; font-size: .8125rem; text-decoration: none; }
+.lp-lm-missing .lp-link-button { padding: 0; font-size: .8125rem; }
+.lp-lm-warn { color: #8a4b12; }
+.lp-lm-muted { color: var(--muted); }
+.lp-board-lm-error { margin: 0; font-size: .8125rem; color: #8a4b12; }
+.lp-board-lm-error .lp-link-button { padding: 0; }
+.lp-tick-written { background: #3B5BDB; opacity: .4; }
+.lp-candidates .lp-candidate-written { --lp-done: #3B5BDB; background: #EFE9DE; border-color: #3B5BDB; box-shadow: none; }
+.lp-candidate-written::after { display: none; }
+.lp-candidate-written .lp-pip-on { background: #3B5BDB; border-color: #3B5BDB; }
+
+/* The list type: one of four, chosen once places are found. */
+.lp-type-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem .9rem;
+  margin: var(--space-2) 0;
+}
+.lp-type-picker-label { margin: 0; font-size: .9375rem; font-weight: 600; }
+.lp-type-picker-options {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid #D6CDBF;
+  border-radius: 10px;
+  background: #F5F0E8;
+}
+.lp-type-picker-options button {
+  padding: .4rem .9rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: .875rem;
+  cursor: pointer;
+}
+.lp-type-picker-options button:hover { background: rgba(45, 42, 38, 0.06); }
+.lp-type-picker-options button[aria-pressed='true'] {
+  background: #3B5BDB;
+  color: #fff;
+  font-weight: 600;
+}
+.lp-type-picker-options button:focus-visible { outline: 2px solid #3B5BDB; outline-offset: 2px; }
+.lp-type-picker-hint { flex-basis: 100%; margin: 0; font-size: .8125rem; color: #8a4b12; }
+.lp-lm-missing > .lp-lm-elsewhere { flex-basis: 100%; font-size: .8125rem; color: var(--muted); font-weight: 400; }

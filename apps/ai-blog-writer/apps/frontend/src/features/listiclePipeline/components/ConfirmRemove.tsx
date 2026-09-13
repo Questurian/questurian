@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { ListicleCandidate } from '../types'
+import { useLockPageScroll } from '../useLockPageScroll'
 
 /**
  * "Are you sure?" before taking a place off the list by hand.
@@ -22,6 +23,7 @@ export function ConfirmRemove({
   onClose: () => void
 }) {
   const cancel = useRef<HTMLButtonElement>(null)
+  useLockPageScroll()
 
   useEffect(() => {
     cancel.current?.focus()

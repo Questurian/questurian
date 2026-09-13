@@ -2,7 +2,8 @@ import { useCallback, useState } from 'react'
 import type {
   ListicleAngleResult,
   ListicleCandidate,
-  ListicleSearchResults
+  ListicleSearchResults,
+  ListicleType
 } from '../types'
 import { CandidateCard, cardState } from './CandidateCard'
 import { GoogleIcon } from './LookupLinks'
@@ -12,6 +13,7 @@ import { DuplicateReview } from './DuplicateReview'
 import { useCandidateBoard } from '../useCandidateBoard'
 import { useGoogleChecks } from '../useGoogleChecks'
 import { usePlaceResearch } from '../usePlaceResearch'
+import { LISTICLE_TYPES, useLocationManager } from '../locationManager'
 import { ResearchViewer } from './ResearchViewer'
 
 /**
@@ -132,6 +134,7 @@ export function SearchResults({
   // researched -- and thirty-five cards each holding their own copy could not
   // agree about it.
   const research = usePlaceResearch(results.run_id)
+  const locationManager = useLocationManager(results.run_id)
   const [researchId, setResearchId] = useState<string | null>(null)
   const refreshResearch = research.refresh
   const closeResearch = useCallback(() => {
@@ -377,10 +380,23 @@ export function SearchResults({
             and the one thing that makes it bearable is being able to see it
             shrink. Counted over the places still on the list. */}
         {research.board && onBoard.length > 0 && (
+          <ListicleTypePicker
+            value={locationManager.listicleType}
+            error={locationManager.typeError}
+            onChoose={(value) => void locationManager.chooseType(value)}
+          />
+        )}
+        {research.board && onBoard.length > 0 && (
           <BoardProgress
             states={onBoard.map((candidate) =>
-              cardState(research.cardFor(candidate.candidate_id))
+              cardState(
+                research.cardFor(candidate.candidate_id),
+                locationManager.placeFor(candidate.candidate_id)
+              )
             )}
+            locationManagerError={locationManager.error}
+            checkingLocationManager={locationManager.checking}
+            onCheckLocationManager={() => void locationManager.refresh()}
           />
         )}
         {research.error && (
@@ -600,6 +616,8 @@ export function SearchResults({
                   : undefined
               }
               google={google.checks[candidate.candidate_id]}
+              locationManager={locationManager.placeFor(candidate.candidate_id)}
+              listicleType={locationManager.listicleType}
               onRemove={() => setConfirmId(candidate.candidate_id)}
               onRemoveNotAVenue={() =>
                 void remove(candidate.candidate_id, 'not_a_venue')
@@ -698,7 +716,6 @@ export function SearchResults({
           topic={research.board?.topic ?? ''}
           topicLabel={research.board?.topic_label ?? ''}
           placeName={researchCandidate?.name ?? researchCard.name}
-          branch={researchCard.readiness.google_address}
           canResearch={researchCard.readiness.ready}
           researching={research.waitingFor === researchId}
           reviewsBudget={research.board?.reviews_budget ?? null}
@@ -773,21 +790,101 @@ export function SearchResults({
  *  information as the cards below, in the one form you can take in at a glance
  *  -- and it is the only thing on this screen that tells you how much is left.
  */
-function BoardProgress({ states }: { states: ReturnType<typeof cardState>[] }) {
+/** Which of the four listicle types this list is. One, chosen by the operator
+ *  once places are found: it decides which Location Manager category a place
+ *  has to be in, since a restaurant-bar is two separate locations there. */
+function ListicleTypePicker({
+  value,
+  error,
+  onChoose
+}: {
+  value?: ListicleType
+  error: string
+  onChoose: (value: ListicleType) => void
+}) {
+  return (
+    <div className="lp-type-picker">
+      <p className="lp-type-picker-label" id="lp-type-picker-label">
+        {value ? 'This list is' : 'What type of list is this?'}
+      </p>
+      <div
+        className="lp-type-picker-options"
+        role="group"
+        aria-labelledby="lp-type-picker-label"
+      >
+        {LISTICLE_TYPES.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={value === option.value}
+            onClick={() => onChoose(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {!value && (
+        <p className="lp-type-picker-hint">
+          Location Manager is checked only in this type.
+        </p>
+      )}
+      {error && (
+        <p className="lp-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function BoardProgress({
+  states,
+  locationManagerError,
+  checkingLocationManager,
+  onCheckLocationManager
+}: {
+  states: ReturnType<typeof cardState>[]
+  /** Set when Location Manager could not be asked. Nothing counts as done
+   *  then, and the line says why instead of reading as zero progress. */
+  locationManagerError: string
+  checkingLocationManager: boolean
+  onCheckLocationManager: () => void
+}) {
   const done = states.filter((state) => state === 'done').length
+  const written = states.filter((state) => state === 'written').length
   const left = states.length - done
   return (
     <div className="lp-board-progress">
       <p className="lp-board-progress-line">
-        <strong>{done}</strong> of {states.length} blurbs ready
+        <strong>{done}</strong> of {states.length} places done
+        {written > 0 && (
+          <span className="lp-muted">
+            {' '}
+            · {written} {written === 1 ? 'blurb is' : 'blurbs are'} waiting on
+            Location Manager
+          </span>
+        )}
         {left === 0 && (
           <span className="lp-board-done"> · ready to read through</span>
         )}
       </p>
+      {locationManagerError && (
+        <p className="lp-board-lm-error" role="alert">
+          Location Manager could not be checked, so no place counts as done.{' '}
+          <button
+            type="button"
+            className="lp-link-button"
+            disabled={checkingLocationManager}
+            onClick={onCheckLocationManager}
+          >
+            {checkingLocationManager ? 'Checking…' : 'Check again'}
+          </button>
+        </p>
+      )}
       <div
         className="lp-board-ticks"
         role="img"
-        aria-label={`${done} of ${states.length} blurbs ready`}
+        aria-label={`${done} of ${states.length} places done`}
       >
         {states.map((state, index) => (
           <span key={index} className={`lp-tick lp-tick-${state}`} />

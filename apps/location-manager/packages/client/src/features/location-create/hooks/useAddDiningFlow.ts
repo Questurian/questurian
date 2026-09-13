@@ -23,6 +23,7 @@ import { useDiningDraft } from "../dining-create/draft/useDiningDraft";
 import { clearDiningDraftFromStorage } from "../dining-create/draft/dining-draft-storage";
 import { useDiningEnrichment } from "../dining-create/enrichment/useDiningEnrichment";
 import { buildDiningCreatePayload } from "../dining-create/submission/build-dining-create-payload";
+import { useLinkPrefill } from "../lib/link-prefill";
 
 export type {
   AiFieldStatus,
@@ -66,6 +67,16 @@ export function useAddDiningFlow() {
     setPrefilledValues: enrichment.setPrefilledValues,
     setPrefillMessage: enrichment.setPrefillMessage,
     setPrefillError: enrichment.setPrefillError,
+  });
+
+  // Opened from another tool with the place already named (the listicle
+  // pipeline's "Add to Location Manager"). A fresh form, not the old draft
+  // with a new name on it.
+  useLinkPrefill(({ name, address, tripadvisorUrl }) => {
+    addForm.reset({ ...DINING_FORM_DEFAULT_VALUES, name, address, tripadvisorUrl });
+    enrichment.resetEnrichmentState();
+    enrichment.setPrefillError(null);
+    enrichment.setPrefillMessage("Filled in from the listicle. Check the details, then run Google lookup.");
   });
 
   function onCreateSuccess(response: Awaited<ReturnType<typeof locationsApi.createLocation>>) {

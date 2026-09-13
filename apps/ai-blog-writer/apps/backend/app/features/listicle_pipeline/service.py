@@ -1271,6 +1271,13 @@ def set_hidden(run_id: str, hidden: bool) -> None:
     store.set_hidden(run_id, hidden)
 
 
+def set_listicle_type(run_id: str, value: str) -> None:
+    """Choose which of the four listicle types this run is."""
+    if not store.run_exists(run_id):
+        raise LookupError(f"No listicle run {run_id}.")
+    store.set_listicle_type(run_id, value)
+
+
 def build_profile(
     *,
     name: str,
