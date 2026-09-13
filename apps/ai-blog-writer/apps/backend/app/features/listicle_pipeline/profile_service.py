@@ -174,6 +174,8 @@ def board(run_id: str) -> dict:
     links = profile_store.linked_profiles(run_id)
     attempts = research_store.for_run(run_id)
 
+    from . import research_workspace
+    entries = research_workspace.board_entries(run_id)
     cards = []
     for candidate_id, candidate in ctx.candidates.items():
         readiness = candidate_prep.readiness_of(
@@ -196,6 +198,7 @@ def board(run_id: str) -> dict:
                 "readiness": readiness.as_dict(),
                 "profile": summary,
                 "last_attempt": _attempt_summary(attempt) if attempt else None,
+                "entry": entries.get(candidate_id),
             }
         )
 

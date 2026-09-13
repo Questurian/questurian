@@ -136,8 +136,8 @@ it('defaults to workspace, previews without applying, preserves deselected slots
     />
   )
   expect(
-    screen.getByRole('tab', { name: 'Research workspace' })
-  ).toHaveAttribute('aria-selected', 'true')
+    await screen.findByRole('button', { name: 'Research' })
+  ).toHaveAttribute('aria-pressed', 'true')
   await screen.findByLabelText('Why it belongs')
   await userEvent.type(screen.getByLabelText('Paste research JSON'), 'packet')
   await userEvent.click(screen.getByRole('button', { name: 'Preview import' }))
@@ -178,11 +178,10 @@ it('defaults to workspace, previews without applying, preserves deselected slots
       })
     )
   )
-  await userEvent.click(
-    screen.getByRole('tab', { name: 'Automated research (existing)' })
-  )
+  await userEvent.click(screen.getByText('More tools'))
+  await userEvent.click(screen.getByRole('button', { name: 'Automated research' }))
   expect(screen.getByRole('button', { name: 'All topics' })).toBeVisible()
-  await userEvent.click(screen.getByRole('tab', { name: 'Research workspace' }))
+  await userEvent.click(screen.getAllByRole('button', { name: 'Back to place editor' })[0])
   expect(screen.getByLabelText('Why it belongs')).toHaveValue(
     'Operator wording.'
   )
@@ -231,7 +230,7 @@ it('copies one place prompt and saves the blurb pasted back', async () => {
       text: 'Pasted blurb.'
     })
   )
-  expect(await screen.findByText('Saved')).toBeInTheDocument()
+  expect(await screen.findByText('Blurb ready')).toBeInTheDocument()
 })
 
 it('does not offer the blurb prompt until the two core details are filled', async () => {
@@ -252,5 +251,6 @@ it('does not offer the blurb prompt until the two core details are filled', asyn
       onClose={() => {}}
     />
   )
+  await userEvent.click(await screen.findByRole('button', { name: 'Blurb' }))
   expect(await screen.findByRole('button', { name: 'Copy blurb prompt' })).toBeDisabled()
 })

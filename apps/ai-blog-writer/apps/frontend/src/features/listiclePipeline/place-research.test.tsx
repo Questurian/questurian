@@ -423,8 +423,14 @@ function research(overrides: Partial<ListicleProfileResearch> = {}): ListiclePro
   }
 }
 
-function show() {
+async function show() {
   render(<SearchResults results={results()} busy={false} onRun={() => {}} />)
+  await waitFor(() => expect(loadResearchBoard).toHaveBeenCalled())
+  await waitFor(() => expect(screen.queryByText('Reading what is prepared for this place…')).not.toBeInTheDocument())
+  const review = screen.queryByRole('button', { name: 'Review location' })
+  if (review) await userEvent.click(review)
+  const tools = screen.queryByText('More tools')
+  if (tools) await userEvent.click(tools)
 }
 
 beforeEach(() => {
@@ -450,14 +456,14 @@ beforeEach(() => {
 
 describe('the card', () => {
   it('opens without buying anything', async () => {
-    show()
+    await show()
     await screen.findByRole('button', { name: 'Research Example Wings' })
     expect(startPlaceResearch).not.toHaveBeenCalled()
     expect(loadResearchBoard).toHaveBeenCalledTimes(1)
   })
 
   it('says which place the confirmation is about', async () => {
-    show()
+    await show()
     expect(
       await screen.findByText(/Example Wings · Av. Brasil 100, Jesús María/),
     ).toBeInTheDocument()
@@ -490,7 +496,7 @@ describe('the card', () => {
         ],
       }),
     )
-    show()
+    await show()
     expect(
       await screen.findByText('Confirm the place is still open.'),
     ).toBeInTheDocument()
@@ -513,7 +519,7 @@ describe('the card', () => {
         ],
       }),
     )
-    show()
+    await show()
     // Two numbers, not one: how much material came back, and how much of it
     // rests on a page somebody can open and check.
     expect(
@@ -545,7 +551,7 @@ describe('the card', () => {
         ],
       }),
     )
-    show()
+    await show()
     expect(await screen.findByText('No findings returned')).toBeInTheDocument()
     expect(
       screen.getByText(/ran and returned no findings/),
@@ -572,7 +578,7 @@ describe('the card', () => {
         ],
       }),
     )
-    show()
+    await show()
     expect(await screen.findByText('The request failed')).toBeInTheDocument()
     // The failure is execution; the four findings are still there to read.
     expect(screen.getByRole('button', { name: 'View research' })).toBeInTheDocument()
@@ -588,7 +594,7 @@ describe('the card', () => {
         release = resolve
       }),
     )
-    show()
+    await show()
     const list = await screen.findByRole('list', { name: 'Checklist for Example Wings' })
     await userEvent.click(within(list).getByLabelText(/Still open/))
     await waitFor(() =>
@@ -605,7 +611,7 @@ describe('the card', () => {
 
   it('buys one request per press and says it will not retry', async () => {
     startPlaceResearch.mockResolvedValue({ attempt: attempt(), profile: profile() })
-    show()
+    await show()
     const button = await screen.findByRole('button', { name: 'Research Example Wings' })
     // The budget, said before the press rather than discovered after it.
     expect(
@@ -625,7 +631,7 @@ describe('the card', () => {
 
   it('does not retry a request that failed on the way out', async () => {
     startPlaceResearch.mockRejectedValue(new Error('the connection dropped'))
-    show()
+    await show()
     await userEvent.click(
       await screen.findByRole('button', { name: 'Research Example Wings' }),
     )
@@ -645,7 +651,7 @@ describe('the card', () => {
         { code: 'duplicates_open', message: 'Settle the duplicate first.', where: 'board' },
       ]),
     )
-    show()
+    await show()
     await userEvent.click(
       await screen.findByRole('button', { name: 'Research Example Wings' }),
     )
@@ -678,7 +684,7 @@ describe('the card', () => {
         ],
       }),
     )
-    show()
+    await show()
     expect(
       await screen.findByText(/One place is being researched/),
     ).toBeInTheDocument()
@@ -702,9 +708,10 @@ describe('the research viewer', () => {
         ],
       }),
     )
-    show()
+    await show()
     await userEvent.click(await screen.findByRole('button', { name: 'View research' }))
-    await userEvent.click(screen.getByRole('tab', { name: 'Automated research (existing)' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByText('More tools'))
+    await userEvent.click(screen.getByRole('button', { name: 'Automated research' }))
     return screen.findByRole('dialog', { name: 'Research for Example Wings' })
   }
 
@@ -758,9 +765,10 @@ describe('the research viewer', () => {
         },
       }),
     )
-    show()
+    await show()
     await userEvent.click(await screen.findByRole('button', { name: 'View research' }))
-    await userEvent.click(screen.getByRole('tab', { name: 'Automated research (existing)' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByText('More tools'))
+    await userEvent.click(screen.getByRole('button', { name: 'Automated research' }))
     const dialog = await screen.findByRole('dialog', {
       name: 'Research for Example Wings',
     })
@@ -803,9 +811,10 @@ describe('the research viewer', () => {
         },
       }),
     )
-    show()
+    await show()
     await userEvent.click(await screen.findByRole('button', { name: 'View research' }))
-    await userEvent.click(screen.getByRole('tab', { name: 'Automated research (existing)' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByText('More tools'))
+    await userEvent.click(screen.getByRole('button', { name: 'Automated research' }))
     const dialog = await screen.findByRole('dialog', {
       name: 'Research for Example Wings',
     })
@@ -926,7 +935,7 @@ describe('the research viewer', () => {
     const dialog = await openViewer()
     // The close button takes focus when the drawer opens, so tabbing reaches
     // the controls in order without a mouse.
-    expect(within(dialog).getByRole('tab', { name: 'Automated research (existing)' })).toHaveFocus()
+    expect(within(dialog).getAllByRole('button', { name: 'Back to place editor' })[0]).toHaveFocus()
     await userEvent.tab()
     expect(document.activeElement).not.toBe(document.body)
   })
@@ -1028,4 +1037,20 @@ describe('the research viewer', () => {
       await within(dialog).findByText(/no page carrying it shows this branch/),
     ).toBeInTheDocument()
   })
+})
+
+it('shows saved writing on a collapsed card and refreshes after editing', async () => {
+  const saved = board()
+  saved.cards[0].entry = {ready: true, stale: false, blurb: {text: 'Saved writing.', stale: false}}
+  loadResearchBoard.mockResolvedValue(saved)
+  render(<SearchResults results={results()} busy={false} onRun={() => {}} />)
+  expect(await screen.findByText('Saved writing.')).toBeVisible()
+  expect(screen.getByText('Blurb ready')).toBeVisible()
+  expect(screen.queryByRole('list', {name: 'Checklist for Example Wings'})).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', {name: 'Edit blurb'}))
+  await screen.findByRole('dialog')
+  loadResearchBoard.mockResolvedValue({...saved, cards: [{...saved.cards[0], entry: {...saved.cards[0].entry, blurb: {text: 'Saved writing.', stale: true}}}]})
+  await userEvent.keyboard('{Escape}')
+  expect(await screen.findByRole('button', {name: 'Review blurb'})).toBeVisible()
+  expect(screen.getByText('Saved writing.')).toBeVisible()
 })

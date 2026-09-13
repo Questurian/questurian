@@ -307,6 +307,37 @@ def view(run_id, candidate_id):
     }
 
 
+def board_entries(run_id):
+    """Saved writing summaries, without opening or creating any workspace."""
+    ensure_tables()
+    from . import entry_blurb
+    entry_blurb.ensure_table()
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            """SELECT b.*, w.text AS blurb_text, w.brief_version AS blurb_brief_version
+            FROM listicle_entry_research_briefs b
+            LEFT JOIN listicle_entry_blurbs w USING (run_id, candidate_id)
+            WHERE b.run_id=?""", (run_id,)
+        ).fetchall()
+    entries = {}
+    for row in rows:
+        try:
+            _, _, _, key = _context(run_id, row["candidate_id"])
+            stale = row["context_key"] != key
+        except (LookupError, ValueError):
+            stale = True
+        slots = json.loads(row["slots"])
+        text = row["blurb_text"] or ""
+        entries[row["candidate_id"]] = {
+            "ready": bool(slots["why_it_belongs"] and slots["what_to_order_or_notice"]),
+            "stale": stale,
+            "blurb": {"text": text, "stale": bool(text) and (
+                stale or row["blurb_brief_version"] != row["version"]
+            )},
+        }
+    return entries
+
+
 def build_prompt(context):
     from pathlib import Path
 

@@ -50,6 +50,7 @@ export function ResearchWorkspace({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [step, setStep] = useState<'research' | 'blurb'>('research')
   const [showPrompt, setShowPrompt] = useState(false)
   const [blurbText, setBlurbText] = useState('')
   useEffect(() => {
@@ -62,6 +63,7 @@ export function ResearchWorkspace({
     void openResearchWorkspace(runId, candidateId)
       .then(async (view) => {
         if (!live) return
+        setStep(view.ready && !view.stale ? 'blurb' : 'research')
         setSaved(view)
         setDraft(view.slots)
         setBlurbText(view.blurb?.text ?? '')
@@ -82,9 +84,18 @@ export function ResearchWorkspace({
     if (!active || !saved?.profile_id) return
     let live = true
     void loadProfileResearch(saved.profile_id)
-      .then(profile => { if (live) setResearch(profile) })
-      .catch(error => { if (live) setError(error instanceof Error ? error.message : 'Could not load sources.') })
-    return () => { live = false }
+      .then((profile) => {
+        if (live) setResearch(profile)
+      })
+      .catch((error) => {
+        if (live)
+          setError(
+            error instanceof Error ? error.message : 'Could not load sources.'
+          )
+      })
+    return () => {
+      live = false
+    }
   }, [active, saved?.profile_id])
 
   async function action(work: () => Promise<void>) {
@@ -141,12 +152,37 @@ export function ResearchWorkspace({
         </p>
       ) : (
         <>
-          <aside className="lp-workspace-tools">
+          <nav className="lp-workspace-tabs" aria-label="Place editor steps">
+            <button
+              aria-pressed={step === 'research'}
+              onClick={() => setStep('research')}
+            >
+              Research
+            </button>
+            <button
+              aria-pressed={step === 'blurb'}
+              onClick={() => setStep('blurb')}
+            >
+              Blurb
+            </button>
+          </nav>
+          <aside className="lp-workspace-tools" hidden={step !== 'research'}>
             <h4>Bring back useful research</h4>
             <p>
               A few concrete details for a short blurb. Use your preferred
               web-enabled model.
             </p>
+            <button
+              className="lp-tool"
+              onClick={() =>
+                void action(async () => {
+                  await navigator.clipboard.writeText(saved.prompt)
+                  setNotice('Prompt copied.')
+                })
+              }
+            >
+              Copy research prompt
+            </button>
             <button
               className="lp-tool"
               onClick={() => setShowPrompt(!showPrompt)}
@@ -161,24 +197,13 @@ export function ResearchWorkspace({
                   value={saved.prompt}
                   rows={12}
                 />
-                <button
-                  className="lp-tool"
-                  onClick={() =>
-                    void action(async () => {
-                      await navigator.clipboard.writeText(saved.prompt)
-                      setNotice('Prompt copied.')
-                    })
-                  }
-                >
-                  Copy prompt
-                </button>
               </>
             )}
             <label>
               Paste research JSON
               <textarea
                 aria-label="Paste research JSON"
-                rows={9}
+                rows={4}
                 value={raw}
                 disabled={busy}
                 onChange={(event) => {
@@ -188,8 +213,8 @@ export function ResearchWorkspace({
                 }}
               />
               <small>
-                Use the code block&apos;s copy button. Links copied from the page
-                are repaired, but the copy button is exact.
+                Use the code block&apos;s copy button. Links copied from the
+                page are repaired, but the copy button is exact.
               </small>
             </label>
             <button
@@ -220,188 +245,6 @@ export function ResearchWorkspace({
               Preview import
             </button>
             {dirty && <p>Save brief edits before previewing an import.</p>}
-          </aside>
-          <div className="lp-workspace-brief">
-            <div className="lp-workspace-heading">
-              <h4>Research brief</h4>
-              <span role="status">
-                {ready ? 'Core details ready' : 'Two core details needed'}
-                {dirty ? ' · unsaved' : ''}
-              </span>
-            </div>
-            <p>
-              Why it belongs + what to order or notice are enough. Add depth
-              only when useful.
-            </p>
-            {saved.stale && (
-              <p role="alert">
-                List context changed since this brief was saved. Review the
-                slots before saving again.
-              </p>
-            )}
-            {fields.map((field, index) => (
-              <label className="lp-workspace-slot" key={field}>
-                <span>
-                  {LABELS[field]}{' '}
-                  <small>{index < 2 ? 'Required' : 'Optional'}</small>
-                </span>
-                <textarea
-                  aria-label={LABELS[field]}
-                  rows={index === 1 ? 4 : 3}
-                  value={printable(draft[field])}
-                  disabled={busy}
-                  onChange={(event) => {
-                    const value = event.target.value
-                    setDraft({
-                      ...draft,
-                      [field]:
-                        field === 'what_to_order_or_notice'
-                          ? value.split('\n')
-                          : value || null
-                    })
-                  }}
-                  onBlur={() => {
-                    if (field === 'what_to_order_or_notice')
-                      setDraft(
-                        (current) =>
-                          current && {
-                            ...current,
-                            what_to_order_or_notice:
-                              current.what_to_order_or_notice
-                                .map((v) => v.trim())
-                                .filter(Boolean)
-                          }
-                      )
-                  }}
-                />
-                {field === 'what_to_order_or_notice' && (
-                  <small>One detail per line.</small>
-                )}
-              </label>
-            ))}
-            <button
-              className="lp-tool"
-              disabled={busy || !dirty}
-              onClick={() =>
-                void action(async () => {
-                  // Blank lines are layout, not details; the server refuses empty ones.
-                  const clean = {
-                    ...draft,
-                    what_to_order_or_notice: draft.what_to_order_or_notice
-                      .map((v) => v.trim())
-                      .filter(Boolean)
-                  }
-                  const changes = Object.fromEntries(
-                    fields
-                      .filter(
-                        (field) =>
-                          JSON.stringify(clean[field]) !==
-                          JSON.stringify(saved.slots[field])
-                      )
-                      .map((field) => [field, clean[field]])
-                  )
-                  await accept(
-                    await saveResearchWorkspace(runId, candidateId, {
-                      version: saved.version,
-                      context_key: saved.context_key,
-                      slots: changes
-                    })
-                  )
-                  setNotice('Research brief saved.')
-                })
-              }
-            >
-              Save brief
-            </button>
-            <BlurbSection
-              saved={saved}
-              text={blurbText}
-              busy={busy}
-              briefDirty={dirty}
-              onText={setBlurbText}
-              onCopy={() =>
-                void action(async () => {
-                  await navigator.clipboard.writeText(saved.blurb?.prompt ?? '')
-                  setNotice('Blurb prompt copied.')
-                })
-              }
-              onSave={() =>
-                void action(async () => {
-                  await accept(
-                    await saveEntryBlurb(runId, candidateId, {
-                      version: saved.blurb?.version ?? 0,
-                      text: blurbText
-                    })
-                  )
-                  setNotice('Blurb saved.')
-                })
-              }
-            />
-          </div>
-          <aside className="lp-workspace-sources">
-            <h4>Source shelf</h4>
-            <p>
-              Useful sources first. Imported facts stay unchecked until
-              verified.
-            </p>
-            {useful.length === 0 && (
-              <p>
-                No brief sources yet. Import a packet or keep findings in
-                Automated research.
-              </p>
-            )}
-            {useful.map((finding) => (
-              <div className="lp-workspace-source" key={finding.finding_id}>
-                <p>{finding.text}</p>
-                <small>
-                  {finding.validation.replace(/_/g, ' ')} ·{' '}
-                  {finding.event_date ||
-                    finding.source_published_at ||
-                    'date unknown'}
-                </small>
-                {finding.evidence.map(
-                  (source, index) =>
-                    source.url && (
-                      <a
-                        key={index}
-                        href={source.url}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                      >
-                        {source.publisher || 'Open source'}
-                      </a>
-                    )
-                )}
-              </div>
-            ))}
-            {unused.length > 0 && (
-              <details>
-                <summary>Other retained material ({unused.length})</summary>
-                {unused.map((finding) => (
-                  <p key={finding.finding_id}>
-                    {finding.text} <small>({finding.curation})</small>
-                  </p>
-                ))}
-              </details>
-            )}
-            {!!saved.imports?.length && (
-              <details>
-                <summary>Import notes ({saved.imports.length})</summary>
-                {saved.imports.map((item) => (
-                  <div key={item.import_key}>
-                    <small>{item.created_at}</small>
-                    {item.stale_or_rejected_claims.map((claim, i) => (
-                      <p key={i}>
-                        {claim.claim} — {claim.reason}
-                      </p>
-                    ))}
-                    {item.open_questions.map((question, i) => (
-                      <p key={i}>Open: {question}</p>
-                    ))}
-                  </div>
-                ))}
-              </details>
-            )}
           </aside>
           {preview && (
             <section
@@ -522,6 +365,221 @@ export function ResearchWorkspace({
               </button>
             </section>
           )}
+          <div className="lp-workspace-brief">
+            <div hidden={step !== 'research'}>
+              <div className="lp-workspace-heading">
+                <h4>Research brief</h4>
+                <span role="status">
+                  {ready ? 'Core details ready' : 'Two core details needed'}
+                  {dirty ? ' · unsaved' : ''}
+                </span>
+              </div>
+              <p>
+                Why it belongs + what to order or notice are enough. Add depth
+                only when useful.
+              </p>
+              {saved.stale && (
+                <p role="alert">
+                  List context changed since this brief was saved. Review the
+                  slots before saving again.
+                </p>
+              )}
+              {fields.slice(0, 2).map((field, index) => (
+                <label className="lp-workspace-slot" key={field}>
+                  <span>
+                    {LABELS[field]}{' '}
+                    <small>{index < 2 ? 'Required' : 'Optional'}</small>
+                  </span>
+                  <textarea
+                    aria-label={LABELS[field]}
+                    rows={index === 1 ? 4 : 3}
+                    value={printable(draft[field])}
+                    disabled={busy}
+                    onChange={(event) => {
+                      const value = event.target.value
+                      setDraft({
+                        ...draft,
+                        [field]:
+                          field === 'what_to_order_or_notice'
+                            ? value.split('\n')
+                            : value || null
+                      })
+                    }}
+                    onBlur={() => {
+                      if (field === 'what_to_order_or_notice')
+                        setDraft(
+                          (current) =>
+                            current && {
+                              ...current,
+                              what_to_order_or_notice:
+                                current.what_to_order_or_notice
+                                  .map((v) => v.trim())
+                                  .filter(Boolean)
+                            }
+                        )
+                    }}
+                  />
+                  {field === 'what_to_order_or_notice' && (
+                    <small>One detail per line.</small>
+                  )}
+                </label>
+              ))}
+              <details>
+                <summary>Optional details</summary>
+                {fields.slice(2).map((field) => (
+                  <label className="lp-workspace-slot" key={field}>
+                    <span>{LABELS[field]}</span>
+                    <textarea
+                      aria-label={LABELS[field]}
+                      rows={3}
+                      value={printable(draft[field])}
+                      disabled={busy}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          [field]: event.target.value || null
+                        })
+                      }
+                    />
+                  </label>
+                ))}
+              </details>
+              <button
+                className="lp-tool"
+                disabled={busy || (!dirty && !saved.stale)}
+                onClick={() =>
+                  void action(async () => {
+                    // Blank lines are layout, not details; the server refuses empty ones.
+                    const clean = {
+                      ...draft,
+                      what_to_order_or_notice: draft.what_to_order_or_notice
+                        .map((v) => v.trim())
+                        .filter(Boolean)
+                    }
+                    const changes = Object.fromEntries(
+                      fields
+                        .filter(
+                          (field) =>
+                            JSON.stringify(clean[field]) !==
+                            JSON.stringify(saved.slots[field])
+                        )
+                        .map((field) => [field, clean[field]])
+                    )
+                    await accept(
+                      await saveResearchWorkspace(runId, candidateId, {
+                        version: saved.version,
+                        context_key: saved.context_key,
+                        slots: changes
+                      })
+                    )
+                    setNotice('Research brief saved.')
+                  })
+                }
+              >
+                Save brief
+              </button>
+              {saved.ready && !dirty && (
+                <button className="lp-tool" onClick={() => setStep('blurb')}>
+                  Continue to blurb
+                </button>
+              )}
+            </div>
+            <div hidden={step !== 'blurb'}>
+              <BlurbSection
+                saved={saved}
+                text={blurbText}
+                busy={busy}
+                briefDirty={dirty}
+                onText={setBlurbText}
+                onCopy={() =>
+                  void action(async () => {
+                    await navigator.clipboard.writeText(
+                      saved.blurb?.prompt ?? ''
+                    )
+                    setNotice('Blurb prompt copied.')
+                  })
+                }
+                onSave={() =>
+                  void action(async () => {
+                    await accept(
+                      await saveEntryBlurb(runId, candidateId, {
+                        version: saved.blurb?.version ?? 0,
+                        text: blurbText
+                      })
+                    )
+                    setNotice('Blurb saved.')
+                  })
+                }
+              />
+            </div>
+          </div>
+          <details className="lp-workspace-sources">
+            <summary>Supporting research</summary>
+            <h4>Source shelf</h4>
+            <p>
+              Useful sources first. Imported facts stay unchecked until
+              verified.
+            </p>
+            {useful.length === 0 && (
+              <p>
+                No brief sources yet. Import a packet or keep findings in
+                Automated research.
+              </p>
+            )}
+            {useful.map((finding) => (
+              <div className="lp-workspace-source" key={finding.finding_id}>
+                <p>{finding.text}</p>
+                <small>
+                  {finding.validation.replace(/_/g, ' ')} ·{' '}
+                  {finding.event_date ||
+                    finding.source_published_at ||
+                    'date unknown'}
+                </small>
+                {finding.evidence.map(
+                  (source, index) =>
+                    source.url && (
+                      <a
+                        key={index}
+                        href={source.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        {source.publisher || 'Open source'}
+                      </a>
+                    )
+                )}
+              </div>
+            ))}
+            {unused.length > 0 && (
+              <details>
+                <summary>Other retained material ({unused.length})</summary>
+                {unused.map((finding) => (
+                  <p key={finding.finding_id}>
+                    {finding.text} <small>({finding.curation})</small>
+                  </p>
+                ))}
+              </details>
+            )}
+            {!!saved.imports?.length && (
+              <details>
+                <summary>Import notes ({saved.imports.length})</summary>
+                {saved.imports.map((item) => (
+                  <div key={item.import_key}>
+                    <small>{item.created_at}</small>
+                    {item.stale_or_rejected_claims.map((claim, i) => (
+                      <p key={i}>
+                        {claim.claim} — {claim.reason}
+                      </p>
+                    ))}
+                    {item.open_questions.map((question, i) => (
+                      <p key={i}>Open: {question}</p>
+                    ))}
+                  </div>
+                ))}
+              </details>
+            )}
+          </details>
+
         </>
       )}
     </section>
@@ -548,14 +606,14 @@ function BlurbSection({
   const blurb = saved.blurb
   if (!blurb) return null
   const changed = text.trim() !== blurb.text
-  const canCopy = saved.ready && !briefDirty
+  const canCopy = saved.ready && !saved.stale && !briefDirty
   return (
     <section className="lp-workspace-blurb" aria-label="Blurb">
       <div className="lp-workspace-heading">
         <h4>Blurb</h4>
         <span>
-          {blurb.text ? 'Saved' : 'Not written yet'}
-          {blurb.stale ? ' · brief changed since' : ''}
+          {blurb.text ? 'Blurb ready' : 'Not written yet'}
+          {blurb.stale || saved.stale ? ' · review needed' : ''}
         </span>
       </div>
       <p>
@@ -565,6 +623,9 @@ function BlurbSection({
       <button className="lp-tool" disabled={busy || !canCopy} onClick={onCopy}>
         Copy blurb prompt
       </button>
+      {saved.stale && (
+        <p>List context changed. Review and save research first.</p>
+      )}
       {!saved.ready && <p>Fill in the two required details first.</p>}
       {briefDirty && saved.ready && (
         <p>Save brief edits first so the prompt matches them.</p>
@@ -585,10 +646,16 @@ function BlurbSection({
       />
       <button
         className="lp-tool"
-        disabled={busy || briefDirty || !changed || !text.trim()}
+        disabled={
+          busy ||
+          briefDirty ||
+          saved.stale ||
+          (!changed && !blurb.stale) ||
+          !text.trim()
+        }
         onClick={onSave}
       >
-        Save blurb
+        {blurb.stale && !changed ? 'Confirm blurb' : 'Save blurb'}
       </button>
     </section>
   )

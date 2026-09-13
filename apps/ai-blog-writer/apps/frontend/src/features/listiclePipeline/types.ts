@@ -75,7 +75,6 @@ export interface ListicleGrillState {
   pending: ListicleGrillPending | null
 }
 
-
 /**
  * The agreement, in the form the searches actually run from.
  *
@@ -137,7 +136,6 @@ export interface ListicleOrder {
   summary: string
   angles: ListicleOrderAngle[]
 }
-
 
 /**
  * What the search order found.
@@ -488,7 +486,12 @@ export interface ListicleProfileSummary {
   last_research_at: string
   last_state: string
   angles: number
-  other_runs: { run_id: string; candidate_id: string; name: string; linked_at: string }[]
+  other_runs: {
+    run_id: string
+    candidate_id: string
+    name: string
+    linked_at: string
+  }[]
 }
 
 /** `completed_empty` is not a failure: the request ran and nothing is
@@ -667,6 +670,11 @@ export interface ListicleAttemptDetail extends ListicleAttemptSummary {
 }
 
 export interface ListicleResearchCard {
+  entry?: {
+    ready: boolean
+    stale: boolean
+    blurb: { text: string; stale: boolean }
+  } | null
   candidate_id: string
   name: string
   district: string
@@ -821,7 +829,12 @@ export interface ListicleProfileResearch {
   history: ListicleAttemptSummary[]
   coverage: { topic: string; category: string; state: string; note: string }[]
   open_questions: string[]
-  runs: { run_id: string; candidate_id: string; name: string; linked_at: string }[]
+  runs: {
+    run_id: string
+    candidate_id: string
+    name: string
+    linked_at: string
+  }[]
 }
 
 export interface EntryResearchSlots {

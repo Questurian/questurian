@@ -660,3 +660,34 @@
   max-height: 20rem;
   overflow: auto;
 }
+
+/* Writing takes over once location preparation is complete. */
+.lp-candidates .lp-entry {
+  height: auto;
+  min-height: 0;
+  padding: 1.5rem 1.75rem;
+  background: #EFE9DE;
+}
+.lp-entry-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.lp-entry-status { color: #3B5BDB; font-size: .8rem; font-weight: 600; margin: 0 0 .6rem; }
+.lp-entry-text { white-space: pre-wrap; max-width: 72ch; font-size: 1.05rem; line-height: 1.75; margin: 1.2rem 0; }
+.lp-candidates .lp-entry-written { border-left: 4px solid #3B5BDB; }
+.lp-more-tools { margin: .75rem 0; font-size: .85rem; }
+.lp-more-tools summary, .lp-workspace summary { cursor: pointer; padding: .5rem 0; }
+.lp-workspace { display: block; max-width: 760px; margin: 0 auto; }
+.lp-workspace [hidden] { display: none; }
+.lp-workspace-tools { margin-bottom: 1.5rem; }
+.lp-workspace-tabs [aria-pressed='true'] { border-bottom-color: #3B5BDB; color: #3B5BDB; }
+.lp-workspace-sources { border-top: 1px solid #c9c2b8; margin-top: 1.5rem; padding-top: .5rem; }
+.lp-workspace-blurb { margin-top: 0; border-top: 0; }
+.lp-workspace-preview { margin-top: 1.5rem; }
+@media (max-width: 650px) {
+  .lp-entry-heading { flex-direction: column; }
+  .lp-candidates .lp-entry { padding: 1rem; }
+}
+.lp-entry::after { display: none; }
+.lp-entry .lp-tool { background: #EFE9DE; }
+.lp-candidates .lp-candidate-done { --lp-done: #3B5BDB; background: #EFE9DE; border-color: #3B5BDB; box-shadow: none; }
+.lp-candidate-done::after { display: none; }
+.lp-tick-done { background: #3B5BDB; }
+.lp-entry .lp-link-button { color: #3B5BDB; }

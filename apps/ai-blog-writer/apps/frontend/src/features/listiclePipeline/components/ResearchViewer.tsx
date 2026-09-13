@@ -6,13 +6,13 @@ import {
   editPossibleAngle,
   editProfileFinding,
   loadProfileResearch,
-  loadResearchAttempt,
+  loadResearchAttempt
 } from '../api'
 import type {
   ListicleAttemptDetail,
   ListicleFinding,
   ListicleProfileResearch,
-  ListicleReviewsBudget,
+  ListicleReviewsBudget
 } from '../types'
 
 /**
@@ -44,7 +44,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   recognition: 'recognition',
   practical: 'practical',
   caveats: 'caveats',
-  other: 'other',
+  other: 'other'
 }
 
 /** How a finding ages, said in words a person can act on rather than in the
@@ -56,13 +56,13 @@ const TEMPORAL_LABELS: Record<string, string> = {
   current_role: 'Who works there now — may need re-checking',
   promotion: 'An offer, with an end',
   observation: 'One dated observation',
-  unknown: 'Not said',
+  unknown: 'Not said'
 }
 
 const CURATION_LABELS: Record<string, string> = {
   unreviewed: 'Unreviewed',
   kept: 'Kept',
-  discarded: 'Discarded',
+  discarded: 'Discarded'
 }
 
 /** What the checks made of a finding. Deliberately not worded as truth:
@@ -72,7 +72,7 @@ const VALIDATION_LABELS: Record<string, string> = {
   evidence_ready: 'Checks out',
   review_needed: 'Needs a look',
   unsupported: 'Nothing backs it',
-  not_checked: 'Unchecked',
+  not_checked: 'Unchecked'
 }
 
 const VALIDATION_WHY: Record<string, string> = {
@@ -83,7 +83,7 @@ const VALIDATION_WHY: Record<string, string> = {
   unsupported:
     'No source this request read carries the passage it was credited to.',
   not_checked:
-    'Nothing has checked this — somebody typed it, or it was stored before checking existed.',
+    'Nothing has checked this — somebody typed it, or it was stored before checking existed.'
 }
 
 const SPEAKER_LABELS: Record<string, string> = {
@@ -91,13 +91,13 @@ const SPEAKER_LABELS: Record<string, string> = {
   publication: 'a publication',
   named_reviewer: 'a named reviewer',
   anonymous_customer: 'an unnamed customer',
-  aggregator: 'a listings platform',
+  aggregator: 'a listings platform'
 }
 
 const CHANNEL_LABELS: Record<string, string> = {
   dine_in: 'at the table',
   delivery: 'on a delivery platform',
-  takeaway: 'for takeaway',
+  takeaway: 'for takeaway'
 }
 
 interface ResearchViewerProps {
@@ -138,10 +138,12 @@ export function ResearchViewer({
   reviewsBudget,
   subjectTerms,
   onGapResearch,
-  onClose,
+  onClose
 }: ResearchViewerProps) {
   const [profileId, setProfileId] = useState(initialProfileId)
-  const [tab, setTab] = useState<'workspace' | 'automated'>(runId && candidateId ? 'workspace' : 'automated')
+  const [tab, setTab] = useState<'workspace' | 'automated'>(
+    runId && candidateId ? 'workspace' : 'automated'
+  )
   const [research, setResearch] = useState<ListicleProfileResearch | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -160,24 +162,27 @@ export function ResearchViewer({
   }, [onClose])
 
   useEffect(() => {
-    if (!profileId) { setLoading(false); return }
+    if (!profileId) {
+      setLoading(false)
+      return
+    }
     let live = true
     setLoading(true)
     void loadProfileResearch(profileId)
-      .then(found => {
+      .then((found) => {
         if (live) {
           setResearch(found)
           setError(null)
         }
       })
-      .catch(caught =>
+      .catch((caught) =>
         live
           ? setError(
               caught instanceof Error
                 ? caught.message
-                : 'This research could not be read.',
+                : 'This research could not be read.'
             )
-          : undefined,
+          : undefined
       )
       .finally(() => (live ? setLoading(false) : undefined))
     return () => {
@@ -185,51 +190,56 @@ export function ResearchViewer({
     }
   }, [profileId, researching, tab])
 
-  const change = useCallback(async (work: () => Promise<ListicleProfileResearch>) => {
-    setBusy(true)
-    setError(null)
-    try {
-      setResearch(await work())
-      return true
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'That could not be saved.')
-      return false
-    } finally {
-      setBusy(false)
-    }
-  }, [])
+  const change = useCallback(
+    async (work: () => Promise<ListicleProfileResearch>) => {
+      setBusy(true)
+      setError(null)
+      try {
+        setResearch(await work())
+        return true
+      } catch (caught) {
+        setError(
+          caught instanceof Error ? caught.message : 'That could not be saved.'
+        )
+        return false
+      } finally {
+        setBusy(false)
+      }
+    },
+    []
+  )
 
   const findings = useMemo(() => {
     if (!research) return []
     return allTopics
       ? research.findings
-      : research.findings.filter(finding => finding.topics.includes(topic))
+      : research.findings.filter((finding) => finding.topics.includes(topic))
   }, [research, allTopics, topic])
 
   const otherTopics = useMemo(
-    () => (research?.topics ?? []).filter(name => name !== topic),
-    [research, topic],
+    () => (research?.topics ?? []).filter((name) => name !== topic),
+    [research, topic]
   )
 
   const unattributed = findings.filter(
-    finding => finding.attribution === 'incomplete',
+    (finding) => finding.attribution === 'incomplete'
   ).length
   // Counted here rather than taken from the attempt, because this table can be
   // filtered to one topic and the attempt's number is about the whole packet.
   const ready = findings.filter(
-    finding => finding.validation === 'evidence_ready',
+    (finding) => finding.validation === 'evidence_ready'
   ).length
   const needsLook = findings.filter(
-    finding => finding.validation === 'review_needed',
+    (finding) => finding.validation === 'review_needed'
   ).length
   const unsupported = findings.filter(
-    finding => finding.validation === 'unsupported',
+    (finding) => finding.validation === 'unsupported'
   ).length
 
   return (
     <div
       className="lp-modal-overlay"
-      onClick={event => event.target === event.currentTarget && onClose()}
+      onClick={(event) => event.target === event.currentTarget && onClose()}
     >
       <div
         className={`lp-modal lp-research${tab === 'workspace' ? ' lp-research-workbench' : ''}`}
@@ -242,7 +252,6 @@ export function ResearchViewer({
             <h3 className="lp-modal-title">{placeName}</h3>
             <p className="lp-muted lp-modal-sub">
               {branch || research?.district || 'branch not recorded'}
-              {research?.place_id ? ` · ${research.place_id}` : ''}
             </p>
           </div>
           <button
@@ -256,176 +265,218 @@ export function ResearchViewer({
           </button>
         </header>
 
-        {runId && candidateId && <>
-          <div role="tablist" aria-label="Research views" className="lp-workspace-tabs">
-            <button role="tab" aria-selected={tab === 'workspace'} aria-controls="research-workspace-panel" id="research-workspace-tab" onClick={() => setTab('workspace')}>Research workspace</button>
-            <button role="tab" aria-selected={tab === 'automated'} aria-controls="research-automated-panel" id="research-automated-tab" onClick={() => setTab('automated')}>Automated research (existing)</button>
-          </div>
-          <div role="tabpanel" id="research-workspace-panel" aria-labelledby="research-workspace-tab" hidden={tab !== 'workspace'}>
-            <ResearchWorkspace runId={runId} candidateId={candidateId} onProfile={setProfileId} active={tab === 'workspace'} />
-          </div>
-        </>}
-        <div role="tabpanel" id="research-automated-panel" aria-labelledby={runId ? 'research-automated-tab' : undefined} hidden={tab !== 'automated'}>
-        {error && (
-          <p className="lp-error" role="alert">
-            {error}
-          </p>
-        )}
-
-        <div className="lp-research-filter" role="group" aria-label="Which topic">
-          <button
-            type="button"
-            className={allTopics ? 'lp-chip' : 'lp-chip lp-chip-on'}
-            onClick={() => setAllTopics(false)}
-          >
-            {topicLabel || 'This list'}
-          </button>
-          <button
-            type="button"
-            className={allTopics ? 'lp-chip lp-chip-on' : 'lp-chip'}
-            onClick={() => setAllTopics(true)}
-          >
-            All topics
-            {otherTopics.length > 0 && (
-              <span className="lp-muted"> · {otherTopics.join(', ')}</span>
-            )}
-          </button>
-        </div>
-
-        {loading ? (
-          <p className="lp-muted" role="status">
-            Reading what is saved…
-          </p>
-        ) : (
+        {runId && candidateId && (
           <>
-            <p className="lp-muted lp-research-count">
-              {findings.length} {findings.length === 1 ? 'finding' : 'findings'}
-              {' · '}
-              <strong>{ready}</strong>{' '}
-              {ready === 1 ? 'checks out' : 'check out'}
-              {needsLook > 0 && <> · {needsLook} need a look</>}
-              {unsupported > 0 && <> · {unsupported} unsupported</>}
-              {unattributed > 0 && (
-                <>
-                  {' · '}
-                  <strong>{unattributed}</strong> with no source of their own
-                </>
-              )}
-              {research?.open_questions.length ? (
-                <> · {research.open_questions.length} open questions</>
-              ) : null}
-              . Counts, not a score: nothing here has judged whether this place
-              is worth writing about, and &ldquo;checks out&rdquo; means the
-              quoted passage is in the page that was read.
-            </p>
-
-            {findings.length === 0 ? (
-              <p className="lp-muted">
-                Nothing saved under this topic yet. Add what you know, or
-                research the place from its card.
-              </p>
-            ) : (
-              <div className="lp-research-table-wrap">
-                <table className="lp-research-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Finding</th>
-                      <th scope="col">What it is about</th>
-                      <th scope="col">Source</th>
-                      <th scope="col">Dates</th>
-                      <th scope="col">State</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {findings.map(finding => (
-                      <FindingRow
-                        key={finding.finding_id}
-                        finding={finding}
-                        open={openRow === finding.finding_id}
-                        busy={busy}
-                        onToggle={() =>
-                          setOpenRow(
-                            openRow === finding.finding_id ? null : finding.finding_id,
-                          )
-                        }
-                        onCurate={state =>
-                          change(() =>
-                            editProfileFinding(profileId, finding.finding_id, {
-                              curation: state,
-                              expected_version: finding.version,
-                            }),
-                          )
-                        }
-                        onEdit={changes =>
-                          change(() =>
-                            editProfileFinding(profileId, finding.finding_id, {
-                              ...changes,
-                              expected_version: finding.version,
-                            }),
-                          )
-                        }
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            <details className="lp-more-tools">
+              <summary>More tools</summary>
+              <button
+                className="lp-tool"
+                onClick={() =>
+                  setTab(tab === 'workspace' ? 'automated' : 'workspace')
+                }
+              >
+                {tab === 'workspace'
+                  ? 'Automated research'
+                  : 'Back to place editor'}
+              </button>
+            </details>
+            {tab === 'automated' && (
+              <button className="lp-tool" onClick={() => setTab('workspace')}>
+                Back to place editor
+              </button>
             )}
-
-            <AddFinding
-              busy={busy}
-              topic={topic}
-              onAdd={body => change(() => addProfileFinding(profileId, body))}
-            />
-
-            <PossibleAngles
-              research={research}
-              busy={busy}
-              topic={topic}
-              onAdd={label =>
-                change(() => addPossibleAngle(profileId, { label, topic }))
-              }
-              onArchive={angleId =>
-                change(() =>
-                  editPossibleAngle(profileId, angleId, { archived: true }),
-                )
-              }
-            />
-
-            {research && research.coverage.length > 0 && (
-              <details className="lp-research-block">
-                <summary>What the research reached, and what it did not</summary>
-                <ul className="lp-research-coverage">
-                  {research.coverage.map((note, index) => (
-                    <li key={`${note.category}-${index}`}>
-                      <span className="lp-research-state">{note.state}</span>{' '}
-                      {CATEGORY_LABELS[note.category] ?? note.category}
-                      {note.note && <span className="lp-muted"> — {note.note}</span>}
-                    </li>
-                  ))}
-                </ul>
-                {research.open_questions.length > 0 && (
-                  <ul className="lp-research-questions">
-                    {research.open_questions.map((question, index) => (
-                      <li key={index}>{question}</li>
-                    ))}
-                  </ul>
-                )}
-              </details>
-            )}
-
-            <SubjectTerms terms={subjectTerms ?? []} />
-
-            {reviewsBudget && <ReviewsAllowance budget={reviewsBudget} />}
-
-            <GapRequest
-              canResearch={canResearch}
-              researching={researching}
-              onAsk={onGapResearch}
-            />
-
-            {research && <History research={research} />}
+            <div hidden={tab !== 'workspace'}>
+              <ResearchWorkspace
+                runId={runId}
+                candidateId={candidateId}
+                onProfile={setProfileId}
+                active={tab === 'workspace'}
+              />
+            </div>
           </>
         )}
+        <div id="research-automated-panel" hidden={tab !== 'automated'}>
+          {error && (
+            <p className="lp-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <div
+            className="lp-research-filter"
+            role="group"
+            aria-label="Which topic"
+          >
+            <button
+              type="button"
+              className={allTopics ? 'lp-chip' : 'lp-chip lp-chip-on'}
+              onClick={() => setAllTopics(false)}
+            >
+              {topicLabel || 'This list'}
+            </button>
+            <button
+              type="button"
+              className={allTopics ? 'lp-chip lp-chip-on' : 'lp-chip'}
+              onClick={() => setAllTopics(true)}
+            >
+              All topics
+              {otherTopics.length > 0 && (
+                <span className="lp-muted"> · {otherTopics.join(', ')}</span>
+              )}
+            </button>
+          </div>
+
+          {loading ? (
+            <p className="lp-muted" role="status">
+              Reading what is saved…
+            </p>
+          ) : (
+            <>
+              <p className="lp-muted lp-research-count">
+                {findings.length}{' '}
+                {findings.length === 1 ? 'finding' : 'findings'}
+                {' · '}
+                <strong>{ready}</strong>{' '}
+                {ready === 1 ? 'checks out' : 'check out'}
+                {needsLook > 0 && <> · {needsLook} need a look</>}
+                {unsupported > 0 && <> · {unsupported} unsupported</>}
+                {unattributed > 0 && (
+                  <>
+                    {' · '}
+                    <strong>{unattributed}</strong> with no source of their own
+                  </>
+                )}
+                {research?.open_questions.length ? (
+                  <> · {research.open_questions.length} open questions</>
+                ) : null}
+                . Counts, not a score: nothing here has judged whether this
+                place is worth writing about, and &ldquo;checks out&rdquo; means
+                the quoted passage is in the page that was read.
+              </p>
+
+              {findings.length === 0 ? (
+                <p className="lp-muted">
+                  Nothing saved under this topic yet. Add what you know, or
+                  research the place from its card.
+                </p>
+              ) : (
+                <div className="lp-research-table-wrap">
+                  <table className="lp-research-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Finding</th>
+                        <th scope="col">What it is about</th>
+                        <th scope="col">Source</th>
+                        <th scope="col">Dates</th>
+                        <th scope="col">State</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {findings.map((finding) => (
+                        <FindingRow
+                          key={finding.finding_id}
+                          finding={finding}
+                          open={openRow === finding.finding_id}
+                          busy={busy}
+                          onToggle={() =>
+                            setOpenRow(
+                              openRow === finding.finding_id
+                                ? null
+                                : finding.finding_id
+                            )
+                          }
+                          onCurate={(state) =>
+                            change(() =>
+                              editProfileFinding(
+                                profileId,
+                                finding.finding_id,
+                                {
+                                  curation: state,
+                                  expected_version: finding.version
+                                }
+                              )
+                            )
+                          }
+                          onEdit={(changes) =>
+                            change(() =>
+                              editProfileFinding(
+                                profileId,
+                                finding.finding_id,
+                                {
+                                  ...changes,
+                                  expected_version: finding.version
+                                }
+                              )
+                            )
+                          }
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <AddFinding
+                busy={busy}
+                topic={topic}
+                onAdd={(body) =>
+                  change(() => addProfileFinding(profileId, body))
+                }
+              />
+
+              <PossibleAngles
+                research={research}
+                busy={busy}
+                topic={topic}
+                onAdd={(label) =>
+                  change(() => addPossibleAngle(profileId, { label, topic }))
+                }
+                onArchive={(angleId) =>
+                  change(() =>
+                    editPossibleAngle(profileId, angleId, { archived: true })
+                  )
+                }
+              />
+
+              {research && research.coverage.length > 0 && (
+                <details className="lp-research-block">
+                  <summary>
+                    What the research reached, and what it did not
+                  </summary>
+                  <ul className="lp-research-coverage">
+                    {research.coverage.map((note, index) => (
+                      <li key={`${note.category}-${index}`}>
+                        <span className="lp-research-state">{note.state}</span>{' '}
+                        {CATEGORY_LABELS[note.category] ?? note.category}
+                        {note.note && (
+                          <span className="lp-muted"> — {note.note}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  {research.open_questions.length > 0 && (
+                    <ul className="lp-research-questions">
+                      {research.open_questions.map((question, index) => (
+                        <li key={index}>{question}</li>
+                      ))}
+                    </ul>
+                  )}
+                </details>
+              )}
+
+              <SubjectTerms terms={subjectTerms ?? []} />
+
+              {reviewsBudget && <ReviewsAllowance budget={reviewsBudget} />}
+
+              <GapRequest
+                canResearch={canResearch}
+                researching={researching}
+                onAsk={onGapResearch}
+              />
+
+              {research && <History research={research} />}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -444,7 +495,7 @@ function FindingRow({
   busy,
   onToggle,
   onCurate,
-  onEdit,
+  onEdit
 }: {
   finding: ListicleFinding
   open: boolean
@@ -473,7 +524,7 @@ function FindingRow({
                 className="lp-research-textarea"
                 value={draft}
                 aria-label={`Correct the finding: ${finding.text}`}
-                onChange={event => setDraft(event.target.value)}
+                onChange={(event) => setDraft(event.target.value)}
               />
               <div className="lp-research-edit-actions">
                 <button
@@ -513,7 +564,7 @@ function FindingRow({
           <span className="lp-research-kind">{finding.kind}</span>
           <span className="lp-muted">
             {finding.categories
-              .map(key => CATEGORY_LABELS[key] ?? key)
+              .map((key) => CATEGORY_LABELS[key] ?? key)
               .join(', ')}
           </span>
           <span className="lp-muted">{finding.topics.join(', ')}</span>
@@ -533,7 +584,10 @@ function FindingRow({
             <span className="lp-research-warn">No source of its own</span>
           )}
           {finding.evidence.length > 1 && (
-            <span className="lp-muted"> +{finding.evidence.length - 1} more</span>
+            <span className="lp-muted">
+              {' '}
+              +{finding.evidence.length - 1} more
+            </span>
           )}
         </td>
         <td className="lp-research-meta">
@@ -555,7 +609,9 @@ function FindingRow({
             )}
         </td>
         <td className="lp-research-meta">
-          <span className={`lp-research-curation lp-research-${finding.curation}`}>
+          <span
+            className={`lp-research-curation lp-research-${finding.curation}`}
+          >
             {CURATION_LABELS[finding.curation] ?? finding.curation}
           </span>
           {/* What the checks made of it, beside what a person decided about
@@ -592,7 +648,7 @@ function FindingRow({
             <button
               type="button"
               className="lp-link-button"
-              onClick={() => setEditing(value => !value)}
+              onClick={() => setEditing((value) => !value)}
             >
               Edit
             </button>
@@ -603,13 +659,17 @@ function FindingRow({
         <tr className="lp-research-detail">
           <td colSpan={5}>
             <p className="lp-muted">
-              {TEMPORAL_LABELS[finding.temporal_type] ?? finding.temporal_type} ·{' '}
+              {TEMPORAL_LABELS[finding.temporal_type] ?? finding.temporal_type}{' '}
+              ·{' '}
               {finding.scope === 'branch'
                 ? 'about this branch'
                 : finding.scope === 'brand'
                   ? 'about the business as a whole, not this branch'
                   : 'branch or brand not said'}{' '}
-              · {finding.origin === 'operator' ? 'typed by a person' : 'from research'}
+              ·{' '}
+              {finding.origin === 'operator'
+                ? 'typed by a person'
+                : 'from research'}
               {finding.who_said_it !== 'unknown' && (
                 <>
                   {' · said by '}
@@ -618,10 +678,13 @@ function FindingRow({
                 </>
               )}
               {finding.channel !== 'unknown' && (
-                <> · seen {CHANNEL_LABELS[finding.channel] ?? finding.channel}</>
+                <>
+                  {' '}
+                  · seen {CHANNEL_LABELS[finding.channel] ?? finding.channel}
+                </>
               )}
             </p>
-            {finding.evidence.map(item => (
+            {finding.evidence.map((item) => (
               <div key={item.source_id} className="lp-research-evidence">
                 <p className="lp-research-excerpt">
                   {item.supporting_excerpt || (
@@ -640,7 +703,11 @@ function FindingRow({
                   {item.url && (
                     <>
                       {' · '}
-                      <a href={item.url} target="_blank" rel="noreferrer noopener">
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
                         open the source
                       </a>
                     </>
@@ -668,7 +735,7 @@ function FindingRow({
             )}
             {finding.revisions.length > 0 && (
               <ul className="lp-research-revisions">
-                {finding.revisions.map(revision => (
+                {finding.revisions.map((revision) => (
                   <li key={revision.revision_id}>
                     v{revision.version} · {revision.changed_at.slice(0, 16)} ·{' '}
                     {revision.editor || 'staff'} changed{' '}
@@ -701,7 +768,7 @@ function DateLine({ label, value }: { label: string; value: string }) {
 function AddFinding({
   busy,
   topic,
-  onAdd,
+  onAdd
 }: {
   busy: boolean
   topic: string
@@ -730,7 +797,7 @@ function AddFinding({
   return (
     <form
       className="lp-research-form"
-      onSubmit={async event => {
+      onSubmit={async (event) => {
         event.preventDefault()
         const saved = await onAdd({
           text: text.trim(),
@@ -742,7 +809,7 @@ function AddFinding({
           source_publisher: publisher.trim(),
           source_published_at: publishedAt,
           scope: 'branch',
-          temporal_type: sourceUrl.trim() ? 'observation' : 'observation',
+          temporal_type: sourceUrl.trim() ? 'observation' : 'observation'
         })
         if (saved) {
           setText('')
@@ -762,7 +829,7 @@ function AddFinding({
         className="lp-research-textarea"
         value={text}
         placeholder="The wings come in a rocoto glaze made in the kitchen, and a portion is eight."
-        onChange={event => setText(event.target.value)}
+        onChange={(event) => setText(event.target.value)}
       />
       <p className="lp-muted">
         "Excellent hidden gem" is an opinion about the place, not something
@@ -771,7 +838,10 @@ function AddFinding({
       <div className="lp-research-fields">
         <label className="lp-research-field">
           <span>What kind</span>
-          <select value={kind} onChange={event => setKind(event.target.value)}>
+          <select
+            value={kind}
+            onChange={(event) => setKind(event.target.value)}
+          >
             {[
               'signature',
               'review',
@@ -782,8 +852,8 @@ function AddFinding({
               'award',
               'recognition',
               'setting',
-              'other',
-            ].map(option => (
+              'other'
+            ].map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
@@ -794,7 +864,7 @@ function AddFinding({
           <span>What it is about</span>
           <select
             value={category}
-            onChange={event => setCategory(event.target.value)}
+            onChange={(event) => setCategory(event.target.value)}
           >
             {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
               <option key={key} value={key}>
@@ -808,7 +878,7 @@ function AddFinding({
           <input
             type="date"
             value={observedAt}
-            onChange={event => setObservedAt(event.target.value)}
+            onChange={(event) => setObservedAt(event.target.value)}
           />
         </label>
       </div>
@@ -819,7 +889,7 @@ function AddFinding({
             type="url"
             value={sourceUrl}
             placeholder="Leave empty if this is your own observation"
-            onChange={event => setSourceUrl(event.target.value)}
+            onChange={(event) => setSourceUrl(event.target.value)}
           />
         </label>
         <label className="lp-research-field">
@@ -827,7 +897,7 @@ function AddFinding({
           <input
             type="text"
             value={publisher}
-            onChange={event => setPublisher(event.target.value)}
+            onChange={(event) => setPublisher(event.target.value)}
           />
         </label>
         <label className="lp-research-field">
@@ -835,12 +905,16 @@ function AddFinding({
           <input
             type="date"
             value={publishedAt}
-            onChange={event => setPublishedAt(event.target.value)}
+            onChange={(event) => setPublishedAt(event.target.value)}
           />
         </label>
       </div>
       <div className="lp-research-edit-actions">
-        <button type="submit" className="lp-tool" disabled={busy || text.trim().length < 8}>
+        <button
+          type="submit"
+          className="lp-tool"
+          disabled={busy || text.trim().length < 8}
+        >
           Save this finding
         </button>
         <button
@@ -862,7 +936,7 @@ function PossibleAngles({
   busy,
   topic,
   onAdd,
-  onArchive,
+  onArchive
 }: {
   research: ListicleProfileResearch | null
   busy: boolean
@@ -871,7 +945,9 @@ function PossibleAngles({
   onArchive: (angleId: string) => Promise<boolean>
 }) {
   const [label, setLabel] = useState('')
-  const live = (research?.possible_angles ?? []).filter(angle => !angle.archived)
+  const live = (research?.possible_angles ?? []).filter(
+    (angle) => !angle.archived
+  )
 
   return (
     <section className="lp-research-block">
@@ -881,10 +957,12 @@ function PossibleAngles({
       </p>
       {live.length > 0 && (
         <ul className="lp-research-angles">
-          {live.map(angle => (
+          {live.map((angle) => (
             <li key={angle.angle_id}>
               <span>{angle.label}</span>
-              {angle.topic && <span className="lp-muted"> · {angle.topic}</span>}
+              {angle.topic && (
+                <span className="lp-muted"> · {angle.topic}</span>
+              )}
               <button
                 type="button"
                 className="lp-link-button"
@@ -899,7 +977,7 @@ function PossibleAngles({
       )}
       <form
         className="lp-research-inline-form"
-        onSubmit={async event => {
+        onSubmit={async (event) => {
           event.preventDefault()
           if (await onAdd(label.trim())) setLabel('')
         }}
@@ -910,9 +988,13 @@ function PossibleAngles({
           value={label}
           aria-label={`An idea for writing about this place on the ${topic} list`}
           placeholder="The one for a long lunch with friends"
-          onChange={event => setLabel(event.target.value)}
+          onChange={(event) => setLabel(event.target.value)}
         />
-        <button type="submit" className="lp-tool" disabled={busy || !label.trim()}>
+        <button
+          type="submit"
+          className="lp-tool"
+          disabled={busy || !label.trim()}
+        >
           Add the idea
         </button>
       </form>
@@ -962,17 +1044,18 @@ function ReviewsAllowance({ budget }: { budget: ListicleReviewsBudget }) {
       )}
       {budget.exhausted ? (
         <p className="lp-muted">
-          The free allowance of {budget.ceiling} reviews is spent. Research still
-          runs and still reads pages — it will not fetch customer reviews, and it
-          will not start charging.
+          The free allowance of {budget.ceiling} reviews is spent. Research
+          still runs and still reads pages — it will not fetch customer reviews,
+          and it will not start charging.
         </p>
       ) : (
         <p className="lp-muted">
           <strong>
-            About {budget.places_left} more {budget.places_left === 1 ? 'place' : 'places'}
+            About {budget.places_left} more{' '}
+            {budget.places_left === 1 ? 'place' : 'places'}
           </strong>{' '}
-          — {budget.remaining} of {budget.ceiling} reviews left on the free plan.
-          Each place asks for up to 20.
+          — {budget.remaining} of {budget.ceiling} reviews left on the free
+          plan. Each place asks for up to 20.
         </p>
       )}
       {budget.disagrees && budget.reported_remaining !== null && (
@@ -989,7 +1072,7 @@ function ReviewsAllowance({ budget }: { budget: ListicleReviewsBudget }) {
 function GapRequest({
   canResearch,
   researching,
-  onAsk,
+  onAsk
 }: {
   canResearch: boolean
   researching: boolean
@@ -1006,7 +1089,7 @@ function GapRequest({
       </p>
       <form
         className="lp-research-inline-form"
-        onSubmit={event => {
+        onSubmit={(event) => {
           event.preventDefault()
           if (question.trim()) {
             onAsk(question.trim())
@@ -1020,7 +1103,7 @@ function GapRequest({
           value={question}
           aria-label="What is missing"
           placeholder="Who owns it now, and since when?"
-          onChange={event => setQuestion(event.target.value)}
+          onChange={(event) => setQuestion(event.target.value)}
         />
         <button
           type="submit"
@@ -1052,7 +1135,7 @@ function History({ research }: { research: ListicleProfileResearch }) {
     }
     let live = true
     void loadResearchAttempt(openId)
-      .then(found => (live ? setDetail(found) : undefined))
+      .then((found) => (live ? setDetail(found) : undefined))
       .catch(() => undefined)
     return () => {
       live = false
@@ -1065,16 +1148,19 @@ function History({ research }: { research: ListicleProfileResearch }) {
     <details className="lp-research-block">
       <summary>Research history ({research.history.length})</summary>
       <ul className="lp-research-history">
-        {research.history.map(attempt => (
+        {research.history.map((attempt) => (
           <li key={attempt.attempt_id}>
             <button
               type="button"
               className="lp-link-button"
               onClick={() =>
-                setOpenId(openId === attempt.attempt_id ? null : attempt.attempt_id)
+                setOpenId(
+                  openId === attempt.attempt_id ? null : attempt.attempt_id
+                )
               }
             >
-              {attempt.started_at.slice(0, 16)} · {attempt.mode} · {attempt.state}
+              {attempt.started_at.slice(0, 16)} · {attempt.mode} ·{' '}
+              {attempt.state}
             </button>
             <span className="lp-muted">
               {' '}
@@ -1119,7 +1205,9 @@ function History({ research }: { research: ListicleProfileResearch }) {
                     {detail.receipts.map((receipt, index) => (
                       <li key={index}>
                         <strong>{receipt.stage}</strong>
-                        {receipt.grounded ? ' · searched the web' : ' · read collected text'}
+                        {receipt.grounded
+                          ? ' · searched the web'
+                          : ' · read collected text'}
                         {' · '}
                         {receipt.outcome}
                         {receipt.model ? ` · ${receipt.model}` : ''}
@@ -1145,8 +1233,9 @@ function History({ research }: { research: ListicleProfileResearch }) {
                 {detail.pages.length > 0 && (
                   <details className="lp-research-block">
                     <summary>
-                      Pages opened ({detail.pages.filter(p => p.state === 'ok').length}{' '}
-                      of {detail.pages.length} readable)
+                      Pages opened (
+                      {detail.pages.filter((p) => p.state === 'ok').length} of{' '}
+                      {detail.pages.length} readable)
                     </summary>
                     <ul className="lp-research-pages">
                       {detail.pages.map((page, index) => (
@@ -1169,7 +1258,11 @@ function History({ research }: { research: ListicleProfileResearch }) {
                           </a>
                           <span className="lp-muted">
                             {page.origin === 'google_reviews' ? (
-                              <> · from Google, not fetched · no page budget spent</>
+                              <>
+                                {' '}
+                                · from Google, not fetched · no page budget
+                                spent
+                              </>
                             ) : (
                               <>
                                 {' · published '}
@@ -1178,7 +1271,9 @@ function History({ research }: { research: ListicleProfileResearch }) {
                             )}
                             {' · read '}
                             {page.retrieved_at.slice(0, 10)}
-                            {page.reused ? ' · from an earlier read, not re-checked' : ''}
+                            {page.reused
+                              ? ' · from an earlier read, not re-checked'
+                              : ''}
                             {page.note ? ` — ${page.note}` : ''}
                           </span>
                         </li>
@@ -1197,7 +1292,8 @@ function History({ research }: { research: ListicleProfileResearch }) {
                     <ul className="lp-research-coverage">
                       {(detail.discovery.pages ?? []).map((page, index) => (
                         <li key={index}>
-                          {page.publisher || page.site || 'publisher not named'} — {page.why}
+                          {page.publisher || page.site || 'publisher not named'}{' '}
+                          — {page.why}
                           {page.address_from === 'none' && (
                             <span className="lp-muted">
                               {' '}
@@ -1215,9 +1311,11 @@ function History({ research }: { research: ListicleProfileResearch }) {
                     </ul>
                     {(detail.discovery.not_found?.length ?? 0) > 0 && (
                       <ul className="lp-research-questions">
-                        {(detail.discovery.not_found ?? []).map((line, index) => (
-                          <li key={index}>Nothing found for: {line}</li>
-                        ))}
+                        {(detail.discovery.not_found ?? []).map(
+                          (line, index) => (
+                            <li key={index}>Nothing found for: {line}</li>
+                          )
+                        )}
                       </ul>
                     )}
                   </details>
@@ -1226,21 +1324,30 @@ function History({ research }: { research: ListicleProfileResearch }) {
                   <details className="lp-research-block">
                     <summary>What this request was asked to settle</summary>
                     <ol className="lp-research-questions">
-                      {(detail.brief.priority_questions ?? []).map((line, index) => (
-                        <li key={index}>{line}</li>
-                      ))}
+                      {(detail.brief.priority_questions ?? []).map(
+                        (line, index) => (
+                          <li key={index}>{line}</li>
+                        )
+                      )}
                     </ol>
                     {(detail.brief.discovery_leads?.length ?? 0) > 0 && (
                       <ul className="lp-research-coverage">
-                        {(detail.brief.discovery_leads ?? []).map((lead, index) => (
-                          <li key={index}>
-                            <span className="lp-research-state">unverified lead</span>{' '}
-                            {lead.snippet}
-                            {lead.angle && (
-                              <span className="lp-muted"> — found by: {lead.angle}</span>
-                            )}
-                          </li>
-                        ))}
+                        {(detail.brief.discovery_leads ?? []).map(
+                          (lead, index) => (
+                            <li key={index}>
+                              <span className="lp-research-state">
+                                unverified lead
+                              </span>{' '}
+                              {lead.snippet}
+                              {lead.angle && (
+                                <span className="lp-muted">
+                                  {' '}
+                                  — found by: {lead.angle}
+                                </span>
+                              )}
+                            </li>
+                          )
+                        )}
                       </ul>
                     )}
                   </details>

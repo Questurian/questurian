@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import type {
   ListicleAngleResult,
   ListicleCandidate,
-  ListicleSearchResults,
+  ListicleSearchResults
 } from '../types'
 import { CandidateCard, cardState } from './CandidateCard'
 import { GoogleIcon } from './LookupLinks'
@@ -54,7 +54,7 @@ const GOOGLE_LOOKUP_USD_AFTER_FREE = 0.04
 /** Why a removed place is off the list, said on its row. */
 function removedBecause(
   entry: { reason?: string; kept_id: string },
-  labelOf: Map<string, string>,
+  labelOf: Map<string, string>
 ): string {
   switch (entry.reason) {
     case 'closed':
@@ -73,7 +73,7 @@ const STATE_LABEL: Record<string, string> = {
   running: 'running',
   completed: '',
   failed: 'failed',
-  interrupted: 'interrupted',
+  interrupted: 'interrupted'
 }
 
 function angleNote(angle: ListicleAngleResult): string {
@@ -101,11 +101,13 @@ export function SearchResults({
   results,
   busy,
   onRun,
-  onRecheck,
+  onRecheck
 }: SearchResultsProps) {
   const [openId, setOpenId] = useState<string | null>(null)
   const closeDetails = useCallback(() => setOpenId(null), [])
-  const opened = results.candidates.find(candidate => candidate.candidate_id === openId)
+  const opened = results.candidates.find(
+    (candidate) => candidate.candidate_id === openId
+  )
   const [reviewId, setReviewId] = useState<string | null>(null)
   const closeReview = useCallback(() => setReviewId(null), [])
   // What the operator decided about duplicates, laid over what the searches
@@ -117,11 +119,13 @@ export function SearchResults({
     resolve,
     restore,
     remove,
-    replace: replaceBoard,
+    replace: replaceBoard
   } = useCandidateBoard(results.run_id)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const closeConfirm = useCallback(() => setConfirmId(null), [])
-  const byId = new Map(results.candidates.map(candidate => [candidate.candidate_id, candidate]))
+  const byId = new Map(
+    results.candidates.map((candidate) => [candidate.candidate_id, candidate])
+  )
   // Preparation, readiness and saved research for every place on this run.
   // One read for the board: readiness is a property of the run, not of a card
   // -- a duplicate settled on one card changes whether another can be
@@ -129,11 +133,17 @@ export function SearchResults({
   // agree about it.
   const research = usePlaceResearch(results.run_id)
   const [researchId, setResearchId] = useState<string | null>(null)
-  const closeResearch = useCallback(() => setResearchId(null), [])
+  const refreshResearch = research.refresh
+  const closeResearch = useCallback(() => {
+    setResearchId(null)
+    void refreshResearch()
+  }, [refreshResearch])
   const researchCard = researchId ? research.cardFor(researchId) : undefined
   const researchCandidate = researchId ? byId.get(researchId) : undefined
-  const removedIds = new Set(board.removed.map(entry => entry.candidate_id))
-  const distinct = new Set(board.distinct_pairs.map(([one, other]) => `${one}|${other}`))
+  const removedIds = new Set(board.removed.map((entry) => entry.candidate_id))
+  const distinct = new Set(
+    board.distinct_pairs.map(([one, other]) => `${one}|${other}`)
+  )
   const judgedDifferent = (one: string, other: string) =>
     distinct.has(one < other ? `${one}|${other}` : `${other}|${one}`)
   // The duplicates still open against a place: flagged, still on the board,
@@ -144,32 +154,54 @@ export function SearchResults({
   // they are spelled. On the wings board three rows -- "Wingman [Miraflores]",
   // "Wigman Alitas Inc." and "Wingman [Barranco]" -- are one bar on Bolognesi
   // 494, and no amount of name matching was ever going to pair them.
-  const openDuplicates = (candidate: ListicleCandidate): ListicleCandidate[] => {
+  const openDuplicates = (
+    candidate: ListicleCandidate
+  ): ListicleCandidate[] => {
     const byName = candidate.possible_duplicate_ids ?? []
     const byPlaceId =
       research.cardFor(candidate.candidate_id)?.readiness.identity_twins ?? []
     return [...new Set([...byName, ...byPlaceId])]
-      .filter(id => !removedIds.has(id) && !judgedDifferent(candidate.candidate_id, id))
-      .map(id => byId.get(id))
+      .filter(
+        (id) =>
+          !removedIds.has(id) && !judgedDifferent(candidate.candidate_id, id)
+      )
+      .map((id) => byId.get(id))
       .filter((other): other is ListicleCandidate => Boolean(other))
   }
-  const onBoard = results.candidates.filter(candidate => !removedIds.has(candidate.candidate_id))
+  const onBoard = results.candidates.filter(
+    (candidate) => !removedIds.has(candidate.candidate_id)
+  )
   const removed = board.removed
-    .map(entry => ({ entry, candidate: byId.get(entry.candidate_id) }))
+    .map((entry) => ({ entry, candidate: byId.get(entry.candidate_id) }))
     .filter(
-      (item): item is { entry: (typeof board.removed)[number]; candidate: ListicleCandidate } =>
-        Boolean(item.candidate),
+      (
+        item
+      ): item is {
+        entry: (typeof board.removed)[number]
+        candidate: ListicleCandidate
+      } => Boolean(item.candidate)
     )
   const reviewing = reviewId ? byId.get(reviewId) : undefined
   // What Google said. Only places still on the board are worth paying to
   // look up, and only those Google has not already answered for.
   const google = useGoogleChecks(results.run_id)
-  const answered = (id: string) => ['found', 'not_found'].includes(google.checks[id]?.status ?? '')
-  const toCheck = onBoard.filter(candidate => !answered(candidate.candidate_id))
-  const onBoardChecks = onBoard.map(candidate => google.checks[candidate.candidate_id]).filter(Boolean)
-  const closedCount = onBoardChecks.filter(check => check?.business_status === 'CLOSED_PERMANENTLY').length
-  const notFoundCount = onBoardChecks.filter(check => check?.status === 'not_found').length
-  const failedCount = onBoardChecks.filter(check => check?.status === 'failed').length
+  const answered = (id: string) =>
+    ['found', 'not_found'].includes(google.checks[id]?.status ?? '')
+  const toCheck = onBoard.filter(
+    (candidate) => !answered(candidate.candidate_id)
+  )
+  const onBoardChecks = onBoard
+    .map((candidate) => google.checks[candidate.candidate_id])
+    .filter(Boolean)
+  const closedCount = onBoardChecks.filter(
+    (check) => check?.business_status === 'CLOSED_PERMANENTLY'
+  ).length
+  const notFoundCount = onBoardChecks.filter(
+    (check) => check?.status === 'not_found'
+  ).length
+  const failedCount = onBoardChecks.filter(
+    (check) => check?.status === 'failed'
+  ).length
   // A check can take permanently closed places off the board, so the board
   // the check returns replaces the one on screen.
   const runGoogleCheck = async () => {
@@ -180,8 +212,10 @@ export function SearchResults({
     const restored = await restore(candidateId)
     // Putting back a place Google flagged overrules Google; the server has
     // recorded that, and the card follows without another read.
-    if (restored && reason === 'closed') google.dismiss(candidateId, 'closed_dismissed')
-    if (restored && reason === 'not_a_venue') google.dismiss(candidateId, 'venue_dismissed')
+    if (restored && reason === 'closed')
+      google.dismiss(candidateId, 'closed_dismissed')
+    if (restored && reason === 'not_a_venue')
+      google.dismiss(candidateId, 'venue_dismissed')
   }
   const confirming = confirmId ? byId.get(confirmId) : undefined
   const removeByHand = async () => {
@@ -189,12 +223,21 @@ export function SearchResults({
     if (await remove(confirmId, 'by_hand')) setConfirmId(null)
   }
   const countOf = (reason: string) =>
-    removed.filter(({ entry }) => (entry.reason ?? 'duplicate') === reason).length
+    removed.filter(({ entry }) => (entry.reason ?? 'duplicate') === reason)
+      .length
   const removedSummary = [
     [countOf('duplicate'), 'duplicate', 'duplicates'],
-    [countOf('closed'), 'permanently closed on Google', 'permanently closed on Google'],
-    [countOf('not_a_venue'), 'not a restaurant or bar', 'not restaurants or bars'],
-    [countOf('by_hand'), 'removed by you', 'removed by you'],
+    [
+      countOf('closed'),
+      'permanently closed on Google',
+      'permanently closed on Google'
+    ],
+    [
+      countOf('not_a_venue'),
+      'not a restaurant or bar',
+      'not restaurants or bars'
+    ],
+    [countOf('by_hand'), 'removed by you', 'removed by you']
   ]
     .filter(([count]) => (count as number) > 0)
     .map(([count, one, many]) => `${count} ${count === 1 ? one : many}`)
@@ -205,14 +248,16 @@ export function SearchResults({
   // once, and the version this replaced could only store one of them — the
   // failure overwrote the successful attempt it was meant to replace, and the
   // places it had found were gone.
-  const failedRefreshes = results.angles.filter(angle => angle.showing_earlier)
-  const unrun = results.angles.filter(angle => angle.state === 'not_started')
+  const failedRefreshes = results.angles.filter(
+    (angle) => angle.showing_earlier
+  )
+  const unrun = results.angles.filter((angle) => angle.state === 'not_started')
   // A finished search that returned no place the others missed. Every one of
   // these was paid for. In run 33fca394 two of seven were like this and
   // nothing anywhere said so — the numbers were in the table and the sentence
   // was not.
   const emptyHanded = results.angles.filter(
-    angle => angle.state === 'completed' && angle.exclusive === 0,
+    (angle) => angle.state === 'completed' && angle.exclusive === 0
   )
   // How to name a row when pointing at it from another row. Two candidates
   // are allowed to share a name -- that is exactly the pair worth pointing at
@@ -220,17 +265,17 @@ export function SearchResults({
   // called Casa Republicana says nothing. The district is what separates them,
   // and where it does not, its absence is the difference.
   const labelOf = new Map(
-    results.candidates.map(candidate => [
+    results.candidates.map((candidate) => [
       candidate.candidate_id,
       candidate.district
         ? `${candidate.name} (${candidate.district})`
-        : `${candidate.name} (no district given)`,
-    ]),
+        : `${candidate.name} (no district given)`
+    ])
   )
   // Deduplicated across every angle: the same paper cited by three searches is
   // one publication, not three.
   const sourcesNamed = [
-    ...new Set(results.angles.flatMap(angle => angle.sources_named ?? [])),
+    ...new Set(results.angles.flatMap((angle) => angle.sources_named ?? []))
   ].sort()
 
   return (
@@ -242,8 +287,8 @@ export function SearchResults({
         </p>
         {removed.length > 0 && (
           <p className="lp-muted lp-results-sub">
-            {removed.length} taken off the list: {removedSummary}. They are at the bottom
-            of the list and can be put back.
+            {removed.length} taken off the list: {removedSummary}. They are at
+            the bottom of the list and can be put back.
           </p>
         )}
         {/* Google, on request. Billed per place, so the button says how
@@ -262,40 +307,48 @@ export function SearchResults({
                   ? `Checking ${toCheck.length} places on Google…`
                   : `Check ${toCheck.length} ${toCheck.length === 1 ? 'place' : 'places'} on Google`}
               </button>
-              <span className="lp-muted">Is it open, what kind of place, rating and price.</span>
+              <span className="lp-muted">
+                Is it open, what kind of place, rating and price.
+              </span>
             </>
           ) : (
-            <span className="lp-muted">Every place on the list has been checked on Google.</span>
-          )}
-          {onBoardChecks.length > 0 && (closedCount > 0 || notFoundCount > 0 || failedCount > 0) && (
-            <span className="lp-google-summary">
-              {[
-                closedCount > 0 && `${closedCount} permanently closed`,
-                notFoundCount > 0 && `${notFoundCount} not found on Google`,
-                failedCount > 0 && `${failedCount} couldn't be checked`,
-              ]
-                .filter(Boolean)
-                .join(', ')}
+            <span className="lp-muted">
+              Every place on the list has been checked on Google.
             </span>
           )}
+          {onBoardChecks.length > 0 &&
+            (closedCount > 0 || notFoundCount > 0 || failedCount > 0) && (
+              <span className="lp-google-summary">
+                {[
+                  closedCount > 0 && `${closedCount} permanently closed`,
+                  notFoundCount > 0 && `${notFoundCount} not found on Google`,
+                  failedCount > 0 && `${failedCount} couldn't be checked`
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
+              </span>
+            )}
         </div>
         {/* The countdown. Google's count, across every app on the key, so it
             is the number that decides whether a check is free. */}
         {google.allowance && (
           <p className="lp-allowance">
-            {google.allowance.available && google.allowance.left !== undefined ? (
+            {google.allowance.available &&
+            google.allowance.left !== undefined ? (
               <>
                 <strong>{google.allowance.left.toLocaleString()}</strong> of{' '}
-                {google.allowance.free.toLocaleString()} free Google lookups left this month
+                {google.allowance.free.toLocaleString()} free Google lookups
+                left this month
                 <span className="lp-muted">
                   {' '}
-                  (all your apps count; Google's number runs a few minutes behind)
+                  (all your apps count; Google's number runs a few minutes
+                  behind)
                 </span>
               </>
             ) : (
               <span className="lp-muted">
-                {google.allowance.reason ?? "Google's count could not be read."} Don't
-                assume the check is free.
+                {google.allowance.reason ?? "Google's count could not be read."}{' '}
+                Don't assume the check is free.
               </span>
             )}
           </p>
@@ -305,10 +358,13 @@ export function SearchResults({
           toCheck.length > google.allowance.left && (
             <p className="lp-results-short" role="status">
               Checking {toCheck.length} places uses more than the{' '}
-              {google.allowance.left.toLocaleString()} free lookups left. The other{' '}
-              {toCheck.length - google.allowance.left} cost about $
+              {google.allowance.left.toLocaleString()} free lookups left. The
+              other {toCheck.length - google.allowance.left} cost about $
               {GOOGLE_LOOKUP_USD_AFTER_FREE.toFixed(2)} each, about $
-              {((toCheck.length - google.allowance.left) * GOOGLE_LOOKUP_USD_AFTER_FREE).toFixed(2)}{' '}
+              {(
+                (toCheck.length - google.allowance.left) *
+                GOOGLE_LOOKUP_USD_AFTER_FREE
+              ).toFixed(2)}{' '}
               in all.
             </p>
           )}
@@ -322,8 +378,8 @@ export function SearchResults({
             shrink. Counted over the places still on the list. */}
         {research.board && onBoard.length > 0 && (
           <BoardProgress
-            states={onBoard.map(candidate =>
-              cardState(research.cardFor(candidate.candidate_id)),
+            states={onBoard.map((candidate) =>
+              cardState(research.cardFor(candidate.candidate_id))
             )}
           />
         )}
@@ -375,9 +431,9 @@ export function SearchResults({
         </summary>
         <div className="lp-results-how-body">
           <p className="lp-muted lp-results-sub">
-            {results.rows_returned} results across {results.angles.length} searches,{' '}
-            {Math.max(0, results.rows_returned - results.found)} of them the same place
-            found more than once
+            {results.rows_returned} results across {results.angles.length}{' '}
+            searches, {Math.max(0, results.rows_returned - results.found)} of
+            them the same place found more than once
           </p>
           {/* A distinct count is provisional while any two rows might be one
               venue. Printing one number without saying so implies a certainty
@@ -385,17 +441,18 @@ export function SearchResults({
           {results.uncertain_identity > 0 && (
             <p className="lp-muted lp-results-sub">
               {results.uncertain_identity}{' '}
-              {results.uncertain_identity === 1 ? 'entry has' : 'entries have'} a
-              possible duplicate beside {results.uncertain_identity === 1 ? 'it' : 'them'},
-              so this count is provisional.
+              {results.uncertain_identity === 1 ? 'entry has' : 'entries have'}{' '}
+              a possible duplicate beside{' '}
+              {results.uncertain_identity === 1 ? 'it' : 'them'}, so this count
+              is provisional.
             </p>
           )}
           {emptyHanded.length > 0 && (
             <p className="lp-muted lp-results-sub">
-              {emptyHanded.length} of {results.angles.length} searches returned no
-              place the others missed. Not wasted by definition — a search with
-              nothing exclusive may be the coverage the rest are being checked
-              against — but each one was paid for.
+              {emptyHanded.length} of {results.angles.length} searches returned
+              no place the others missed. Not wasted by definition — a search
+              with nothing exclusive may be the coverage the rest are being
+              checked against — but each one was paid for.
             </p>
           )}
           {/* A correction changed what the searches ask for, so the research
@@ -407,15 +464,15 @@ export function SearchResults({
               {results.superseded_results} earlier{' '}
               {results.superseded_results === 1 ? 'search is' : 'searches are'}{' '}
               still stored for this run and no longer{' '}
-              {results.superseded_results === 1 ? 'answers' : 'answer'} the order
-              as it stands — a correction changed what they ask for. They are
-              kept under the revision they were bought for.
+              {results.superseded_results === 1 ? 'answers' : 'answer'} the
+              order as it stands — a correction changed what they ask for. They
+              are kept under the revision they were bought for.
             </p>
           )}
           {results.legacy && (
             <p className="lp-muted lp-results-sub" role="status">
-              Stored before this pipeline recorded work per search, so individual
-              searches cannot be re-run from here.
+              Stored before this pipeline recorded work per search, so
+              individual searches cannot be re-run from here.
             </p>
           )}
           {/* Where the searches actually looked. The citation URLs are opaque
@@ -441,7 +498,7 @@ export function SearchResults({
               </tr>
             </thead>
             <tbody>
-              {results.angles.map(angle => (
+              {results.angles.map((angle) => (
                 <tr
                   key={angle.angle_id || angle.angle}
                   className={
@@ -478,7 +535,9 @@ export function SearchResults({
                         type="button"
                         className="lp-link-button"
                         disabled={busy}
-                        onClick={() => onRun({ angleIds: [angle.angle_id], reuse: false })}
+                        onClick={() =>
+                          onRun({ angleIds: [angle.angle_id], reuse: false })
+                        }
                       >
                         run this one
                       </button>
@@ -501,13 +560,17 @@ export function SearchResults({
               not do it either: it weighs whether enough is published about a
               place, and every one of those eight is written about constantly. */}
           {results.order.exclusions && results.candidates.length > 0 && (
-            <CutReviewNote results={results} busy={busy} onRecheck={onRecheck} />
+            <CutReviewNote
+              results={results}
+              busy={busy}
+              onRecheck={onRecheck}
+            />
           )}
         </div>
       </details>
 
       <ol className="lp-candidates">
-        {onBoard.map(candidate => {
+        {onBoard.map((candidate) => {
           const open = openDuplicates(candidate)
           // A stored result from before candidates had ids names its
           // duplicates and cannot point at them, so its warning stays a note.
@@ -526,15 +589,21 @@ export function SearchResults({
               duplicates={
                 legacyNames
                   ? candidate.possible_duplicates
-                  : open.map(other => labelOf.get(other.candidate_id) ?? other.name)
+                  : open.map(
+                      (other) => labelOf.get(other.candidate_id) ?? other.name
+                    )
               }
               onDetails={() => setOpenId(candidate.candidate_id)}
               onReviewDuplicates={
-                open.length > 0 ? () => setReviewId(candidate.candidate_id) : undefined
+                open.length > 0
+                  ? () => setReviewId(candidate.candidate_id)
+                  : undefined
               }
               google={google.checks[candidate.candidate_id]}
               onRemove={() => setConfirmId(candidate.candidate_id)}
-              onRemoveNotAVenue={() => void remove(candidate.candidate_id, 'not_a_venue')}
+              onRemoveNotAVenue={() =>
+                void remove(candidate.candidate_id, 'not_a_venue')
+              }
               research={(() => {
                 const card = research.cardFor(candidate.candidate_id)
                 if (!card) return undefined
@@ -545,18 +614,19 @@ export function SearchResults({
                   researching:
                     research.waitingFor === candidate.candidate_id ||
                     card.last_attempt?.state === 'running',
-                  onPrep: patch =>
+                  onPrep: (patch) =>
                     void research.savePrep(candidate.candidate_id, patch),
-                  onResearch: () => void research.research(candidate.candidate_id),
+                  onResearch: () =>
+                    void research.research(candidate.candidate_id),
                   onOpenResearch: () => setResearchId(candidate.candidate_id),
                   onRecheckGoogle: () => {
-                    void google.recheck(candidate.candidate_id).then(done => {
+                    void google.recheck(candidate.candidate_id).then((done) => {
                       // The identity moved, so everything that was confirmed
                       // against the old one has to be read again.
                       if (done) void research.refresh()
                     })
                   },
-                  recheckingGoogle: google.checking,
+                  recheckingGoogle: google.checking
                 }
               })()}
             />
@@ -633,8 +703,11 @@ export function SearchResults({
           researching={research.waitingFor === researchId}
           reviewsBudget={research.board?.reviews_budget ?? null}
           subjectTerms={research.board?.subject_terms ?? []}
-          onGapResearch={question =>
-            void research.research(researchId, { mode: 'gap', gapText: question })
+          onGapResearch={(question) =>
+            void research.research(researchId, {
+              mode: 'gap',
+              gapText: question
+            })
           }
           onClose={closeResearch}
         />
@@ -644,7 +717,8 @@ export function SearchResults({
         <CandidateDetails
           candidate={opened}
           partialCutReview={
-            Boolean(results.order.exclusions) && results.cut_review_status === 'partial'
+            Boolean(results.order.exclusions) &&
+            results.cut_review_status === 'partial'
           }
           onClose={closeDetails}
         />
@@ -656,7 +730,10 @@ export function SearchResults({
             type="button"
             disabled={busy}
             onClick={() =>
-              onRun({ angleIds: rerunnable.map(angle => angle.angle_id), reuse: false })
+              onRun({
+                angleIds: rerunnable.map((angle) => angle.angle_id),
+                reuse: false
+              })
             }
           >
             {busy
@@ -667,11 +744,7 @@ export function SearchResults({
           </button>
         )}
         {unrun.length > 0 && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onRun({})}
-          >
+          <button type="button" disabled={busy} onClick={() => onRun({})}>
             {busy ? 'Searching…' : `Run ${unrun.length} remaining`}
           </button>
         )}
@@ -685,14 +758,13 @@ export function SearchResults({
         </button>
       </div>
       <p className="lp-muted lp-results-sub">
-        Searching everything again buys new research for every angle. Retrying one
-        search costs one search &mdash; and a search that was interrupted may have
-        been charged already.
+        Searching everything again buys new research for every angle. Retrying
+        one search costs one search &mdash; and a search that was interrupted
+        may have been charged already.
       </p>
     </section>
   )
 }
-
 
 /** The board, as one line and one row of marks.
  *
@@ -702,22 +774,20 @@ export function SearchResults({
  *  -- and it is the only thing on this screen that tells you how much is left.
  */
 function BoardProgress({ states }: { states: ReturnType<typeof cardState>[] }) {
-  const ready = states.filter(state => state === 'ready').length
-  const done = states.filter(state => state === 'done').length
+  const done = states.filter((state) => state === 'done').length
   const left = states.length - done
   return (
     <div className="lp-board-progress">
       <p className="lp-board-progress-line">
-        <strong>{done}</strong> of {states.length} researched
-        {ready > 0 && (
-          <span className="lp-muted"> · {ready} ready to go</span>
+        <strong>{done}</strong> of {states.length} blurbs ready
+        {left === 0 && (
+          <span className="lp-board-done"> · ready to read through</span>
         )}
-        {left === 0 && <span className="lp-board-done"> · every place done</span>}
       </p>
       <div
         className="lp-board-ticks"
         role="img"
-        aria-label={`${done} of ${states.length} places researched, ${ready} ready`}
+        aria-label={`${done} of ${states.length} blurbs ready`}
       >
         {states.map((state, index) => (
           <span key={index} className={`lp-tick lp-tick-${state}`} />
@@ -737,13 +807,15 @@ function BoardProgress({ states }: { states: ReturnType<typeof cardState>[] }) {
 function CutReviewNote({
   results,
   busy,
-  onRecheck,
+  onRecheck
 }: {
   results: ListicleSearchResults
   busy: boolean
   onRecheck?: () => void
 }) {
-  const status = results.cut_review_status ?? (results.cut_checked ? 'complete' : 'not_checked')
+  const status =
+    results.cut_review_status ??
+    (results.cut_checked ? 'complete' : 'not_checked')
   const reviewed = results.cut_reviewed_count ?? 0
   const expected = results.cut_expected_count ?? results.candidates.length
 
@@ -795,15 +867,15 @@ function CutReviewNote({
 
   return (
     <p className="lp-results-unchecked" role="status">
-      Nothing below has been checked against what you left out. The rule went
-      to every search; whether a place breaks it is not something this step
+      Nothing below has been checked against what you left out. The rule went to
+      every search; whether a place breaks it is not something this step
       decides.
       {results.cut_historical && (
         <>
           {' '}
           An earlier check of this run is still stored. It was filed by name,
-          under different pooling rules, so it cannot be applied to these rows
-          — it is kept as a record rather than shown as a verdict.
+          under different pooling rules, so it cannot be applied to these rows —
+          it is kept as a record rather than shown as a verdict.
         </>
       )}
       {onRecheck && (

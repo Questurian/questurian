@@ -50,3 +50,22 @@ def test_a_pasted_blurb_is_saved_once_and_marked_when_the_brief_moves(client, ru
     after = _fill(client, path, useful_detail='Open until 3am on weekends.')
     assert after['blurb']['stale'] is True
     assert after['blurb']['text'] == 'Barbarian marinates its wings in Red Ale.'
+
+
+def test_board_restores_blurb_and_flags_later_research_edits(client, run):
+    from tests.test_listicle_place_research import _cards
+
+    path = entry(client, run)
+    candidate_id = path.split('/')[-2]
+    name = next(name for name, card in _cards(client, run).items() if card['candidate_id'] == candidate_id)
+    _fill(client, path, why_it_belongs='Named sauces.', what_to_order_or_notice=['BBQ IPA'])
+    assert _cards(client, run)[name]['entry']['ready'] is True
+    response = client.put(path + '/blurb', json={'version': 0, 'text': 'Saved writing.'})
+    assert response.status_code == 200
+    assert _cards(client, run)[name]['entry']['blurb'] == {
+        'text': 'Saved writing.', 'stale': False,
+    }
+    _fill(client, path, useful_detail='Late hours.')
+    assert _cards(client, run)[name]['entry']['blurb'] == {
+        'text': 'Saved writing.', 'stale': True,
+    }
