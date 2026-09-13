@@ -39,7 +39,12 @@ class _Model:
 
     def invoke_json(self, prompt, *, input_schema, max_tokens=None):
         self.calls.append({"prompt": prompt, "schema": input_schema})
-        self.last_usage_metadata = {"input_tokens": 10, "output_tokens": 20}
+        self.last_usage_metadata = {
+            "prompt_token_count": 10,
+            "candidates_token_count": 20,
+            "thoughts_token_count": 5,
+            "total_token_count": 35,
+        }
         if self.error is not None:
             raise self.error
         return self.reply
@@ -79,7 +84,11 @@ def test_one_call_held_to_the_schema_and_its_tokens_reported(seams):
     # The ceiling goes through the builder, which is where the output floor
     # lives; the forced-tool path sent it straight to the provider.
     assert seams["built"][0]["max_tokens"] == 8192
-    assert seams["observed"][0].usage == {"input_tokens": 10, "output_tokens": 20}
+    assert seams["observed"][0].usage["total_token_count"] == 35
+    # Returned in the shape every receipt reads, thinking counted as output.
+    assert result.usage["total_tokens"] == 35
+    assert result.usage["output_tokens"] == 25
+    assert result.usage["reasoning_tokens"] == 5
 
 
 def test_a_reply_that_fails_is_asked_once_and_still_reported(seams):
@@ -90,7 +99,7 @@ def test_a_reply_that_fails_is_asked_once_and_still_reported(seams):
         )
     assert len(seams["model"].calls) == 1
     # A failed call can still have been charged; its tokens are not dropped.
-    assert seams["observed"][0].usage == {"input_tokens": 10, "output_tokens": 20}
+    assert seams["observed"][0].usage["total_token_count"] == 35
 
 
 def test_the_extraction_no_longer_goes_through_a_forced_tool(seams, monkeypatch):

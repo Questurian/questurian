@@ -581,6 +581,8 @@ export interface ListicleAttemptSummary {
    *  `state` on purpose: a request that ran is not a request that found
    *  anything, and the screen this replaces showed one number for both. */
   evidence_ready: number
+  /** Every claim that checks out, about the subject or not. */
+  evidence_ready_total?: number
   strategy_version: string
   pilot: string
   baseline_attempt_id: string

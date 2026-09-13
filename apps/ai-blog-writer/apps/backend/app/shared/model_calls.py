@@ -33,7 +33,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from model_gateway import model_for
+from model_gateway import model_for, normalize_token_usage
 from model_gateway.usage import (
     PROVIDER_GOOGLE_VERTEX,
     observe_job_call,
@@ -220,8 +220,13 @@ def schema_json(
                 observed.record_usage(usage)
             else:
                 observed.add_metadata(usageUnreported=True)
+    # In the one shape every receipt reads. Vertex's own spellings
+    # (`total_token_count`) made the first real extraction print "0 tokens"
+    # while 17,670 had been charged.
     return StructuredWriterResult(
-        payload=payload, model_name=served, usage=dict(usage or {})
+        payload=payload,
+        model_name=served,
+        usage=normalize_token_usage(usage) or {},
     )
 
 

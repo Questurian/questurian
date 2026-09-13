@@ -316,6 +316,12 @@ def _attempt_summary(attempt: ResearchAttempt) -> dict:
         "evidence_ready": int(
             attempt.evidence_summary.get("subject_evidence_ready", 0) or 0
         ),
+        # Every claim that checks out, the subject or not. Beside the subject
+        # count because the two differ, and a screen that shows only the
+        # smaller one under "findings" reads as claims failing.
+        "evidence_ready_total": int(
+            attempt.evidence_summary.get("evidence_ready_total", 0) or 0
+        ),
         "strategy_version": attempt.strategy_version,
         "pilot": attempt.pilot,
         "baseline_attempt_id": attempt.baseline_attempt_id,

@@ -41,7 +41,7 @@ from .source_reader import PageRead
 # Bumped when the extraction wording or the checks below change in a way that
 # would produce different material. Stored beside the prompt version, so a
 # stored packet can be told apart by what was asked AND by what was enforced.
-EXTRACTION_VERSION = "evidence-extract/1"
+EXTRACTION_VERSION = "evidence-extract/2"
 
 # What the call asks for. Since the extraction moved to `schema_json` the
 # backend's output floor raises it (64,000), so this is no longer a ceiling
@@ -245,6 +245,10 @@ For every claim:
   room, the history and the staff if the pages carry them, and mark them false.
 - Dates: `event_date` is when the thing happened. Do not put a page's own
   publication date there; that is recorded separately and you do not need to.
+- A claim that comes from a dated review or page says its date in `text` too,
+  and stays in the past: "In a 2022 review, a customer said the BBQ wings were
+  a menu item", never "BBQ wings are a menu item". A reader of the sentence
+  alone must not take a years-old observation for today's menu.
 
 Shape:
 

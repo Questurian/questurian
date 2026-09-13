@@ -511,7 +511,7 @@ describe('the card', () => {
     // rests on a page somebody can open and check.
     expect(
       await screen.findByText(
-        /4 findings · 3 check out · 3 of 4 pages read · 1 unresolved question/,
+        /4 findings · 3 on the subject check out · 3 of 4 pages read · 1 unresolved question/,
       ),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'View research' })).toBeInTheDocument()

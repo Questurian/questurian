@@ -1051,7 +1051,7 @@ function History({ research }: { research: ListicleProfileResearch }) {
             <span className="lp-muted">
               {' '}
               {attempt.findings_added} new of {attempt.findings_seen} returned ·{' '}
-              {attempt.evidence_ready} check out ·{' '}
+              {attempt.evidence_ready} on the subject check out ·{' '}
               {attempt.generations}{' '}
               {attempt.generations === 1 ? 'generation' : 'generations'} (
               {attempt.grounded_calls} searched) · {attempt.pages_read} of{' '}

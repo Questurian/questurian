@@ -379,7 +379,8 @@ def spend(only: str = "", name: str = PILOT_NAME, extract_only: bool = False) ->
         print(
             f"  findings : {attempt['findings_seen']} returned, "
             f"{attempt['findings_added']} new, "
-            f"{attempt['evidence_ready']} check out"
+            f"{attempt['evidence_ready_total']} check out, "
+            f"{attempt['evidence_ready']} of them about the subject"
         )
         if attempt["reason"]:
             print(f"  note     : {attempt['reason']}")
@@ -387,7 +388,7 @@ def spend(only: str = "", name: str = PILOT_NAME, extract_only: bool = False) ->
             print(
                 f"    · {receipt['stage']}: {receipt['outcome']} · "
                 f"{receipt['model'] or 'no model'} · "
-                f"{receipt['usage'].get('total_tokens', 0)} tokens · "
+                f"{receipt['usage'].get('total_tokens', 'unreported')} tokens · "
                 f"{receipt['duration_seconds']}s"
                 + (f" · stopped {receipt['finish_reason']}" if receipt["finish_reason"] else "")
             )
