@@ -1,0 +1,1425 @@
+/*
+ * Itinerary pipeline — scoped styles.
+ *
+ * Everything is namespaced under `.ip-`, and every rule is a descendant of
+ * `.ip-page`. This screen shares an app with a landing page whose stylesheet
+ * reaches for bare element selectors; nothing here is allowed to do the same
+ * back.
+ *
+ * The palette is the one the plan settled on: parchment ground, a slightly
+ * deeper inset surface, and the site blue as the single accent. The app's own
+ * tokens (`css/base.css`) supply spacing, radii and type; only the accent and
+ * the two surfaces are re-declared here, so a change to the app's scale still
+ * reaches this page.
+ *
+ * The agenda is meant to be the satisfying part, so it gets the contrast: a
+ * ruled list on the lighter surface with room to breathe, while the options
+ * beside it stay quiet. Motion is short and only ever a response to something
+ * the operator did.
+ */
+
+.ip-page {
+  --ip-accent: #3b5bdb;
+  --ip-accent-hover: #2f49b0;
+  --ip-accent-soft: rgba(59, 91, 219, 0.1);
+  --ip-accent-softer: rgba(59, 91, 219, 0.05);
+  --ip-ground: #f5f0e8;
+  --ip-surface: #efe9de;
+  --ip-ink: #1a1a1a;
+  --ip-line: rgba(26, 26, 26, 0.14);
+  --ip-line-soft: rgba(26, 26, 26, 0.08);
+
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: var(--space-6) clamp(var(--space-4), 4vw, var(--space-7)) var(--space-10);
+  color: var(--ip-ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+/* ---------------------------------------------------------------- shell -- */
+
+.ip-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--ip-line);
+}
+
+.ip-stage-nav ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ip-stage-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.ip-stage-step:hover:not(:disabled) {
+  color: var(--ip-ink);
+  background: var(--ip-accent-softer);
+}
+
+.ip-stage-step:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.ip-stage-step-index {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ip-stage-step-on {
+  color: var(--ip-accent);
+  background: var(--ip-accent-soft);
+  font-weight: 600;
+}
+
+.ip-stage-step-done {
+  color: var(--ip-ink);
+}
+
+.ip-stage-step-done .ip-stage-step-index {
+  border-color: var(--ip-accent);
+  color: var(--ip-accent);
+}
+
+.ip-save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.ip-save-status-warning { color: var(--warning); }
+.ip-save-status-error { color: var(--error); }
+
+/* --------------------------------------------------------------- stages -- */
+
+.ip-stage-header {
+  margin: 0 0 var(--space-5);
+}
+
+.ip-stage-header h1 {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 3.4vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.ip-stage-header h1:focus-visible {
+  outline: 2px solid var(--ip-accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.ip-stage-instruction {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--ink-light);
+}
+
+.ip-form {
+  max-width: 720px;
+}
+
+/* ---------------------------------------------------------------- forms -- */
+
+.ip-field {
+  margin: 0 0 var(--space-5);
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.ip-field-narrow {
+  flex: 0 1 180px;
+}
+
+.ip-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.ip-page label,
+.ip-page legend {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ip-ink);
+}
+
+.ip-helper {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.ip-page input[type='text'],
+.ip-page input[type='number'],
+.ip-page input[type='date'],
+.ip-page input[type='time'],
+.ip-page select,
+.ip-page textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--ip-line);
+  border-radius: var(--radius-sm);
+  background: var(--ip-ground);
+  color: var(--ip-ink);
+  font: inherit;
+  font-size: 1rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.ip-page textarea {
+  min-height: 0;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.ip-page input:focus-visible,
+.ip-page select:focus-visible,
+.ip-page textarea:focus-visible,
+.ip-page button:focus-visible,
+.ip-page summary:focus-visible,
+.ip-page [tabindex]:focus-visible {
+  outline: 2px solid var(--ip-accent);
+  outline-offset: 2px;
+}
+
+.ip-page input[aria-invalid='true'],
+.ip-page select[aria-invalid='true'],
+.ip-page textarea[aria-invalid='true'] {
+  border-color: var(--error);
+  box-shadow: inset 0 0 0 1px var(--error);
+}
+
+.ip-page input:disabled,
+.ip-page textarea:disabled,
+.ip-page button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ip-inline-input {
+  margin-top: var(--space-2);
+}
+
+.ip-field-error,
+.ip-field-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.ip-field-error { color: var(--error); }
+.ip-field-warning { color: var(--warning); }
+
+.ip-field-error svg,
+.ip-field-warning svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.ip-fieldset {
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  border: 0;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.ip-fieldset-tight { margin-bottom: var(--space-3); }
+
+.ip-radio-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Specificity note: `.ip-page label` above sets `display:block`, so these have
+   to be at least as specific to lay a choice out as a row. */
+.ip-page .ip-radio,
+.ip-page .ip-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--ip-line-soft);
+  border-radius: var(--radius-sm);
+  font-weight: 400;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.ip-page .ip-radio:hover,
+.ip-page .ip-checkbox:hover {
+  border-color: var(--ip-accent);
+  background: var(--ip-accent-softer);
+}
+
+.ip-page .ip-radio input,
+.ip-page .ip-checkbox input {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  accent-color: var(--ip-accent);
+  flex: none;
+}
+
+.ip-page .ip-radio > span,
+.ip-page .ip-checkbox > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ip-radio-label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.ip-radio-note {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.ip-checkbox-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ip-checkbox-row .ip-checkbox { flex: 0 1 auto; }
+
+.ip-checkbox-standalone {
+  flex: 1 1 260px;
+  align-self: flex-start;
+}
+
+.ip-segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--ip-line-soft);
+  border-radius: var(--radius-full);
+  background: var(--ip-surface);
+}
+
+.ip-segment {
+  min-height: 38px;
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--ink-light);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.ip-segment:hover { color: var(--ip-ink); }
+
+.ip-segment-on {
+  background: var(--ip-accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.ip-segmented-small .ip-segment {
+  min-height: 34px;
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.8125rem;
+}
+
+.ip-subgroup {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4);
+  border-left: 3px solid var(--ip-accent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--ip-surface);
+}
+
+.ip-subgroup .ip-field:last-child { margin-bottom: 0; }
+
+.ip-token-input {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.ip-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ip-tokens li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border: 1px solid var(--ip-line);
+  border-radius: var(--radius-full);
+  background: var(--ip-ground);
+  font-size: 0.8125rem;
+}
+
+.ip-tokens button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ip-tokens button:hover { color: var(--error); background: var(--error-soft); }
+
+.ip-tokens-small li { font-size: 0.75rem; }
+
+.ip-disclosure {
+  margin: 0 0 var(--space-5);
+  border-top: 1px solid var(--ip-line);
+  border-bottom: 1px solid var(--ip-line);
+  padding: var(--space-3) 0;
+}
+
+.ip-disclosure-inset {
+  border: 1px solid var(--ip-line-soft);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--ip-surface);
+}
+
+.ip-disclosure > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 36px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.ip-disclosure > summary::-webkit-details-marker { display: none; }
+
+.ip-disclosure > summary::after {
+  content: '+';
+  color: var(--ip-accent);
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.ip-disclosure[open] > summary::after { content: '–'; }
+
+.ip-disclosure[open] > summary { margin-bottom: var(--space-3); }
+
+.ip-disclosure-note {
+  margin-left: auto;
+  margin-right: var(--space-3);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+  text-align: right;
+}
+
+/* ------------------------------------------------------------- feedback -- */
+
+.ip-summary {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--error);
+  border-left-width: 4px;
+  border-radius: var(--radius-md);
+  background: var(--error-soft);
+}
+
+.ip-summary-warning {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.ip-summary-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-weight: 600;
+}
+
+.ip-summary-list {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.ip-summary-list li { margin-bottom: var(--space-1); }
+
+.ip-link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ip-accent);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.ip-link-button:hover { color: var(--ip-accent-hover); }
+
+.ip-notice,
+.ip-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--ip-accent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--ip-accent-softer);
+  color: var(--ink-light);
+  font-size: 0.875rem;
+}
+
+.ip-notice svg,
+.ip-banner svg { flex: none; margin-top: 2px; }
+
+.ip-banner {
+  align-items: center;
+  flex-wrap: wrap;
+  border-left-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.ip-banner > div { flex: 1 1 260px; }
+.ip-banner p { margin: 0; }
+
+.ip-banner-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+.ip-warning-text {
+  margin: var(--space-3) 0 0;
+  color: var(--warning);
+  font-size: 0.875rem;
+}
+
+.ip-empty {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+/* -------------------------------------------------------------- buttons -- */
+
+.ip-button-primary,
+.ip-button-quiet,
+.ip-button-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-full);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.ip-button-primary {
+  border: 1px solid var(--ip-accent);
+  background: var(--ip-accent);
+  color: #fff;
+}
+
+.ip-button-primary:hover:not(:disabled) {
+  background: var(--ip-accent-hover);
+  border-color: var(--ip-accent-hover);
+}
+
+.ip-button-quiet {
+  border: 1px solid var(--ip-line);
+  background: transparent;
+  color: var(--ip-ink);
+  font-weight: 500;
+}
+
+.ip-button-quiet:hover:not(:disabled) {
+  border-color: var(--ip-accent);
+  color: var(--ip-accent);
+  background: var(--ip-accent-softer);
+}
+
+.ip-button-danger {
+  border: 1px solid var(--error);
+  background: var(--error);
+  color: #fff;
+}
+
+.ip-button-danger:hover:not(:disabled) { filter: brightness(0.92); }
+
+.ip-button-small {
+  min-height: 36px;
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.8125rem;
+}
+
+.ip-icon-button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.ip-icon-button:hover:not(:disabled) {
+  color: var(--ip-accent);
+  background: var(--ip-accent-soft);
+}
+
+.ip-icon-button-danger:hover:not(:disabled) { color: var(--error); background: var(--error-soft); }
+
+.ip-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--ip-line);
+  background: linear-gradient(to top, var(--ip-ground) 70%, rgba(245, 240, 232, 0.86));
+  backdrop-filter: blur(3px);
+}
+
+.ip-action-note {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* ----------------------------------------------------------------- tabs -- */
+
+.ip-trip-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--ip-surface);
+}
+
+.ip-trip-strip p {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  min-width: 0;
+}
+
+.ip-trip-strip strong {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ip-trip-strip span { color: var(--muted); font-size: 0.8125rem; }
+
+/* Pills above the panel rather than folder tabs joined to it: the rail scrolls
+   horizontally on a narrow screen, and a joined tab that has scrolled away from
+   its panel edge looks broken. */
+.ip-tab-rail {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding: var(--space-1) 2px var(--space-3);
+  margin-bottom: 0;
+  scrollbar-width: thin;
+}
+
+.ip-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: none;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--ip-line);
+  border-radius: var(--radius-md);
+  background: var(--ip-ground);
+  color: var(--ink-light);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.ip-tab:hover { border-color: var(--ip-accent); }
+
+.ip-tab-name { font-size: 0.9375rem; font-weight: 600; white-space: nowrap; }
+
+.ip-tab-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.ip-tab-on {
+  background: var(--ip-surface);
+  border-color: var(--ip-accent);
+  box-shadow: inset 0 0 0 1px var(--ip-accent);
+  color: var(--ip-ink);
+}
+
+.ip-tab-approved .ip-tab-status { color: var(--success); }
+.ip-tab-needs_layout .ip-tab-status { color: var(--error); }
+.ip-tab-needs_review .ip-tab-status { color: var(--warning); }
+
+.ip-day-panel {
+  border: 1px solid var(--ip-line-soft);
+  border-radius: var(--radius-md);
+  background: var(--ip-surface);
+  padding: var(--space-5);
+}
+
+.ip-day-panel:focus-visible { outline: 2px solid var(--ip-accent); outline-offset: 2px; }
+
+/* --------------------------------------------------------------- agenda -- */
+
+.ip-day-editor {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.ip-agenda-head h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.ip-agenda-sub {
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.ip-stop-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ip-line);
+}
+
+.ip-stop {
+  border-bottom: 1px solid var(--ip-line);
+  background: var(--ip-ground);
+  transition: background var(--transition-fast);
+}
+
+/* Tinted, not lightened: the house palette has no near-white surface, and a
+   white row on parchment reads as a foreign element pasted on top. */
+.ip-stop:hover { background: var(--ip-accent-softer); }
+
+.ip-stop-open {
+  background: var(--ip-accent-softer);
+  box-shadow: inset 3px 0 0 var(--ip-accent);
+}
+
+.ip-stop-broken { box-shadow: inset 3px 0 0 var(--error); }
+
+.ip-stop-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+
+.ip-daypart {
+  flex: none;
+  width: 92px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ip-stop-name {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  min-height: 40px;
+  min-width: 0;
+  padding: var(--space-1) 0;
+  border: 0;
+  background: none;
+  color: var(--ip-ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ip-stop-name > span:first-child { font-weight: 500; }
+
+.ip-stop-marks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ip-stop-kind {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.ip-chip {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--ip-accent-soft);
+  color: var(--ip-accent);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ip-chip-error { background: var(--error-soft); color: var(--error); }
+
+.ip-stop-actions { display: flex; gap: 2px; flex: none; }
+
+/* Indented to sit under the row it belongs to, but not all the way to the
+   daypart column: the accent bar already says which row is open, and the editor
+   needs the width more than the alignment. */
+.ip-stop-panel {
+  padding: var(--space-3) var(--space-3) var(--space-4) var(--space-5);
+  border-top: 1px dashed var(--ip-line);
+  animation: ipReveal 150ms ease-out;
+}
+
+.ip-stop-panel-foot { display: flex; justify-content: flex-end; }
+
+@keyframes ipReveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.ip-stop-editor .ip-field:last-child { margin-bottom: var(--space-2); }
+
+.ip-inline-confirm {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  font-size: 0.875rem;
+}
+
+.ip-inline-confirm p { margin: 0 0 var(--space-3); }
+
+.ip-inline-confirm-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+.ip-undo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--ip-accent-softer);
+  font-size: 0.875rem;
+}
+
+.ip-undo .ip-link-button { display: inline-flex; align-items: center; gap: 4px; }
+
+.ip-agenda-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.ip-day-issues {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ip-day-issues li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+
+.ip-day-issues svg { flex: none; margin-top: 3px; }
+
+.ip-day-issue-error { background: var(--error-soft); color: var(--error); }
+.ip-day-issue-warning { background: var(--warning-soft); color: var(--warning); }
+
+.ip-day-options {
+  padding: var(--space-4);
+  border: 1px solid var(--ip-line-soft);
+  border-radius: var(--radius-md);
+  background: var(--ip-ground);
+}
+
+.ip-day-options .ip-field:last-of-type { margin-bottom: var(--space-4); }
+
+.ip-custom-window { margin-top: var(--space-3); }
+
+.ip-aside-note {
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--ip-line-soft);
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+/* --------------------------------------------------------------- review -- */
+
+.ip-review-trip {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 2px solid var(--ip-line);
+}
+
+.ip-review-title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 2.6vw, 1.75rem);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.ip-detail-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.ip-detail-list div { min-width: 0; }
+
+.ip-detail-list dt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.ip-detail-list dd {
+  margin: 2px 0 0;
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+.ip-detail-list-inline { margin-bottom: var(--space-4); }
+
+.ip-review-day {
+  margin-bottom: var(--space-6);
+  padding: var(--space-5);
+  border: 1px solid var(--ip-line-soft);
+  border-radius: var(--radius-md);
+  background: var(--ip-surface);
+}
+
+.ip-review-day-approved { border-color: var(--success); }
+
+.ip-review-day-head { margin-bottom: var(--space-4); }
+
+.ip-review-day-head h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 600;
+}
+
+.ip-review-date { color: var(--muted); font-weight: 400; }
+
+.ip-review-day-label {
+  color: var(--ink-light);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 400;
+}
+
+.ip-review-day-meta { margin: var(--space-1) 0 0; color: var(--muted); font-size: 0.8125rem; }
+
+.ip-review-slots,
+.ip-context-slots,
+.ip-preview-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ip-review-slots li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--ip-line-soft);
+}
+
+.ip-review-slots li:last-child { border-bottom: 0; }
+
+.ip-review-slot-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ip-review-slot-name { font-size: 0.9375rem; }
+.ip-review-slot-meta { color: var(--muted); font-size: 0.75rem; }
+.ip-optional-mark { color: var(--muted); font-size: 0.8125rem; }
+
+.ip-review-day-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--ip-line-soft);
+}
+
+.ip-approved-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--success);
+  font-weight: 600;
+}
+
+.ip-ack {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+}
+
+.ip-ack p {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  font-size: 0.875rem;
+}
+
+.ip-ack svg { flex: none; margin-top: 2px; }
+
+/* ------------------------------------------------------------ workspace -- */
+
+.ip-workspace-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.ip-workspace-panel {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+  padding: var(--space-5);
+  border: 1px solid var(--ip-line-soft);
+  border-radius: var(--radius-md);
+  background: var(--ip-surface);
+}
+
+.ip-workspace-day-title {
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 600;
+}
+
+.ip-grill,
+.ip-notes { margin-bottom: var(--space-6); }
+
+.ip-grill h3,
+.ip-notes h3,
+.ip-workspace-context h3 {
+  margin: 0 0 var(--space-3);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ip-composer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px dashed var(--ip-line);
+  border-radius: var(--radius-md);
+  background: var(--ip-ground);
+}
+
+.ip-composer textarea { flex: 1 1 260px; }
+.ip-composer .ip-helper { flex: 1 1 100%; margin: 0; }
+
+.ip-notes-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.ip-save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.ip-save-state-dirty { color: var(--warning); }
+
+.ip-workspace-context section { margin-bottom: var(--space-5); }
+
+.ip-context-meta { margin: 0 0 var(--space-3); color: var(--muted); font-size: 0.8125rem; }
+
+.ip-context-slots li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--ip-line-soft);
+  font-size: 0.875rem;
+}
+
+.ip-context-slots li > span:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.ip-context-slots .ip-daypart { width: 74px; font-size: 0.6875rem; }
+
+.ip-workspace-context h4 {
+  margin: var(--space-4) 0 var(--space-1);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.ip-context-text { margin: 0; color: var(--ink-light); font-size: 0.875rem; white-space: pre-wrap; }
+
+.ip-context-title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  line-height: 1.3;
+}
+
+/* -------------------------------------------------------------- dialogs -- */
+
+.ip-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgba(26, 26, 26, 0.45);
+  animation: ipFade 120ms ease-out;
+}
+
+@keyframes ipFade { from { opacity: 0; } to { opacity: 1; } }
+
+.ip-dialog {
+  width: min(100%, 520px);
+  max-height: min(86vh, 760px);
+  overflow: auto;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--ip-ground);
+  box-shadow: 0 24px 64px rgba(26, 26, 26, 0.28);
+}
+
+.ip-dialog-wide { width: min(100%, 780px); }
+
+.ip-dialog-title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 600;
+}
+
+.ip-dialog-description,
+.ip-dialog-lead {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+}
+
+.ip-dialog-body { margin-bottom: var(--space-5); }
+
+.ip-dialog-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.ip-shape {
+  margin: 0 0 var(--space-4);
+  color: var(--ip-accent);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ip-compare {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.ip-compare h3 {
+  margin: 0 0 var(--space-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ip-compare-arrow { align-self: center; color: var(--ip-accent); }
+
+.ip-preview-list li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--ip-line-soft);
+  font-size: 0.875rem;
+}
+
+.ip-preview-list .ip-daypart { width: 68px; font-size: 0.625rem; }
+
+.ip-preview-list-next li { color: var(--ip-ink); }
+
+.ip-palette { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+
+.ip-palette-list {
+  max-height: 340px;
+  overflow: auto;
+  padding-right: var(--space-2);
+}
+
+.ip-palette-group {
+  margin: var(--space-3) 0 var(--space-1);
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ip-palette-group:first-child { margin-top: 0; }
+
+.ip-palette-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 40px;
+  padding: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ip-ink);
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ip-palette-item:hover { background: var(--ip-accent-softer); }
+
+.ip-palette-item-on {
+  border-color: var(--ip-accent);
+  background: var(--ip-accent-soft);
+  font-weight: 600;
+}
+
+.ip-palette-item .ip-daypart { width: 68px; font-size: 0.625rem; }
+
+.ip-palette-preview {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--ip-surface);
+}
+
+.ip-palette-preview h3 { margin: 0 0 var(--space-2); font-size: 1.0625rem; }
+
+.ip-copy-list,
+.ip-remove-list { margin: 0; padding: 0; list-style: none; }
+
+.ip-copy-list li { margin-bottom: var(--space-2); }
+
+.ip-remove-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--ip-line-soft);
+}
+
+/* ------------------------------------------------------------ utilities -- */
+
+.ip-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ----------------------------------------------------------- responsive -- */
+
+@media (max-width: 960px) {
+  .ip-day-editor,
+  .ip-workspace-panel {
+    grid-template-columns: 1fr;
+  }
+
+  /* Options come first on a narrow screen: you pick the day type, then read
+     what it produced. On desktop the agenda leads because it is the subject. */
+  .ip-day-options { order: -1; }
+
+  .ip-compare,
+  .ip-palette { grid-template-columns: 1fr; }
+  .ip-compare-arrow { display: none; }
+}
+
+@media (max-width: 640px) {
+  .ip-page { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .ip-day-panel, .ip-workspace-panel, .ip-review-day { padding: var(--space-4); }
+  /* Narrow rows read top-down: what the stop is, when it is, then what you can
+     do to it. The controls get a line of their own rather than competing with a
+     wrapping stop name — which is also what lets them keep a 44px touch target
+     at this width. */
+  .ip-stop-row { flex-wrap: wrap; gap: var(--space-1) var(--space-3); }
+  .ip-stop-name { flex: 1 1 100%; order: 1; }
+  .ip-daypart { width: auto; order: 2; }
+  .ip-stop-actions { order: 3; flex: 1 1 100%; justify-content: flex-end; }
+  .ip-stop-actions .ip-icon-button { width: 44px; height: 44px; }
+  .ip-action-bar { justify-content: stretch; }
+  .ip-action-bar .ip-button-primary { flex: 1 1 100%; }
+  .ip-action-note { margin-right: 0; flex: 1 1 100%; }
+  .ip-detail-list { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ip-page *,
+  .ip-backdrop,
+  .ip-stop-panel {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -18,6 +18,7 @@ import {
   ListicleItinerariesPage,
   ListicleItineraryBuilderPage,
 } from './features/listicleItineraries'
+import ItineraryPipelinePage from './features/itineraryPipeline/ItineraryPipelinePage'
 import { ItinerariesPipelinePage } from './features/itinerariesPipeline'
 import { ListiclePipelinePage } from './features/listiclePipeline'
 import {
@@ -85,6 +86,8 @@ export default function App() {
               {/* Listicle Itineraries */}
               <Route path="listicle-itineraries" element={<ListicleItinerariesPage />} />
               <Route path="listicle-itineraries/builder" element={<ListicleItineraryBuilderPage />} />
+
+              <Route path="itinerary-pipeline" element={<ItineraryPipelinePage />} />
 
               {/* Itineraries Pipeline */}
               <Route path="itineraries-pipeline" element={<ItinerariesPipelinePage />} />

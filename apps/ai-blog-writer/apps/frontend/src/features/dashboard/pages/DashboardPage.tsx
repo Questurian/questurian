@@ -92,6 +92,24 @@ function ToggleChevron({ open }: { open: boolean }) {
 
 const LANDING_CARDS: LandingCardConfig[] = [
   {
+    id: 'itinerary-pipeline',
+    title: 'Itinerary Pipeline',
+    description: 'Enter the trip, shape each day, approve every layout.',
+    to: '/itinerary-pipeline',
+    section: 'article-generation',
+    priority: 6,
+    accentClass: 'landing-card--listicle-pipeline',
+    actionLabel: 'Open',
+    icon: (
+      <path
+        d="M4 6h16M4 12h16M4 18h10"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    ),
+  },
+  {
     id: 'prompt2blog',
     title: 'Prompt → Articles',
     description: 'Fill out content parameters and let AI craft polished, publish-ready articles from your raw material.',
