@@ -168,6 +168,45 @@ describe('shaping a day', () => {
   })
 })
 
+describe('reducing the day count', () => {
+  it('names the days it would remove, and Cancel loses nothing', async () => {
+    renderPage()
+    const user = await fillTripDetails('3')
+
+    // Put something on Day 3 that a number field has no business deleting.
+    await user.click(screen.getAllByRole('tab')[2])
+    // `summary` has no implicit ARIA role, so it is found by its text.
+    await user.click(screen.getByText(/^Day notes/))
+    await user.type(screen.getByLabelText('Notes for day 3 setup'), 'Lands at 11am')
+
+    await user.click(
+      within(screen.getByRole('navigation', { name: 'Setup stages' })).getByRole('button', {
+        name: 'Trip details',
+      }),
+    )
+    await user.clear(screen.getByLabelText('Number of days'))
+    await user.type(screen.getByLabelText('Number of days'), '2')
+    expect(screen.getByLabelText('Number of days')).toHaveValue(2)
+    await user.click(action(/shape days/i))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveTextContent('Day 3')
+    expect(dialog).toHaveTextContent('day notes')
+
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    // Cancel puts the count back, so the form and the days agree again and
+    // nothing has been removed.
+    expect(screen.getByLabelText('Number of days')).toHaveValue(3)
+
+    await user.clear(screen.getByLabelText('Number of days'))
+    await user.type(screen.getByLabelText('Number of days'), '2')
+    await user.click(action(/shape days/i))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: /^Remove/ }))
+    expect(await screen.findByRole('heading', { name: 'Shape your days' })).toBeInTheDocument()
+    expect(screen.getAllByRole('tab')).toHaveLength(2)
+  })
+})
+
 describe('the approval gate', () => {
   it('will not open the workspace until every layout is approved', async () => {
     renderPage()

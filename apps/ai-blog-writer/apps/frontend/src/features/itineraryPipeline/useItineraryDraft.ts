@@ -157,11 +157,9 @@ export function useItineraryDraft(userId: string | null): DraftController {
   useEffect(() => {
     return repository.subscribe((result: LoadResult) => {
       if (result.status !== 'ok') return
-      if (result.draft.draftId === draftRef.current.draftId && !dirtyRef.current) {
-        dispatch({ type: 'hydrate', draft: result.draft })
-        return
-      }
       if (!dirtyRef.current) {
+        // Nothing to lose here, so the other tab's version simply becomes this
+        // tab's version. No question worth asking.
         dispatch({ type: 'hydrate', draft: result.draft })
         return
       }

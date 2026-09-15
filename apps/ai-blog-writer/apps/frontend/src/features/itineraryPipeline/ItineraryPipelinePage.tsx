@@ -145,7 +145,10 @@ export default function ItineraryPipelinePage() {
     const count = parsedDayCount(draft.trip)
     if (count === null) return
 
-    if (count < days.length && days.slice(count).some(dayHasContent)) {
+    // Always reviewed, never guessed at. A day carries edited stops as well as
+    // notes, and deciding for the operator which of those was worth asking
+    // about is how work disappears quietly.
+    if (count < days.length) {
       setPendingRemoval(count)
       return
     }
@@ -383,10 +386,6 @@ export default function ItineraryPipelinePage() {
       </div>
     </div>
   )
-}
-
-function dayHasContent(day: { setupNotes: string; preparationNotes: string; approval?: unknown }) {
-  return Boolean(day.setupNotes.trim() || day.preparationNotes.trim() || day.approval)
 }
 
 function SaveStatus({ controller }: { controller: ReturnType<typeof useItineraryDraft> }) {
