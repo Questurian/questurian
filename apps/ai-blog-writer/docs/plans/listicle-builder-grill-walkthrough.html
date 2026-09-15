@@ -1,0 +1,1003 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Itinerary Pipeline — Final UI implementation plan</title><style>
+:root{--bg:#F5F0E8;--paper:#EFE9DE;--ink:#1A1A1A;--blue:#3B5BDB;--line:#bcb6aa}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 system-ui,sans-serif}header,main{max-width:1160px;margin:auto;padding:36px}header{padding-top:65px}h1,h2,h3{font-family:Georgia,serif;line-height:1.15;font-weight:normal}h1{font-size:clamp(38px,6vw,72px);max-width:900px;margin:18px 0}h2{font-size:36px}h3{font-size:25px}p{max-width:78ch}.lead{font-size:23px;max-width:760px}.note{font-size:14px;color:#514e47}nav{display:flex;gap:20px;flex-wrap:wrap;border-block:1px solid var(--line);padding:17px 0;margin-top:35px}a{color:var(--blue)}section{padding:25px 0 45px;border-bottom:1px solid var(--line);scroll-margin-top:20px}.step{color:var(--blue);font-size:16px}table{border-collapse:collapse;width:100%;font-size:15px}th,td{text-align:left;vertical-align:top;padding:14px 12px;border-bottom:1px solid var(--line)}th{background:var(--paper)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:25px}.panel{background:var(--paper);padding:24px;border-radius:10px}.callout{border-left:4px solid var(--blue);padding:10px 24px;margin:24px 0}.fields{display:grid;grid-template-columns:2fr 1fr;gap:16px}label{display:block;font-size:14px;font-weight:600}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;padding:10px;background:var(--bg);color:var(--ink);border:1px solid #858176;border-radius:5px;margin:5px 0 12px}button{background:var(--blue);color:var(--bg);border:0;border-radius:5px;padding:10px 16px;cursor:pointer}button.secondary{background:transparent;color:var(--blue);border:1px solid var(--blue)}:focus-visible{outline:3px solid var(--blue);outline-offset:3px}.daynav{display:flex;gap:8px;margin:20px 0;flex-wrap:wrap}.daynav button[aria-pressed=true]{background:var(--ink);color:var(--bg)}.slots{list-style:none;padding:0}.slots li{display:flex;gap:15px;border-bottom:1px solid var(--line);padding:10px 0}.slots b{color:var(--blue);min-width:25px}.chat{max-width:780px;margin:20px auto}.message{padding:18px 24px;margin:14px 0;background:var(--paper);border-radius:10px}.editor{margin-left:55px;background:transparent;border:1px solid var(--line)}.message strong{color:var(--blue)}details{padding:15px 0}summary{cursor:pointer;color:var(--blue);font-weight:600}pre{white-space:pre-wrap;background:var(--paper);padding:22px;font-size:13px}footer{padding:30px 0;font-size:14px}.scroll{overflow-x:auto}@media(max-width:720px){header,main{padding:24px}.grid,.fields{grid-template-columns:1fr}td,th{padding:9px}h2{font-size:30px}.editor{margin-left:15px}}@media print{button,nav{display:none}section{break-inside:avoid}body{font-size:12px}}
+.eyebrow,.flow{color:var(--blue)}.flow{background:var(--paper);padding:16px}code{overflow-wrap:anywhere}#selection-rules td:first-child{min-width:160px}
+
+pre{font:14px/1.6 ui-monospace,monospace;overflow-wrap:anywhere}.panel pre{padding:0}h1{font-size:clamp(36px,5vw,60px)}nav{gap:12px 20px}td{max-width:72ch}section>p,section>ul,section>ol{max-width:88ch}li{margin-bottom:9px}button{min-height:44px}@media print{details>*{display:block}header{padding-top:20px}section{break-inside:auto}h2,h3{break-after:avoid}tr{break-inside:avoid}}
+
+header{padding-top:36px}h1{font-family:system-ui,sans-serif;font-size:clamp(30px,4vw,46px);font-weight:700;max-width:1000px}h2{font-family:system-ui,sans-serif;font-size:28px;font-weight:650}h3{font-family:system-ui,sans-serif;font-size:21px;font-weight:650}#tasks article{padding:20px 0;border-top:1px solid var(--line)}#tasks article p{margin:9px 0}#assignment{border-top:4px solid var(--blue)}
+</style></head><body>
+<header>
+<p>Implementation plan · Frontend only
+</p>
+<h1>Itinerary Pipeline UI<br>Build instructions for the next AI
+</h1>
+<p class="lead">Replace the empty Itinerary Pipeline page with a working four-step form and a day-planning workspace. Do not connect AI.
+</p>
+<p><strong>Read in order:</strong> assignment → fixed decisions → build tasks → acceptance checks. Detailed screen specifications and template data follow as references.
+</p>
+<nav><a href="#assignment">1. Assignment</a><a href="#fixed">2. Fixed decisions</a><a href="#tasks">3. Build tasks</a><a href="#finish">4. Definition of done</a><a href="#reference">Detailed specifications</a><a href="#appendix">Template data</a>
+</nav>
+</header>
+<main>
+
+<section id="assignment">
+<h2>1. Your assignment
+</h2>
+<p><strong>Implement the application UI described here.</strong> This is an execution plan, not a request to generate another plan or build another HTML mockup. The user will hand this document to the implementing AI.
+</p>
+<table>
+<tr><th>Item</th><th>Instruction</th>
+</tr>
+<tr><td>Repository</td><td><code>/Users/alanmalpartida/Desktop/questurian/apps/ai-blog-writer</code></td>
+</tr>
+<tr><td>Entry file</td><td><code>apps/frontend/src/features/itineraryPipeline/ItineraryPipelinePage.tsx</code></td>
+</tr>
+<tr><td>Page to deliver</td><td><a href="http://localhost:3003/itinerary-pipeline">http://localhost:3003/itinerary-pipeline</a></td>
+</tr>
+<tr><td>Current state</td><td>The page contains a heading and “Planning only.” Its route and dashboard link already exist.</td>
+</tr>
+<tr><td>Required outcome</td><td>User enters trip details, configures each day, approves every layout, then opens a workspace showing that day’s data and preparation notes.</td>
+</tr>
+<tr><td>Explicit limit</td><td>No AI calls, generated responses, research, title generation, backend migrations or deployment.</td>
+</tr>
+</table>
+<h3>Read before coding
+</h3>
+<ol>
+<li>Read applicable AGENTS.md and use the required caveman skill.
+</li>
+<li>Inspect the entry file, existing Studio form/dialog components and frontend tooling.
+</li>
+<li>Read the ordered tasks below, then their linked specifications.
+</li>
+<li>Read the revised template appendix before implementing the day selector. Existing app constants contain older layouts.
+</li>
+</ol>
+<p>Use this plan for the new itinerary UI only. Do not apply its form-based intake to Prompt2Blog or change the legacy itinerary builder. New code belongs under the singular <code>features/itineraryPipeline/</code> directory.
+</p>
+</section>
+
+<section id="fixed">
+<h2>2. Fixed product decisions
+</h2>
+<p>These decisions are settled. Do not restart the design discussion or substitute a different flow.
+</p>
+<ol>
+<li><strong>Title seed is a finished or near-finished SEO title.</strong> User supplies it once. Preserve it; do not generate or discover it.
+</li>
+<li><strong>No initial Grill.</strong> Trip details and layouts are entered with forms and controls.
+</li>
+<li><strong>Number of days creates that many tabs.</strong> Three days means three independently editable day layouts.
+</li>
+<li><strong>User selects day type and organizes stops.</strong> Selecting a type fills a visible, editable agenda.
+</li>
+<li><strong>User approves every layout before entering the day workspace.</strong> Layout approval is not approval of AI-generated content.
+</li>
+<li><strong>Each day has its own future Grill.</strong> Shared trip details are inherited; day data and notes remain separate.
+</li>
+<li><strong>AI stays disconnected in this build.</strong> Workspace must be useful and honest about its current availability.
+</li>
+<li><strong>Every displayed element needs a purpose.</strong> No fake statistics, filler panels, duplicated title inputs or technical metadata in the product UI.
+</li>
+</ol>
+<p><strong>Implementation defaults:</strong> four stages on the existing route, Full Day Balanced on new days, optional shared preferences collapsed, browser-local saving, per-day approval buttons, no approve-all shortcut. These specify how to implement the agreed flow; they are not claims that each detail was separately requested by the user. Use them unless repository constraints require a documented equivalent.
+</p><div class="flow">Trip details → Shape days → Approve layouts → Day workspace</div>
+</section>
+
+<section id="tasks">
+<h2>3. Execute these tasks in order
+</h2>
+<p>Finish and verify each deliverable before moving on. The links lead to exact field and behavior specifications. Do not stop after building only the first screen.
+</p>
+
+<article>
+<h3>Task 1 — Establish state and page shell
+</h3>
+<p><strong>Build:</strong> a feature-scoped draft model, reducer, validation function and four-stage page shell. Track active stage and active day by stable ID. Create the seven revised built-in templates as independent snapshots when selected.
+</p>
+<p><strong>Files:</strong> entry page, <code>types.ts</code>, <code>setupReducer.ts</code>, <code>validation.ts</code>, <code>templates.ts</code>, scoped stylesheet.
+</p>
+<p><strong>Pass when:</strong> a three-day draft has three unique day IDs; slot occurrences are unique; editing one day cannot mutate another; stage changes do not discard data.
+</p>
+<p><strong>Read:</strong> <a href="#state">state contract</a>, <a href="#implementation">file responsibilities</a>, <a href="#visual">visual rules</a>.
+</p>
+</article>
+
+<article>
+<h3>Task 2 — Build Trip details
+</h3>
+<p><strong>Build:</strong> title, count, base city, scope, timing, preferred areas and starting base. Add optional shared preferences in one disclosure. Render conditional date/weekday/getaway inputs only when relevant.
+</p>
+<p><strong>Action:</strong> “Shape days” validates the form, focuses actionable errors, then opens the day editor. Do not call AI or infer missing values from the title.
+</p>
+<p><strong>Pass when:</strong> missing required values block progress; optional blanks do not; valid three-day input produces exactly three tabs; all entered wording survives navigation.
+</p>
+<p><strong>Read:</strong> <a href="#trip">exact fields, controls and defaults</a>, <a href="#validation">validation rules</a>.
+</p>
+</article>
+
+<article>
+<h3>Task 3 — Build the day tabs and editable agenda
+</h3>
+<p><strong>Build:</strong> tabs, day-type selector, available-time selector, working day title and ordered stop rows. Apply the revised Full Day Balanced default. Changing type previews replacement before applying. Add stop, edit stop, remove with Undo, move up/down and copy layout to selected days.
+</p>
+<p><strong>Show:</strong> concise stop rows first; full selection rules only inside the selected stop’s editor. User must see what choosing a day type actually produces.
+</p>
+<p><strong>Pass when:</strong> every revised template produces the right slots; replacement can be canceled; copied layouts have fresh IDs; decreasing day count previews affected days before removal; keyboard users can reorder stops.
+</p>
+<p><strong>Read:</strong> <a href="#days">day editor behavior and wireframe</a>, <a href="#appendix">template/preset data</a>.
+</p>
+</article>
+
+<article>
+<h3>Task 4 — Build layout review and approval
+</h3>
+<p><strong>Build:</strong> an ordered readback of all days with their slots, Edit layout and Approve layout actions. Show approved count. Gate “Open day workspace” on valid, current approval for every day.
+</p>
+<p><strong>Handle edits:</strong> day-layout edits reopen that day; shared trip edits reopen all affected approvals according to the revision rules. Keep notes and layouts intact.
+</p>
+<p><strong>Pass when:</strong> two approvals out of three cannot open workspace; approving the third can; later edits make stale approvals unusable, including through stage navigation.
+</p>
+<p><strong>Read:</strong> <a href="#review">approval specification</a>, <a href="#state">revision ownership</a>.
+</p>
+</article>
+
+<article>
+<h3>Task 5 — Build the day workspace without AI
+</h3>
+<p><strong>Build:</strong> day tabs, selected day’s approved agenda, shared trip context disclosure and editable per-day preparation notes. Show the future conversation area with one clear unavailable notice and a disabled composer.
+</p>
+<p><strong>Do not implement:</strong> fake chats, simulated generation, research, AI content approval or a working Send action.
+</p>
+<p><strong>Pass when:</strong> notes stay attached to the correct day, shared data appears accurately, Edit layouts preserves notes, and no AI endpoint is invoked.
+</p>
+<p><strong>Read:</strong> <a href="#workspace">workspace layout and boundaries</a>.
+</p>
+</article>
+
+<article>
+<h3>Task 6 — Add saving and failure recovery
+</h3>
+<p><strong>Build:</strong> a versioned draft repository behind an interface, scoped to the signed-in user. Restore stage/day on reload. Display accurate browser-save status; handle write failures and conflicting tabs. Load saved custom templates through the existing read-only API without blocking built-ins.
+</p>
+<p><strong>Pass when:</strong> same-user reload restores the draft; another user cannot inherit it; failed writes never display Saved; unavailable custom library still allows built-in templates.
+</p>
+<p><strong>Read:</strong> <a href="#state">persistence details</a>, <a href="#implementation">custom-template adapter</a>.
+</p>
+</article>
+
+<article>
+<h3>Task 7 — Verify the complete experience
+</h3>
+<p><strong>Run:</strong> appropriate existing type/build checks, meaningful state/validation tests and an end-to-end browser walkthrough. Check desktop, narrow mobile, keyboard navigation and reload. Inspect network activity to verify no AI calls.
+</p>
+<p><strong>Polish:</strong> correct errors, focus behavior, clipping, accidental global styles and unnecessary screen content. Use existing dependencies; no new packages just for basic controls.
+</p>
+<p><strong>Pass when:</strong> every item below is satisfied and the app, rather than an HTML mockup, performs the workflow.
+</p>
+<p><strong>Read:</strong> <a href="#delivery">detailed acceptance scenarios and accessibility requirements</a>.
+</p>
+</article>
+
+</section>
+
+<section id="finish">
+<h2>4. Definition of done
+</h2>
+<ul>
+<li>Real application page replaces “Planning only.”
+</li>
+<li>Trip form validates required and conditional inputs.
+</li>
+<li>N days produce N independent tabs and editable layouts.
+</li>
+<li>Template choices show their slots and preserve full rules.
+</li>
+<li>Every layout requires explicit approval; edits invalidate stale approval.
+</li>
+<li>Approved layouts open a per-day workspace with working notes.
+</li>
+<li>Shared context is entered once and inherited correctly.
+</li>
+<li>Saving, reload and failure states behave as specified.
+</li>
+<li>Keyboard/mobile use works; no filler or fake AI behavior.
+</li>
+<li>No AI, research, publishing or deployment action occurs.
+</li>
+</ul>
+<h3>Final response from the implementing AI
+</h3>
+<p>Report files changed, the working local route, verification commands and outcomes, and any remaining limitations. State explicitly that AI remains unwired. Do not claim production persistence or research feasibility. If something cannot be completed, identify the exact missing behavior rather than calling the whole task finished.
+</p>
+</section>
+
+<section id="reference">
+<h2>5. Detailed implementation specifications
+</h2>
+<p>The sections below are reference requirements for the tasks above. They describe the product to build; do not copy this explanatory text wholesale into the user interface.
+</p>
+<nav><a href="#trip">Trip form</a><a href="#days">Day editor</a><a href="#review">Approval</a><a href="#workspace">Workspace</a><a href="#validation">Validation</a><a href="#state">State</a><a href="#implementation">Files</a><a href="#delivery">Checks</a>
+</nav>
+</section>
+
+<section id="contract">
+<h2>Reference A — Scope
+</h2>
+<p><strong>Build a usable frontend workflow, with no AI integration:</strong> Trip details → Shape days → Approve layouts → Day workspace. The initial section is a structured form. Every day gets its own future Grill after all layouts are approved.
+</p>
+<ul>
+<li><strong>One title seed:</strong> a finished or near-finished SEO-ready title, supplied by the user. Preserve its wording and promise. No title generation, discovery interview or duplicate seed field.
+</li>
+<li><strong>Structure belongs to the user:</strong> number of days, day types, slot order and options. Show the resulting layout immediately.
+</li>
+<li><strong>No initial Grill:</strong> collect known shared information through controls. Optional information stays optional.
+</li>
+<li><strong>One future Grill per day:</strong> daily purpose, experiences, geography, distances, timings and tradeoffs. Each receives the same shared trip context and its own day snapshot.
+</li>
+<li><strong>This build stops at an honest workspace:</strong> editable preparation notes and readable context work; sending messages, AI recommendations, research, route verification and day-content approval do not.
+</li>
+</ul>
+<p>This document is the implementation handoff. When assigned this plan, implement the application UI through Tasks 1–7 above. The seven revised day rhythms and their complete slot rules remain specified in the appendix.
+</p>
+<p><strong>Acceptance principle:</strong> every visible element must help enter a decision, inspect its result, fix a problem or move to the next step. Remove decorative metrics, duplicate summaries and implementation metadata from the product UI.
+</p>
+</section>
+<section id="map">
+<h2>Reference B — Screen transitions
+</h2><div class="flow"><strong>1. Trip details</strong> → <strong>2. Shape days</strong> → <strong>3. Approve layouts</strong> → <strong>4. Day workspace</strong></div>
+<p>Use one existing route, <code>/itinerary-pipeline</code>, with four local stages. Keep the Studio navigation shell. A compact step navigation shows the current stage and lets users return to earlier stages without losing edits. Later stages become available only when their prerequisites hold.
+</p>
+<table>
+<tr><th>Stage</th><th>Main task</th><th>Primary action</th><th>Exit condition</th>
+</tr>
+<tr><td>Trip details</td><td>Enter title and shared trip decisions.</td><td>Shape days</td><td>Required fields and conditional fields valid.</td>
+</tr>
+<tr><td>Shape days</td><td>Choose formats; inspect and adjust every day.</td><td>Review layouts</td><td>Every day has a valid slot layout.</td>
+</tr>
+<tr><td>Approve layouts</td><td>Read the complete skeleton and approve each day.</td><td>Open day workspace</td><td>All days approved at current layout/context revision.</td>
+</tr>
+<tr><td>Day workspace</td><td>Inspect day context and record preparation notes.</td><td>Save notes, only when changed</td><td>No AI-stage completion in this build.</td>
+</tr>
+</table>
+<p>One main action per stage. Back actions are secondary. Do not show a second copy of the same action at the top and bottom on short screens. For long forms, use a bottom action bar that never obscures the last field, errors or mobile keyboard focus.
+</p>
+<p>A saved draft resumes at its last available stage and active day. Entering the workspace selects Day 1 initially; later visits restore the selected day. Browsing a tab never marks it approved.
+</p>
+</section>
+<section id="visual">
+<h2>Visual direction: an editable day agenda
+</h2>
+<p>The distinctive element is the day agenda: select a format and see its ordered stops appear as an editable sequence. This is where the interface should feel satisfying. Everything around it stays quiet.
+</p>
+<table>
+<tr><th>Decision</th><th>Specification</th>
+</tr>
+<tr><td>Color</td><td>Ground <code>#F5F0E8</code>; inset surface <code>#EFE9DE</code>; text <code>#1A1A1A</code>; action/focus accent <code>#3B5BDB</code>; borders derived from foreground with adequate contrast. Use the approved foundations palette. No near-white panels or warm accent colors.</td>
+</tr>
+<tr><td>Type</td><td>Existing Studio sans-serif for controls and body, 16px minimum body; existing display font or Georgia for page and stage headings, roughly 28–36px. Small labels 14px. No new downloaded fonts.</td>
+</tr>
+<tr><td>Layout</td><td>Left-aligned content, comfortable maximum width around 1120px. Forms about 720px; day editor may use a 2:1 agenda/details split. Use whitespace and rules between groups, not a card around every field.</td>
+</tr>
+<tr><td>Hierarchy</td><td>Stage title → short task instruction → inputs → useful preview. A title summary may truncate with an accessible full-title disclosure; never make the user scroll past a hero banner to work.</td>
+</tr>
+<tr><td>Feedback</td><td>Immediate slot preview after initial selection; concise “Layout updated” after accepted replacement. Text plus icon for errors and approval; color alone conveys nothing.</td>
+</tr>
+<tr><td>Motion</td><td>Only brief response to selection or disclosure, roughly 120–180ms. Respect reduced motion. No confetti, looping animation or fake AI typing.</td>
+</tr>
+</table>
+<p><strong>Critique applied:</strong> a dashboard of equal cards would obscure the ordered days. Use actual day tabs and an agenda, with an expanded editor only for the stop being changed. The HTML handoff contains more explanation than the finished product should display.
+</p>
+</section>
+<section id="trip">
+<h2>Stage 1 — Trip details
+</h2>
+<p>Heading: <strong>Start with your itinerary</strong>. Instruction: “Add your title and trip details. Next, shape each day.” Render a normal form, not chat bubbles. No AI buttons.
+</p>
+<table>
+<tr><th>Field / control</th><th>Required and default</th><th>Behavior and reason</th>
+</tr>
+<tr><td>Title seed · full-width text input</td><td>Required; empty</td><td>Label “Itinerary title”; helper “Use your finished or near-finished SEO title.” Placeholder “Three easy days of food and culture in Lima”. Reject whitespace-only. Do not rewrite or assign an SEO score.</td>
+</tr>
+<tr><td>Number of days · numeric stepper plus typing</td><td>Required; empty</td><td>Positive whole number. Creates exactly that many days. Seven is not a maximum. No guessed count from the title. Allow editing later with explicit removal handling.</td>
+</tr>
+<tr><td>Base city · text input</td><td>Required; empty</td><td>Accept explicit city text, including country for clarity. No paid geocoding or invented city IDs. A future catalog adapter can replace the control without changing its purpose.</td>
+</tr>
+<tr><td>Scope · radio group</td><td>Required; “City only”</td><td>Other option: “Include an overnight getaway”. One base city; getaway occupies existing days and returns to base. Do not silently create extra days.</td>
+</tr>
+<tr><td>Timing · segmented radio group</td><td>Required mode; “Evergreen”</td><td>Options Evergreen / Specific dates / Weekday sequence. Dates reveals start date; derive end date from day count. Weekday sequence reveals first weekday. Evergreen attaches no invented weekdays.</td>
+</tr>
+<tr><td>Preferred areas · token input</td><td>Optional; empty</td><td>Type area, Enter to add; removable tokens, deduplicate trimmed labels. Show helper only: “Leave blank to choose areas during each day’s Grill.”</td>
+</tr>
+<tr><td>Starting base · text input</td><td>Optional; empty</td><td>Hotel or neighborhood. Placeholder “Hotel or neighborhood, if known”. No hotel selection requirement or geocoding.</td>
+</tr>
+</table>
+<h3>Optional: shared preferences
+</h3>
+<p>One collapsed disclosure, “Shared preferences”. A short line explains these apply to all days. Do not count blank optional fields as incomplete.
+</p>
+<table>
+<tr><th>Field</th><th>Control / values</th><th>Meaning</th>
+</tr>
+<tr><td>Who this is for</td><td>Short text</td><td>Reader or travel party in their own words; avoid forcing overlapping traveler categories.</td>
+</tr>
+<tr><td>Budget style</td><td>Select: Unspecified / Budget-conscious / Mid-range / Premium / Mixed</td><td>Selection preference, not a factual price guarantee. Optional short budget note for exact amounts and currency; no currency guess.</td>
+</tr>
+<tr><td>Pace</td><td>Select: Unspecified / Relaxed / Balanced / Full</td><td>Shared preference; does not replace selected day formats.</td>
+</tr>
+<tr><td>Getting around</td><td>Checkboxes: Walking / Public transport / Taxi or rideshare / Rental car; default none</td><td>None means unspecified, not walking-only. Optional transport note.</td>
+</tr>
+<tr><td>Walking tolerance</td><td>Select: Unspecified / Short walks / Moderate walks / Long walks welcome</td><td>Qualitative preference now. Precise distance/time tradeoffs belong to day Grills.</td>
+</tr>
+<tr><td>Dietary needs, access needs</td><td>Two short textareas</td><td>Blank means unspecified. Explicit “None” remains distinguishable from blank.</td>
+</tr>
+<tr><td>Must include, avoid</td><td>Two short textareas</td><td>Shared user constraints; preserve exact wording. No generated tags or interpretation.</td>
+</tr>
+</table>
+<p><strong>Do not ask here:</strong> daily theme essays, individual venues, exact route durations, SEO keywords already implied by title, a tone profile, a second title seed or a generic “vision” field.
+</p>
+<h3>Getaway conditional group
+</h3>
+<p>When scope includes a getaway, show destination/area (optional), departure day and return day (required selectors bounded by total days). Require return later than departure; with one total day, explain “An overnight getaway needs at least two days.” Derive which nights are away. In Shape days, require a Travel slot on departure and return days. The editor adds or marks the slots; scope selection never silently inserts them. Destination may remain undecided until the affected day Grills.
+</p>
+</section>
+<section id="days">
+<h2>Stage 2 — Shape days
+</h2>
+<p>Heading: <strong>Shape your days</strong>. Instruction: “Choose a day type, then adjust its stops.” Show a single compact title/city/day-count summary with “Edit trip details”. Below it, exactly N tabs labelled Day 1, Day 2, …; include weekday/date only when supplied. Each tab has a concise state: Needs layout, Ready, Approved or Needs review.
+</p><div class="panel"><pre>Trip details   /   Shape days   /   Approve layouts   /   Day workspace
+Three easy days of food and culture in Lima       Edit trip details
+
+[ Day 1 — Ready ] [ Day 2 — Ready ] [ Day 3 — Needs layout ]
+
+Day type [ Full Day Balanced ▾ ]       Available time [ Full day ▾ ]
+Working title [ Day 1                                      ]
+
+Morning      Signature activity                    Edit  Move up/down
+Morning      Neighborhood exploration              Edit  Move up/down
+Lunch        Lunch                                 Edit  Move up/down
+Afternoon    Cultural / experiential activity       Edit  Move up/down
+Dinner       Dinner                                Edit  Move up/down
+Evening      Social evening                         Edit  Move up/down
+
+Add stop                     Copy layout to other days
+
+Back                                             Review layouts</pre></div>
+<h3>Day type selection
+</h3>
+<p>Default newly created days to the revised <strong>Full Day Balanced</strong> template, with visible rows immediately. Ready means structurally valid, not approved. Selector offers seven revised built-ins and available saved custom templates in separate groups. Under the selector show one sentence explaining the chosen rhythm; no full rule table in the primary UI.
+</p>
+<p>Built-ins: Full Day Balanced; Light Full Day; Food-Focused Full Day; Adventure Full Day; Nightlife Full Day; Premium Indulgence Day; Culture &amp; Stroll Day. The appendix is the authoritative revised slot content; the older app constants differ. Use feature-scoped revised definitions so existing builders do not change.
+</p>
+<p>Opening a different option previews the replacement sequence with “Use this layout” / “Keep current layout”. Apply only on explicit selection of Use. Existing edits and approval are never erased merely by browsing choices. After applying, assign fresh slot occurrence IDs and reset only the affected approval. Custom template source must remain identifiable internally.
+</p>
+<h3>Day options
+</h3>
+<ul>
+<li><strong>Working title:</strong> defaults to Day N; optional personalization. This is a day label, never a second article title.
+</li>
+<li><strong>Available time:</strong> Full day / Morning only / Afternoon onward / Evening only / Custom window. Full day is default. Custom requires start and end, plus an explicit “Ends next day” checkbox for overnight windows.
+</li>
+<li><strong>Day-specific notes:</strong> collapsed optional textarea for already-known constraints, such as arrival time. Do not require the user to fill daily intent here.
+</li>
+</ul>
+<p>Available time does not silently prune the template. Show out-of-window stops with a linked message to adjust daypart, remove the stop or change the window. Dayparts are coarse labels. Custom windows must receive an explicit layout review; do not claim exact schedule fit from dayparts.
+</p>
+<h3>Stop rows and editing
+</h3>
+<p>Collapsed row shows daypart, label, kind and Optional where relevant. Each row has Edit, Move up, Move down and Remove controls with accessible stop-specific names. An optional drag handle is supplemental; keyboard moves must always work.
+</p>
+<table>
+<tr><th>Expanded field</th><th>Control</th><th>Rules</th>
+</tr>
+<tr><td>Stop label</td><td>Text input</td><td>Required, trimmed nonempty.</td>
+</tr>
+<tr><td>Kind</td><td>Select: Place / Experience / Free time / Travel</td><td>Place and Experience have search instructions. Free time creates no venue search. Travel represents transfer planning.</td>
+</tr>
+<tr><td>Time of day</td><td>Select</td><td>Morning, late morning, lunch, afternoon, dinner, evening, nightlife. Explicit user order wins; do not silently sort.</td>
+</tr>
+<tr><td>Optional</td><td>Checkbox</td><td>Independent of kind. Optional still must have valid fields.</td>
+</tr>
+<tr><td>Purpose</td><td>Short textarea prefilled from template</td><td>Required for searchable stops; useful default from chosen preset. User can refine later in the Grill.</td>
+</tr>
+<tr><td>Selection details</td><td>Collapsed disclosure</td><td>Allowed categories checkboxes (Restaurant, Activity, Nightlife), preferred subset, search cues, exclusions. Carry all template rules even while hidden. Do not expose raw collection keys.</td>
+</tr>
+<tr><td>Travel details</td><td>From / To / transport select</td><td>Required endpoints for getaway departure/return; “Base city” and “Getaway destination — undecided” are valid references. No fabricated address. Mode may be Unspecified.</td>
+</tr>
+</table>
+<p>Free time hides category/search fields; label and daypart still required. Switching kind discards incompatible fields only after a clear preview; preserve draft until accepted. Add stop opens the existing 13 presets plus Free time and Travel, showing a preview before insert. New rows receive unique IDs. Remove offers an immediate Undo action; no modal for every small edit. Keep the last removal recoverable until the next removal.
+</p>
+<h3>Repetition without repetitive work
+</h3>
+<p>“Copy layout to other days” opens a target-day checklist and a replacement summary. Copy type, slot structure and optional flags; do not copy day title, date, available window, notes, IDs or approvals. Explicit Apply confirms replacements. Each target receives independent snapshots and fresh slot IDs. A copied layout conflicting with a target window becomes Needs layout with linked fixes.
+</p>
+<p>Changing total days upward appends defaults; existing IDs and content survive. Reducing count shows exactly which trailing days and saved notes will be removed, with Cancel / Remove days. Cancel preserves count and state. After removing the active day, focus the last remaining day. Reordering whole days is deferred; slot reordering is included.
+</p>
+</section>
+<section id="review">
+<h2>Stage 3 — Approve layouts
+</h2>
+<p>Heading: <strong>Review your day layouts</strong>. Show the article title, compact shared trip summary and every day in order. Each day displays its type, available time, working title, ordered stops and optional flags. Put optional shared preferences behind one disclosure. No requirement to inspect every hidden category tag before approving.
+</p>
+<p>Each day has <strong>Edit layout</strong> and <strong>Approve layout</strong>. Approval is an explicit per-day action against its current revision; no prechecked boxes or approve-all shortcut. Replace the button with “Layout approved” and a secondary Edit action. Show useful progress such as “2 of 3 layouts approved”, never an arbitrary completion percentage.
+</p>
+<p>Primary action <strong>Open day workspace</strong> remains unavailable until all layouts are approved and validation passes. Explain the remaining action adjacent to the button: “Approve Day 3 to continue.” Error links navigate to the exact day and input. Approving a layout confirms structure only; it does not imply venues chosen, schedules verified or daily Grill completed.
+</p>
+<p>A later layout edit clears approval for that day. A shared trip detail change clears all layout approvals conservatively; show this before committing the shared change once approvals exist. Preserve all layouts and notes. Revisions remain internal; product copy says “Trip details changed. Review these layouts again.” Adding/removing days clears trip-context-dependent approvals because sequence and timing changed.
+</p>
+</section>
+<section id="workspace">
+<h2>Stage 4 — Day workspace, AI unwired
+</h2>
+<p>Heading: <strong>Plan each day</strong>. Retain day tabs and the same stable day identities. Desktop uses a wide conversation area and a narrower context column. Mobile stacks context summary above the conversation, with full context in a disclosure.
+</p><div class="panel"><pre>[ Day 1 ] [ Day 2 ] [ Day 3 ]                       Edit layouts
+
+Day 2 · Food-Focused Full Day
+
+Day Grill                                 This day
+AI conversation is not connected yet.      Approved layout and ordered slots
+Your trip details and layout are ready.    Available time and day notes
+
+Preparation notes                         Shared trip details  [Expand]
+[What should this day focus on?       ]    Title, city, scope, timing
+[                                    ]    Preferences entered once
+Save notes
+
+[ Message composer unavailable       ]
+Start day Grill — unavailable</pre></div>
+<p>One short availability notice near the conversation is enough. No simulated transcript in the actual user draft. No loading spinner, invented recommendation, fake success or Start button that quietly does nothing. Disabled composer and action have an adjacent explanation. An optional fixture story for development may show future messages, but never ship fixture messages as user data.
+</p>
+<h3>Useful interaction available now
+</h3>
+<ul>
+<li>Switch days; view that day’s complete layout and notes.
+</li>
+<li>Expand shared trip context; entered values appear once as inherited read-only context.
+</li>
+<li>Edit and save preparation notes per day. Label the textarea “Notes for this day”; helper “Anything you want to explore when planning this day.” No required essay.
+</li>
+<li>Return to Edit layouts; keep notes when approval is reopened.
+</li>
+<li>Show a simple saved/not-saved state. Do not label notes as agreed AI decisions.
+</li>
+</ul>
+<h3>Future contract, not part of this implementation
+</h3>
+<p>Each day Grill receives shared trip context, that day’s layout and notes, and concise summaries of other days when those exist. It will settle purpose, anchors, geographic boundaries, distances, timing targets and priorities. Proposed structural changes return to user controls. Future conversation, agreed decisions and factual evidence are separate records keyed by day ID; never shared mutable chat state across tabs.
+</p>
+<p>Reserve interface boundaries for idle, sending, response, failure and readback states, but do not build provider selection, network retries, model budgets, research or approval of AI content now. Layout approval and future day-plan approval are distinct. Whole-trip content consistency review follows future Grills; current review only checks structure and explicit input consistency.
+</p>
+</section>
+<section id="validation">
+<h2>Validation and clear recovery
+</h2>
+<p>Use one pure validation function shared by stage navigation and approval actions. Return field/day IDs and human-readable reasons, not just a boolean. Validate touched fields on blur; validate the whole stage on Continue. Show a focused error summary linked to fields, then inline messages. Never clear entered content after failure.
+</p>
+<table>
+<tr><th>Condition</th><th>Handling</th>
+</tr>
+<tr><td>Empty title/city; invalid count</td><td>Block Shape days. “Add your itinerary title.” / “Add a base city.” / “Enter a whole number of days, at least 1.”</td>
+</tr>
+<tr><td>Specific dates or weekdays missing required value</td><td>Block. Keep unrelated fields and show the missing control.</td>
+</tr>
+<tr><td>Getaway outside range or same-day return</td><td>Block. Require departure before return, both within total days. Revalidate after count changes.</td>
+</tr>
+<tr><td>Day has no stops, blank stop label, missing daypart or invalid searchable rule</td><td>Block review/approval for that day; focus failing row. Required allowed categories nonempty; preferred categories must be a subset.</td>
+</tr>
+<tr><td>Clearly excluded dayparts under coarse time choice</td><td>Block until user adjusts. Morning-only allows morning/late morning; afternoon-onward allows afternoon/dinner/evening/nightlife; evening-only allows dinner/evening/nightlife. Explain this product convention in helper copy, especially lunch exclusion.</td>
+</tr>
+<tr><td>Custom window invalid</td><td>Require end after start, considering explicit next-day flag. No implicit midnight wrap. Show “Set an end time after the start, or choose Ends next day.”</td>
+</tr>
+<tr><td>Custom-window compatibility or unusual slot order</td><td>Require a one-time “Keep this order/window” acknowledgment on review; reset acknowledgment when relevant values change. This accepts intent, not route feasibility.</td>
+</tr>
+<tr><td>Missing travel slots on getaway endpoints</td><td>Block approval; link to Add Travel on the corresponding day. Validate base→getaway and getaway→base references.</td>
+</tr>
+<tr><td>Obvious numeric title/day mismatch</td><td>Targeted warning only when confidently detected, such as “3 days” vs 5. User edits title/count or acknowledges the wording. No semantic AI title validator; do not reject ambiguous numbers such as “24 hours”.</td>
+</tr>
+<tr><td>Unknown budget, venues, hours, distances or dietary needs</td><td>No setup blocker. Store unspecified values honestly; later day Grills/research handle them.</td>
+</tr>
+<tr><td>Approval stale</td><td>Block workspace entry; link affected days. If already open, redirect to review with notes retained.</td>
+</tr>
+</table>
+<p>Errors use an icon, text and visible border, with accessible descriptions. No error color dependency. No “Everything must be filled” message when only three required fields are missing.
+</p>
+</section>
+<section id="state">
+<h2>State, persistence and ownership
+</h2>
+<p><strong>UI-only build:</strong> save one local draft per signed-in user and browser using a feature-specific, versioned storage key. If no reliable user identity is available, keep in memory and explain the limitation; do not use an anonymous shared draft for authenticated operators. No new backend run or AI calls. “Saved on this browser” is the accurate persistence label.
+</p>
+<p>Create the draft on first substantive edit. Autosave form changes with a short debounce and flush on blur/stage navigation; preparation notes have explicit Save and a leave-with-unsaved-notes prompt. Catch storage failures and show “Changes aren’t saved on this browser” with Retry. Do not display Saved until write succeeds. Route navigation and tab switching preserve state; reload restores the same draft where storage works.
+</p><pre>ItinerarySetupDraft
+  schemaVersion, draftId, updatedAt
+  trip: titleSeed, dayCount, baseCity, scope, timing,
+        preferredAreas[], startingBase?, sharedPreferences, getaway?
+  tripRevision
+  days[]: id, label, sourceTemplateId, sourceTemplateVersion,
+          availableTime, slots[], setupNotes, preparationNotes,
+          layoutRevision, approval?: {tripRevision, layoutRevision},
+          acknowledgments[]
+  ui: stage, activeDayId
+
+Slot snapshot
+  id                       // unique occurrence, never array index
+  sourceSlotId?            // provenance from template or preset
+  kind, label, daypart, optional
+  purpose, allowedCategories[], preferredCategories[], cues[], exclusions[]
+  travel?: {from, to, mode}
+</pre>
+<p>Day labels and array order never serve as IDs. Selecting/copying a template snapshots all its instructions. Later library edits do not rewrite selected days. Shared trip data is stored once; derive a day’s full context from it rather than copying it into every record. Day notes supplement shared restrictions; they never silently override them.
+</p>
+<p>Derive readiness and approval validity; do not store contradictory status flags. Compare content changes before incrementing revisions; focus, tab switching and saving unchanged values do not invalidate approval. Preparation notes are future content input and do not invalidate structural approval. Existing saved data with unknown schema must not be silently overwritten: offer explicit reset after explaining incompatibility, preserving the original until confirmation.
+</p>
+<p>Listen for same-key changes from another tab. Warn and pause overwriting until user chooses to reload the saved draft or keep this tab’s version. No last-write-wins surprise. Scope reset to this draft only, with confirmation listing that layouts and notes are removed. No automatic migration of old pipeline runs.
+</p>
+<p><strong>Production limit:</strong> local storage is browser-local, not durable cross-device storage. Introduce server persistence later behind a repository interface; do not claim the frontend-only build creates production runs. Keep the UX and state boundaries ready for that replacement.
+</p>
+</section>
+<section id="implementation">
+<h2>Implementation map for the next agent
+</h2>
+<p><strong>Verified starting point:</strong> <code>apps/frontend/src/features/itineraryPipeline/ItineraryPipelinePage.tsx</code> currently renders a heading and “Planning only.” Its route already exists in <code>apps/frontend/src/App.tsx</code>, and the dashboard already links to it. Implement there; do not accidentally modify the separate plural <code>itinerariesPipeline</code> title tooling or replace the legacy builder.
+</p>
+<table>
+<tr><th>Proposed file under features/itineraryPipeline/</th><th>Responsibility</th>
+</tr>
+<tr><td>ItineraryPipelinePage.tsx</td><td>Stage shell and navigation. Keep form/state logic out of the page component.</td>
+</tr>
+<tr><td>types.ts; setupReducer.ts</td><td>Typed draft contract; explicit transitions for edits, copy, replace, count changes and approvals.</td>
+</tr>
+<tr><td>validation.ts; context.ts</td><td>Pure readiness and error computation; derive shared/day context for workspace.</td>
+</tr>
+<tr><td>draftRepository.ts; useItineraryDraft.ts</td><td>Storage adapter, schema checks, save feedback, restoration and cross-tab conflict handling.</td>
+</tr>
+<tr><td>templates.ts</td><td>Feature-scoped revised seven built-ins and preset adapters. Preserve all appendix instructions.</td>
+</tr>
+<tr><td>components/TripDetailsForm.tsx</td><td>Required fields, optional preferences and conditional timing/getaway controls.</td>
+</tr>
+<tr><td>components/DayTabs.tsx; DayLayoutEditor.tsx</td><td>Accessible navigation, template preview, available window and ordered slots.</td>
+</tr>
+<tr><td>components/StopEditor.tsx; LayoutReplacementDialog.tsx</td><td>Progressive stop editing; explicit destructive replacement/copy review.</td>
+</tr>
+<tr><td>components/LayoutReview.tsx; DayWorkspace.tsx</td><td>Per-day structural approval; unwired Grill surface and editable notes.</td>
+</tr>
+<tr><td>itinerary-pipeline.css</td><td>Scoped styles, responsive layout, focus and reduced-motion treatment. Avoid global landing overrides.</td>
+</tr>
+</table>
+<p>Reuse existing accessible controls and dialogs after inspecting their APIs. No dependency installation needed for basic form controls, tabs or move buttons. Mirror frontend types locally; do not import Python shared contracts.
+</p>
+<h3>Template sources
+</h3>
+<p>Existing <code>listicleItineraries/builder/constants/day-shells.constants.ts</code> supplies identities and old vocabulary, but contains older rhythms. This document’s appendix supplies the revised built-ins. Existing <code>builder/services/day-shell-library.api.ts</code> has <code>listLibraryDayShells()</code> for a read-only custom library request. Reuse that through an adapter; do not call create/update/delete endpoints in this build.
+</p>
+<p>Custom templates loading must not block built-ins. Show loading/error text only inside the custom selector section, with Retry. Saved selected snapshots remain usable if the library is unavailable. The two custom templates in the appendix are reference snapshots, not fake live user records to inject into the app. Use real available custom records or show no saved options.
+</p>
+<h3>Boundaries that remain unchanged
+</h3>
+<p>No changes to Prompt2Blog’s v4 intake or ADR contracts; no restoration of retired pipelines or tone selectors. No backend migrations, Payload writes, title generation, provider wiring, maps, paid searches, publishing or deployment. This itinerary form is its own workflow, not a reversal of Prompt2Blog’s interview design.
+</p>
+</section>
+<section id="delivery">
+<h2>Acceptance scenarios and verification details
+</h2>
+<ol>
+<li><strong>Draft foundation:</strong> types, scoped revised templates, reducer, validation and repository. Prove independent day/slot identity, snapshot ownership and round-trip storage.
+</li>
+<li><strong>Trip form:</strong> required inputs, optional preferences, timing/getaway conditionals and error navigation. Continue creates correct tabs without losing earlier edits.
+</li>
+<li><strong>Day editor:</strong> selector preview, row edits, add/remove/undo/move, available windows, copy-to-days and safe count reduction.
+</li>
+<li><strong>Review gate:</strong> complete skeleton readback, per-day approval and revision invalidation. User can repair a specific day and return to review.
+</li>
+<li><strong>Workspace:</strong> day-specific notes, shared context disclosure, stable navigation, explicitly unavailable AI composer. No chat endpoint invocation.
+</li>
+<li><strong>Polish and verify:</strong> keyboard, narrow screens, reload, network/library failure and storage failure. Remove any element that does not aid the workflow.
+</li>
+</ol>
+<table>
+<tr><th>Scenario</th><th>Expected result</th>
+</tr>
+<tr><td>Fresh start; press Shape days</td><td>Required errors, preserved input, focus first missing field. Optional fields do not count as failures.</td>
+</tr>
+<tr><td>Valid title + Lima + 3 days</td><td>Exactly three tabs and independent default layouts. Article title remains verbatim.</td>
+</tr>
+<tr><td>Change Day 2 to Food-Focused</td><td>Preview before apply. Correct seven revised slots and full rules. Days 1 and 3 unchanged.</td>
+</tr>
+<tr><td>Edit, reorder and copy slots</td><td>New target identities; source unaffected. Category rules survive. Keyboard moves update order and announce it.</td>
+</tr>
+<tr><td>Reduce 3 days to 2 with notes on Day 3</td><td>Explicit removal review; Cancel loses nothing. Confirm removes only listed days and updates active tab.</td>
+</tr>
+<tr><td>Morning-only day with evening slots</td><td>Actionable day-specific errors. No silent deletions or claim of a verified schedule.</td>
+</tr>
+<tr><td>Approve 2 of 3 layouts</td><td>Workspace blocked with direct link to unapproved day. Approve third → workspace available.</td>
+</tr>
+<tr><td>Edit an approved day/shared city</td><td>Day edit reopens one approval; city edit reopens all. Notes remain. Stale gate cannot be bypassed via stage navigation.</td>
+</tr>
+<tr><td>Reload and switch users</td><td>Restore same user’s draft where supported; never show another user’s draft.</td>
+</tr>
+<tr><td>Unavailable custom library/storage</td><td>Built-ins usable; visible retry for custom library. No false saved state on failed storage.</td>
+</tr>
+<tr><td>Workspace and network inspection</td><td>Notes editable per day; shared details correct. No AI, title generation, research or write-to-library requests.</td>
+</tr>
+<tr><td>320px, tablet, desktop and 200% zoom</td><td>No page overflow; tabs scroll within their rail; controls remain reachable, content not hidden by footer.</td>
+</tr>
+</table>
+<p>Automate meaningful reducer/validation/persistence checks and one complete browser flow. Use the repository’s existing test tooling; inspect available scripts before choosing commands. Run frontend type/build checks appropriate to touched files. Report exact commands and outcomes; do not claim backend or AI verification. No new tests needed for static prose alone.
+</p>
+<h3>Accessibility requirements
+</h3>
+<p>Use labelled controls, fieldsets and legends; error descriptions tied to inputs; logical heading order. Tabs use tablist/tab/tabpanel roles, roving tabindex, arrow keys, Home/End and visible focus. Dialogs trap focus and restore it on close. Announce slot moves and approval changes with a quiet live region. Touch targets at least 44px. Avoid hover-only controls; retain text labels for ambiguous icons.
+</p>
+<h3>Completion definition
+</h3>
+<p>A user can enter a real title and shared details, create any supported number of day tabs, choose/edit independent layouts, see the resulting skeleton, approve every layout, reopen safely, and enter a useful day workspace without any AI call. All fields shown have a defined storage destination, validation rule and user purpose. The next integration task can consume the structured state without redesigning the intake.
+</p>
+</section>
+<section id="appendix">
+<h2>Appendix — authoritative template and slot rules
+</h2>
+<p>The following retained library specifies the seven revised built-ins and existing preset reference. It is implementation data, not a table to paste into the product screen. Render concise agendas; reveal the detailed rules only when editing selection details. Where earlier descriptive wording differs, the final flow and approval rules above take precedence.
+</p>
+</section>
+<section id="selection-rules"><span class="step">2A / Day and stop rules</span>
+<h2>Carry the rules with the day
+</h2>
+<p>A template is more than a list of stop names. Selecting one must carry its ordered slots and their selection instructions into the outline. The library below revises seven built-in templates by stop purpose, while retaining two saved custom templates and the 13 existing stop presets as reference.
+</p><div class="scroll">
+<table><thead>
+<tr><th>Data point</th><th>Rule for the new pipeline</th>
+</tr></thead><tbody>
+
+<tr><td>Template identity and origin</td><td>Keep the source template ID and whether it came from the built-in or custom library. Full Day Balanced is the existing default; selecting a different template is an explicit editor choice.</td>
+</tr>
+
+<tr><td>Ordered slots</td><td>Copy the complete slot sequence into the day. Give each occurrence its own stable identity; two days can use the same template without sharing editable stops.</td>
+</tr>
+
+<tr><td>Time of day</td><td>Preserve each slot’s daypart. Morning, late morning, lunch, afternoon, dinner, evening, and nightlife are labels, not verified hours or durations. Flag slots outside the editor’s available time for an agreed adjustment.</td>
+</tr>
+
+<tr><td>Allowed place categories</td><td>Use these as the category boundary for candidate selection. A dining-only slot cannot silently become an attraction. A multi-category slot allows any listed category.</td>
+</tr>
+
+<tr><td>Preferred categories</td><td>Prefer these within the allowed categories. Preference is not an additional mandatory category, and does not authorize a category outside the allowed list.</td>
+</tr>
+
+<tr><td>Search cues</td><td>Carry intent tags as descriptions of the desired experience. They guide search and comparison; they are not all mandatory requirements. Each day’s Grill separates must-haves from softer preferences.</td>
+</tr>
+
+<tr><td>Exclusions</td><td>Carry the listed avoid tags into the outline. Surface conflicts with editor requests before research. “None specified” means this template supplies no exclusions; it does not erase trip-wide restrictions.</td>
+</tr>
+
+<tr><td>Trip and day constraints</td><td>Apply reader needs, budget, access, dietary restrictions, geography, and available time alongside slot rules. If they conflict, ask for a decision rather than silently dropping either instruction.</td>
+</tr>
+
+<tr><td>Editor-approved changes</td><td>Preview template replacement and any proposed changes to order, categories, cues, or exclusions. Apply accepted changes to the day’s copy. Later library edits must not rewrite an existing outline.</td>
+</tr>
+
+<tr><td>Free time and travel</td><td>These remain proposed extensions beyond the place-oriented library. Free time creates no venue search. Travel needs feasibility checks. Their detailed fields still need definition.</td>
+</tr>
+
+<tr><td>Handoff to research</td><td>Send the resolved rules for each slot, not just its name or template reference. Keep factual checks separate: a “sunset” cue or “reservation” tag proves neither timing nor availability.</td>
+</tr>
+</tbody>
+</table></div>
+<p class="note">The seven built-in tables below describe revised proposals, not the currently shipped library. Saved custom templates and stop presets remain existing-library snapshots. The rules above describe how the new pipeline should carry that data forward; they do not claim the current builder already enforces every rule.
+</p>
+</section>
+<section id="rhythm-principles">
+<h2>Give every stop a job
+</h2>
+<p>A slot tells Claude why a stop exists, not just its category or time of day. Signature anchors, neighborhood exploration, hands-on experiences, scenic resets, cultural deep dives, transition stops and evening anchors shape genuinely different days.
+</p>
+<p>Keep the three underlying types: Restaurant (dining), Activity (attractions), and Nightlife (nightlife). Slot roles sit above those types. Cultural anchors and scenic recovery map to Activity; dinner maps to Restaurant; a cocktail opener can use Restaurant or Nightlife; the main nightlife destination maps to Nightlife.
+</p>
+<p>Carry each role’s purpose into the outline and research prompt. Light means low intensity with a memorable experience. Food needs a non-food break. Adventure needs recovery. Nightlife needs progression. Premium needs indulgent experiences beyond expensive meals. Culture gets its anchor before lunch.
+</p>
+<p>Optional finishes remain explicitly optional; none should be added merely to fill a template. Dayparts and routing still need feasibility checks. Future Food Explorer, Foodie Splurge and Street Food Day variants can share a theme while using different skeletons; these are future options, not extra templates in this revision.
+</p>
+</section>
+<section id="day-templates">
+<h2>Detailed day library carried into this plan
+</h2>
+<p>Updated September 14, 2026. Seven built-in templates now have distinct proposed rhythms. Two saved custom templates remain unchanged reference snapshots. Full Day Balanced stays the default. This document does not update the app’s template definitions.
+</p>
+<p>Each template fixes an ordered set of stop slots. Each slot carries a time of day, allowed place categories, preferred categories, search cues, and optional exclusions. Times are dayparts, not clock times or durations.
+</p>
+<nav aria-label="Day templates"><a href="#full_day_balanced">Full Day Balanced</a><a href="#light_full_day">Light Full Day</a><a href="#food_focused_full_day">Food-Focused Full Day</a><a href="#adventure_full_day">Adventure Full Day</a><a href="#nightlife_full_day">Nightlife Full Day</a><a href="#premium_indulgence_day">Premium Indulgence Day</a><a href="#culture_and_stroll_day">Culture &amp; Stroll Day</a><a href="#custom_day_shell_1781320547073_odhj8">Afternoon Nightlife</a><a href="#custom_day_shell_1781203331074_shhyp">Alan</a>
+</nav>
+</section>
+<section id="full_day_balanced">
+<p class="eyebrow">Revised proposal · 6 slots
+</p>
+<h2>Full Day Balanced
+</h2>
+<p>anchor → roam → eat → anchor → eat → unwind
+</p>
+<p class="flow">Signature activity → Neighborhood exploration → Lunch → Cultural / experiential activity → Dinner → Social evening
+</p><div class="scroll">
+<table><thead>
+<tr><th>Order / stop</th><th>Time of day</th><th>Place categories</th><th>Purpose / search guidance</th><th>Avoid</th>
+</tr></thead><tbody>
+<tr><th scope="row">1. Signature activity</th><td>morning</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Structure the morning around a memorable landmark or experience.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">2. Neighborhood exploration</th><td>morning</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Wander streets, shops and local landmarks; complement the anchor.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">3. Lunch</th><td>lunch</td><td>Allowed: dining<br>Preferred: dining</td><td>Pause for a local meal.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">4. Cultural / experiential activity</th><td>afternoon</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Give the afternoon a museum, cultural visit or participatory experience.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">5. Dinner</th><td>dinner</td><td>Allowed: dining<br>Preferred: dining</td><td>Settle into an evening meal.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">6. Social evening</th><td>evening</td><td>Allowed: nightlife<br>Preferred: nightlife</td><td>Unwind with conversation, drinks or music.</td><td>None specified</td>
+</tr></tbody>
+</table></div>
+</section>
+<section id="light_full_day">
+<p class="eyebrow">Revised proposal · 6 slots
+</p>
+<h2>Light Full Day
+</h2>
+<p>ease in → memorable low-effort experience → eat → wander → eat → optional unwind
+</p>
+<p class="flow">Coffee / light breakfast → Scenic / low-effort activity → Special lunch → Leisure / neighborhood exploration → Dinner → Relaxed evening (optional)
+</p><div class="scroll">
+<table><thead>
+<tr><th>Order / stop</th><th>Time of day</th><th>Place categories</th><th>Purpose / search guidance</th><th>Avoid</th>
+</tr></thead><tbody>
+<tr><th scope="row">1. Coffee / light breakfast</th><td>morning</td><td>Allowed: dining<br>Preferred: dining</td><td>Start gently with coffee, pastry or a light breakfast.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">2. Scenic / low-effort activity</th><td>morning</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Make a memorable visit without demanding exertion; park, waterfront or accessible overlook.</td><td>strenuous, all-day commitment</td>
+</tr>
+<tr><th scope="row">3. Special lunch</th><td>lunch</td><td>Allowed: dining<br>Preferred: dining</td><td>Make lunch a highlight through food or setting.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">4. Leisure / neighborhood exploration</th><td>afternoon</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Explore at an unhurried pace; short walks, shops or gardens.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">5. Dinner</th><td>dinner</td><td>Allowed: dining<br>Preferred: dining</td><td>Choose a comfortable evening meal.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">6. Relaxed evening (optional)</th><td>evening</td><td>Allowed: nightlife<br>Preferred: nightlife</td><td>Offer a quiet lounge or social finish that can be skipped.</td><td>high energy, club</td>
+</tr></tbody>
+</table></div>
+</section>
+<section id="food_focused_full_day">
+<p class="eyebrow">Revised proposal · 7 slots
+</p>
+<h2>Food-Focused Full Day
+</h2>
+<p>eat → explore food → eat big → breathe → taste → eat big → optional finish
+</p>
+<p class="flow">Breakfast / iconic coffee → Market / food exploration → Signature lunch → Neighborhood walk / light activity → Specialty tasting / snack → Destination dinner → Dessert / drinks
+</p><div class="scroll">
+<table><thead>
+<tr><th>Order / stop</th><th>Time of day</th><th>Place categories</th><th>Purpose / search guidance</th><th>Avoid</th>
+</tr></thead><tbody>
+<tr><th scope="row">1. Breakfast / iconic coffee</th><td>morning</td><td>Allowed: dining<br>Preferred: dining</td><td>Introduce local food culture through breakfast or a distinctive cafe.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">2. Market / food exploration</th><td>morning</td><td>Allowed: attractions, dining<br>Preferred: attractions</td><td>Browse a market and learn about ingredients; avoid another full meal.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">3. Signature lunch</th><td>lunch</td><td>Allowed: dining<br>Preferred: dining</td><td>Anchor lunch around a regional specialty.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">4. Neighborhood walk / light activity</th><td>afternoon</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Create a non-food breathing space between meals.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">5. Specialty tasting / snack</th><td>afternoon</td><td>Allowed: dining, attractions<br>Preferred: dining</td><td>Try one specialty in a small portion, not another full meal.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">6. Destination dinner</th><td>dinner</td><td>Allowed: dining<br>Preferred: dining</td><td>Make dinner a deliberate culinary destination.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">7. Dessert / drinks</th><td>evening</td><td>Allowed: dining, nightlife<br>Preferred: dining</td><td>Offer an optional small finish suited to appetite and energy.</td><td>None specified</td>
+</tr></tbody>
+</table></div>
+</section>
+<section id="adventure_full_day">
+<p class="eyebrow">Revised proposal · 6 slots
+</p>
+<h2>Adventure Full Day
+</h2>
+<p>warm up → adventure anchor → refuel → immerse → recover → eat
+</p>
+<p class="flow">Active opener → Signature adventure → Lunch → Hands-on / immersive experience → Scenic recovery activity → Dinner
+</p><div class="scroll">
+<table><thead>
+<tr><th>Order / stop</th><th>Time of day</th><th>Place categories</th><th>Purpose / search guidance</th><th>Avoid</th>
+</tr></thead><tbody>
+<tr><th scope="row">1. Active opener</th><td>morning</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Warm up with a walk, hike or outdoor activity.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">2. Signature adventure</th><td>morning</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Anchor the day in a distinctive adventure suited to traveler ability.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">3. Lunch</th><td>lunch</td><td>Allowed: dining<br>Preferred: dining</td><td>Refuel and pause between active experiences.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">4. Hands-on / immersive experience</th><td>afternoon</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Participate in a class, guided experience or water activity.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">5. Scenic recovery activity</th><td>afternoon</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Slow down at a waterfront, park or easy viewpoint; recovery is the purpose.</td><td>strenuous, all-day commitment</td>
+</tr>
+<tr><th scope="row">6. Dinner</th><td>dinner</td><td>Allowed: dining<br>Preferred: dining</td><td>Finish with a comfortable, restorative meal.</td><td>None specified</td>
+</tr></tbody>
+</table></div>
+</section>
+<section id="nightlife_full_day">
+<p class="eyebrow">Revised proposal · 7 slots
+</p>
+<h2>Nightlife Full Day
+</h2>
+<p>late start → easy exploration → reset → dinner → social opener → show → main event
+</p>
+<p class="flow">Late lunch / brunch → Low-key daytime activity → Reset / pre-evening stop → Dinner → Cocktail / social opener → Entertainment → Main nightlife destination
+</p><div class="scroll">
+<table><thead>
+<tr><th>Order / stop</th><th>Time of day</th><th>Place categories</th><th>Purpose / search guidance</th><th>Avoid</th>
+</tr></thead><tbody>
+<tr><th scope="row">1. Late lunch / brunch</th><td>lunch</td><td>Allowed: dining<br>Preferred: dining</td><td>Begin late with a substantial meal.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">2. Low-key daytime activity</th><td>afternoon</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Explore without using up energy for the night.</td><td>strenuous, all-day commitment</td>
+</tr>
+<tr><th scope="row">3. Reset / pre-evening stop</th><td>afternoon</td><td>Allowed: dining, attractions<br>Preferred: dining</td><td>Pause at a cafe, quiet garden or refreshment stop before the evening.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">4. Dinner</th><td>dinner</td><td>Allowed: dining<br>Preferred: dining</td><td>Provide a proper meal before nightlife.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">5. Cocktail / social opener</th><td>evening</td><td>Allowed: dining, nightlife<br>Preferred: dining</td><td>Start socially with a cocktail bar or lounge before entertainment.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">6. Entertainment</th><td>evening</td><td>Allowed: nightlife<br>Preferred: nightlife</td><td>See comedy, live music or a performance; distinguish this from the final venue.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">7. Main nightlife destination</th><td>nightlife</td><td>Allowed: nightlife<br>Preferred: nightlife</td><td>Build toward the main club, dance floor or late-night destination.</td><td>None specified</td>
+</tr></tbody>
+</table></div>
+</section>
+<section id="premium_indulgence_day">
+<p class="eyebrow">Revised proposal · 6 slots
+</p>
+<h2>Premium Indulgence Day
+</h2>
+<p>elevated start → signature experience → destination lunch → indulgent leisure → fine dining → premium finish
+</p>
+<p class="flow">Elevated breakfast / coffee → Signature cultural / luxury experience → Destination lunch → Indulgent leisure experience → Fine dining → Premium evening experience
+</p><div class="scroll">
+<table><thead>
+<tr><th>Order / stop</th><th>Time of day</th><th>Place categories</th><th>Purpose / search guidance</th><th>Avoid</th>
+</tr></thead><tbody>
+<tr><th scope="row">1. Elevated breakfast / coffee</th><td>morning</td><td>Allowed: dining<br>Preferred: dining</td><td>Begin with refined breakfast or exceptional coffee.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">2. Signature cultural / luxury experience</th><td>morning</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Anchor the morning with distinctive culture, design or a private experience.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">3. Destination lunch</th><td>lunch</td><td>Allowed: dining<br>Preferred: dining</td><td>Choose lunch for its food and special setting.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">4. Indulgent leisure experience</th><td>afternoon</td><td>Allowed: attractions, dining, nightlife<br>Preferred: attractions</td><td>Add spa, shopping, private tour, afternoon tea, beach club, wine tasting or lounge time; indulgence is more than expensive meals.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">5. Fine dining</th><td>dinner</td><td>Allowed: dining<br>Preferred: dining</td><td>Give dinner a considered fine-dining experience.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">6. Premium evening experience</th><td>evening</td><td>Allowed: nightlife<br>Preferred: nightlife</td><td>Finish with a distinctive performance, reservation-led lounge or special evening.</td><td>None specified</td>
+</tr></tbody>
+</table></div>
+</section>
+<section id="culture_and_stroll_day">
+<p class="eyebrow">Revised proposal · 7 slots
+</p>
+<h2>Culture &amp; Stroll Day
+</h2>
+<p>local start → explore → cultural anchor → lunch → artisan discovery → stroll → casual meal
+</p>
+<p class="flow">Local breakfast / coffee → Neighborhood exploration → Cultural anchor → Local lunch → Secondary cultural / artisan stop → Evening stroll → Market / casual dinner
+</p><div class="scroll">
+<table><thead>
+<tr><th>Order / stop</th><th>Time of day</th><th>Place categories</th><th>Purpose / search guidance</th><th>Avoid</th>
+</tr></thead><tbody>
+<tr><th scope="row">1. Local breakfast / coffee</th><td>morning</td><td>Allowed: dining<br>Preferred: dining</td><td>Start with local breakfast traditions or a neighborhood cafe.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">2. Neighborhood exploration</th><td>morning</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Read the neighborhood through streets, architecture and shops.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">3. Cultural anchor</th><td>morning</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Give the morning purpose with a museum, historical site or major cultural visit before lunch.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">4. Local lunch</th><td>lunch</td><td>Allowed: dining<br>Preferred: dining</td><td>Use a local meal as the natural break after the anchor.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">5. Secondary cultural / artisan stop</th><td>afternoon</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Choose a gallery, craft market, historic shop, bookstore or studio; avoid automatically adding another full museum.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">6. Evening stroll</th><td>evening</td><td>Allowed: attractions<br>Preferred: attractions</td><td>Wind down through a scenic walk or neighborhood route.</td><td>None specified</td>
+</tr>
+<tr><th scope="row">7. Market / casual dinner</th><td>dinner</td><td>Allowed: dining, attractions<br>Preferred: dining</td><td>Finish with market food or a relaxed local meal.</td><td>None specified</td>
+</tr></tbody>
+</table></div>
+</section>
+<section id="custom_day_shell_1781320547073_odhj8">
+<p class="eyebrow">Saved custom template · 5 stops
+</p>
+<h2>Afternoon Nightlife
+</h2>
+<p>5 custom stops.
+</p>
+<p class="flow">Scenic or special lunch → Cultural stop → Evening stroll → Drinks &amp; social → Entertainment
+</p><div class="scroll">
+<table><thead>
+<tr><th>Order / stop</th><th>Time of day</th><th>Place categories</th><th>Purpose / search cues</th><th>Avoid</th>
+</tr></thead><tbody>
+<tr><th scope="row">1. Scenic or special lunch</th><td>lunch</td><td>Allowed: dining<br>Preferred: dining</td><td>view, special setting, terrace, waterfront, lunch</td><td>None specified</td>
+</tr>
+<tr><th scope="row">2. Cultural stop</th><td>afternoon</td><td>Allowed: attractions<br>Preferred: attractions</td><td>culture, art, history, museum, gallery</td><td>None specified</td>
+</tr>
+<tr><th scope="row">3. Evening stroll</th><td>evening</td><td>Allowed: attractions, nightlife<br>Preferred: attractions</td><td>sunset, evening walk, stroll, night view</td><td>None specified</td>
+</tr>
+<tr><th scope="row">4. Drinks &amp; social</th><td>evening</td><td>Allowed: nightlife<br>Preferred: nightlife</td><td>drinks, cocktails, wine bar, social, lounge</td><td>None specified</td>
+</tr>
+<tr><th scope="row">5. Entertainment</th><td>nightlife</td><td>Allowed: nightlife<br>Preferred: nightlife</td><td>music, dancing, performance, show, club</td><td>None specified</td>
+</tr></tbody>
+</table></div>
+</section>
+<section id="custom_day_shell_1781203331074_shhyp">
+<p class="eyebrow">Saved custom template · 9 stops
+</p>
+<h2>Alan
+</h2>
+<p>Classic full day with two morning anchors, lunch, afternoon, dinner, and nightlife.
+</p>
+<p class="flow">Morning coffee → Morning walk → Cultural stop → Scenic or special lunch → Break or refreshment → Dinner → Evening stroll → Drinks &amp; social → Entertainment
+</p><div class="scroll">
+<table><thead>
+<tr><th>Order / stop</th><th>Time of day</th><th>Place categories</th><th>Purpose / search cues</th><th>Avoid</th>
+</tr></thead><tbody>
+<tr><th scope="row">1. Morning coffee</th><td>morning</td><td>Allowed: dining<br>Preferred: dining</td><td>coffee, cafe, bakery, pastry, local</td><td>None specified</td>
+</tr>
+<tr><th scope="row">2. Morning walk</th><td>morning</td><td>Allowed: attractions<br>Preferred: attractions</td><td>walk, neighborhood, park, waterfront, culture</td><td>None specified</td>
+</tr>
+<tr><th scope="row">3. Cultural stop</th><td>afternoon</td><td>Allowed: attractions<br>Preferred: attractions</td><td>culture, art, history, museum, gallery</td><td>None specified</td>
+</tr>
+<tr><th scope="row">4. Scenic or special lunch</th><td>lunch</td><td>Allowed: dining<br>Preferred: dining</td><td>view, special setting, terrace, waterfront, lunch</td><td>None specified</td>
+</tr>
+<tr><th scope="row">5. Break or refreshment</th><td>afternoon</td><td>Allowed: dining, attractions<br>Preferred: dining</td><td>drink, snack, rest, coffee, refreshment</td><td>None specified</td>
+</tr>
+<tr><th scope="row">6. Dinner</th><td>dinner</td><td>Allowed: dining<br>Preferred: dining</td><td>dinner, restaurant, evening meal, atmosphere</td><td>None specified</td>
+</tr>
+<tr><th scope="row">7. Evening stroll</th><td>evening</td><td>Allowed: attractions, nightlife<br>Preferred: attractions</td><td>sunset, evening walk, stroll, night view</td><td>None specified</td>
+</tr>
+<tr><th scope="row">8. Drinks &amp; social</th><td>nightlife</td><td>Allowed: nightlife<br>Preferred: nightlife</td><td>drinks, cocktails, wine bar, social, music, bar</td><td>None specified</td>
+</tr>
+<tr><th scope="row">9. Entertainment</th><td>nightlife</td><td>Allowed: nightlife<br>Preferred: nightlife</td><td>music, dancing, performance, show, club</td><td>None specified</td>
+</tr></tbody>
+</table></div>
+</section>
+<section id="slot-presets">
+<h2>Reusable stop presets
+</h2>
+<p>The custom-template editor also offers these 13 individual stop presets. This is a palette, not another day sequence. Template-specific cues can differ from these defaults.
+</p><div class="scroll">
+<table><thead>
+<tr><th>Order / stop</th><th>Time of day</th><th>Place categories</th><th>Purpose / search cues</th><th>Avoid</th>
+</tr></thead><tbody>
+<tr><th scope="row">1. Morning coffee</th><td>morning</td><td>Allowed: dining<br>Preferred: dining</td><td>coffee, cafe, bakery, pastry, local</td><td>None specified</td>
+</tr>
+<tr><th scope="row">2. Morning walk</th><td>morning</td><td>Allowed: attractions<br>Preferred: attractions</td><td>walk, neighborhood, park, waterfront, culture</td><td>None specified</td>
+</tr>
+<tr><th scope="row">3. Local tasting lunch</th><td>lunch</td><td>Allowed: dining<br>Preferred: dining</td><td>local flavors, regional specialty, tasting, lunch</td><td>None specified</td>
+</tr>
+<tr><th scope="row">4. Scenic or special lunch</th><td>lunch</td><td>Allowed: dining<br>Preferred: dining</td><td>view, special setting, terrace, waterfront, lunch</td><td>None specified</td>
+</tr>
+<tr><th scope="row">5. Exclusive dining</th><td>dinner</td><td>Allowed: dining<br>Preferred: dining</td><td>fine dining, exclusive, tasting menu, reservation, premium</td><td>None specified</td>
+</tr>
+<tr><th scope="row">6. Cultural stop</th><td>afternoon</td><td>Allowed: attractions<br>Preferred: attractions</td><td>culture, art, history, museum, gallery</td><td>None specified</td>
+</tr>
+<tr><th scope="row">7. Break or refreshment</th><td>afternoon</td><td>Allowed: dining, attractions<br>Preferred: dining</td><td>drink, snack, rest, coffee, refreshment</td><td>None specified</td>
+</tr>
+<tr><th scope="row">8. Hands-on experience</th><td>afternoon</td><td>Allowed: attractions<br>Preferred: attractions</td><td>class, workshop, hands on, activity, experience</td><td>None specified</td>
+</tr>
+<tr><th scope="row">9. Drinks &amp; social</th><td>evening</td><td>Allowed: nightlife<br>Preferred: nightlife</td><td>drinks, cocktails, wine bar, social, lounge</td><td>None specified</td>
+</tr>
+<tr><th scope="row">10. Entertainment</th><td>nightlife</td><td>Allowed: nightlife<br>Preferred: nightlife</td><td>music, dancing, performance, show, club</td><td>None specified</td>
+</tr>
+<tr><th scope="row">11. Evening stroll</th><td>evening</td><td>Allowed: attractions, nightlife<br>Preferred: attractions</td><td>sunset, evening walk, stroll, night view</td><td>None specified</td>
+</tr>
+<tr><th scope="row">12. Night market or tasting</th><td>nightlife</td><td>Allowed: dining, nightlife, attractions<br>Preferred: dining</td><td>night market, tasting, street food, food hall</td><td>None specified</td>
+</tr>
+<tr><th scope="row">13. Exclusive evening</th><td>nightlife</td><td>Allowed: nightlife<br>Preferred: nightlife</td><td>exclusive, premium, vip, reservation, special evening</td><td>None specified</td>
+</tr></tbody>
+</table></div>
+</section>
+<section>
+<h2>Where this came from
+</h2>
+<p>Built-in templates and stop presets: <code>apps/frontend/src/features/listicleItineraries/builder/constants/day-shells.constants.ts</code>. Used by the builder’s Day Shell selector and library editor.
+</p>
+<p>Saved custom template: local app’s <code>/itineraries-pipeline/day-shells</code> library endpoint. Draft-specific copies may differ; this inventory covers built-ins and the shared saved library.
+</p>
+<p>Built-in sequences and purpose guidance incorporate the editor’s new recommendation. Category mappings, dayparts and exclusions are proposed implementation details. Custom descriptions and preset rows remain reference snapshots. These are selection instructions, not evidence that a venue suits them.
+</p>
+</section>
+
+<footer>End of implementation plan. The implementing AI must deliver the application workflow described in Tasks 1–7.
+</footer>
+</main></body></html>
