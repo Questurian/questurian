@@ -1,4 +1,4 @@
-"""Researching a day inside the app, on the subscription.
+"""Choosing a day's places inside the app, on the subscription.
 
 Nothing here reaches a provider: the transport is a callable and the tests hand
 it a double. What is tested is the part this feature owns — which schema is
@@ -12,17 +12,20 @@ from __future__ import annotations
 import json
 
 from app.features.itinerary_pipeline import research
-from app.features.itinerary_pipeline.contracts import RESEARCH_WIRE_VERSION
+from app.features.itinerary_pipeline.selection_contract import SELECTION_CONTRACT_VERSION
 
 import pytest
 
-from tests.itinerary_pipeline_support import itinerary_client, setup_payload
+from tests.itinerary_pipeline_support import (
+    itinerary_client,
+    setup_payload,
+    valid_selection as valid_packet,
+)
 
 # The helpers that drive a day as far as a built prompt, reused rather than
 # rebuilt: these tests are about what researching adds to a day that already
 # has one, and reaching that takes an interview and an extraction.
-from tests.test_itinerary_workflow import BASE, accepted_export, create, day, key
-from tests.test_itinerary_import import valid_wire_packet as valid_packet
+from tests.test_itinerary_workflow import BASE, accepted_export, create, day, key, save
 
 
 @pytest.fixture
@@ -92,7 +95,7 @@ def test_the_identity_fields_are_stamped_rather_than_asked_for(client):
 
     saved = day(client, workspace_id)["research"]
     stamped = json.loads(saved["raw"])
-    assert stamped["contractVersion"] == RESEARCH_WIRE_VERSION
+    assert stamped["contractVersion"] == SELECTION_CONTRACT_VERSION
     assert stamped["exportId"] == view["export"]["export_id"]
     assert stamped["inputHash"] == view["export"]["input_hash"]
     assert stamped["dayId"] == "day-1"
@@ -140,24 +143,22 @@ def test_the_meta_schema_ref_is_stripped(client):
     assert "$schema" not in view["export"]["prompt_text"]
 
 
-def test_the_schema_asks_for_the_prose_even_though_the_app_would_accept_a_day_without_it(client):
-    """The request is demanding and acceptance is forgiving, on purpose.
-
-    With `readerCopy` merely optional, the first live run came back after sixty
-    turns with every address, every source and no prose at all. The CLI only
-    enforces what the schema names.
-    """
+def test_the_schema_names_every_pick_field_and_asks_for_no_prose(client):
+    """The request is demanding and acceptance is forgiving, on purpose: a
+    merely optional key is a key a model skips. And there is no article in it."""
     workspace_id = create(client)
     view = accepted_export(client, workspace_id)
     seen: list[dict] = []
     _run(client, workspace_id, {"structured_output": _answer(view)}, seen=seen)
 
-    asked = seen[0]["schema"]["properties"]["stops"]["items"]["required"]
-    for field in ("readerCopy", "name", "evidence", "practicalNotes", "unresolvedReason"):
+    asked = seen[0]["schema"]["properties"]["picks"]["items"]["required"]
+    for field in ("slotId", "status", "name", "reason", "note", "sources"):
         assert field in asked, f"the schema has to ask for {field}"
-    # And the restatements the compact answer dropped are not asked for.
-    for field in ("whyHere", "selectionReason", "whatToDo", "claimIds"):
-        assert field not in asked
+    top = seen[0]["schema"]["required"]
+    for field in ("overview", "tripFit", "stay", "picks", "journeys", "questions"):
+        assert field in top
+    for gone in ("readerCopy", "dayIntro", "evidence", "issues", "restWindows"):
+        assert gone not in json.dumps(seen[0]["schema"])
 
 
 def test_the_embedded_schema_is_not_sent_twice(client):
@@ -169,11 +170,11 @@ def test_the_embedded_schema_is_not_sent_twice(client):
     _run(client, workspace_id, {"structured_output": _answer(view)}, seen=seen)
 
     prompt = seen[0]["prompt"]
-    assert "## Required output JSON Schema" not in prompt
+    assert '"picks"' not in prompt
     # The day itself is still all there.
     for slot in view["slots"]:
         assert slot["id"] in prompt
-    assert "Questurian" in prompt
+    assert "Choose the places" in prompt
 
 
 def test_it_runs_on_the_job_s_model_not_a_named_one(client):
@@ -213,8 +214,8 @@ def test_a_researched_answer_is_checked_exactly_like_a_pasted_one(client):
     assert found["research"]["turns"] == 12
     assert found["research"]["for_current_export"]
 
-    # Nothing is saved by researching. The answer goes through preview.
-    assert found["result"] is None
+    # Nothing is saved by running. The answer goes through preview.
+    assert found["proposal"] is None
 
     preview = client.post(
         f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
@@ -228,7 +229,7 @@ def test_a_researched_answer_that_fails_the_checks_still_fails_them(client):
     workspace_id = create(client)
     view = accepted_export(client, workspace_id)
     broken = _answer(view)
-    del broken["stops"][1]
+    del broken["picks"][1]
     _run(client, workspace_id, {"structured_output": broken})
 
     found = day(client, workspace_id)
@@ -238,7 +239,7 @@ def test_a_researched_answer_that_fails_the_checks_still_fails_them(client):
     ).json()
     assert not preview["valid"]
     assert any(
-        "missing from the answer" in issue["message"]
+        "has no pick" in issue["message"]
         for issue in preview["report"]["issues"]
     )
 
@@ -308,7 +309,7 @@ def test_a_day_with_no_prompt_cannot_be_researched(client):
     workspace_id = create(client)
     response = _dispatch(client, workspace_id, transport({}))
     assert response.status_code == 400
-    assert "no research prompt" in response.json()["detail"]
+    assert "no prompt yet" in response.json()["detail"]
 
 
 def test_a_stale_prompt_cannot_be_researched(client):
@@ -349,6 +350,96 @@ def test_an_answer_to_an_old_prompt_is_kept_but_not_offered(client):
     assert found["state"] == "done"
     assert not found["for_current_export"]
     assert found["raw"] == ""
+
+
+# ---------------------------------------------------------------- revisions --
+
+
+def _revise(client, workspace_id, call, body):
+    import app.features.itinerary_pipeline.api as module
+
+    original = module.research.default_transport
+    module.research.default_transport = lambda: call
+    try:
+        return client.post(
+            f"{BASE}/workspaces/{workspace_id}/days/day-1/revisions",
+            json={"attempt_key": key(), **body},
+        )
+    finally:
+        module.research.default_transport = original
+
+
+def test_a_revision_asks_for_the_change_and_keeps_the_rest(client):
+    workspace_id = create(client)
+    view = accepted_export(client, workspace_id)
+    saved = save(client, workspace_id, {**_answer(view), **{
+        "contractVersion": SELECTION_CONTRACT_VERSION,
+        "workspaceId": workspace_id,
+        "dayId": "day-1",
+        "exportId": view["export"]["export_id"],
+        "inputHash": view["export"]["input_hash"],
+    }})
+    seen: list[dict] = []
+    response = _revise(
+        client,
+        workspace_id,
+        transport({"structured_output": _answer(view)}, seen=seen),
+        {
+            "base_revision": saved["proposal"]["revision"],
+            "change": "Somewhere quieter, please.",
+            "slot_id": "day1-lunch",
+        },
+    )
+    assert response.status_code == 202, response.text
+    prompt = seen[0]["prompt"]
+    assert "## The current proposal (version 1)" in prompt
+    assert "- day1-coffee: Place for day1-coffee" in prompt
+    assert "Stop: Special lunch\nSomewhere quieter, please." in prompt
+    assert "Keep every other choice exactly as it is" in prompt
+
+    after = day(client, workspace_id)
+    assert after["export"]["revision"] == {
+        "base_revision": 1,
+        "change": "Somewhere quieter, please.",
+        "slot_id": "day1-lunch",
+    }
+    # The saved proposal is untouched until the new answer is saved.
+    assert after["proposal"]["revision"] == 1
+    # The answer is checked against the revision request and can be saved.
+    preview = client.post(
+        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
+        json={"raw": after["research"]["raw"]},
+    ).json()
+    assert preview["valid"], preview["report"]["issues"]
+    assert preview["changes"] == ["The same places; only the wording differs."]
+
+
+def test_a_revision_needs_a_saved_proposal_and_a_change(client):
+    workspace_id = create(client)
+    accepted_export(client, workspace_id)
+    missing = _revise(client, workspace_id, transport({}), {"base_revision": 1, "change": "x"})
+    assert missing.status_code == 404
+
+
+def test_an_older_agreement_cannot_be_built_from(client):
+    """A day agreed under the long format has to have its summary written
+    again before a prompt is built. Nothing is regenerated silently."""
+    from app.features.itinerary_pipeline import service, store
+    from app.features.itinerary_pipeline.contracts import DirectionRevision
+    from tests.itinerary_pipeline_support import direction_for
+
+    workspace_id = create(client)
+    store.save_direction(
+        workspace_id,
+        "day-1",
+        DirectionRevision(revision=1, status="candidate", direction=direction_for()),
+    )
+    store.accept_direction(workspace_id, "day-1", 1)
+    assert day(client, workspace_id)["state"] == "direction_outdated"
+    response = client.post(f"{BASE}/workspaces/{workspace_id}/days/day-1/exports")
+    assert response.status_code == 409
+    assert "older, longer format" in response.json()["detail"]
+    assert service.current_export(workspace_id, "day-1") is None
 
 
 # ------------------------------------------------------------------ plumbing --

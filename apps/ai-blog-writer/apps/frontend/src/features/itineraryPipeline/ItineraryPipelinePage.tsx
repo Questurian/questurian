@@ -8,6 +8,7 @@ import { ErrorSummary } from './components/ErrorSummary'
 import { LayoutReview } from './components/LayoutReview'
 import { RemoveDaysDialog } from './components/RemoveDaysDialog'
 import { StageNav } from './components/StageNav'
+import { StaysPanel } from './components/StaysPanel'
 import { TripDetailsForm } from './components/TripDetailsForm'
 import { useCustomTemplates } from './customTemplates'
 import { useItineraryDraft } from './useItineraryDraft'
@@ -280,6 +281,8 @@ export default function ItineraryPipelinePage() {
                 Edit trip details
               </button>
             </div>
+
+            <StaysPanel trip={draft.trip} dayCount={days.length} dispatch={dispatch} />
 
             {dayStageIssues.length > 0 ? (
               <ErrorSummary

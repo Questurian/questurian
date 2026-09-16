@@ -19,7 +19,7 @@ from tests.itinerary_pipeline_support import LookupHungryGrill, ScriptedGrill
 BRIEF = "THE TRIP: Lima.\nTHE DAY: six stops."
 
 
-def test_the_interview_settles_the_eight_areas_and_agrees():
+def test_the_interview_settles_its_four_topics_and_agrees():
     llm = ScriptedGrill(ITINERARY_MARKER_KEYS)
     state = grill.start(run_id="run1", seed="Day 1 of 3 in Lima", brief=BRIEF, llm=llm)
     assert state.status == "asking"
@@ -127,10 +127,31 @@ def test_the_prompt_carries_the_day_and_forbids_venue_facts():
     prompt = llm.prompts[0]
     assert brief in prompt
     assert "YOU CANNOT LOOK ANYTHING UP" in prompt
-    assert "NEVER state a fact about a real place" in prompt
-    # The two rules the plan is most insistent about.
-    assert "never mean fewer stops" in prompt
-    assert '"UNKNOWN", NOT "NONE"' in prompt
+    assert "Never state a fact about a real place" in prompt
+    assert "never fewer stops" in prompt
+    assert "BLANK MEANS UNKNOWN" in prompt
+    # The summary it asks for is short and holds no research instructions.
+    assert "at most six short" in prompt
+    assert "research checklist" not in prompt.lower()
+
+
+def test_an_interview_started_on_the_older_topics_is_still_described():
+    """A GrillState keeps the keys it started with. Its prompt must describe
+    those keys rather than the new four, or it could never finish."""
+    older = ("purpose", "geography", "anchors")
+    llm = ScriptedGrill(older)
+    from app.features.prompt2blog.grill_v4 import start_grill as engine_start
+
+    state = engine_start(
+        run_id="run1",
+        seed="Day 1",
+        dependencies=grill.dependencies(llm, BRIEF),
+        marker_keys=older,
+    )
+    assert "- geography: the area, the progression" in llm.prompts[0]
+    while state.status == "asking":
+        state = grill.answer(state, "Yes.", brief=BRIEF, llm=llm)
+    assert state.status == "agreed"
 
 
 def test_the_brief_is_rebuilt_per_turn_and_not_stored_in_the_seed():

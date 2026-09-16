@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { AlertTriangle, Check, CircleAlert, Info, PanelRight, Pencil } from 'lucide-react'
+import { AlertTriangle, BedDouble, Check, CircleAlert, Info, PanelRight, Pencil } from 'lucide-react'
 import { DayTabs } from './DayTabs'
 import { Dialog } from './Dialog'
+import { StaysPanel } from './StaysPanel'
 import { DayGrill } from './dayWork/DayGrill'
 import { DayDirectionReview } from './dayWork/DayDirectionReview'
 import { DayImportPanel } from './dayWork/DayImportPanel'
 import { DayPromptPanel } from './dayWork/DayPromptPanel'
-import { DayResultView } from './dayWork/DayResultView'
+import { DayProposalView, PreviousVersion } from './dayWork/DayProposalView'
 import { DayContextDrawer } from './dayWork/DayContextDrawer'
 import { DayProgress } from './dayWork/DayProgress'
 import { StageFold } from './dayWork/Step'
-import { attentionFor, stopNames } from './dayWork/attention'
+import { TripOverview } from './dayWork/TripOverview'
+import { runSummary } from './dayWork/proposalText'
 import { useDayWork } from '../dayWork/useDayWork'
 import type { DayState } from '../dayWork/types'
 import { availableTimeLabel, dayDateLabel } from '../context'
@@ -19,16 +21,15 @@ import type { ItinerarySetupDraft } from '../types'
 import type { SetupAction } from '../setupReducer'
 
 /**
- * Stage 4 — one day, from an approved layout to a researched day.
+ * Stage 4 — the trip at a glance, then one day from an approved layout to a
+ * proposal: places, one reason each.
  *
- * The screen answers four questions in order: where am I (the progress
- * track), what has happened and what needs me (the status callout), and what
- * the next action does (the live step, which is the only one open). Finished
- * stages fold to one line each and reopen on request. Once a day is saved the
- * day itself leads, and the stages that made it move below it under "How this
- * day was made". The server decides which step is live by deriving the day's
- * state from the artifacts that exist; there is no stored status to fall out
- * of step with them.
+ * The screen answers three questions in order: where am I (the progress
+ * track), what needs me (the status line), and what the next action does (the
+ * live step, the only one open). Finished stages fold to one line each. Once a
+ * day has a proposal, the proposal leads and the stages that made it move
+ * below it. The server decides which step is live by deriving the day's state
+ * from the artifacts that exist.
  *
  * The day's context — its layout, its notes, the trip it inherits — is a
  * drawer rather than a permanent column: it is reference, and the column cost
@@ -64,6 +65,7 @@ export function DayWorkspace({
   const [notes, setNotes] = useState(activeDay?.preparationNotes ?? '')
   const [pendingNav, setPendingNav] = useState<null | (() => void)>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [staysOpen, setStaysOpen] = useState(false)
   const loadedDayRef = useRef(activeDay?.id)
 
   const onLinked = useCallback(
@@ -111,6 +113,7 @@ export function DayWorkspace({
   }
 
   const day = work.day
+  const stayCount = (trip.stays ?? []).length
   const state: DayState = day?.state ?? 'ready_to_start'
   const slots =
     day?.slots ??
@@ -124,17 +127,11 @@ export function DayWorkspace({
       purpose: slot.purpose,
     }))
 
-  // Why each stop is in the day: what the interview agreed it is for, else
-  // what the layout said. Shown under the place research chose for it.
-  const roles = new Map(slots.map(slot => [slot.id, slot.purpose]))
-  for (const entry of day?.accepted_direction?.direction.slot_directions ?? []) {
-    if (entry.role) roles.set(entry.slot_id, entry.role)
-  }
-
   const hasGrill = Boolean(day?.grill)
   const agreed = day?.grill?.status === 'agreed'
   const hasDirection = Boolean(day?.accepted_direction || day?.candidate_direction)
-  const accepted = Boolean(day?.accepted_direction) && !day?.candidate_direction
+  const outdated = state === 'direction_outdated'
+  const accepted = Boolean(day?.accepted_direction) && !day?.candidate_direction && !outdated
   const hasExport = Boolean(day?.export)
   const research = day?.research ?? null
   const researchAnswer =
@@ -143,15 +140,7 @@ export function DayWorkspace({
   const answerWaiting =
     !work.researching &&
     ((Boolean(researchAnswer) && !research?.saved_as_revision) ||
-      (Boolean(work.preview?.valid) && !day?.result))
-
-  const savedAttention = day?.result
-    ? attentionFor(
-        day.result.result,
-        day.result.report,
-        stopNames(day.result.result, slots),
-      )
-    : null
+      (Boolean(work.preview?.valid) && !day?.proposal))
 
   // Exactly one step is live, and it is the one holding the action the day is
   // waiting on. Derived from the server's own word for where the day stands,
@@ -169,15 +158,16 @@ export function DayWorkspace({
         return 'grill'
       case 'agreed':
       case 'direction_review':
+      case 'direction_outdated':
         return 'direction'
       case 'direction_accepted':
       case 'context_changed':
         return 'prompt'
       case 'prompt_ready':
         return work.researching || !answerWaiting ? 'prompt' : 'import'
-      case 'saved_needs_work':
-      case 'saved_complete':
-        return answerWaiting ? 'import' : null
+      case 'proposal_open':
+      case 'proposal_ready':
+        return answerWaiting ? 'import' : work.researching ? 'prompt' : null
     }
   }
   const liveStep = liveStepFor()
@@ -265,7 +255,7 @@ export function DayWorkspace({
       ),
     },
     prompt: {
-      available: Boolean(day?.accepted_direction) || hasExport,
+      available: accepted || hasExport,
       done: hasExport && !day?.export?.stale,
       el: (
         <DayPromptPanel
@@ -275,7 +265,7 @@ export function DayWorkspace({
           tone={toneFor('prompt', hasExport && !day?.export?.stale)}
           busy={work.busy === 'export' || work.busy === 'research'}
           researching={work.researching}
-          canBuild={Boolean(day?.accepted_direction)}
+          canBuild={accepted}
           onBuild={work.buildPrompt}
           onResearch={work.research}
           announce={announce}
@@ -284,19 +274,18 @@ export function DayWorkspace({
     },
     import: {
       available: hasExport,
-      done: Boolean(day?.result),
+      done: Boolean(day?.proposal),
       el: (
         <DayImportPanel
           preview={work.preview}
           researched={researchAnswer}
           slots={slots}
-          roles={roles}
-          tone={toneFor('import', Boolean(day?.result))}
+          tone={toneFor('import', Boolean(day?.proposal))}
           busy={work.busy !== null}
           previewing={work.busy === 'preview'}
           applying={work.busy === 'apply'}
           canImport={hasExport}
-          hasSavedResult={Boolean(day?.result)}
+          hasSavedResult={Boolean(day?.proposal)}
           onPreview={work.runPreview}
           onClear={work.clearPreview}
           onApply={work.apply}
@@ -317,30 +306,31 @@ export function DayWorkspace({
       case 'direction': {
         const shown = day?.candidate_direction ?? day?.accepted_direction
         if (!shown) return 'Not written yet'
+        if (outdated) return 'Agreed in the older format'
+        const line =
+          'angle' in shown.direction ? shown.direction.angle : shown.direction.promise
         return accepted
-          ? `Accepted, version ${shown.revision} — ${shown.direction.promise}`
-          : 'Written down, waiting for you to accept it'
+          ? `Agreed, version ${shown.revision} — ${line}`
+          : 'Written down, waiting for you to agree'
       }
       case 'prompt':
-        if (day?.export?.stale) return 'The prompt is out of date'
+        if (day?.export?.stale) return 'The request is out of date'
         if (research?.state === 'done' && research.for_current_export) {
-          return `Researched on ${research.model || 'Claude'}${
-            research.searches != null ? ` · ${research.searches} searches` : ''
-          }${research.cost_usd != null ? ` · about $${research.cost_usd.toFixed(2)}` : ''}`
+          return runSummary(research)
         }
-        return hasExport ? 'Prompt built' : 'Not built yet'
+        return hasExport ? 'Request built' : 'Not built yet'
       case 'import':
-        return day?.result
-          ? `Version ${day.result.result_revision} saved. Paste or load a newer answer here to replace it.`
+        return day?.proposal
+          ? 'Paste or load an answer from another tool to replace the proposal.'
           : 'Got an answer from another tool? Paste or load its JSON here.'
     }
   }
 
   const FOLD_LABELS: Record<StepName, string> = {
     grill: 'Interview',
-    direction: 'Direction',
-    prompt: 'Research',
-    import: 'Review and save',
+    direction: 'Summary',
+    prompt: 'Choose places',
+    import: 'Paste an answer',
   }
 
   const order: StepName[] = ['grill', 'direction', 'prompt', 'import']
@@ -352,33 +342,34 @@ export function DayWorkspace({
     </StageFold>
   )
 
+  const previous =
+    day?.previous_version && !day.proposal ? (
+      <PreviousVersion previous={day.previous_version} slots={slots} />
+    ) : null
+
   let flow: ReactNode
-  if (day?.result) {
+  if (day?.proposal) {
     const made = available.filter(step => step !== liveStep)
     flow = (
       <>
         {liveStep ? steps[liveStep].el : null}
-        <DayResultView
-          saved={day.result}
+        <DayProposalView
+          proposal={day.proposal}
           slots={slots}
-          roles={roles}
-          history={day.result_history}
-          review={day.review}
+          stay={day.stay}
+          history={day.history}
+          previous={day.previous_version}
           busy={work.busy !== null}
-          onSaveReview={work.review}
+          researching={work.researching}
+          onRevise={work.revise}
+          onSwap={work.swap}
         />
         {made.length > 0 ? (
           <section className="ip-made" aria-labelledby="ip-made-heading">
             <h3 className="ip-section-title" id="ip-made-heading">
               How this day was made
             </h3>
-            <p className="ip-helper">
-              The earlier stages, kept for reference. Open one to reread it or to
-              start it again.
-            </p>
-            {made.map(step =>
-              step === 'import' ? fold(step, 'Replace with a new answer') : fold(step),
-            )}
+            {made.map(step => fold(step))}
           </section>
         ) : null}
       </>
@@ -392,10 +383,16 @@ export function DayWorkspace({
         {liveStep === 'prompt' && steps.import.available
           ? fold('import', 'Or paste an answer from elsewhere')
           : null}
+        {previous}
       </>
     )
   } else {
-    flow = steps.grill.el
+    flow = (
+      <>
+        {steps.grill.el}
+        {previous}
+      </>
+    )
   }
 
   return (
@@ -403,10 +400,33 @@ export function DayWorkspace({
       <header className="ip-stage-header">
         <h1 tabIndex={-1}>Plan each day</h1>
         <p className="ip-stage-instruction">
-          Every layout is approved. Each day is planned on its own: an
-          interview, research, then a saved day you can review.
+          Every layout is approved. Each day is planned on its own: a short
+          interview, then a proposal of places you can keep or change.
         </p>
       </header>
+
+      <TripOverview
+        trip={trip}
+        overview={work.trip}
+        workspaceId={work.workspaceId}
+        activeDayId={activeDay.id}
+        onOpenDay={dayId => guard(() => dispatch({ type: 'setActiveDay', dayId }))}
+        announce={announce}
+      />
+
+      <details
+        className="ip-disclosure ip-stays-fold"
+        open={staysOpen}
+        onToggle={event => setStaysOpen((event.currentTarget as HTMLDetailsElement).open)}
+      >
+        <summary>
+          <BedDouble size={14} aria-hidden /> Where you’re staying{' '}
+          <span className="ip-disclosure-note">
+            {stayCount === 0 ? 'no stay set' : `${stayCount} stay${stayCount === 1 ? '' : 's'}`}
+          </span>
+        </summary>
+        <StaysPanel trip={trip} dayCount={days.length} dispatch={dispatch} />
+      </details>
 
       <div className="ip-workspace-bar">
         <DayTabs
@@ -460,7 +480,6 @@ export function DayWorkspace({
           day={day}
           researching={work.researching}
           answerWaiting={answerWaiting}
-          blockingCount={savedAttention?.blocking.length ?? 0}
         />
 
         {work.error ? (

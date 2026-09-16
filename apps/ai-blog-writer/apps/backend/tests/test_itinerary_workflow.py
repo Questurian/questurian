@@ -1,4 +1,4 @@
-"""One day from handed-over setup to saved result, through the real routes.
+"""One day from handed-over setup to a saved proposal, through the real routes.
 
 Nothing here reaches a provider: the two routes that would are patched with
 the scripted doubles. Everything else -- the store, the revisions, the
@@ -14,8 +14,12 @@ import uuid
 import pytest
 from app.features.itinerary_pipeline.contracts import ITINERARY_MARKER_KEYS
 
-from tests.itinerary_pipeline_support import itinerary_client, setup_payload
-from tests.test_itinerary_import import valid_wire_packet as valid_packet
+from tests.itinerary_pipeline_support import (
+    itinerary_client,
+    setup_payload,
+    stay,
+    valid_selection,
+)
 
 
 @pytest.fixture
@@ -181,7 +185,7 @@ def test_the_same_attempt_key_does_not_buy_a_second_turn(client):
     assert len(client.grill_llm.prompts) == calls
 
 
-def test_the_interview_reaches_agreement_and_eight_markers(client):
+def test_the_interview_reaches_agreement_on_every_topic(client):
     workspace_id = create(client)
     view = interview_to_agreement(client, workspace_id)
     assert view["grill"]["status"] == "agreed"
@@ -202,10 +206,10 @@ def test_a_second_interview_on_the_same_day_is_refused(client):
     assert response.status_code == 400
 
 
-# ------------------------------------------------------------ the direction --
+# -------------------------------------------------------------- the summary --
 
 
-def test_a_direction_is_a_candidate_until_it_is_accepted(client):
+def test_a_summary_is_a_candidate_until_it_is_accepted(client):
     workspace_id = create(client)
     interview_to_agreement(client, workspace_id)
     view = client.post(
@@ -264,18 +268,35 @@ def test_editing_the_day_does_age_the_conversation(client):
     assert day(client, workspace_id)["grill_context_changed"]
 
 
-def test_the_direction_covers_every_approved_stop(client):
+def test_the_summary_covers_every_approved_stop_and_is_short(client):
     workspace_id = create(client)
     interview_to_agreement(client, workspace_id)
     view = client.post(
         f"{BASE}/workspaces/{workspace_id}/days/day-1/direction/prepare",
         json={"attempt_key": key()},
     ).json()
-    written = [
-        entry["slot_id"]
-        for entry in view["candidate_direction"]["direction"]["slot_directions"]
+    summary = view["candidate_direction"]["direction"]
+    assert summary["contract_version"] == "itinerary-day-summary-v1"
+    assert [entry["slot_id"] for entry in summary["slots"]] == [
+        slot["id"] for slot in view["slots"]
     ]
-    assert written == [slot["id"] for slot in view["slots"]]
+    # Requirements and preferences are kept apart; nothing else is asked for.
+    assert summary["requirements"] == ["No cliff stairs"]
+    assert summary["preferences"] == ["Walkable"]
+    for gone in ("fails_if", "research_checklist", "change_policy", "rhythm"):
+        assert gone not in summary
+
+
+def test_the_extraction_is_told_an_accepted_suggestion_is_only_a_preference(client):
+    workspace_id = create(client)
+    interview_to_agreement(client, workspace_id)
+    client.post(
+        f"{BASE}/workspaces/{workspace_id}/days/day-1/direction/prepare",
+        json={"attempt_key": key()},
+    )
+    prompt = client.direction_llm_prompts[-1]
+    assert "anything that came only from an accepted suggestion" in prompt
+    assert "Blank dietary or access needs stay blank" in prompt
 
 
 def test_the_agreement_trace_remembers_an_accepted_suggestion(client):
@@ -320,27 +341,22 @@ def test_the_export_names_this_day_and_its_slots_and_costs_nothing(client):
         assert slot["id"] in prompt
     assert view["export"]["input_hash"] in prompt
     assert "Day 1 of 3" in prompt
-    # Nine turns of interview and one extraction. Building the prompt itself
-    # added nothing.
+    # The interview turns, and nothing for building the prompt.
     assert spent_on_export == len(ITINERARY_MARKER_KEYS) + 1
 
 
-def test_the_export_carries_the_canonical_voice_rules_and_a_version(client):
-    """Read from the same files every other writer here reads, not copied into
-    this feature — a second copy drifts and nobody notices until two pieces
-    stop sounding alike."""
+def test_the_prompt_asks_for_places_not_an_article(client):
     workspace_id = create(client)
     view = accepted_export(client, workspace_id)
     prompt = view["export"]["prompt_text"]
-    assert view["export"]["voice_version"]
-    assert "The Questurian voice" in prompt
-    assert "Writing conventions" in prompt
-    # The Prompt2Blog house rules are not this request's; the one rule of
-    # theirs that matters here is said once in the instructions instead.
-    assert "house rules" not in prompt.lower()
-    assert "no source names in the prose" in prompt
-    # Voice files are sent without their option-picker header.
-    assert "default: true" not in prompt
+    assert "# Choose the places for one day" in prompt
+    assert "Firm requirements: No cliff stairs" in prompt
+    assert "Preferences (adjust if needed): Walkable" in prompt
+    # No voice, no reader copy, no evidence graph.
+    for gone in ("Questurian voice", "readerCopy", "dayIntro", "claimIds", "feasibility"):
+        assert gone not in prompt
+    size = view["export"]["size"]
+    assert size["total"] < size["target"], size
 
 
 def test_copying_twice_for_an_unchanged_day_reuses_one_export(client):
@@ -369,7 +385,7 @@ def test_an_export_goes_stale_when_the_day_changes(client):
     assert view["state"] == "context_changed"
 
 
-def test_exporting_without_an_accepted_direction_is_refused(client):
+def test_exporting_without_an_accepted_summary_is_refused(client):
     workspace_id = create(client)
     interview_to_agreement(client, workspace_id)
     response = client.post(f"{BASE}/workspaces/{workspace_id}/days/day-1/exports")
@@ -385,13 +401,31 @@ def _packet(export_view, **overrides):
         input_hash = export_view["export"]["input_hash"]
         slot_ids = [slot["id"] for slot in export_view["slots"]]
 
-    packet = valid_packet(_Export())
+    packet = valid_selection(_Export(), dayId=export_view["day_id"])
     packet["workspaceId"] = export_view["workspace_id"]
     packet.update(overrides)
     return packet
 
 
-def test_a_valid_paste_previews_and_then_saves(client):
+def save(client, workspace_id, packet, day_id="day-1"):
+    preview = client.post(
+        f"{BASE}/workspaces/{workspace_id}/days/{day_id}/imports/preview",
+        json={"raw": json.dumps(packet)},
+    ).json()
+    assert preview["valid"], preview["report"]["issues"]
+    response = client.post(
+        f"{BASE}/workspaces/{workspace_id}/days/{day_id}/imports/apply",
+        json={
+            "raw": json.dumps(packet),
+            "content_hash": preview["content_hash"],
+            "import_key": key(),
+        },
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def test_a_valid_answer_previews_and_then_saves(client):
     workspace_id = create(client)
     view = accepted_export(client, workspace_id)
     packet = _packet(view)
@@ -413,8 +447,12 @@ def test_a_valid_paste_previews_and_then_saves(client):
         },
     ).json()
     assert saved["created"] is True
-    assert saved["state"] == "saved_complete"
-    assert saved["result"]["result"]["title"] == "An easy Miraflores day"
+    assert saved["state"] == "proposal_ready"
+    proposal = saved["proposal"]["selection"]
+    assert proposal["overview"] == "An easy Miraflores day."
+    # The app adds a map search for a chosen place; it never takes one from the answer.
+    assert proposal["picks"][0]["mapsUrl"].startswith("https://www.google.com/maps/search/")
+    assert proposal["picks"][0]["chosenBy"] == "ai"
 
 
 def test_saving_twice_with_one_key_does_not_create_two_results(client):
@@ -425,24 +463,19 @@ def test_saving_twice_with_one_key_does_not_create_two_results(client):
         f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
         json={"raw": json.dumps(packet)},
     ).json()
-    shared = key()
     body = {
         "raw": json.dumps(packet),
         "content_hash": preview["content_hash"],
-        "import_key": shared,
+        "import_key": key(),
     }
-    first = client.post(
-        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/apply", json=body
-    ).json()
-    second = client.post(
-        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/apply", json=body
-    ).json()
+    first = client.post(f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/apply", json=body).json()
+    second = client.post(f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/apply", json=body).json()
     assert first["created"] is True
     assert second["created"] is False
-    assert len(second["result_history"]) == 1
+    assert len(second["history"]) == 1
 
 
-def test_editing_the_paste_after_previewing_invalidates_the_save(client):
+def test_editing_the_answer_after_checking_invalidates_the_save(client):
     workspace_id = create(client)
     view = accepted_export(client, workspace_id)
     packet = _packet(view)
@@ -450,7 +483,7 @@ def test_editing_the_paste_after_previewing_invalidates_the_save(client):
         f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
         json={"raw": json.dumps(packet)},
     ).json()
-    packet["title"] = "A title typed after the preview"
+    packet["overview"] = "Typed after the check."
     response = client.post(
         f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/apply",
         json={
@@ -460,14 +493,14 @@ def test_editing_the_paste_after_previewing_invalidates_the_save(client):
         },
     )
     assert response.status_code == 409
-    assert "changed since it was previewed" in response.json()["detail"]
+    assert "changed since it was checked" in response.json()["detail"]
 
 
-def test_an_invalid_paste_cannot_be_saved_and_offers_a_repair_prompt(client):
+def test_an_invalid_answer_cannot_be_saved_and_offers_a_repair_prompt(client):
     workspace_id = create(client)
     view = accepted_export(client, workspace_id)
     packet = _packet(view)
-    del packet["stops"][1]
+    del packet["picks"][1]
 
     preview = client.post(
         f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
@@ -486,18 +519,26 @@ def test_an_invalid_paste_cannot_be_saved_and_offers_a_repair_prompt(client):
         },
     )
     assert response.status_code == 400
-    assert day(client, workspace_id)["result"] is None
+    assert day(client, workspace_id)["proposal"] is None
+
+
+def test_an_answer_in_the_old_article_format_is_refused_by_name(client):
+    workspace_id = create(client)
+    view = accepted_export(client, workspace_id)
+    packet = _packet(view, contractVersion="itinerary-day-research-v2")
+    preview = client.post(
+        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
+        json={"raw": json.dumps(packet)},
+    ).json()
+    assert not preview["valid"]
+    assert "older article format" in preview["report"]["issues"][0]["message"]
 
 
 def test_an_answer_to_an_older_prompt_is_told_what_changed(client):
-    """A day can legitimately have two prompts out: copy one, change the day,
-    copy another. An answer to the first is stale, and it deserves to be told
-    that the day moved rather than that it answered the wrong prompt."""
     workspace_id = create(client)
     first = accepted_export(client, workspace_id)
     answer_to_first = _packet(first)
 
-    # The day changes, and a second prompt is built for it.
     payload = setup_payload()
     payload["days"][0]["preparationNotes"] = "They land at 11am."
     revision = client.get(f"{BASE}/workspaces/{workspace_id}").json()["revision"]
@@ -513,201 +554,290 @@ def test_an_answer_to_an_older_prompt_is_told_what_changed(client):
         json={"raw": json.dumps(answer_to_first)},
     ).json()
     assert not preview["valid"]
-    messages = [
-        issue["message"]
-        for issue in preview["report"]["issues"]
-        if issue["severity"] == "error"
-    ]
-    assert any("has changed since that prompt was copied" in m for m in messages), messages
-    # Not "you answered a different prompt" — it answered the prompt it says it
-    # did, and that prompt is simply no longer current.
+    messages = [i["message"] for i in preview["report"]["issues"] if i["severity"] == "error"]
+    assert any("has changed since that prompt was built" in m for m in messages), messages
     assert not any("different copy of the prompt" in m for m in messages)
 
 
-def test_a_paste_for_the_wrong_day_leaves_the_saved_day_alone(client):
+def test_an_answer_for_the_wrong_day_leaves_the_saved_day_alone(client):
     workspace_id = create(client)
     view = accepted_export(client, workspace_id)
-    packet = _packet(view)
-    preview = client.post(
-        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
-        json={"raw": json.dumps(packet)},
-    ).json()
-    client.post(
-        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/apply",
-        json={
-            "raw": json.dumps(packet),
-            "content_hash": preview["content_hash"],
-            "import_key": key(),
-        },
-    )
-    wrong = _packet(view, dayId="day-2", title="Someone else's day")
+    save(client, workspace_id, _packet(view))
+    wrong = _packet(view, dayId="day-2", overview="Someone else's day")
     later = client.post(
         f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
         json={"raw": json.dumps(wrong)},
     ).json()
     assert not later["valid"]
-    assert day(client, workspace_id)["result"]["result"]["title"] == (
-        "An easy Miraflores day"
-    )
+    assert day(client, workspace_id)["proposal"]["selection"]["overview"] == "An easy Miraflores day."
 
 
-def test_an_incomplete_result_saves_visibly_as_needing_work(client):
+def test_an_unmet_requirement_saves_as_a_proposal_with_a_question(client):
+    """The rest of the day is kept, the stop is named, and nothing pretends it is filled."""
     workspace_id = create(client)
     view = accepted_export(client, workspace_id)
     packet = _packet(view)
-    packet["stops"][2].update(
+    packet["picks"][2].update(
         {
             "status": "unresolved",
             "name": None,
-            "addressOrMeetingPoint": None,
-            "startMinutes": None,
-            "durationMinutes": None,
-            "readerCopy": "",
-            "claimIds": [],
-            "unresolvedReason": "Nothing on the route could be confirmed.",
+            "address": None,
+            "area": None,
+            "sources": [],
+            "reason": "No lunch nearby is step-free.",
         }
     )
+    packet["questions"] = [
+        {
+            "slotId": "day1-lunch",
+            "question": "No step-free lunch fits the route. Which should give?",
+            "options": ["Allow one step at the door", "Move lunch to Barranco"],
+        }
+    ]
+    saved = save(client, workspace_id, packet)
+    assert saved["state"] == "proposal_open"
+    completeness = saved["proposal"]["report"]["completeness"]
+    assert completeness["required_unresolved"] == ["Special lunch"]
+    assert completeness["outstanding_checks"] == [
+        "No step-free lunch fits the route. Which should give?"
+    ]
+
+
+def test_an_open_stop_must_say_why(client):
+    workspace_id = create(client)
+    view = accepted_export(client, workspace_id)
+    packet = _packet(view)
+    packet["picks"][2].update({"status": "unresolved", "name": None, "reason": ""})
     preview = client.post(
         f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
         json={"raw": json.dumps(packet)},
     ).json()
-    assert preview["valid"]
-    saved = client.post(
-        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/apply",
-        json={
-            "raw": json.dumps(packet),
-            "content_hash": preview["content_hash"],
-            "import_key": key(),
-        },
-    ).json()
-    assert saved["state"] == "saved_needs_work"
-    assert saved["result"]["report"]["completeness"]["required_unresolved"] == [
-        "Special lunch"
-    ]
+    assert not preview["valid"]
+    assert any("does not say why" in i["message"] for i in preview["report"]["issues"])
 
 
-def test_a_replacement_result_keeps_the_earlier_one_in_history(client):
+def test_a_replacement_keeps_the_earlier_one_in_history(client):
     workspace_id = create(client)
     view = accepted_export(client, workspace_id)
-    for title in ("First attempt", "Second attempt"):
-        packet = _packet(view, title=title)
-        preview = client.post(
-            f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
-            json={"raw": json.dumps(packet)},
-        ).json()
-        client.post(
-            f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/apply",
-            json={
-                "raw": json.dumps(packet),
-                "content_hash": preview["content_hash"],
-                "import_key": key(),
-            },
-        )
+    for overview in ("First attempt.", "Second attempt."):
+        save(client, workspace_id, _packet(view, overview=overview))
     view = day(client, workspace_id)
-    assert [row["title"] for row in view["result_history"]] == [
-        "First attempt",
-        "Second attempt",
-    ]
-    assert view["result"]["result"]["title"] == "Second attempt"
+    assert [row["headline"] for row in view["history"]] == ["First attempt.", "Second attempt."]
+    assert view["proposal"]["selection"]["overview"] == "Second attempt."
 
 
 # ---------------------------------------------------------------- continuity --
 
 
-def test_day_two_is_told_what_day_one_actually_used(client):
+def test_day_two_is_told_what_day_one_actually_uses(client):
     workspace_id = create(client)
-    view = accepted_export(client, workspace_id)
-    packet = _packet(view)
-    preview = client.post(
-        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
-        json={"raw": json.dumps(packet)},
-    ).json()
-    client.post(
-        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/apply",
-        json={
-            "raw": json.dumps(packet),
-            "content_hash": preview["content_hash"],
-            "import_key": key(),
-        },
-    )
+    save(client, workspace_id, _packet(accepted_export(client, workspace_id)))
     before = len(client.grill_llm.prompts)
     client.post(
         f"{BASE}/workspaces/{workspace_id}/days/day-2/grill/start",
         json={"attempt_key": key()},
     )
     prompt = client.grill_llm.prompts[before]
-    assert "SAVED RESULT (COMPLETE FOR PLANNING)" in prompt
-    assert "An easy Miraflores day" in prompt
+    assert "places already chosen" in prompt
     assert "Place for day1-lunch" in prompt
 
 
-def test_changing_day_one_flags_day_two_rather_than_rewriting_it(client):
-    """No silent regeneration and no cascade of paid calls. The old work stays
-    readable; it simply stops being current."""
+def test_a_repeated_place_across_days_is_a_warning_not_a_block(client):
     workspace_id = create(client)
-    day_one = accepted_export(client, workspace_id)
-    packet = _packet(day_one)
+    save(client, workspace_id, _packet(accepted_export(client, workspace_id)))
+    day_two = accepted_export(client, workspace_id, "day-2")
+    packet = _packet(day_two)
+    packet["picks"][1]["name"] = "Place for day1-lunch"
     preview = client.post(
-        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
+        f"{BASE}/workspaces/{workspace_id}/days/day-2/imports/preview",
         json={"raw": json.dumps(packet)},
     ).json()
-    client.post(
-        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/apply",
-        json={
-            "raw": json.dumps(packet),
-            "content_hash": preview["content_hash"],
-            "import_key": key(),
-        },
-    )
-    day_two = accepted_export(client, workspace_id, "day-2")
-    assert not day_two["export"]["stale"]
+    assert preview["valid"]
+    assert any("also used on Day 1" in i["message"] for i in preview["report"]["issues"])
 
-    # Now day one is researched again with a different lunch.
-    replacement = _packet(day_one, title="A different day one")
-    replacement["stops"][2]["name"] = "A completely different lunch"
+
+def test_changing_day_one_flags_day_two_rather_than_rewriting_it(client):
+    workspace_id = create(client)
+    day_one = accepted_export(client, workspace_id)
+    save(client, workspace_id, _packet(day_one))
+    day_two = accepted_export(client, workspace_id, "day-2")
+    save(client, workspace_id, _packet(day_two), "day-2")
+    assert not day(client, workspace_id, "day-2")["proposal"]["stale"]
+
+    # Rewording day one changes nothing for day two.
+    save(client, workspace_id, _packet(day_one, overview="Reworded."))
+    assert not day(client, workspace_id, "day-2")["proposal"]["stale"]
+
+    # A different place does.
+    replacement = _packet(day_one)
+    replacement["picks"][2]["name"] = "A completely different lunch"
+    save(client, workspace_id, replacement)
+    after = day(client, workspace_id, "day-2")
+    assert after["proposal"]["stale"]
+    assert after["proposal"]["changes"] == ["Day 1 now uses different places."]
+    assert after["state"] == "proposal_ready", "the proposal is kept, not discarded"
+
+
+# ------------------------------------------------------------------ stays --
+
+
+def test_a_stay_reaches_the_prompt_and_its_change_touches_only_its_days(client):
+    stays = [stay("stay-1", first=1, last=1), stay("stay-2", first=2, last=2, name="Hotel B")]
+    workspace_id = create(client, stays=stays)
+    view = accepted_export(client, workspace_id)
+    prompt = view["export"]["prompt_text"]
+    assert "Stay: starts and ends at Casa Miraflores, Miraflores." in prompt
+    save(client, workspace_id, _packet(view))
+
+    three_before = accepted_export(client, workspace_id, "day-3")["export"]["prompt_text"]
+    assert "Starts from: Hotel B, Miraflores." in three_before
+    assert "Ends with departure" in three_before
+
+    # Night 2's hotel changes: day 2 ends and day 3 starts there. Day 1 is untouched.
+    payload = setup_payload(stays=[stays[0], stay("stay-2", first=2, last=2, name="Hotel C")])
+    revision = client.get(f"{BASE}/workspaces/{workspace_id}").json()["revision"]
+    client.patch(
+        f"{BASE}/workspaces/{workspace_id}/setup",
+        json={"setup": payload, "expected_revision": revision},
+    )
+    one = day(client, workspace_id, "day-1")
+    three = day(client, workspace_id, "day-3")
+    assert one["layout_approved"], "a hotel change reopens no layout"
+    assert not one["proposal"]["stale"]
+    assert three["export"]["stale"]
+    assert three["export"]["changes"][0].startswith("The stay changed")
+
+
+def test_the_last_day_ends_in_a_departure(client):
+    workspace_id = create(client, stays=[stay(first=1, last=2)])
+    view = accepted_export(client, workspace_id, "day-3")
+    assert "Ends with departure: no hotel night after this day." in view["export"]["prompt_text"]
+    assert view["stay"]["final_day"]
+
+
+def test_a_recommended_stay_is_chosen_once_and_reused(client):
+    wanted = stay("stay-r", first=1, last=2, mode="recommend", note="boutique, walkable")
+    workspace_id = create(client, stays=[wanted])
+    view = accepted_export(client, workspace_id)
+    prompt = view["export"]["prompt_text"]
+    assert "a stay you recommend (boutique, walkable) [stay id stay-r]" in prompt
+    assert '"stay":{"type":"object"' in prompt.replace(" ", "")
+
+    # An answer that forgets the stay is still saveable, and says so.
+    forgetful = _packet(view)
     preview = client.post(
         f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
-        json={"raw": json.dumps(replacement)},
+        json={"raw": json.dumps(forgetful)},
     ).json()
-    client.post(
-        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/apply",
+    assert preview["valid"]
+    assert any("recommend a stay" in i["message"] for i in preview["report"]["issues"])
+
+    chosen = _packet(
+        view,
+        stay={"stayId": "stay-r", "name": "Hotel Picked", "area": "Miraflores", "reason": "Quiet.", "sources": []},
+    )
+    save(client, workspace_id, chosen)
+    day_two = accepted_export(client, workspace_id, "day-2")
+    assert "Stay: starts and ends at Hotel Picked, Miraflores." in day_two["export"]["prompt_text"]
+    assert '"stay":{"type":"null"}' in day_two["export"]["prompt_text"].replace(" ", "")
+
+
+# ------------------------------------------------------------------- swap --
+
+
+def test_swapping_a_place_by_hand_is_free_and_keeps_the_rest(client):
+    workspace_id = create(client)
+    view = accepted_export(client, workspace_id)
+    saved = save(client, workspace_id, _packet(view))
+    calls = len(client.grill_llm.prompts)
+    swapped = client.post(
+        f"{BASE}/workspaces/{workspace_id}/days/day-1/swap",
         json={
-            "raw": json.dumps(replacement),
-            "content_hash": preview["content_hash"],
-            "import_key": key(),
+            "slot_id": "day1-lunch",
+            "name": "My favourite cevicheria",
+            "area": "Surquillo",
+            "reason": "I have eaten there.",
+            "expected_revision": saved["proposal"]["revision"],
+            "swap_key": key(),
         },
     )
-    after = day(client, workspace_id, "day-2")
-    assert after["export"]["stale"], "day two's export should need review"
-    assert after["accepted_direction"] is not None, "its old work is still readable"
+    assert swapped.status_code == 200, swapped.text
+    after = swapped.json()
+    assert len(client.grill_llm.prompts) == calls
+    picks = {pick["slotId"]: pick for pick in after["proposal"]["selection"]["picks"]}
+    assert picks["day1-lunch"]["name"] == "My favourite cevicheria"
+    assert picks["day1-lunch"]["chosenBy"] == "editor"
+    assert picks["day1-coffee"]["name"] == "Place for day1-coffee"
+    journeys = after["proposal"]["selection"]["journeys"]
+    touching = [leg for leg in journeys if "day1-lunch" in (leg["from"], leg["to"])]
+    assert touching and all(leg["minutes"] is None for leg in touching)
+    assert after["proposal"]["origin"] == "editor_swap"
+    assert after["proposal"]["revision"] == 2
 
 
-# ------------------------------------------------------------------- review --
+def test_a_swap_against_an_old_version_is_refused(client):
+    workspace_id = create(client)
+    view = accepted_export(client, workspace_id)
+    save(client, workspace_id, _packet(view))
+    save(client, workspace_id, _packet(view, overview="Newer."))
+    response = client.post(
+        f"{BASE}/workspaces/{workspace_id}/days/day-1/swap",
+        json={
+            "slot_id": "day1-lunch",
+            "name": "Somewhere",
+            "expected_revision": 1,
+            "swap_key": key(),
+        },
+    )
+    assert response.status_code == 409
 
 
-def test_an_operator_review_is_stored_beside_the_result_not_inside_it(client):
+def test_a_swap_settles_the_question_about_that_stop(client):
     workspace_id = create(client)
     view = accepted_export(client, workspace_id)
     packet = _packet(view)
-    preview = client.post(
-        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/preview",
-        json={"raw": json.dumps(packet)},
-    ).json()
-    client.post(
-        f"{BASE}/workspaces/{workspace_id}/days/day-1/imports/apply",
+    packet["picks"][2].update({"status": "unresolved", "name": None, "reason": "Nothing fits."})
+    packet["questions"] = [{"slotId": "day1-lunch", "question": "Which should give?", "options": []}]
+    saved = save(client, workspace_id, packet)
+    after = client.post(
+        f"{BASE}/workspaces/{workspace_id}/days/day-1/swap",
         json={
-            "raw": json.dumps(packet),
-            "content_hash": preview["content_hash"],
-            "import_key": key(),
+            "slot_id": "day1-lunch",
+            "name": "Chosen by me",
+            "expected_revision": saved["proposal"]["revision"],
+            "swap_key": key(),
         },
-    )
-    reviewed = client.post(
-        f"{BASE}/workspaces/{workspace_id}/days/day-1/review",
-        json={"notes": "Checked the lunch hours myself.", "evidence_reviewed": True},
     ).json()
-    assert reviewed["review"]["evidence_reviewed"] is True
-    assert reviewed["review"]["notes"] == "Checked the lunch hours myself."
-    # And the claims are exactly as they were returned.
-    assert reviewed["result"]["result"]["claims"][0]["text"] == (
-        "This place exists and posts these hours."
-    )
+    assert after["proposal"]["selection"]["questions"] == []
+    assert after["state"] == "proposal_ready"
+
+
+# --------------------------------------------------------------- the handoff --
+
+
+def test_the_handoff_carries_places_and_context_and_starts_nothing(client):
+    workspace_id = create(client, stays=[stay(first=1, last=2)])
+    save(client, workspace_id, _packet(accepted_export(client, workspace_id)))
+    calls = len(client.grill_llm.prompts)
+    packet = client.get(f"{BASE}/workspaces/{workspace_id}/handoff").json()
+    assert len(client.grill_llm.prompts) == calls
+    assert packet["kind"] == "itinerary-selection-handoff-v1"
+    first = packet["days"][0]
+    assert first["overview"] == "An easy Miraflores day."
+    assert first["stops"][2]["name"] == "Place for day1-lunch"
+    assert first["stops"][2]["reason"] == "It suits day1-lunch."
+    assert first["stay"]["start"]["name"] == "Casa Miraflores"
+    assert packet["days"][1]["stops"] == []
+
+
+def test_the_workspace_shows_the_whole_trip(client):
+    workspace_id = create(client)
+    save(client, workspace_id, _packet(accepted_export(client, workspace_id)))
+    trip = client.get(f"{BASE}/workspaces/{workspace_id}").json()
+    first = trip["days"][0]
+    assert first["overview"] == "An easy Miraflores day."
+    assert first["picks"][0] == {
+        "label": "Coffee / light breakfast",
+        "name": "Place for day1-coffee",
+        "status": "selected",
+    }

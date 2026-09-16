@@ -1,7 +1,7 @@
 import { apiFetch } from '../../../shared/api/client/apiFetch'
 import type { ItinerarySetupDraft } from '../types'
 import { layoutSignature, tripSignature } from '../draft'
-import type { DayWorkView, ImportPreview, WorkspaceView } from './types'
+import type { DayWorkView, HotelList, ImportPreview, WorkspaceView } from './types'
 
 /**
  * One call per move the operator can make.
@@ -11,11 +11,11 @@ import type { DayWorkView, ImportPreview, WorkspaceView } from './types'
  * is a view of where the work stands, and a screen that merges fragments into
  * its own copy is a screen that can be wrong in a way nobody can see.
  *
- * Three of these spend money — the two interview turns and the extraction —
- * and each takes an idempotency key the caller mints once per intent. The rest
- * are free, and that is a property of the server rather than a promise made
- * here: building the prompt, validating a paste and saving a result reach no
- * provider at all.
+ * The moves that spend money — interview turns, the summary, choosing places
+ * and asking for a revision — each take an idempotency key the caller mints
+ * once per intent. The rest are free, and that is a property of the server
+ * rather than a promise made here: building the prompt, checking an answer,
+ * saving it and swapping a place by hand reach no provider at all.
  */
 
 const BASE = '/api/itinerary-pipeline'
@@ -82,6 +82,16 @@ export function setupPayload(draft: ItinerarySetupDraft) {
       startingBase: trip.startingBase,
       sharedPreferences: trip.sharedPreferences,
       getaway: trip.getaway,
+      stays: (trip.stays ?? []).map(stay => ({
+        id: stay.id,
+        mode: stay.mode,
+        locationId: stay.locationId,
+        name: stay.name,
+        area: stay.area,
+        note: stay.note,
+        firstNight: stay.firstNight,
+        lastNight: stay.lastNight,
+      })),
     },
     days: draft.days.map(day => ({
       id: day.id,
@@ -251,16 +261,49 @@ export function applyImport(
   })
 }
 
-export function saveReview(
+/**
+ * Ask for a changed proposal. Like choosing places, this returns when the
+ * run is claimed; the answer is previewed before anything is saved.
+ */
+export function requestRevision(
   workspaceId: string,
   dayId: string,
-  notes: string,
-  evidenceReviewed: boolean,
+  body: { baseRevision: number; change: string; slotId?: string },
+  attemptKey: string,
 ): Promise<DayWorkView> {
-  return post<DayWorkView>(dayPath(workspaceId, dayId, 'review'), {
-    notes,
-    evidence_reviewed: evidenceReviewed,
+  return post<DayWorkView>(dayPath(workspaceId, dayId, 'revisions'), {
+    attempt_key: attemptKey,
+    base_revision: body.baseRevision,
+    change: body.change,
+    slot_id: body.slotId ?? '',
   })
+}
+
+/** Put the editor's own place in one stop. Free; saved as a new version. */
+export function swapPick(
+  workspaceId: string,
+  dayId: string,
+  body: { slotId: string; name: string; area: string; reason: string; expectedRevision: number },
+  swapKey: string,
+): Promise<DayWorkView> {
+  return post<DayWorkView>(dayPath(workspaceId, dayId, 'swap'), {
+    slot_id: body.slotId,
+    name: body.name,
+    area: body.area,
+    reason: body.reason,
+    expected_revision: body.expectedRevision,
+    swap_key: swapKey,
+  })
+}
+
+/** The chosen places and their context, for the later writing step. */
+export function readHandoff(workspaceId: string): Promise<unknown> {
+  return call<unknown>(`${BASE}/workspaces/${workspaceId}/handoff`)
+}
+
+/** Location Manager's hotels in a city. Never throws for a dead LM: it says so. */
+export function listHotels(city: string): Promise<HotelList> {
+  return call<HotelList>(`${BASE}/hotels?city=${encodeURIComponent(city)}`)
 }
 
 /**

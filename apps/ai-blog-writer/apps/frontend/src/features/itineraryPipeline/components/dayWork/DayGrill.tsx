@@ -22,6 +22,11 @@ import type { GrillView } from '../../dayWork/types'
  */
 
 const MARKER_LABELS: Record<string, string> = {
+  angle: 'what the day is for',
+  area: 'where it happens',
+  stops: 'what the stops are for',
+  limits: 'what is firm and what may bend',
+  // An interview started before the shorter list keeps its own topics.
   purpose: 'what the day promises',
   geography: 'where it happens',
   anchors: 'what drives it',
@@ -93,8 +98,8 @@ export function DayGrill({
         lead={
           <>
             The day Grill is a short interview about what this day is <em>for</em>,
-            before anything is researched. It already knows the trip, this
-            day&rsquo;s layout, your notes and what the other days cover.
+            before any place is chosen. It already knows the trip, this
+            day&rsquo;s layout, the stay, your notes and what the other days use.
           </>
         }
         actions={

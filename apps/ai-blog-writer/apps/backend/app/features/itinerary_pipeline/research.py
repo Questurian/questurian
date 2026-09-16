@@ -1,4 +1,7 @@
-"""Running the day's research in the app, on the Claude subscription.
+"""Running the day's selection in the app, on the Claude subscription.
+
+(The module keeps its name and job id, `itinerary.day_research`: the call
+still researches, it just no longer writes an article. ADR 0045.)
 
 The copy-and-paste boundary was the plan's deliberate choice and it is still
 supported. It also turned out to be the part that failed in practice: the
@@ -50,7 +53,7 @@ from pathlib import Path
 from typing import Any
 
 from .contracts import DayPromptExport
-from .prompt_export import call_schema
+from .selection_contract import call_schema
 
 logger = logging.getLogger(__name__)
 
@@ -98,15 +101,6 @@ def timeout_for(export: DayPromptExport) -> float:
     seconds = RESEARCH_BASE_SECONDS + RESEARCH_SECONDS_PER_STOP * stops
     return min(seconds, RESEARCH_CEILING_SECONDS)
 
-# Filled in by this module from the export, never asked of the model.
-_STAMPED = (
-    "contractVersion",
-    "workspaceId",
-    "dayId",
-    "exportId",
-    "inputHash",
-)
-
 
 class ResearchUnavailable(RuntimeError):
     """The research call could not be made or could not be used.
@@ -123,36 +117,14 @@ class ResearchUnavailable(RuntimeError):
 
 
 def schema_for_call(export: DayPromptExport) -> dict[str, Any]:
-    """The export's schema, shaped for the CLI rather than for a reader.
+    """The export's schema without the identity, which this module stamps.
 
-    A compact export's schema has no meta-schema line and is trimmed by the
-    same function that measured it, so what is sent is what was counted.
-
-    Two differences from the copy in the prompt, and both were measured.
-
-    **`$schema` comes off.** The CLI validates the schema itself before it will
-    use it, and it cannot resolve the 2020-12 meta-schema by URL: it refuses the
-    whole call with "no schema with key or ref". Harmless in the prompt, where
-    it tells a human which dialect this is; fatal here. Everything else the
-    generator produces -- `const`, nullable type arrays, enums carrying null,
-    `additionalProperties: false`, array bounds -- the CLI accepts.
-
-    **The identity fields come out.** They are `const`s the model would have to
-    copy exactly, and this module knows them already. Asking for them would add
-    five ways to fail a call whose answer we could not misattribute if we tried.
+    Asking for five `const`s the app already knows would add five ways to fail
+    a call whose answer cannot be misattributed. The schema carries no
+    `$schema` line: the CLI cannot resolve the meta-schema by URL and refuses
+    the whole call when one is present.
     """
-    if export.is_compact:
-        return call_schema(copy.deepcopy(export.response_schema))
-    schema = copy.deepcopy(export.response_schema)
-    schema.pop("$schema", None)
-    properties = schema.get("properties")
-    if isinstance(properties, dict):
-        for field in _STAMPED:
-            properties.pop(field, None)
-    required = schema.get("required")
-    if isinstance(required, list):
-        schema["required"] = [name for name in required if name not in _STAMPED]
-    return schema
+    return call_schema(copy.deepcopy(export.response_schema))
 
 
 def stamp_identity(payload: dict[str, Any], export: DayPromptExport) -> dict[str, Any]:
@@ -168,28 +140,8 @@ def stamp_identity(payload: dict[str, Any], export: DayPromptExport) -> dict[str
 
 
 def build_prompt(export: DayPromptExport) -> str:
-    """What the in-app call sends as its prompt.
-
-    A compact export carries it already, assembled from the same sections as
-    the copyable text. A legacy export predates that and is cut the old way:
-    the exported prompt minus the embedded schema, because the schema is
-    enforced by the transport and the identity is stamped afterwards.
-    """
-    if export.is_compact:
-        return export.call_prompt
-    text = export.prompt_text
-    marker = "## Required output JSON Schema"
-    if marker in text:
-        text = text.split(marker)[0].rstrip()
-    return (
-        text
-        + "\n\n## How to answer\n\n"
-        "Return the object itself, matching the required schema. Do not write "
-        "the identity fields — this app fills those in. Search and read real "
-        "pages before you choose anything; a stop you could not establish is "
-        "`unresolved` with a reason, which is a real answer and always better "
-        "than a plausible invention."
-    )
+    """What the in-app call sends: assembled from the export's own sections."""
+    return export.call_prompt
 
 
 def system_prompt_for(export: DayPromptExport) -> str | None:
@@ -213,7 +165,7 @@ def sent_sizes(export: DayPromptExport) -> dict[str, int]:
 def run_research(
     *, export: DayPromptExport, model_name: str, call: Any
 ) -> dict[str, Any]:
-    """One research-and-writing assignment for one exported day.
+    """One selection assignment for one exported day.
 
     `call` is the transport, injected so this is testable without a
     subscription, a subprocess or a network. It is handed the prompt, the

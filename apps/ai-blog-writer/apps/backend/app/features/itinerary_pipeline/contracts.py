@@ -1,28 +1,25 @@
 """Every shape this feature persists, exports or accepts back.
 
-Three artifacts, kept apart on purpose (plan section 7).
+Three artifacts, kept apart on purpose.
 
-**DayDirection** is what the interview agreed: intent plus the criteria a
-selection has to satisfy. It is not the old free-text Generation Brief, not a
-Writer Brief and not an Article Brief; those three already exist elsewhere in
-this repo and mean different things.
+**DaySummary** is what the interview agreed, said short: the day's angle, how
+it fits the trip, where it happens, and each stop's role -- with the operator's
+firm requirements kept apart from preferences the selection may adjust. It is
+not the Generation Brief, the Writer Brief or the Article Brief; those exist
+elsewhere in this repo and mean different things.
 
 **DayPromptExport** is a transport envelope. It carries the exact text the
 operator copied, the snapshot it was built from, and the hash that lets a
-returned packet prove which request it is answering.
+returned answer prove which request it is answering.
 
-**DayResult** is what came back from the external model: research, a proposed
-schedule, reader copy, evidence and the concerns it wants a person to see.
+**DaySelection** (`selection_contract.py`) is what comes back: the places,
+one short reason each, the day's overview and the questions only a person can
+answer. It is a proposal to judge, not an article (ADR 0045).
 
-The dry run's schema proved the shape renders. It cannot be the production
-contract, because it hard-codes six rows, six literal slot ids and a
-place-only world. Everything here is keyed off the slots that were actually
-exported, and the JSON Schema handed to the external model is generated per
-export from those ids (`day_schema.py`).
-
-Times are integer minutes from the day's reference midnight, with an explicit
-day offset for anything that runs past it. "around eight" is not parseable and
-"20:30" quietly becomes a timezone question; an integer is neither.
+Two older shapes are still READ here and never written: **DayDirection**, the
+long requirements object the first version extracted, and **DayResult**, the
+article-shaped day it researched and wrote. Saved work in those shapes stays
+viewable as a previous version; nothing new is generated from them.
 """
 
 from __future__ import annotations
@@ -34,44 +31,33 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 DIRECTION_CONTRACT_VERSION = "itinerary-day-direction-v1"
+SUMMARY_CONTRACT_VERSION = "itinerary-day-summary-v1"
 RESULT_CONTRACT_VERSION = "itinerary-day-result-v1"
 PROMPT_CONTRACT_VERSION = "itinerary-day-prompt-v1"
 
-# The compact request format (ADR 0044, amended). What the model is asked to
-# RETURN, not what the app stores: a v2 answer is adapted into the v1
-# `DayResult` once, at import, so history, the screen and every downstream
-# reader keep the one saved shape they already understand.
+# The answer formats of the article-shaped versions. Named so an answer in
+# either is refused by name, with a next step, rather than read as nonsense.
 RESEARCH_WIRE_VERSION = "itinerary-day-research-v2"
+RETIRED_ANSWER_VERSIONS: tuple[str, ...] = (RESULT_CONTRACT_VERSION, RESEARCH_WIRE_VERSION)
 
-# Which set of instructions a compact export was built under. Part of the
-# export's identity, unlike the wording itself: it changes only when what the
-# model is ASKED TO DO changes (a new budget, a new stopping rule), and an
-# answer to the old assignment is then an answer to a different question.
-PROMPT_POLICY_REVISION = "itinerary-research-policy-2026-09-16"
+# Which set of instructions an export was built under. Part of the export's
+# identity, unlike the wording itself: it changes only when what the model is
+# ASKED TO DO changes, and an answer to the old assignment is then an answer to
+# a different question.
+PROMPT_POLICY_REVISION = "itinerary-selection-policy-2026-09-16"
 
-# The formats this app can read back. Anything else is refused by name rather
-# than guessed at.
-READABLE_ANSWER_VERSIONS: tuple[str, ...] = (RESULT_CONTRACT_VERSION, RESEARCH_WIRE_VERSION)
-
-# What the day interview has to settle before it may agree. The eight areas
-# from the plan, in the order a day is usually decided.
+# What the day interview has to settle before it may agree. Four, not eight:
+# the interview decides what the day is for, not how research should work.
+# A GrillState keeps the keys it started with, so an interview begun under the
+# older eight-marker list finishes under it.
 ITINERARY_MARKERS: tuple[tuple[str, str], ...] = (
-    ("purpose", "the day's promise and what it contributes to this trip"),
-    ("geography", "the area, the progression and how far a transfer may go"),
-    ("anchors", "which experience drives the day, or that there is no anchor"),
-    ("slot_intent", "what every slot is for, and what it must and must not be"),
-    ("rhythm", "effort, meal balance, rest and what is optional"),
-    ("continuity", "what other days cover, and which overlaps are deliberate"),
-    ("change_policy", "what must stay, and what research may propose instead"),
-    ("unknowns", "what would make this day wrong, and what research must check"),
+    ("angle", "what the day is for, and how it differs from the other days"),
+    ("area", "where the day happens and roughly how it moves"),
+    ("stops", "what each stop is for, where that is not already obvious"),
+    ("limits", "the operator's firm requirements, kept apart from preferences"),
 )
 
 ITINERARY_MARKER_KEYS: tuple[str, ...] = tuple(key for key, _ in ITINERARY_MARKERS)
-
-# Shaped for `_marker_status`, which takes (key, field, description) triples.
-ITINERARY_MARKER_ROWS: tuple[tuple[str, str, str], ...] = tuple(
-    (key, key, description) for key, description in ITINERARY_MARKERS
-)
 
 
 class ItineraryModel(BaseModel):
@@ -176,6 +162,30 @@ class DaySnapshotModel(ItineraryModel):
         return self
 
 
+class StayModel(ItineraryModel):
+    """Where the traveller sleeps for a run of nights.
+
+    Night N is the night after day N. Either a Location Manager hotel the
+    operator picked, or a request for the selection to recommend one -- which
+    is a suggestion, never a booking and never a claim of availability.
+    """
+
+    id: str = Field(min_length=1, max_length=120)
+    mode: Literal["location_manager", "recommend"] = "location_manager"
+    location_id: int | None = Field(default=None, alias="locationId")
+    name: str = Field(default="", max_length=300)
+    area: str = Field(default="", max_length=300)
+    # For a recommendation: what kind of stay the operator wants.
+    note: str = Field(default="", max_length=1000)
+    first_night: int = Field(default=1, alias="firstNight", ge=1, le=60)
+    last_night: int = Field(default=1, alias="lastNight", ge=1, le=60)
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    def covers(self, night: int) -> bool:
+        return self.first_night <= night <= self.last_night
+
+
 class TripSnapshotModel(ItineraryModel):
     """The shared trip. Free-form enough to survive the setup screen growing."""
 
@@ -191,8 +201,14 @@ class TripSnapshotModel(ItineraryModel):
         default_factory=dict, alias="sharedPreferences"
     )
     getaway: dict[str, Any] = Field(default_factory=dict)
+    stays: list[StayModel] = Field(default_factory=list, max_length=40)
 
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    def stay_for_night(self, night: int) -> StayModel | None:
+        """The first stay covering this night. Overlaps are the setup screen's
+        to flag; here the earlier one wins, deterministically."""
+        return next((stay for stay in self.stays if stay.covers(night)), None)
 
 
 class SetupSnapshot(ItineraryModel):
@@ -302,15 +318,58 @@ class DayDirection(ItineraryModel):
     agreement_trace: list[AgreementTurn] = Field(default_factory=list, max_length=40)
 
 
+class SlotSummary(ItineraryModel):
+    """One stop's role, and only what the conversation actually settled."""
+
+    slot_id: str = Field(min_length=1, max_length=120)
+    role: str = Field(default="", max_length=300)
+    requirements: list[str] = Field(default_factory=list, max_length=8)
+    preferences: list[str] = Field(default_factory=list, max_length=8)
+
+
+class DaySummary(ItineraryModel):
+    """The agreed day, short enough to scan. Immutable once accepted.
+
+    `requirements` are the operator's own musts: things they wrote, or the
+    setup states. `preferences` are everything the selection may adjust --
+    including a suggestion the operator merely accepted. "Walkable" is a
+    preference; it does not become a fifteen-minute rule by being written down.
+    """
+
+    contract_version: Literal["itinerary-day-summary-v1"] = SUMMARY_CONTRACT_VERSION
+    day_id: str = Field(min_length=1, max_length=120)
+    angle: str = Field(default="", max_length=600)
+    trip_fit: str = Field(default="", max_length=600)
+    area: str = Field(default="", max_length=600)
+    requirements: list[str] = Field(default_factory=list, max_length=12)
+    preferences: list[str] = Field(default_factory=list, max_length=12)
+    avoid: list[str] = Field(default_factory=list, max_length=12)
+    slots: list[SlotSummary] = Field(default_factory=list, max_length=40)
+    agreement_trace: list[AgreementTurn] = Field(default_factory=list, max_length=40)
+
+    @property
+    def promise(self) -> str:
+        """The one line other days see about this one."""
+        return self.angle
+
+
 class DirectionRevision(ItineraryModel):
-    """One extraction, candidate or accepted, with what it was extracted from."""
+    """One extraction, candidate or accepted, with what it was extracted from.
+
+    An accepted `DayDirection` is the older, longer shape. It is kept readable
+    and is never exported: a new selection needs a `DaySummary`.
+    """
 
     revision: int = Field(ge=1)
     status: Literal["candidate", "accepted"] = "candidate"
-    direction: DayDirection
+    direction: DaySummary | DayDirection = Field(discriminator="contract_version")
     context_key: str = Field(default="", max_length=128)
     created_at: str = ""
     accepted_at: str = ""
+
+    @property
+    def is_summary(self) -> bool:
+        return isinstance(self.direction, DaySummary)
 
 
 # --------------------------------------------------------------- the export --
@@ -330,9 +389,9 @@ class DayPromptExport(ItineraryModel):
     context_key: str = Field(default="", max_length=128)
     slot_ids: list[str] = Field(default_factory=list, max_length=40)
     optional_slot_ids: list[str] = Field(default_factory=list, max_length=40)
-    # The answer format this export asks for. Exports written before the
-    # compact format existed carry the default and are read as v1 forever:
-    # an issued request is immutable, and so is the question it asked.
+    # The answer format this export asks for. An issued request is immutable,
+    # and so is the question it asked: exports from the article-shaped
+    # versions keep their format and are no longer run or imported.
     schema_version: str = RESULT_CONTRACT_VERSION
     voice_version: str = Field(default="", max_length=128)
     # Empty on a legacy export. See PROMPT_POLICY_REVISION.
@@ -353,14 +412,26 @@ class DayPromptExport(ItineraryModel):
     # The research allowance the prompt states, so the screen can say it and
     # a run can be compared against it afterwards.
     research_budget: dict[str, int] = Field(default_factory=dict)
+    # A revision asks for a changed proposal: which saved revision it starts
+    # from, and what the operator wants different. Both are part of the hash.
+    base_revision: int | None = None
+    change_request: str = Field(default="", max_length=4000)
+    change_slot_id: str = Field(default="", max_length=120)
+    # What the request was built from, in words, so a later change to the day
+    # can be named ("the stay for night 1") rather than just detected.
+    context_summary: dict[str, Any] = Field(default_factory=dict)
     created_at: str = ""
 
     @property
-    def is_compact(self) -> bool:
-        return self.schema_version == RESEARCH_WIRE_VERSION
+    def is_selection(self) -> bool:
+        from .selection_contract import SELECTION_CONTRACT_VERSION
+
+        return self.schema_version == SELECTION_CONTRACT_VERSION
 
 
-# --------------------------------------------------------------- the result --
+# ------------------------------------------- the previous version's result --
+#
+# Read-only. Saved article-shaped days are still shown as previous versions.
 
 
 class ResultResearch(ItineraryModel):
@@ -607,16 +678,61 @@ class ValidationReport(ItineraryModel):
 
 
 class StoredResult(ItineraryModel):
-    """A saved day, plus everything about how it got here."""
+    """A saved day, plus everything about how it got here.
+
+    Exactly one of `selection` (current) and `result` (a previous, article-
+    shaped version) is set.
+    """
 
     result_revision: int = Field(ge=1)
     export_id: str = ""
     content_hash: str = ""
-    result: DayResult
+    result: DayResult | None = None
+    selection: Any = None
     report: ValidationReport
     saved_at: str = ""
+    # Who made this revision: an answer that was imported, or an edit made on
+    # the proposal itself.
+    origin: Literal["answer", "editor_swap"] = "answer"
     review_notes: str = ""
     evidence_reviewed: bool = False
+
+    @model_validator(mode="after")
+    def read_selection(self) -> "StoredResult":
+        from .selection_contract import DaySelection
+
+        if isinstance(self.selection, dict):
+            self.selection = DaySelection.model_validate(self.selection)
+        return self
+
+    @property
+    def is_selection(self) -> bool:
+        return self.selection is not None
+
+    @property
+    def complete(self) -> bool:
+        return self.report.completeness.complete
+
+    def chosen_names(self) -> list[str]:
+        """The places this saved day uses, whichever shape it is."""
+        if self.selection is not None:
+            return [
+                pick.name.strip()
+                for pick in self.selection.picks
+                if pick.status == "selected" and pick.name and pick.name.strip()
+            ]
+        if self.result is not None:
+            return [
+                stop.name.strip()
+                for stop in self.result.stops
+                if stop.status == "selected" and stop.name and stop.name.strip()
+            ]
+        return []
+
+    def headline(self) -> str:
+        if self.selection is not None:
+            return self.selection.overview
+        return self.result.title if self.result is not None else ""
 
 
 def stable_hash(payload: Any) -> str:

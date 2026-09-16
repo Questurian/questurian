@@ -396,29 +396,6 @@ def save_grill(
         )
 
 
-def save_review(
-    workspace_id: str, day_id: str, *, notes: str, evidence_reviewed: bool
-) -> None:
-    """The operator's own reading of the evidence, stored as theirs.
-
-    Deliberately never touches the result: a review is a person saying they
-    looked, and rewriting a claim to match would destroy the thing they
-    reviewed.
-    """
-    ensure_tables()
-    with transaction() as conn:
-        conn.execute(
-            "INSERT INTO itinerary_day_work "
-            "(workspace_id, day_id, review_notes, evidence_reviewed, revision, updated_at) "
-            "VALUES (?, ?, ?, ?, 1, ?) "
-            "ON CONFLICT(workspace_id, day_id) DO UPDATE SET "
-            "review_notes = excluded.review_notes, "
-            "evidence_reviewed = excluded.evidence_reviewed, "
-            "revision = itinerary_day_work.revision + 1, updated_at = excluded.updated_at",
-            (workspace_id, day_id, notes, 1 if evidence_reviewed else 0, _now()),
-        )
-
-
 # -------------------------------------------------------------- direction --
 
 
@@ -553,7 +530,7 @@ def list_exports(workspace_id: str, day_id: str) -> list[DayPromptExport]:
     with get_db_connection() as conn:
         rows = conn.execute(
             "SELECT payload FROM itinerary_exports "
-            "WHERE workspace_id = ? AND day_id = ? ORDER BY created_at",
+            "WHERE workspace_id = ? AND day_id = ? ORDER BY rowid",
             (workspace_id, day_id),
         ).fetchall()
     return [DayPromptExport.model_validate(json.loads(row["payload"])) for row in rows]
@@ -599,6 +576,7 @@ def apply_result(
     export_id: str,
     raw_paste: str,
     build: Any,
+    expected_revision: int | None = None,
 ) -> tuple[StoredResult, bool]:
     """Save a previewed result, once, inside one transaction.
 
@@ -633,7 +611,15 @@ def apply_result(
             "WHERE workspace_id = ? AND day_id = ?",
             (workspace_id, day_id),
         ).fetchone()["top"]
-        revision = (int(top) if top is not None else 0) + 1
+        current = int(top) if top is not None else 0
+        # An edit made on a proposal is an edit to THAT version. If another
+        # save landed first, the edit would silently undo it.
+        if expected_revision is not None and current != expected_revision:
+            raise RevisionConflict(
+                "This proposal changed while you were editing it. Read it again.",
+                current,
+            )
+        revision = current + 1
         stored: StoredResult = build(revision)
         conn.execute(
             "INSERT INTO itinerary_results "
@@ -1005,7 +991,6 @@ def research_runs_for_export(workspace_id: str, day_id: str, export_id: str) -> 
         }
         for row in rows
     ]
-
 
 
 def research_run_finished_at(attempt_key: str) -> str:

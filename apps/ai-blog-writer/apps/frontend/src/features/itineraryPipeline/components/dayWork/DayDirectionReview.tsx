@@ -1,19 +1,20 @@
-import { Check, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Check, RefreshCw } from 'lucide-react'
 import { Badge, Step } from './Step'
-import type { DaySlotView, DirectionRevision } from '../../dayWork/types'
+import { isSummary } from '../../dayWork/types'
+import type { DaySlotView, DirectionRevision, OlderDirection } from '../../dayWork/types'
 
 /**
- * The agreed direction, shown as the object it is before it is accepted.
+ * The agreed day, written down short, before it is accepted.
  *
- * The conversation ends in a paragraph, and a paragraph is the right thing to
- * agree to. It is not the right thing to research from: it cannot be checked
- * against the stop list and it cannot be hashed into a prompt. So a second
- * pass writes the same agreement down as a structured object — and that object
- * is shown here, exactly as it will be sent, before anybody accepts it.
+ * The conversation ends in a paragraph. A second pass writes it down as a
+ * summary the selection works from: the angle, how the day fits the trip, the
+ * area, and each stop's role — with the operator's firm requirements shown
+ * apart from preferences the selection may bend. It is shown here exactly as
+ * it will be used, and accepted by revision number.
  *
- * "Agree and prepare prompt" accepts the revision on screen, by number. A
- * second extraction landing between the render and the click would otherwise
- * be accepted without ever having been read.
+ * A day agreed under the older, long format shows that agreement as history
+ * and offers to write the short summary from the same conversation. Nothing
+ * is rewritten on its own.
  */
 
 export interface DayDirectionReviewProps {
@@ -27,12 +28,12 @@ export interface DayDirectionReviewProps {
   onAccept: (revision: number) => void
 }
 
-function List({ title, items }: { title: string; items: string[] }) {
+function Items({ title, items, tone }: { title: string; items: string[]; tone?: string }) {
   if (items.length === 0) return null
   return (
     <div className="ip-direction-block">
       <h4>{title}</h4>
-      <ul>
+      <ul className={tone ? `ip-criteria ${tone}` : 'ip-criteria'}>
         {items.map(item => (
           <li key={item}>{item}</li>
         ))}
@@ -41,18 +42,28 @@ function List({ title, items }: { title: string; items: string[] }) {
   )
 }
 
-function Lines({ title, rows }: { title: string; rows: Array<[string, string]> }) {
-  const filled = rows.filter(([, value]) => value.trim())
-  if (filled.length === 0) return null
+function Trace({ turns }: { turns: OlderDirection['agreement_trace'] }) {
+  if (turns.length === 0) return null
   return (
-    <div className="ip-direction-block">
-      <h4>{title}</h4>
-      {filled.map(([label, value]) => (
-        <p key={label}>
-          <strong>{label}:</strong> {value}
-        </p>
-      ))}
-    </div>
+    <details className="ip-disclosure">
+      <summary>
+        How this was agreed{' '}
+        <span className="ip-disclosure-note">{turns.length} decisions</span>
+      </summary>
+      <ol className="ip-slot-directions">
+        {turns.map((turn, index) => (
+          <li key={`${index}-${turn.decision}`}>
+            <p className="ip-slot-direction-head">{turn.decision}</p>
+            <p className="ip-context-text">{turn.answer}</p>
+            <p className="ip-helper">
+              {turn.answer_origin === 'accepted_recommendation'
+                ? 'You accepted the suggestion unchanged, so it counts as a preference.'
+                : 'You answered in your own words.'}
+            </p>
+          </li>
+        ))}
+      </ol>
+    </details>
   )
 }
 
@@ -70,14 +81,20 @@ export function DayDirectionReview({
   const isAccepted = !candidate && Boolean(accepted)
   const labels = new Map(slots.map(slot => [slot.id, slot.label]))
 
+  const writeAgain = (
+    <button type="button" className="ip-button-quiet" onClick={onPrepare} disabled={busy}>
+      <RefreshCw size={15} aria-hidden /> Write it down again
+    </button>
+  )
+
   if (!showing) {
     return (
       <Step
         id="ip-direction"
-        title="Direction"
+        title="Summary"
         tone={tone}
         badge={<Badge tone="quiet">Not written yet</Badge>}
-        lead="The conversation, written down as the requirements research will work from — purpose, area, what every stop is for, and the factual questions that still need answering."
+        lead="The conversation, written down short: what the day is for, where it happens, each stop's role, and which of your wishes are firm."
         actions={
           <>
             <button
@@ -86,11 +103,11 @@ export function DayDirectionReview({
               onClick={onPrepare}
               disabled={busy || !canPrepare}
             >
-              {busy ? 'Writing it down…' : 'Write down the direction'}
+              {busy ? 'Writing it down…' : 'Write down the summary'}
             </button>
             <span className="ip-helper">
               {canPrepare
-                ? 'One more model call. It adds nothing — it only records what was agreed.'
+                ? 'One short model call. It only records what was agreed.'
                 : 'Available once the interview has agreed.'}
             </span>
           </>
@@ -100,38 +117,68 @@ export function DayDirectionReview({
   }
 
   const direction = showing.direction
+  if (!isSummary(direction)) {
+    // The older, long agreement: kept readable, never built from.
+    return (
+      <Step
+        id="ip-direction"
+        title="Summary"
+        tone={tone}
+        badge={<Badge tone="warning">Older format</Badge>}
+        lead="This day was agreed in the older, longer format, which asked research to prove every detail. Write the short summary from the same conversation to choose places."
+        actions={
+          <>
+            <button
+              type="button"
+              className="ip-button-primary"
+              onClick={onPrepare}
+              disabled={busy || !canPrepare}
+            >
+              <RefreshCw size={15} aria-hidden />
+              {busy ? 'Writing it down…' : 'Write the short summary'}
+            </button>
+            <span className="ip-helper">
+              {canPrepare
+                ? 'One short model call. The conversation is not repeated.'
+                : 'The interview has to be agreed first.'}
+            </span>
+          </>
+        }
+      >
+        <p className="ip-unchecked" role="status">
+          <AlertTriangle size={16} aria-hidden /> Nothing new is built from this version.
+        </p>
+        <p className="ip-direction-promise">{direction.promise}</p>
+        <Trace turns={direction.agreement_trace} />
+      </Step>
+    )
+  }
+
+  const roles = direction.slots.filter(
+    entry => entry.role || entry.requirements.length || entry.preferences.length,
+  )
   return (
     <Step
       id="ip-direction"
-      title="Direction"
+      title="Summary"
       tone={tone}
       badge={
         isAccepted ? (
-          <Badge tone="done">Accepted · revision {showing.revision}</Badge>
+          <Badge tone="done">Accepted · version {showing.revision}</Badge>
         ) : (
-          <Badge>Read this before accepting</Badge>
+          <Badge>Read before accepting</Badge>
         )
       }
       lead={
         isAccepted
-          ? 'This is what the research prompt is built from.'
-          : 'The interview, written down as requirements. This is exactly what will be sent to research. Read it; accepting it is what makes it the requirements.'
+          ? 'Places are chosen from this.'
+          : 'What was agreed, short. Firm requirements must be met; preferences may bend.'
       }
       actions={
         isAccepted ? (
           <>
-            <button
-              type="button"
-              className="ip-button-quiet"
-              onClick={onPrepare}
-              disabled={busy}
-            >
-              <RefreshCw size={15} aria-hidden /> Write it down again
-            </button>
-            <span className="ip-helper">
-              Only if the conversation has moved on. A new version has to be
-              accepted before it is used.
-            </span>
+            {writeAgain}
+            <span className="ip-helper">Only if the conversation has moved on.</span>
           </>
         ) : (
           <>
@@ -141,162 +188,60 @@ export function DayDirectionReview({
               onClick={() => onAccept(showing.revision)}
               disabled={busy}
             >
-              <Check size={16} aria-hidden /> Agree and prepare the prompt
+              <Check size={16} aria-hidden /> Agree
             </button>
-            <button
-              type="button"
-              className="ip-button-quiet"
-              onClick={onPrepare}
-              disabled={busy}
-            >
-              <RefreshCw size={15} aria-hidden /> Write it down again
-            </button>
-            <span className="ip-helper">
-              Open &ldquo;Full requirements&rdquo; before accepting — it is part of
-              what is sent. Accepting is free. Research will work from this version; you can
-              write it down again later, and a new version needs accepting too.
-            </span>
+            {writeAgain}
+            <span className="ip-helper">Accepting is free.</span>
           </>
         )
       }
     >
       <div className="ip-direction">
-        <p className="ip-direction-promise">{direction.promise}</p>
+        <p className="ip-direction-promise">{direction.angle}</p>
+        {direction.trip_fit ? <p className="ip-context-text">{direction.trip_fit}</p> : null}
+        {direction.area ? (
+          <p className="ip-context-text">
+            <strong>Where:</strong> {direction.area}
+          </p>
+        ) : null}
 
-        <div>
-          <h4 className="ip-issue-group">What each stop is for</h4>
-          <ol className="ip-slot-directions">
-            {direction.slot_directions.map(entry => (
-              <li key={entry.slot_id}>
-                <p className="ip-slot-direction-head">
-                  {labels.get(entry.slot_id) ?? entry.slot_id}
-                  <span className="ip-slot-direction-role">{entry.role}</span>
-                </p>
-                {entry.must_have.length > 0 ? (
-                  <ul className="ip-criteria">
-                    {entry.must_have.map(item => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                ) : null}
-                {entry.nice_to_have.length > 0 ? (
-                  <ul className="ip-criteria ip-criteria-soft">
-                    {entry.nice_to_have.map(item => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                ) : null}
-                {entry.exclusions.length > 0 ? (
-                  <ul className="ip-criteria ip-criteria-out">
-                    {entry.exclusions.map(item => (
-                      <li key={item}>not: {item}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </li>
-            ))}
-          </ol>
+        <div className="ip-direction-grid">
+          <Items title="Firm requirements" items={direction.requirements} />
+          <Items title="Preferences" items={direction.preferences} tone="ip-criteria-soft" />
+          <Items title="Avoid" items={direction.avoid} tone="ip-criteria-out" />
         </div>
 
-        <List title="This day is wrong if" items={direction.fails_if} />
-
-        <details className="ip-disclosure">
-          <summary>
-            Full requirements{' '}
-            <span className="ip-disclosure-note">
-              area, rhythm, constraints{direction.research_checklist.length > 0
-                ? ` · ${direction.research_checklist.length} questions for research`
-                : ''}
-            </span>
-          </summary>
-          <div className="ip-direction-grid">
-            <Lines
-              title="This day's part in the trip"
-              rows={[['Role', direction.trip_role]]}
-            />
-            <Lines
-              title="Geography"
-              rows={[
-                ['Area', direction.geography.required_area],
-                ['Starts from', direction.geography.starting_point],
-                ['Progression', direction.geography.progression],
-                ['Transfers', direction.geography.transfer_tolerance],
-              ]}
-            />
-            <Lines
-              title="Rhythm"
-              rows={[
-                ['Effort', direction.rhythm.effort],
-                ['Meals', direction.rhythm.meal_balance],
-                ['Rest', direction.rhythm.rest_policy],
-                [
-                  'Minimum rest',
-                  direction.rhythm.rest_minutes_minimum
-                    ? `${direction.rhythm.rest_minutes_minimum} minutes`
-                    : '',
-                ],
-                ['Optional', direction.rhythm.optionality],
-              ]}
-            />
-            <List title="What drives the day" items={direction.anchors} />
-            <List title="Staying out of" items={direction.geography.avoid_today} />
-            <List title="Constraints" items={direction.constraints} />
-            <List
-              title="Covered by other days"
-              items={direction.continuity.covered_elsewhere}
-            />
-            <List
-              title="Reserved for later days"
-              items={direction.continuity.reserved_for_later}
-            />
-            <Lines
-              title="What may change"
-              rows={[
-                ['Must stay', direction.change_policy.must_remain],
-                ['May be proposed', direction.change_policy.may_be_proposed],
-              ]}
-            />
-          </div>
-
-          {direction.research_checklist.length > 0 ? (
-            <div className="ip-direction-block">
-              <h4>What research has to answer</h4>
-              <ul>
-                {direction.research_checklist.map(item => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-        </details>
-
-        {direction.agreement_trace.length > 0 ? (
-          <details className="ip-disclosure">
-            <summary>
-              How this was agreed{' '}
-              <span className="ip-disclosure-note">
-                {direction.agreement_trace.length} decisions
-              </span>
-            </summary>
+        {roles.length > 0 ? (
+          <div>
+            <h4 className="ip-issue-group">The stops</h4>
             <ol className="ip-slot-directions">
-              {direction.agreement_trace.map((turn, index) => (
-                <li key={`${index}-${turn.decision}`}>
-                  <p className="ip-slot-direction-head">{turn.decision}</p>
-                  <p className="ip-context-text">{turn.answer}</p>
-                  <p className="ip-helper">
-                    {turn.answer_origin === 'accepted_recommendation'
-                      ? // Kept visible because it changes what the answer is
-                        // worth downstream: an accepted suggestion is a
-                        // decision, and it is not first-hand knowledge.
-                        'You accepted the suggestion unchanged.'
-                      : 'You answered in your own words.'}
+              {roles.map(entry => (
+                <li key={entry.slot_id}>
+                  <p className="ip-slot-direction-head">
+                    {labels.get(entry.slot_id) ?? entry.slot_id}
+                    <span className="ip-slot-direction-role">{entry.role}</span>
                   </p>
+                  {entry.requirements.length > 0 ? (
+                    <ul className="ip-criteria">
+                      {entry.requirements.map(item => (
+                        <li key={item}>must: {item}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {entry.preferences.length > 0 ? (
+                    <ul className="ip-criteria ip-criteria-soft">
+                      {entry.preferences.map(item => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </li>
               ))}
             </ol>
-          </details>
+          </div>
         ) : null}
+
+        <Trace turns={direction.agreement_trace} />
       </div>
     </Step>
   )

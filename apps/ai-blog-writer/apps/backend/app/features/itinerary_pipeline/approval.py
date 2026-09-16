@@ -30,10 +30,14 @@ def layout_signature(setup: SetupSnapshot, day: DaySnapshotModel) -> str:
     notes and preparation notes are input to a conversation, not part of the
     structure that was approved, and making them reopen approval would punish
     the operator for thinking.
+
+    The stays are excluded too. Changing a hotel changes where a day starts
+    and ends, which the selection's own fingerprint picks up for the days it
+    touches; it does not make a single layout need approving again.
     """
     return stable_hash(
         {
-            "trip": setup.trip.model_dump(by_alias=True),
+            "trip": setup.trip.model_dump(by_alias=True, exclude={"stays"}),
             "day": day.model_dump(
                 by_alias=True,
                 exclude={

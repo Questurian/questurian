@@ -12,13 +12,16 @@ import {
   prepareDirection,
   previewImport,
   readDay,
+  readWorkspace,
   reopenGrill,
-  saveReview,
+  requestRevision,
+  setupPayload,
   startGrill,
   startResearch,
+  swapPick,
   updateSetup,
 } from './api'
-import type { DayWorkView, ImportPreview } from './types'
+import type { DayWorkView, ImportPreview, WorkspaceView } from './types'
 import type { ItinerarySetupDraft } from '../types'
 
 /**
@@ -43,6 +46,11 @@ import type { ItinerarySetupDraft } from '../types'
  * **One key per intent.** An attempt key is minted when the operator decides,
  * and reused by every retry of that decision, so a double-click or a retry
  * after a timeout cannot buy the turn twice.
+ *
+ * **Setup edits reach the server on their own.** Changing a hotel or a note
+ * after a proposal exists has to show up as "this changed" without waiting for
+ * the next paid move, so a linked draft is pushed (debounced) whenever what it
+ * would send changes. Pushing an unchanged setup is a no-op on the server.
  */
 
 type Busy =
@@ -55,7 +63,7 @@ type Busy =
   | 'research'
   | 'preview'
   | 'apply'
-  | 'review'
+  | 'swap'
 
 /**
  * How often the day is re-read while research is running.
@@ -66,10 +74,18 @@ type Busy =
  */
 const RESEARCH_POLL_MS = 5_000
 
+/** How long setup edits settle before they are pushed. */
+const SETUP_SYNC_MS = 700
+
+/** What each workspace was last sent, across remounts of this screen. */
+const pushedSetups = new Map<string, string>()
+
 export interface UseDayWork {
   /** The workspace this draft is linked to, once it exists. */
   workspaceId: string | null
   day: DayWorkView | null
+  /** Every day at a glance, once the workspace exists. */
+  trip: WorkspaceView | null
   /** What is happening, specific enough to say which button to disable. */
   busy: Busy
   /** True while a model call is out. These are the only moves that cost. */
@@ -91,7 +107,10 @@ export interface UseDayWork {
   runPreview: (raw: string) => void
   clearPreview: () => void
   apply: (raw: string, contentHash: string) => void
-  review: (notes: string, evidenceReviewed: boolean) => void
+  /** Ask for a changed proposal. Spends, like choosing places. */
+  revise: (change: string, slotId?: string) => void
+  /** Put the editor's own place in a stop. Free. */
+  swap: (slotId: string, name: string, area: string, reason: string) => void
 }
 
 export function useDayWork(
@@ -103,6 +122,7 @@ export function useDayWork(
   const [busy, setBusy] = useState<Busy>(null)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<ImportPreview | null>(null)
+  const [trip, setTrip] = useState<WorkspaceView | null>(null)
 
   const workspaceId = draft.workspaceId ?? null
 
@@ -137,6 +157,16 @@ export function useDayWork(
   const movesInFlight = useRef(0)
 
   const spending = busy === 'grill' || busy === 'direction' || busy === 'research'
+
+  /** The whole-trip view. A read; a failure leaves the last one standing. */
+  const refreshTrip = useCallback(async (id: string) => {
+    try {
+      const found = await readWorkspace(id)
+      if (Array.isArray(found?.days)) setTrip(found)
+    } catch {
+      // The day itself is what matters on this screen; the overview can wait.
+    }
+  }, [])
   // Read off the day rather than off this screen's own state: a run started in
   // another tab, or before a reload, is still running and still costs. A run
   // that stalled is not running — leaving it counted as such would disable the
@@ -154,6 +184,7 @@ export function useDayWork(
         if (targetDay !== null && showing.current !== targetDay) return
         writes.current += 1
         setDay(next)
+        if (next?.workspace_id) void refreshTrip(next.workspace_id)
       } catch (caught) {
         if (targetDay !== null && showing.current !== targetDay) return
         // Said on the screen rather than swallowed: a failed turn leaves the
@@ -165,7 +196,7 @@ export function useDayWork(
         setBusy(current => (current === kind ? null : current))
       }
     },
-    [],
+    [refreshTrip],
   )
 
   // Read the day whenever the workspace or the day changes. A read costs
@@ -176,6 +207,7 @@ export function useDayWork(
       setPreview(null)
       return
     }
+    void refreshTrip(workspaceId)
     let live = true
     const startedAt = writes.current
     setBusy('reading')
@@ -207,7 +239,39 @@ export function useDayWork(
     return () => {
       live = false
     }
-  }, [workspaceId, dayId])
+  }, [workspaceId, dayId, refreshTrip])
+
+  // Push setup edits made while linked. Re-read only when the server says the
+  // setup actually moved: an unchanged push changes nothing worth a read.
+  const setupSignature = workspaceId ? JSON.stringify(setupPayload(draft)) : ''
+  useEffect(() => {
+    if (!workspaceId || !setupSignature) return
+    if (pushedSetups.get(workspaceId) === setupSignature) return
+    const timer = setTimeout(() => {
+      void (async () => {
+        const known = draftRef.current
+        try {
+          const before = trip?.revision ?? day?.workspace_revision
+          const result = await updateSetup(workspaceId, known, null)
+          pushedSetups.set(workspaceId, setupSignature)
+          const moved = typeof result?.revision === 'number' && result.revision !== before
+          if (!moved || movesInFlight.current > 0) return
+          if (Array.isArray(result.days)) setTrip(result)
+          const target = showing.current
+          if (!target) return
+          const found = await readDay(workspaceId, target)
+          if (showing.current === target && movesInFlight.current === 0) setDay(found)
+        } catch {
+          // Another tab moved it, or the server is away. The next move pushes
+          // the setup again before it asks anything.
+        }
+      })()
+    }, SETUP_SYNC_MS)
+    return () => clearTimeout(timer)
+    // `day` and `trip` are read for the revision only; a new one must not
+    // restart the wait.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId, setupSignature])
 
   /**
    * Hand the setup to the backend, once, and remember where it went.
@@ -224,6 +288,7 @@ export function useDayWork(
       // since the handoff reaches the backend before anything is asked of it.
       try {
         await updateSetup(current.workspaceId, current, null)
+        pushedSetups.set(current.workspaceId, JSON.stringify(setupPayload(current)))
       } catch (caught) {
         if (!(caught instanceof ConflictError)) throw caught
         // Another tab moved it. Its version is the one that exists; this one
@@ -363,19 +428,39 @@ export function useDayWork(
     [dayId, run, workspaceId],
   )
 
-  const review = useCallback(
-    (notes: string, evidenceReviewed: boolean) => {
-      if (!dayId || !workspaceId) return
-      void run('review', dayId, () =>
-        saveReview(workspaceId, dayId, notes, evidenceReviewed),
+  const revise = useCallback(
+    (change: string, slotId?: string) => {
+      const base = day?.proposal?.revision
+      if (!dayId || !workspaceId || !base || !change.trim()) return
+      const key = attemptKey()
+      void run('research', dayId, () =>
+        requestRevision(workspaceId, dayId, { baseRevision: base, change: change.trim(), slotId }, key),
       )
     },
-    [dayId, run, workspaceId],
+    [day?.proposal?.revision, dayId, run, workspaceId],
+  )
+
+  const swap = useCallback(
+    (slotId: string, name: string, area: string, reason: string) => {
+      const base = day?.proposal?.revision
+      if (!dayId || !workspaceId || !base || !name.trim()) return
+      const key = attemptKey()
+      void run('swap', dayId, () =>
+        swapPick(
+          workspaceId,
+          dayId,
+          { slotId, name: name.trim(), area: area.trim(), reason: reason.trim(), expectedRevision: base },
+          key,
+        ),
+      )
+    },
+    [day?.proposal?.revision, dayId, run, workspaceId],
   )
 
   return {
     workspaceId,
     day,
+    trip,
     busy,
     spending,
     researching,
@@ -393,6 +478,7 @@ export function useDayWork(
     runPreview,
     clearPreview: useCallback(() => setPreview(null), []),
     apply,
-    review,
+    revise,
+    swap,
   }
 }

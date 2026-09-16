@@ -1141,20 +1141,6 @@
   color: var(--muted);
 }
 
-.ip-composer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border: 1px dashed var(--ip-line);
-  border-radius: var(--radius-md);
-  background: var(--ip-ground);
-}
-
-.ip-composer textarea { flex: 1 1 260px; }
-.ip-composer .ip-helper { flex: 1 1 100%; margin: 0; }
-
 .ip-notes-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1375,7 +1361,6 @@
   white-space: nowrap;
   border: 0;
 }
-
 
 /* ------------------------------------------------------------- day work -- */
 
@@ -1762,35 +1747,6 @@
   color: var(--ink-light);
 }
 
-/* ----------------------------------------------------------- the result -- */
-
-.ip-result-head {
-  margin-bottom: var(--space-5);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--ip-line-soft);
-}
-
-.ip-result-title {
-  margin: 0 0 var(--space-2);
-  font-family: var(--font-display);
-  font-size: 1.75rem;
-  line-height: 1.2;
-}
-
-.ip-result-intro {
-  margin: 0;
-  font-size: 1rem;
-  line-height: 1.65;
-  color: var(--ink-light);
-}
-
-.ip-result-status {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-
 .ip-agenda {
   margin: 0;
   padding: 0;
@@ -1809,51 +1765,6 @@
   gap: var(--space-3);
 }
 
-.ip-agenda-time {
-  flex: none;
-  width: 5.5rem;
-  color: var(--muted);
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.ip-agenda-heading { flex: 1 1 14rem; min-width: 0; }
-
-.ip-agenda-name {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.375rem;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.ip-agenda-slot {
-  margin: 0 0 2px;
-  color: var(--muted);
-  font-family: var(--font-body);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.ip-agenda-body {
-  margin: var(--space-3) 0 0 0;
-  padding-left: 5.5rem;
-}
-
-.ip-agenda-copy {
-  margin: 0 0 var(--space-3);
-  font-size: 0.9375rem;
-  line-height: 1.65;
-}
-
-.ip-agenda-meta {
-  margin: 0 0 var(--space-2);
-  color: var(--muted);
-  font-size: 0.8125rem;
-}
-
 .ip-agenda-list {
   margin: 0 0 var(--space-3);
   padding-left: var(--space-5);
@@ -1861,27 +1772,10 @@
   color: var(--ink-light);
 }
 
-.ip-agenda-unresolved {
-  margin: var(--space-2) 0 0;
-  padding: var(--space-3);
-  border-left: 3px solid var(--warning);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  background: var(--warning-soft);
-  font-size: 0.875rem;
-}
-
-.ip-rest {
-  padding: var(--space-3) 0 var(--space-3) 5.5rem;
-  color: var(--muted);
-  font-size: 0.8125rem;
-  font-style: italic;
-  border-bottom: 1px solid var(--ip-line-soft);
-}
-
 /* The journey out of a stop, drawn between it and the next one. */
 .ip-leg {
   margin: 0;
-  padding: var(--space-2) 0 var(--space-2) 5.5rem;
+  padding: var(--space-1) 0 var(--space-1) var(--space-4);
   color: var(--muted);
   font-size: 0.8125rem;
 }
@@ -1889,11 +1783,6 @@
 .ip-leg::before {
   content: "↓ ";
   color: var(--ip-accent);
-}
-
-.ip-practical {
-  color: var(--muted);
-  font-size: 0.8125rem;
 }
 
 /* What the research call is handed: the scope, the sizes, the brief. */
@@ -1927,10 +1816,6 @@
   font-weight: 600;
 }
 
-.ip-size-table .ip-size-largest {
-  border-color: var(--ip-accent);
-}
-
 .ip-size-table .ip-size-total {
   background: var(--ip-accent-softer);
 }
@@ -1956,54 +1841,12 @@
   outline-offset: 2px;
 }
 
-/* Everything that needs a decision, once, above the article. */
-.ip-attention {
-  margin: var(--space-4) 0;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--ip-line);
-  border-radius: var(--radius-md);
-  background: var(--ip-accent-softer);
-}
-
-.ip-attention-kind {
-  margin: var(--space-3) 0 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.ip-attention .ip-issues {
-  margin-top: var(--space-2);
-}
-
-.ip-article {
-  margin-top: var(--space-4);
-}
-
-.ip-evidence {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.8125rem;
-}
-
-.ip-evidence li {
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--ip-line-soft);
-}
-
-.ip-step a,
-.ip-evidence a {
+.ip-step a {
   color: var(--ip-accent);
   word-break: break-word;
 }
 
 .ip-step a:hover { color: var(--ip-accent-hover); }
-
-.ip-evidence-claim { color: var(--ink-light); }
-.ip-evidence-cite { color: var(--muted); }
 
 .ip-unchecked {
   margin: 0 0 var(--space-3);
@@ -2014,8 +1857,6 @@
   font-size: 0.875rem;
 }
 
-.ip-review-notes textarea { width: 100%; }
-
 .ip-check {
   display: flex;
   align-items: flex-start;
@@ -2025,23 +1866,6 @@
 }
 
 .ip-check input { margin-top: 3px; }
-
-.ip-raw {
-  margin-top: var(--space-4);
-}
-
-.ip-raw pre {
-  max-height: 22rem;
-  overflow: auto;
-  margin: var(--space-3) 0 0;
-  padding: var(--space-3);
-  border: 1px solid var(--ip-line-soft);
-  border-radius: var(--radius-md);
-  background: var(--ip-surface);
-  font-size: 0.6875rem;
-  line-height: 1.5;
-}
-
 
 /* ------------------------------------------------ day: where am I, what now -- */
 
@@ -2133,12 +1957,6 @@
   font-size: 1.25rem;
   font-weight: 600;
   line-height: 1.25;
-}
-
-.ip-status-detail {
-  margin: var(--space-1) 0 0;
-  color: var(--ink-light);
-  font-size: 0.9375rem;
 }
 
 .ip-status-next {
@@ -2259,167 +2077,10 @@
   border-color: var(--ip-line);
 }
 
-.ip-step-result .ip-result-title { font-size: 2rem; }
-
-.ip-step-result .ip-result-head,
-.ip-article { max-width: 48rem; }
-
-.ip-day-status {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-4);
-  padding: 0;
-}
-
-.ip-day-status > div {
-  display: grid;
-  grid-template-columns: 6rem 1fr;
-  gap: var(--space-3);
-  font-size: 0.875rem;
-}
-
-.ip-day-status dt {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding-top: 2px;
-}
-
-.ip-day-status dd {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin: 0;
-  color: var(--ink-light);
-}
-
-.ip-status-dot {
-  flex: none;
-  width: 9px;
-  height: 9px;
-  border: 2px solid var(--muted);
-  border-radius: var(--radius-full);
-  transform: translateY(1px);
-}
-
-.ip-status-dot-done { border-color: var(--success); background: var(--success); }
-.ip-status-dot-open { border-color: var(--warning); background: var(--warning); }
-
-.ip-attention {
-  background: var(--ip-ground);
-  max-width: 48rem;
-}
-
-.ip-attention-open { border-color: rgba(184, 68, 68, 0.35); border-left: 3px solid var(--error); }
-
-.ip-attention-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.ip-attention-open .ip-attention-title svg { color: var(--error); }
-
-.ip-attention-lead {
-  margin: var(--space-1) 0 var(--space-2);
-  color: var(--ink-light);
-  font-size: 0.875rem;
-}
-
-.ip-attn-list {
-  margin: var(--space-2) 0 var(--space-2);
-  padding: 0;
-  list-style: none;
-  font-size: 0.875rem;
-}
-
-.ip-attn-list li {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-2) 0 var(--space-2) var(--space-3);
-  border-left: 2px solid var(--ip-line);
-}
-
-.ip-attn-list li + li { margin-top: var(--space-1); }
-.ip-attn-list-block li { border-left-color: var(--error); }
-.ip-attn-list-suggest li { border-left-color: var(--ip-accent); }
-
-.ip-attn-venue {
-  font-weight: 700;
-  color: var(--ip-ink);
-}
-
-.ip-attn-detail {
-  color: var(--muted);
-  font-size: 0.8125rem;
-}
-
-.ip-attn-fold {
-  margin-top: var(--space-2);
-  border-top: 1px solid var(--ip-line-soft);
-  padding-top: var(--space-2);
-}
-
-.ip-attn-fold > summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 36px;
-  cursor: pointer;
-  list-style: none;
-}
-
-.ip-attn-fold > summary::-webkit-details-marker { display: none; }
-.ip-attn-fold > summary svg { flex: none; color: var(--muted); }
-.ip-attn-fold > summary .ip-attention-kind { margin: 0; }
-.ip-attn-fold > summary::after { content: '+'; color: var(--ip-accent); font-size: 1.125rem; }
-.ip-attn-fold[open] > summary::after { content: '–'; }
-
-.ip-agenda-why {
-  margin: 0 0 var(--space-3);
-  color: var(--ink-light);
-  font-size: 0.875rem;
-}
-
-.ip-agenda-why span {
-  display: block;
-  color: var(--muted);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.ip-agenda-missing .ip-agenda-name { color: var(--muted); }
-
-.ip-disclosure-quiet {
-  margin-bottom: 0;
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-.ip-disclosure-quiet > summary { font-size: 0.8125rem; font-weight: 600; color: var(--ink-light); }
-
 .ip-issue-note {
   border-left-color: var(--ip-line);
   background: var(--ip-ground);
 }
-
-.ip-review-notes,
-.ip-reference {
-  max-width: 48rem;
-  margin-top: var(--space-6);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--ip-line);
-}
-
-.ip-reference .ip-disclosure { margin-bottom: 0; border-top: 0; }
 
 /* The day's context, on request. */
 .ip-backdrop-drawer {
@@ -2461,6 +2122,318 @@
 
 /* ----------------------------------------------------------- responsive -- */
 
+/* ------------------------------------------------------------- the stays -- */
+
+.ip-stays {
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--ip-line);
+  border-radius: var(--radius-md);
+  background: var(--ip-surface);
+}
+
+.ip-stays-fold .ip-stays { margin: var(--space-2) 0 0; }
+
+.ip-stays-head h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  font-size: 1rem;
+}
+
+.ip-stay-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ip-stay {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--ip-line-soft);
+  border-radius: var(--radius-md);
+  background: var(--ip-ground);
+}
+
+.ip-stay-modes,
+.ip-swap-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  font-size: 0.875rem;
+}
+
+.ip-stay-modes label,
+.ip-swap-modes label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.ip-stay-fields,
+.ip-swap {
+  display: grid;
+  gap: var(--space-1);
+  font-size: 0.875rem;
+}
+
+.ip-stay-fields input,
+.ip-stay-fields select,
+.ip-swap input,
+.ip-question-own input,
+.ip-revise-day textarea {
+  width: 100%;
+  max-width: 32rem;
+  padding: var(--space-2);
+  border: 1px solid var(--ip-line);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--ip-ground);
+  font: inherit;
+}
+
+.ip-stay-nights {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 0.875rem;
+}
+
+.ip-stay-night {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.ip-stay-days,
+.ip-stay-issues {
+  margin: var(--space-3) 0 0;
+  padding-left: var(--space-4);
+  font-size: 0.8125rem;
+  color: var(--ink-light);
+}
+
+.ip-stay-issues { color: var(--warning); }
+
+/* --------------------------------------------------------- the whole trip -- */
+
+.ip-trip-overview {
+  margin-bottom: var(--space-4);
+}
+
+.ip-trip-overview-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.ip-trip-overview-head h2 {
+  margin: 0;
+  font-family: var(--font-display, inherit);
+  font-size: 1.25rem;
+}
+
+.ip-trip-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ip-trip-day-button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--ip-line);
+  border-radius: var(--radius-md);
+  background: var(--ip-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ip-trip-day-button:hover { border-color: var(--ip-accent); }
+
+.ip-trip-day-active .ip-trip-day-button {
+  border-color: var(--ip-accent);
+  box-shadow: inset 3px 0 0 var(--ip-accent);
+}
+
+.ip-trip-day-name { font-weight: 700; font-size: 0.875rem; }
+.ip-trip-day-line { font-size: 0.8125rem; }
+.ip-trip-day-places { font-size: 0.8125rem; color: var(--ip-accent); }
+.ip-trip-day-stay { font-size: 0.75rem; color: var(--muted); }
+
+/* ------------------------------------------------------------ the proposal -- */
+
+.ip-proposal { display: grid; gap: var(--space-3); }
+
+.ip-proposal-overview {
+  margin: 0;
+  font-family: var(--font-display, inherit);
+  font-size: 1.125rem;
+  line-height: 1.45;
+}
+
+.ip-proposal-fit,
+.ip-proposal-stay {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-light);
+}
+
+.ip-picks {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ip-pick {
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--ip-accent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--ip-ground);
+}
+
+.ip-pick-open {
+  border-left-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.ip-pick-omitted {
+  border-left-color: var(--ip-line);
+  color: var(--muted);
+}
+
+.ip-pick-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.ip-pick-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ip-pick-name { font-weight: 700; font-size: 1rem; }
+
+.ip-pick-tag {
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--ip-accent-soft);
+  color: var(--ip-accent);
+  font-size: 0.75rem;
+}
+
+.ip-pick-reason { margin: var(--space-1) 0 0; font-size: 0.9375rem; }
+
+.ip-pick-note {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8125rem;
+  color: var(--ink-light);
+}
+
+.ip-pick-details { margin-top: var(--space-2); font-size: 0.8125rem; }
+.ip-pick-details > summary { cursor: pointer; color: var(--ip-accent); }
+
+.ip-pick-details dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px var(--space-3);
+  margin: var(--space-2) 0;
+}
+
+.ip-pick-details dl > div { display: contents; }
+.ip-pick-details dt { color: var(--muted); }
+.ip-pick-details dd { margin: 0; }
+
+.ip-pick-sources {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.ip-pick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.ip-swap {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--ip-line);
+  border-radius: var(--radius-md);
+  background: var(--ip-surface);
+}
+
+.ip-swap-title { margin: 0; font-weight: 700; }
+
+.ip-questions h4 { display: flex; align-items: center; gap: var(--space-1); }
+
+.ip-questions ul,
+.ip-questions-plain {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ip-question {
+  padding: var(--space-3);
+  border-left: 3px solid var(--warning);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--warning-soft);
+}
+
+.ip-question p { margin: 0 0 var(--space-2); }
+
+.ip-question-options,
+.ip-question-own {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.ip-question-own input { flex: 1 1 14rem; }
+
+.ip-revise-day {
+  display: grid;
+  gap: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--ip-line-soft);
+  font-size: 0.875rem;
+}
+
+div.ip-unchecked {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+div.ip-unchecked p { margin: 0 0 var(--space-1); }
+
 @media (max-width: 960px) {
   .ip-day-editor,
   .ip-workspace-panel {
@@ -2493,22 +2466,16 @@
   .ip-action-note { margin-right: 0; flex: 1 1 100%; }
   .ip-detail-list { grid-template-columns: 1fr; }
   .ip-step { padding: var(--space-4); }
-  /* The time column becomes a line of its own rather than a 5.5rem gutter
-     squeezing a venue name into four characters. */
-  .ip-agenda-body, .ip-rest, .ip-leg { padding-left: 0; }
-  .ip-agenda-time { width: auto; }
   .ip-size-table { grid-template-columns: 1fr 1fr; }
   .ip-message { max-width: 100%; }
   .ip-workspace-panel { padding: var(--space-4) var(--space-3); }
   .ip-step-result { padding: var(--space-4); }
   .ip-step-active > .ip-step-actions { margin-left: calc(-1 * var(--space-4)); margin-right: calc(-1 * var(--space-4)); padding: var(--space-3) var(--space-4); }
-  .ip-step-result .ip-result-title { font-size: 1.5rem; }
   .ip-progress { grid-template-columns: 1fr; gap: 0; }
   .ip-progress-stage { border-top: 0; border-left: 3px solid var(--ip-line-soft); padding: var(--space-1) 0 var(--space-1) var(--space-2); }
   .ip-progress-done { border-left-color: var(--success); }
   .ip-progress-current { border-left-color: var(--ip-accent); }
   .ip-progress-attention { border-left-color: var(--warning); }
-  .ip-day-status > div { grid-template-columns: 1fr; gap: 2px; }
   .ip-fold > summary { padding: var(--space-2) var(--space-3); }
   .ip-fold-summary { flex-basis: 100%; order: 3; white-space: normal; }
   .ip-fold-body { padding: 0; }

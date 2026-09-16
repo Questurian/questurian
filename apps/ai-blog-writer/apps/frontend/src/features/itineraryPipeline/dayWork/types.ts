@@ -15,11 +15,15 @@ export type DayState =
   | 'grill_asking'
   | 'agreed'
   | 'direction_review'
+  /** The accepted agreement is in the older, long format: write the short
+   *  summary again from the same conversation. */
+  | 'direction_outdated'
   | 'direction_accepted'
   | 'prompt_ready'
   | 'context_changed'
-  | 'saved_needs_work'
-  | 'saved_complete'
+  /** A proposal is saved and something in it needs a decision. */
+  | 'proposal_open'
+  | 'proposal_ready'
 
 export interface GrillTurnView {
   question_id: string
@@ -47,14 +51,6 @@ export interface GrillView {
   pending: GrillPendingView | null
 }
 
-export interface SlotDirection {
-  slot_id: string
-  role: string
-  must_have: string[]
-  nice_to_have: string[]
-  exclusions: string[]
-}
-
 export interface AgreementTurn {
   decision: string
   recommendation: string
@@ -63,67 +59,57 @@ export interface AgreementTurn {
   answer_origin: 'operator' | 'accepted_recommendation'
 }
 
-export interface DayDirection {
-  contract_version: string
+export interface SlotSummary {
+  slot_id: string
+  role: string
+  requirements: string[]
+  preferences: string[]
+}
+
+/** What the interview agreed, said short. */
+export interface DaySummary {
+  contract_version: 'itinerary-day-summary-v1'
+  day_id: string
+  angle: string
+  trip_fit: string
+  area: string
+  /** The operator's own musts. */
+  requirements: string[]
+  /** Everything the selection may adjust. */
+  preferences: string[]
+  avoid: string[]
+  slots: SlotSummary[]
+  agreement_trace: AgreementTurn[]
+}
+
+/** The older, long agreement. Only read, never built from. */
+export interface OlderDirection {
+  contract_version: 'itinerary-day-direction-v1'
   day_id: string
   promise: string
   trip_role: string
-  anchors: string[]
-  geography: {
-    required_area: string
-    starting_point: string
-    progression: string
-    transfer_tolerance: string
-    avoid_today: string[]
-  }
-  rhythm: {
-    effort: string
-    meal_balance: string
-    rest_policy: string
-    rest_minutes_minimum: number | null
-    optionality: string
-  }
-  constraints: string[]
-  slot_directions: SlotDirection[]
-  continuity: {
-    covered_elsewhere: string[]
-    reserved_for_later: string[]
-    deliberate_overlaps: string[]
-  }
-  change_policy: {
-    must_remain: string
-    may_be_proposed: string
-    optional_slots_may_be_omitted: boolean
-  }
-  fails_if: string[]
-  research_checklist: string[]
   agreement_trace: AgreementTurn[]
+  [key: string]: unknown
 }
 
 export interface DirectionRevision {
   revision: number
   status: 'candidate' | 'accepted'
-  direction: DayDirection
+  direction: DaySummary | OlderDirection
   context_key: string
   created_at: string
   accepted_at: string
 }
 
-/** Characters, never tokens: what each part of the research call weighs. */
+/** Characters, never tokens: what each part of the call weighs. */
 export interface PromptSize {
-  sections: {
-    system: number
-    instructions: number
-    brief: number
-    writing: number
-    schema: number
-  }
+  sections: Record<string, number>
   /** System prompt + in-app prompt + schema: what the call is handed. */
   total: number
-  budget: number
-  over_budget: boolean
-  largest_section: 'system' | 'instructions' | 'brief' | 'writing' | 'schema'
-  /** The copyable version, which adds the identity and the schema once. */
+  /** A number to measure against; nothing is cut to meet it. */
+  target: number
+  over_target: boolean
+  largest_section: string
   copy_characters: number
 }
 
@@ -139,143 +125,84 @@ export interface ExportView {
   created_at: string
   direction_revision: number
   input_hash: string
-  voice_version: string
   /** The copyable prompt: identity, assignment and schema, once each. */
   prompt_text: string
-  /** True when the day has changed since this prompt was copied. */
+  /** True when the day has changed since this prompt was built. */
   stale: boolean
+  /** What changed, in words, when stale. */
+  changes: string[]
   characters: number
-  wire_version: string
-  /** Built in the compact format. */
-  compact: boolean
-  /** Built in the original, larger format. Still copyable and importable. */
-  legacy: boolean
-  /** Whether the app will run research on it. A legacy prompt needs a rebuild. */
-  runnable: boolean
-  /** Readable pieces of the compact prompt. Empty on a legacy export. */
-  sections: {
-    instructions?: string
-    brief?: string
-    writing?: string
-    schema?: string
-  }
+  sections: Record<string, string>
   size: PromptSize | Record<string, never>
   budget: ResearchBudget | Record<string, never>
+  /** Set when this prompt asks for a changed version of a saved proposal. */
+  revision: { base_revision: number; change: string; slot_id: string } | null
 }
 
-export type StopStatus = 'selected' | 'unresolved' | 'omitted_optional'
+export type PickStatus = 'selected' | 'unresolved' | 'omitted_optional'
 
-export interface ResultStop {
+export interface SelectionSource {
+  url: string
+  title: string
+}
+
+export interface SelectionPick {
   slotId: string
-  status: StopStatus
+  status: PickStatus
   name: string | null
   category: string | null
-  addressOrMeetingPoint: string | null
   area: string | null
+  address: string | null
+  /** One sentence. For an open stop: why it is open. */
+  reason: string
+  note: string
+  sources: SelectionSource[]
+  /** A map search the app built. Never taken from an answer. */
   mapsUrl: string | null
-  /** Minutes after midnight on the day itself. Over 1440 means the next day. */
-  startMinutes: number | null
-  durationMinutes: number | null
-  whyHere: string
-  readerCopy: string
-  whatToDo: string[]
-  practicalNotes: string[]
-  claimIds: string[]
-  selectionReason: string
-  unresolvedReason: string | null
+  chosenBy: 'ai' | 'editor'
 }
 
-export interface ResultTransfer {
+export interface SelectionStay {
+  stayId: string
+  name: string
+  area: string
+  reason: string
+  sources: SelectionSource[]
+  mapsUrl: string | null
+}
+
+export interface SelectionJourney {
   from: string
   to: string
   mode: string
-  minutesMin: number | null
-  minutesMax: number | null
-  basis: 'sourced' | 'planning_estimate' | 'unknown'
-  sourceIds: string[]
+  /** An estimate. Null when unknown or when a swap moved one end. */
+  minutes: number | null
   note: string
 }
 
-export interface ResultRestWindow {
-  afterSlotId: string
-  beforeSlotId: string
-  minutes: number
-  locationPolicy: 'stay_nearby' | 'named_location' | 'return_to_base' | 'unknown'
-  description: string
+export interface SelectionQuestion {
+  slotId: string | null
+  question: string
+  options: string[]
 }
 
-export interface ResultSource {
-  id: string
-  url: string
-  title: string
-  publisher: string
-  sourceType: 'official' | 'map' | 'secondary'
-  accessedAt: string | null
-  publishedOrUpdatedAt: string | null
-}
-
-export interface ResultClaim {
-  id: string
-  text: string
-  sourceIds: string[]
-  appliesTo: string
-}
-
-export interface ResultFeasibility {
-  topic: string
-  status: 'supported' | 'conditional' | 'unresolved' | 'not_applicable'
-  detail: string
-  sourceIds: string[]
-}
-
-export interface DayResult {
+export interface DaySelection {
   contractVersion: string
   workspaceId: string
   dayId: string
   exportId: string
   inputHash: string
-  /** Empty when the answer arrived as this object; the compact version when
-   *  the app built this object from a smaller answer. */
-  wireVersion?: string
-  research: {
-    performedAt: string | null
-    browsingUsed: boolean
-    /** Where browsingUsed came from: the model's own claim, the run's tool
-     *  calls, or nothing at all. */
-    browsingBasis?: 'model' | 'tool_calls' | 'unknown'
-    limitations: string[]
-  }
-  status: 'ready_for_editor_review' | 'needs_decision' | 'insufficient_evidence'
-  title: string
-  dayIntro: string
-  tripRole: string
-  scheduleLabel: string
-  stops: ResultStop[]
-  transfers: ResultTransfer[]
-  restWindows: ResultRestWindow[]
-  sources: ResultSource[]
-  claims: ResultClaim[]
-  feasibility: ResultFeasibility[]
-  proposedChanges: Array<{ slotId: string; proposal: string; reason: string }>
-  tripMemory: {
-    usedPlaces: string[]
-    coveredExperiences: string[]
-    reservedForLater: string[]
-    nextDayImplications: string[]
-  }
-  editorNotes: string[]
+  overview: string
+  tripFit: string
+  stay: SelectionStay | null
+  picks: SelectionPick[]
+  journeys: SelectionJourney[]
+  questions: SelectionQuestion[]
 }
 
 export interface ValidationIssue {
   severity: 'error' | 'warning'
-  layer:
-    | 'transport'
-    | 'schema'
-    | 'identity'
-    | 'structure'
-    | 'evidence'
-    | 'schedule'
-    | 'review'
+  layer: string
   path: string
   message: string
 }
@@ -285,14 +212,8 @@ export interface CompletenessReport {
   unresolved: number
   omitted_optional: number
   required_unresolved: string[]
-  missing_timing: string[]
-  /** Questions the model itself left unresolved. The one reason a day is
-   *  incomplete that does not point at a stop you can see. */
+  /** The proposal's open questions. */
   outstanding_checks: string[]
-  /** Consecutive stops with no journey, or one with no known time. */
-  missing_legs?: string[]
-  /** Stretches where a finish plus the journey (and rest) runs past the next start. */
-  schedule_conflicts?: string[]
   complete: boolean
 }
 
@@ -303,15 +224,25 @@ export interface ValidationReport {
   completeness: CompletenessReport
 }
 
-export interface SavedResultView {
-  result_revision: number
+export interface ProposalView {
+  revision: number
   saved_at: string
+  origin: 'answer' | 'editor_swap'
   export_id: string
-  result: DayResult
+  selection: DaySelection
   report: ValidationReport
-  /** The text that actually arrived, when the saved object was built from a
-   *  compact answer. Empty otherwise. */
-  returned_raw?: string
+  /** Something this day depends on changed since the proposal was made. */
+  stale: boolean
+  changes: string[]
+}
+
+/** A day saved in the older article format, reduced to what is worth rereading. */
+export interface PreviousVersionView {
+  revision: number
+  saved_at: string
+  title: string
+  intro: string
+  stops: Array<{ slot_id: string; status: string; name: string | null; copy: string }>
 }
 
 export interface DaySlotView {
@@ -324,39 +255,56 @@ export interface DaySlotView {
   purpose: string
 }
 
-/** The last in-app research run for a day. */
+/** One end of a day, as the server resolved it. */
+export interface StayEndView {
+  id: string
+  mode: 'location_manager' | 'recommend'
+  name: string
+  area: string
+  note: string
+  nights: [number, number]
+  /** False for a recommendation nobody has chosen yet. */
+  resolved: boolean
+}
+
+export interface DayStayView {
+  start: StayEndView | null
+  end: StayEndView | null
+  final_day: boolean
+}
+
+/** The last in-app run for a day. */
 export interface ResearchView {
   state: 'running' | 'done' | 'failed'
-  /** Dispatched and never heard from again — usually the server restarting
-   *  mid-call. Distinct from failed: the app knows the call went out and does
-   *  not know whether the provider answered or billed. */
+  /** Dispatched and never heard from again. Distinct from failed: the app
+   *  does not know whether the provider answered or billed. */
   stalled: boolean
   detail: string
-  /** The transport's own classification: quota_exhausted, not_connected,
-   *  provider_unavailable, invalid_response. Different next steps. */
   fault: string
   model: string
   cost_usd: number | null
-  /** How many provider round trips it took. One means it never searched,
-   *  whatever the answer claims about itself. */
   turns: number | null
   started_at: string
   finished_at: string
-  wire_version?: string
   duration_ms?: number | null
   /** Read off the run's own transcript. Null means unknown, never zero. */
   searches?: number | null
   fetches?: number | null
-  budget?: ResearchBudget | Record<string, never>
   sent_characters?: number | null
-  returned_characters?: number | null
-  output_tokens?: number | null
-  /** The saved result this run's answer became, once it was saved. */
   saved_as_revision?: number | null
   /** False when the day has moved on since this run was made. */
   for_current_export: boolean
   /** The returned JSON, only when it answers the prompt this day is on. */
   raw: string
+}
+
+export interface HistoryRow {
+  revision: number
+  saved_at: string
+  kind: 'proposal' | 'previous'
+  origin: 'answer' | 'editor_swap'
+  headline: string
+  complete: boolean
 }
 
 export interface DayWorkView {
@@ -375,45 +323,63 @@ export interface DayWorkView {
   grill_context_changed: boolean
   candidate_direction: DirectionRevision | null
   accepted_direction: DirectionRevision | null
+  stay: DayStayView
   export: ExportView | null
-  result: SavedResultView | null
-  result_history: Array<{
-    result_revision: number
-    saved_at: string
-    title: string
-    complete: boolean
-  }>
-  review: { notes: string; evidence_reviewed: boolean }
+  proposal: ProposalView | null
+  previous_version: PreviousVersionView | null
+  history: HistoryRow[]
   research: ResearchView | null
   /** A call this day dispatched and never heard the end of. */
   pending_attempt: { attempt_key: string; kind: string; started_at: string } | null
-  /** Only on an apply response: false means the save was a duplicate. */
+  /** Only on a save response: false means the save was a duplicate. */
   created?: boolean
+}
+
+export interface WorkspaceDayView {
+  day_id: string
+  day_number: number
+  day_label: string
+  state: DayState
+  complete: boolean
+  overview: string
+  trip_fit: string
+  picks: Array<{ label: string; name: string | null; status: PickStatus }>
+  stay: DayStayView
 }
 
 export interface WorkspaceView {
   workspace_id: string
   revision: number
   setup_hash: string
-  days: Array<{
-    day_id: string
-    day_number: number
-    day_label: string
-    state: DayState
-    title: string | null
-    complete: boolean
-  }>
+  days: WorkspaceDayView[]
 }
 
 export interface ImportPreview {
   valid: boolean
   report: ValidationReport
-  result: DayResult | null
+  selection: DaySelection | null
   content_hash: string
   export_id: string
   changes: string[]
-  /** A deterministic follow-up prompt. Only present when the paste failed. */
+  /** A deterministic follow-up prompt. Only present when the answer failed. */
   repair_prompt: string | null
   /** True when this is, unedited, what an in-app run returned. */
   from_research_run?: boolean
+}
+
+export interface HotelOption {
+  id: number
+  name: string
+  area: string
+  type: string
+}
+
+export interface HotelList {
+  available: boolean
+  error: string
+  hotels: HotelOption[]
+}
+
+export function isSummary(direction: DaySummary | OlderDirection): direction is DaySummary {
+  return direction.contract_version === 'itinerary-day-summary-v1'
 }

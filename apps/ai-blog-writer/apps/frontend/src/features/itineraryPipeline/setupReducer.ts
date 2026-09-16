@@ -1,6 +1,7 @@
 import {
   acknowledgmentKey,
   createDay,
+  createStay,
   createEmptyDraft,
   createId,
   layoutSignature,
@@ -16,6 +17,8 @@ import type {
   SlotSnapshot,
   SharedPreferences,
   Stage,
+  StayDraft,
+  StayMode,
   TripDraft,
 } from './types'
 
@@ -69,6 +72,9 @@ export type SetupAction =
   | { type: 'approveDay'; dayId: string }
   | { type: 'reopenDay'; dayId: string }
   | { type: 'acknowledge'; dayId: string; kind: string }
+  | { type: 'addStay'; mode: StayMode }
+  | { type: 'patchStay'; stayId: string; patch: Partial<Omit<StayDraft, 'id'>> }
+  | { type: 'removeStay'; stayId: string }
   /** Remember where the backend copy of this trip lives. Written only after
    *  the server has confirmed it exists. */
   | { type: 'linkWorkspace'; workspaceId: string }
@@ -374,6 +380,45 @@ export function setupReducer(state: SetupState, action: SetupAction): SetupState
           ...day,
           acknowledgments: [...day.acknowledgments, acknowledgmentKey(action.kind, day)],
         })),
+      }
+
+    /**
+     * Stays live on the trip and are not in any approval signature, so
+     * choosing or changing a hotel never reopens a layout.
+     */
+    case 'addStay': {
+      const stays = draft.trip.stays ?? []
+      const stay = createStay(action.mode, stays, draft.days.length)
+      return {
+        ...state,
+        draft: touch({ ...draft, trip: { ...draft.trip, stays: [...stays, stay] } }),
+      }
+    }
+
+    case 'patchStay':
+      return {
+        ...state,
+        draft: touch({
+          ...draft,
+          trip: {
+            ...draft.trip,
+            stays: (draft.trip.stays ?? []).map(stay =>
+              stay.id === action.stayId ? { ...stay, ...action.patch } : stay,
+            ),
+          },
+        }),
+      }
+
+    case 'removeStay':
+      return {
+        ...state,
+        draft: touch({
+          ...draft,
+          trip: {
+            ...draft.trip,
+            stays: (draft.trip.stays ?? []).filter(stay => stay.id !== action.stayId),
+          },
+        }),
       }
 
     case 'linkWorkspace':

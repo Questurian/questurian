@@ -4,14 +4,9 @@ import type { DayState, DayWorkView } from '../../dayWork/types'
 /**
  * Where the day stands, answered before anything else on the screen.
  *
- * A five-stage track (interview → direction → research → review and save →
- * ready for planning) says where you are, and one callout says what has
- * happened, what needs you now, and what the next action does. Both are read
- * off the server's word for the day and the artifacts it returned — nothing
- * here is stored, so the track cannot disagree with the steps below it.
- *
- * "Ready for planning" is the server's completeness verdict and nothing more.
- * It never implies the sources were read or that anything was published.
+ * Four stages — interview, summary, choose places, proposal — and one line
+ * saying what needs the editor now. Read off the server's word for the day;
+ * nothing here is stored.
  */
 
 type Mark = 'done' | 'current' | 'upcoming' | 'attention'
@@ -20,149 +15,139 @@ export interface DayProgressProps {
   state: DayState
   day: DayWorkView | null
   researching: boolean
-  /** A research answer for the current prompt is waiting to be saved. */
+  /** An answer for the current request is waiting to be saved. */
   answerWaiting: boolean
-  /** How many things keep a saved day open. */
-  blockingCount: number
 }
 
 interface Status {
   headline: string
-  detail: string
   next: string | null
   tone: 'neutral' | 'working' | 'attention' | 'done'
 }
 
-export function dayStatus({
-  state,
-  day,
-  researching,
-  answerWaiting,
-  blockingCount,
-}: DayProgressProps): Status {
-  const reviewed = Boolean(day?.review.evidence_reviewed)
+function dayStatus({ state, day, researching, answerWaiting }: DayProgressProps): Status {
+  if (researching) {
+    return {
+      headline: 'Choosing places',
+      next: 'Nothing to do yet. This takes a few minutes; the answer will be waiting here.',
+      tone: 'working',
+    }
+  }
+  if (answerWaiting) {
+    return {
+      headline: 'New places are back — not saved yet',
+      next: 'Look at them below, then save.',
+      tone: 'attention',
+    }
+  }
+  const questions = day?.proposal?.selection.questions.length ?? 0
   switch (state) {
     case 'layout_needs_review':
       return {
         headline: 'Layout needs approving',
-        detail: 'This layout needs approving again before anything can start.',
         next: 'Use Edit layouts to review and approve this day.',
         tone: 'attention',
       }
     case 'ready_to_start':
       return {
         headline: 'Not started',
-        detail: 'Nothing has been decided about this day yet.',
-        next: 'Start the day Grill. It is a short interview that settles what this day is for; nothing is researched yet.',
+        next: 'Start the interview: a short conversation about what this day is for.',
         tone: 'neutral',
       }
     case 'grill_asking':
-      return {
-        headline: 'Interview in progress',
-        detail: 'The interview is waiting on you.',
-        next: 'Answer the question below. When every topic is settled, the interview proposes a summary for you to agree to.',
-        tone: 'neutral',
-      }
+      return { headline: 'Interview in progress', next: 'Answer the question below.', tone: 'neutral' }
     case 'agreed':
       return {
         headline: 'Interview agreed',
-        detail: 'The interview agreed. Write the direction down next.',
-        next: 'Write down the direction — one model call that records the agreement as requirements. It adds nothing new.',
+        next: 'Write down the summary — one short call that records what was agreed.',
         tone: 'neutral',
       }
     case 'direction_review':
+      return { headline: 'Summary ready', next: 'Read it, then agree.', tone: 'neutral' }
+    case 'direction_outdated':
       return {
-        headline: 'Direction ready to review',
-        detail: 'Read the direction, then accept it.',
-        next: 'Accepting is free and makes this the brief that research works from.',
-        tone: 'neutral',
+        headline: 'Agreed in the older format',
+        next: 'Write the short summary from the same conversation, then choose places.',
+        tone: 'attention',
       }
     case 'direction_accepted':
       return {
-        headline: 'Ready to build the research prompt',
-        detail: 'The direction is settled. Build the prompt next.',
-        next: 'Build the research prompt. It is free and calls no model.',
+        headline: 'Summary agreed',
+        next: 'Build the request. It is free.',
         tone: 'neutral',
       }
     case 'prompt_ready':
-      if (researching) {
-        return {
-          headline: 'Research running',
-          detail: 'The research call is out: it looks places up and writes the day in one go.',
-          next: 'Nothing to do yet. This takes several minutes; you can leave the screen and the answer will be waiting here.',
-          tone: 'working',
-        }
-      }
-      if (answerWaiting) {
-        return {
-          headline: 'Research returned — not saved yet',
-          detail: 'The answer is back and the app has checked it.',
-          next: 'Read the day below, then save it. Saving is allowed even if something is still open.',
-          tone: 'attention',
-        }
-      }
       return {
-        headline: 'Ready to research',
-        detail: 'Take the prompt to a research tool, then bring the answer back.',
-        next: 'Research this day here (one call, several minutes), or copy the prompt, run it elsewhere and paste the answer back.',
+        headline: 'Ready to choose places',
+        next: 'Choose places here, or copy the request and paste the answer back.',
         tone: 'neutral',
       }
     case 'context_changed':
       return {
         headline: 'This day changed',
-        detail: 'This day changed. Outstanding work needs reviewing before it is used.',
-        next: 'Rebuild the research prompt so it matches the day as it is now. Anything already saved is kept.',
+        next: 'Rebuild the request so it matches the day as it is now.',
         tone: 'attention',
       }
-    case 'saved_needs_work':
+    case 'proposal_open':
       return {
-        headline: 'Saved — not ready for planning',
-        detail:
-          blockingCount > 0
-            ? `A day is saved and is not finished: its places and paragraphs are kept, and ${blockingCount} issue${blockingCount === 1 ? '' : 's'} still keep${blockingCount === 1 ? 's' : ''} it open.`
-            : 'A day is saved and is not finished.',
-        next: 'Decide what to do about each open issue below. Nothing here fixes them: to change the plan, reopen the interview or research again, then save the new answer.',
+        headline: questions > 0 ? 'Proposal — needs your decision' : 'Proposal — a stop is open',
+        next:
+          questions > 0
+            ? 'Answer the question below, or fill the stop yourself.'
+            : 'Fill the open stop, or ask for a revised day.',
         tone: 'attention',
       }
-    case 'saved_complete':
-      return {
-        headline: 'Complete for planning',
-        detail: reviewed
-          ? 'A day is saved and every stop is chosen and timed. You marked its sources as read.'
-          : 'A day is saved. Its facts are still unchecked.',
-        next: reviewed
-          ? null
-          : 'Read the day and check its sources, then record that in Your review.',
-        tone: 'done',
-      }
+    case 'proposal_ready':
+      return day?.proposal?.stale
+        ? {
+            headline: 'Proposal — the trip changed since',
+            next: 'Check what changed below, and refresh the proposal if it matters.',
+            tone: 'attention',
+          }
+        : {
+            headline: 'Proposal ready',
+            next: 'Keep the places, swap any you would change, or ask for a revised day.',
+            tone: 'done',
+          }
   }
 }
 
-function marks(props: DayProgressProps): Mark[] {
-  const { state, day, researching, answerWaiting } = props
+function marks({ state, day, researching, answerWaiting }: DayProgressProps): Mark[] {
+  if (state === 'layout_needs_review') return ['upcoming', 'upcoming', 'upcoming', 'upcoming']
   const agreed = day?.grill?.status === 'agreed'
-  const accepted = Boolean(day?.accepted_direction) && !day?.candidate_direction
-  const saved = Boolean(day?.result)
-  const complete = state === 'saved_complete'
-  const answered = saved || answerWaiting
-
-  const interview: Mark = agreed || accepted ? 'done' : 'current'
-  const direction: Mark = accepted ? 'done' : interview === 'done' ? 'current' : 'upcoming'
-  const research: Mark =
-    state === 'context_changed'
+  const summarised =
+    Boolean(day?.accepted_direction) && !day?.candidate_direction && state !== 'direction_outdated'
+  const proposed = Boolean(day?.proposal)
+  const interview: Mark = agreed || summarised ? 'done' : 'current'
+  const summary: Mark =
+    state === 'direction_outdated'
       ? 'attention'
-      : answered && !researching
+      : summarised
         ? 'done'
-        : direction === 'done'
+        : interview === 'done'
           ? 'current'
           : 'upcoming'
-  const save: Mark = saved ? 'done' : answerWaiting ? 'current' : 'upcoming'
-  const ready: Mark = complete ? 'done' : saved ? 'attention' : 'upcoming'
-  if (state === 'layout_needs_review') return ['upcoming', 'upcoming', 'upcoming', 'upcoming', 'upcoming']
-  return [interview, direction, research, save, ready]
+  const choose: Mark =
+    state === 'context_changed'
+      ? 'attention'
+      : researching
+        ? 'current'
+        : proposed || answerWaiting
+          ? 'done'
+          : summary === 'done'
+            ? 'current'
+            : 'upcoming'
+  const proposal: Mark = answerWaiting
+    ? 'current'
+    : state === 'proposal_open'
+      ? 'attention'
+      : proposed
+        ? 'done'
+        : 'upcoming'
+  return [interview, summary, choose, proposal]
 }
 
-const STAGES = ['Interview', 'Direction', 'Research', 'Review & save', 'Ready for planning']
+const STAGES = ['Interview', 'Summary', 'Choose places', 'Proposal']
 
 const MARK_WORDS: Record<Mark, string> = {
   done: 'done',
@@ -205,7 +190,6 @@ export function DayProgress(props: DayProgressProps) {
 
       <div className={`ip-status ip-status-${status.tone}`} role="status">
         <p className="ip-status-headline">{status.headline}</p>
-        <p className="ip-status-detail">{status.detail}</p>
         {status.next ? (
           <p className="ip-status-next">
             <ArrowRight size={14} aria-hidden />

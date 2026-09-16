@@ -1,4 +1,4 @@
-"""One day's workflow, from a handed-over setup to a saved researched day.
+"""One day's workflow, from a handed-over setup to a saved proposal.
 
 This module is the only place that knows the order of the steps. The pieces
 either side of it are deliberately ignorant of each other: the grill does not
@@ -7,9 +7,11 @@ does not know what a day means. That is what makes each of them testable
 without a network and without a database.
 
 The state an operator sees is DERIVED here, from the artifacts, every time it
-is asked for. There is no `status` column. A stored status is a second opinion
-about facts already written down, and the two go out of step the first time a
-write half-lands.
+is asked for. There is no `status` column.
+
+Since ADR 0045 the day ends in a proposal -- places, one reason each -- which
+the editor keeps, swaps or asks to revise. Days saved in the older article
+format stay readable as previous versions; nothing new is built from them.
 """
 
 from __future__ import annotations
@@ -25,22 +27,36 @@ from app.core import database
 from ..prompt2blog.contracts_v4 import GrillState
 from . import store
 from .approval import claims_approval, layout_signature
-from .context import context_key, day_brief, day_date_label, window_label
+from .context import (
+    context_key,
+    day_brief,
+    day_date_label,
+    stay_context,
+    stay_wanted,
+    window_label,
+)
 from .contracts import (
-    DayDirection,
     DayPromptExport,
-    DayResult,
     DirectionRevision,
+    DaySummary,
     SetupSnapshot,
     StoredResult,
+    ValidationReport,
     stable_hash,
 )
 from . import direction as direction_module
 from . import grill as grill_module
-from .prompt_export import build_export, build_repair_prompt, compact_enabled
+from .prompt_export import _context_summary, build_export, build_repair_prompt
 from . import research as research_module
-from .research_adapter import AdapterContext, RunFacts
-from .validation import PasteRejected, parse_paste, validate_paste
+from .selection_contract import DaySelection, SelectionPick
+from .validation import (
+    PasteRejected,
+    check_structure,
+    completeness_of,
+    map_search_url,
+    parse_paste,
+    validate_answer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -105,9 +121,7 @@ def require_workspace(workspace_id: str, owner_id: str) -> tuple[SetupSnapshot, 
         raise LookupError(f"No itinerary workspace {workspace_id}")
     setup, revision, owner = found
     # Ownership is enforced only when both sides have an identity. With staff
-    # auth off -- the local default -- there is no caller to compare against,
-    # and refusing every request would make the feature unusable in
-    # development while proving nothing about production.
+    # auth off -- the local default -- there is no caller to compare against.
     if owner and owner_id and owner != owner_id:
         raise store.NotOwned("This itinerary workspace belongs to someone else.")
     return setup, revision
@@ -134,18 +148,26 @@ def _candidate_direction(workspace_id: str, day_id: str) -> DirectionRevision | 
 
 
 def _results_by_day(workspace_id: str, setup: SetupSnapshot) -> dict[str, StoredResult]:
+    """Each day's newest saved PROPOSAL.
+
+    A day saved only in the older article format has no proposal: its places
+    were chosen under the old assignment, and the new one does not build on it.
+    """
     found: dict[str, StoredResult] = {}
     for day in setup.days:
-        latest = store.latest_result(workspace_id, day.id)
+        latest = latest_proposal(workspace_id, day.id)
         if latest is not None:
             found[day.id] = latest
     return found
 
 
-def _directions_by_day(
-    workspace_id: str, setup: SetupSnapshot
-) -> dict[str, DayDirection]:
-    found: dict[str, DayDirection] = {}
+def latest_proposal(workspace_id: str, day_id: str) -> StoredResult | None:
+    proposals = [stored for stored in store.load_results(workspace_id, day_id) if stored.is_selection]
+    return proposals[-1] if proposals else None
+
+
+def _directions_by_day(workspace_id: str, setup: SetupSnapshot) -> dict[str, Any]:
+    found: dict[str, Any] = {}
     for day in setup.days:
         accepted = _accepted_direction(workspace_id, day.id)
         if accepted is not None:
@@ -154,28 +176,24 @@ def _directions_by_day(
 
 
 def current_context_key(workspace_id: str, setup: SetupSnapshot, day_id: str) -> str:
-    """What an export depends on: the day, the other days, and the direction.
-
-    The accepted direction is in here because an export is built FROM it, so a
-    different direction is a different request.
-    """
+    """What a selection depends on: the day, the other days' places, the stay
+    and the accepted summary."""
     accepted = _accepted_direction(workspace_id, day_id)
     return context_key(
         setup,
         day_id,
         _results_by_day(workspace_id, setup),
         accepted.direction if accepted else None,
+        include_stay=True,
     )
 
 
 def conversation_key(workspace_id: str, setup: SetupSnapshot, day_id: str) -> str:
-    """What the INTERVIEW depends on, which is the same minus the direction.
+    """What the INTERVIEW depends on: the same minus the summary and the stay.
 
-    The direction is downstream of the conversation: it is written from it.
-    Including it here would mean that accepting a direction — the ordinary next
-    step — immediately told the operator their conversation was out of date,
-    which is both wrong and the kind of false alarm that teaches people to
-    ignore the real one.
+    The summary is written from the conversation, and the hotel does not change
+    what a day is for. Including either would tell the operator their
+    conversation was out of date when it is not.
     """
     return context_key(setup, day_id, _results_by_day(workspace_id, setup), None)
 
@@ -198,12 +216,7 @@ def approval_current(workspace_id: str, setup: SetupSnapshot, day_id: str) -> bo
 
 
 def seed_for(setup: SetupSnapshot, day_id: str) -> str:
-    """The one line the interview opens on.
-
-    Short on purpose: the seed is replayed verbatim into every later prompt,
-    and everything else this interview knows arrives through the brief, which
-    is rebuilt per turn from the workspace.
-    """
+    """The one line the interview opens on."""
     day = setup.day(day_id)
     if day is None:
         raise LookupError(f"No day {day_id}")
@@ -218,6 +231,24 @@ def seed_for(setup: SetupSnapshot, day_id: str) -> str:
         + f" — {day.source_template_name or 'custom layout'}, "
         + f"{len(day.slots)} stops, {window_label(day)}."
     )
+
+
+def _day_labels(setup: SetupSnapshot) -> dict[str, str]:
+    return {
+        day.id: f"Day {index}" + (f" ({day.label.strip()})" if day.label.strip() and day.label.strip() != f"Day {index}" else "")
+        for index, day in enumerate(setup.days, start=1)
+    }
+
+
+def _other_day_places(
+    setup: SetupSnapshot, day_id: str, results: dict[str, StoredResult]
+) -> dict[str, list[str]]:
+    labels = _day_labels(setup)
+    return {
+        labels[other_id]: stored.chosen_names()
+        for other_id, stored in results.items()
+        if other_id != day_id and other_id in labels
+    }
 
 
 # ------------------------------------------------------------------- grill --
@@ -362,6 +393,11 @@ def reopen_grill(
 def prepare_direction(
     *, workspace_id: str, setup: SetupSnapshot, day_id: str, attempt_key: str, llm
 ) -> DirectionRevision:
+    """Write the agreed conversation down as a short summary.
+
+    Also the way an older, long direction is replaced: the conversation it was
+    extracted from is intact, so the summary is one call away.
+    """
     day = setup.day(day_id)
     if day is None:
         raise LookupError(f"No day {day_id}")
@@ -401,21 +437,20 @@ def accept_direction(
     """Accept the candidate that was on screen, by number.
 
     Checked against the context it was extracted from: a candidate written
-    against a day that has since changed describes the old day, and accepting
-    it would make an export from requirements nobody agreed to.
+    against a day that has since changed describes the old day.
     """
     candidates = {
         found.revision: found for found in store.list_directions(workspace_id, day_id)
     }
     found = candidates.get(revision)
     if found is None:
-        raise LookupError("That direction revision does not exist.")
+        raise LookupError("That summary revision does not exist.")
     if found.status == "accepted":
         return found
     live = conversation_key(workspace_id, setup, day_id)
     if found.context_key and found.context_key != live:
         raise Stale(
-            "This day changed while that direction was on screen. Read it again "
+            "This day changed while that summary was on screen. Read it again "
             "before accepting it."
         )
     return store.accept_direction(workspace_id, day_id, revision)
@@ -424,24 +459,59 @@ def accept_direction(
 # ------------------------------------------------------------------ export --
 
 
+def _summary_for(workspace_id: str, day_id: str) -> DirectionRevision:
+    accepted = _accepted_direction(workspace_id, day_id)
+    if accepted is None:
+        raise ValueError("This day has no accepted summary to choose places from.")
+    if not accepted.is_summary:
+        raise Stale(
+            "This day's agreement was written in the older, longer format. Write "
+            "the short summary from the same conversation first."
+        )
+    return accepted
+
+
 def prepare_export(
-    *, workspace_id: str, setup: SetupSnapshot, workspace_revision: int, day_id: str
+    *,
+    workspace_id: str,
+    setup: SetupSnapshot,
+    workspace_revision: int,
+    day_id: str,
+    base_revision: int | None = None,
+    change_request: str = "",
+    change_slot_id: str = "",
 ) -> DayPromptExport:
     """Build the copyable prompt. Free, deterministic, and reused when unchanged.
 
-    Copying twice for an unchanged day returns the same export id rather than
-    minting a second one -- otherwise the operator is holding one prompt while
-    the app is expecting an answer to another.
+    With `base_revision`, the prompt asks for a changed version of that saved
+    proposal. Copying twice for an unchanged request returns the same export id
+    rather than minting a second one.
     """
-    accepted = _accepted_direction(workspace_id, day_id)
-    if accepted is None:
-        raise ValueError("This day has no accepted direction to export.")
+    accepted = _summary_for(workspace_id, day_id)
     if not approval_current(workspace_id, setup, day_id):
         raise Stale(
             "This day's layout is not approved as it currently stands. Review it "
-            "before copying a research prompt."
+            "before building a prompt."
         )
+    base = None
+    if base_revision is not None:
+        base = next(
+            (
+                stored
+                for stored in store.load_results(workspace_id, day_id)
+                if stored.result_revision == base_revision
+            ),
+            None,
+        )
+        if base is None or not base.is_selection:
+            raise LookupError("That proposal version does not exist.")
+        if not change_request.strip():
+            raise ValueError("Say what should change.")
+    day = setup.day(day_id)
+    if change_slot_id and (day is None or change_slot_id not in {slot.id for slot in day.slots}):
+        raise LookupError("That stop is not on this day.")
     key = current_context_key(workspace_id, setup, day_id)
+    results = _results_by_day(workspace_id, setup)
 
     def assemble(export_id: str | None) -> DayPromptExport:
         return build_export(
@@ -449,29 +519,25 @@ def prepare_export(
             workspace_revision=workspace_revision,
             setup=setup,
             day_id=day_id,
-            direction=accepted.direction,
+            summary=accepted.direction,
             direction_revision=accepted.revision,
             context_key=key,
-            results=_results_by_day(workspace_id, setup),
+            results=results,
             directions=_directions_by_day(workspace_id, setup),
             export_id=export_id,
+            base=base,
+            change_request=change_request,
+            change_slot_id=change_slot_id,
         )
 
-    # Built once with a fresh id to learn the hash, which is what decides
-    # whether this request already has an export.
     candidate = assemble(None)
     existing = store.find_export_by_hash(workspace_id, day_id, candidate.input_hash)
     if existing is None:
         store.save_export(candidate)
         return candidate
-
     # The identity is unchanged, so the export that exists is the one that
-    # answers. It is reassembled under its OWN id rather than replayed: the
-    # voice files and these instructions are allowed to improve without
-    # invalidating an outstanding request, because the hash is over what was
-    # ASKED FOR and not over the prose that asked. The id is baked into the
-    # prompt text and the schema, which is why this cannot simply keep the
-    # candidate and relabel it.
+    # answers. Reassembled under its own id (the id is baked into the text and
+    # the schema), and saved again so it is the day's current request.
     reused = assemble(existing.export_id).model_copy(
         update={"created_at": existing.created_at}
     )
@@ -480,24 +546,23 @@ def prepare_export(
 
 
 def current_export(workspace_id: str, day_id: str) -> DayPromptExport | None:
-    exports = store.list_exports(workspace_id, day_id)
+    """The day's current request in the proposal format, if it has one.
+
+    An export from the article-shaped versions is history: it is never the
+    request a new answer is checked against.
+    """
+    exports = [export for export in store.list_exports(workspace_id, day_id) if export.is_selection]
     return exports[-1] if exports else None
 
 
 def export_answered_by(
     workspace_id: str, day_id: str, raw: str
 ) -> DayPromptExport | None:
-    """The export a pasted packet says it is answering.
+    """The export an answer says it is answering.
 
-    Read from the packet rather than assumed to be the newest, because a day
-    can legitimately have more than one outstanding prompt -- copy one, change
-    the day, copy another -- and an answer to the first one should be told what
-    changed rather than told it is answering the wrong prompt. The identity and
-    context checks then do the real work against the export it actually names.
-
-    Falls back to the newest export when the packet names nothing usable: an
-    unreadable paste is a transport problem, and reporting it as one needs
-    something for the checks to run against.
+    Read from the answer rather than assumed to be the newest, because a day
+    can have more than one outstanding prompt. Falls back to the newest when
+    the answer names nothing usable.
     """
     try:
         payload, _notes = parse_paste(raw)
@@ -515,36 +580,52 @@ def export_answered_by(
     return current_export(workspace_id, day_id)
 
 
+def _context_changes(
+    export: DayPromptExport, setup: SetupSnapshot, day_id: str, workspace_id: str
+) -> list[str]:
+    """What moved since a request was built, in words.
+
+    Compared field by field against what the request recorded. When the
+    fingerprint moved and none of these did, the summary or the notes did.
+    """
+    before = export.context_summary or {}
+    now = _context_summary(setup, day_id, _results_by_day(workspace_id, setup))
+    labels = _day_labels(setup)
+    changes: list[str] = []
+    if before.get("stay") != now["stay"]:
+        changes.append("The stay changed: " + " ".join(now["stay"]))
+    if before.get("stops") != now["stops"] or before.get("window") != now["window"]:
+        changes.append("This day's stops or time window changed.")
+    old_days = before.get("other_days") or {}
+    for other_id, places in now["other_days"].items():
+        if sorted(old_days.get(other_id, [])) != places:
+            changes.append(f"{labels.get(other_id, 'Another day')} now uses different places.")
+    accepted = _accepted_direction(workspace_id, day_id)
+    if accepted is not None and accepted.revision != export.direction_revision:
+        changes.append("A newer summary was accepted.")
+    if not changes:
+        changes.append("The trip details or this day's notes changed.")
+    return changes
+
+
 # ---------------------------------------------------------------- research --
 
 
 def start_research(
     *, workspace_id: str, setup: SetupSnapshot, day_id: str, attempt_key: str
 ) -> DayPromptExport:
-    """Claim the right to research this day, synchronously, before dispatch.
+    """Claim the right to run this day's selection, synchronously, before dispatch.
 
-    Separate from `run_research` below so the route can return the moment the
-    claim is written. A day's research is minutes of searching and reading; a
-    request that waited for it would time out in the browser long before the
-    work finished, and a second click would buy a second one.
+    Separate from `run_research` so the route can return the moment the claim
+    is written; the call itself is minutes of searching.
     """
     export = current_export(workspace_id, day_id)
     if export is None:
-        raise ValueError(
-            "This day has no research prompt yet. Build one first."
-        )
+        raise ValueError("This day has no prompt yet. Build one first.")
     if export.context_key != current_context_key(workspace_id, setup, day_id):
         raise Stale(
-            "This day changed since its prompt was built. Rebuild the prompt "
-            "before researching, or the answer will not fit the day."
-        )
-    if compact_enabled() and not export.is_compact:
-        # An issued v1 prompt stays readable and its pasted answers stay
-        # importable; it is just no longer something the app will run.
-        raise Stale(
-            "This prompt was built in the older, larger research format. Rebuild "
-            "it to run the research here; answers you already have for it can "
-            "still be pasted in."
+            "This day changed since its prompt was built. Build it again before "
+            "choosing places, or the answer will not fit the day."
         )
     reserved, existing = store.reserve_attempt(
         attempt_key=attempt_key,
@@ -577,6 +658,36 @@ def start_research(
         budget=export.research_budget,
     )
     return export
+
+
+def request_revision(
+    *,
+    workspace_id: str,
+    setup: SetupSnapshot,
+    workspace_revision: int,
+    day_id: str,
+    base_revision: int,
+    change_request: str,
+    change_slot_id: str,
+    attempt_key: str,
+) -> DayPromptExport:
+    """Ask for a changed proposal: build that request, then claim the run.
+
+    What comes back is previewed and saved like any answer; the proposal on
+    screen is untouched until then.
+    """
+    prepare_export(
+        workspace_id=workspace_id,
+        setup=setup,
+        workspace_revision=workspace_revision,
+        day_id=day_id,
+        base_revision=base_revision,
+        change_request=change_request,
+        change_slot_id=change_slot_id,
+    )
+    return start_research(
+        workspace_id=workspace_id, setup=setup, day_id=day_id, attempt_key=attempt_key
+    )
 
 
 def _audit_path(attempt_key: str):
@@ -655,88 +766,54 @@ def _same_answer(left: str, right: str) -> bool:
 
 
 def _run_behind(workspace_id: str, day_id: str, export_id: str, raw: str) -> str | None:
-    """The research run whose answer this text is, unedited, or None.
-
-    Telemetry belongs to a run, and a paste only inherits it when it IS that
-    run's answer. An edited answer is the operator's text, not the run's.
-    """
+    """The in-app run whose answer this text is, unedited, or None."""
     for run in store.research_runs_for_export(workspace_id, day_id, export_id):
         if run["raw"] and _same_answer(run["raw"], raw):
             return run["attempt_key"]
     return None
 
 
-def _run_facts(attempt_key: str | None) -> RunFacts:
-    if attempt_key is None:
-        return RunFacts()
-    run = store.research_details(attempt_key) or {}
-    searches, fetches = run.get("searches"), run.get("fetches")
-    browsed = None if searches is None or fetches is None else (searches + fetches) > 0
-    finished = store.research_run_finished_at(attempt_key)
-    return RunFacts(performed_at=finished[:10] or None, browsed=browsed)
-
-
-def _adapter_for(
-    workspace_id: str, setup: SetupSnapshot, day_id: str, export: DayPromptExport, raw: str
-) -> tuple[AdapterContext, str | None]:
-    day = setup.day(day_id)
-    assert day is not None
-    agreed = next(
-        (
-            found.direction
-            for found in store.list_directions(workspace_id, day_id)
-            if found.revision == export.direction_revision
-        ),
-        None,
-    )
-    attempt = (
-        _run_behind(workspace_id, day_id, export.export_id, raw)
-        if export.is_compact
-        else None
-    )
-    return (
-        AdapterContext(
-            day=day,
-            trip_role=agreed.trip_role if agreed else "",
-            schedule_label=window_label(day),
-            reserved_for_later=list(agreed.continuity.reserved_for_later) if agreed else [],
-            run=_run_facts(attempt),
-        ),
-        attempt,
-    )
-
-
-def preview_import(
+def _check(
     *, workspace_id: str, setup: SetupSnapshot, day_id: str, raw: str
-) -> dict[str, Any]:
+) -> tuple[DayPromptExport, DaySelection | None, ValidationReport, str, str | None]:
     day = setup.day(day_id)
     if day is None:
         raise LookupError(f"No day {day_id}")
     export = export_answered_by(workspace_id, day_id, raw)
     if export is None:
         raise ValueError(
-            "Nothing has been exported for this day, so there is no request for "
+            "No prompt has been built for this day, so there is no request for "
             "this answer to be an answer to."
         )
-    adapter, attempt = _adapter_for(workspace_id, setup, day_id, export, raw)
-    result, report, content_hash = validate_paste(
+    results = _results_by_day(workspace_id, setup)
+    selection, report, content_hash = validate_answer(
         raw,
         export=export,
         day=day,
         workspace_id=workspace_id,
         day_id=day_id,
         current_context_key=current_context_key(workspace_id, setup, day_id),
-        adapter=adapter,
-        base_known=bool(setup.trip.starting_base.strip()),
+        stay_id=stay_wanted(stay_context(setup, day_id, results)),
+        other_days=_other_day_places(setup, day_id, results),
     )
-    previous = store.latest_result(workspace_id, day_id)
+    return export, selection, report, content_hash, _run_behind(
+        workspace_id, day_id, export.export_id, raw
+    )
+
+
+def preview_import(
+    *, workspace_id: str, setup: SetupSnapshot, day_id: str, raw: str
+) -> dict[str, Any]:
+    export, selection, report, content_hash, attempt = _check(
+        workspace_id=workspace_id, setup=setup, day_id=day_id, raw=raw
+    )
     return {
         "valid": report.valid,
         "report": report,
-        "result": result,
+        "selection": selection,
         "content_hash": content_hash,
         "export_id": export.export_id,
-        "changes": _changes_against(previous, result),
+        "changes": _changes_against(latest_proposal(workspace_id, day_id), selection, setup, day_id),
         "from_research_run": attempt is not None,
         "repair_prompt": (
             None
@@ -751,33 +828,34 @@ def preview_import(
 
 
 def _changes_against(
-    previous: StoredResult | None, incoming: DayResult | None
+    previous: StoredResult | None,
+    incoming: DaySelection | None,
+    setup: SetupSnapshot,
+    day_id: str,
 ) -> list[str]:
-    """What this paste would change about the day that is already saved."""
-    if incoming is None:
+    """What saving this would change about the proposal already saved."""
+    if incoming is None or previous is None:
         return []
-    if previous is None:
-        return ["Nothing is saved for this day yet; this would be the first result."]
+    day = setup.day(day_id)
+    labels = {slot.id: (slot.label or slot.id) for slot in (day.slots if day else [])}
+    before = {pick.slot_id: pick for pick in previous.selection.picks}
     lines: list[str] = []
-    if (previous.result.title or "") != (incoming.title or ""):
-        lines.append(
-            f'Title: "{previous.result.title}" becomes "{incoming.title}"'
-        )
-    before = {stop.slot_id: stop for stop in previous.result.stops}
-    for stop in incoming.stops:
-        was = before.get(stop.slot_id)
+    for pick in incoming.picks:
+        was = before.get(pick.slot_id)
+        label = labels.get(pick.slot_id, pick.slot_id)
         if was is None:
-            lines.append(f"{stop.slot_id}: new in this result")
             continue
-        if was.status != stop.status:
-            lines.append(f"{stop.slot_id}: {was.status} becomes {stop.status}")
-        elif (was.name or "") != (stop.name or ""):
+        if (was.name or "") != (pick.name or "") or was.status != pick.status:
             lines.append(
-                f'{stop.slot_id}: "{was.name or "nothing"}" becomes '
-                f'"{stop.name or "nothing"}"'
+                f"{label}: {was.name or was.status.replace('_', ' ')} → "
+                f"{pick.name or pick.status.replace('_', ' ')}"
             )
+    old_stay = previous.selection.stay.name if previous.selection.stay else ""
+    new_stay = incoming.stay.name if incoming.stay else ""
+    if old_stay != new_stay and (old_stay or new_stay):
+        lines.append(f"Stay: {old_stay or 'none'} → {new_stay or 'none'}")
     if not lines:
-        lines.append("No stop changes; the wording or the evidence may still differ.")
+        lines.append("The same places; only the wording differs.")
     return lines
 
 
@@ -790,39 +868,22 @@ def apply_import(
     expected_content_hash: str,
     import_key: str,
 ) -> tuple[StoredResult, bool]:
-    """Save a previewed result, atomically, against the state it was previewed on.
+    """Save a previewed proposal, atomically, against the state it was previewed on.
 
-    Everything is re-read and re-validated here rather than trusted from the
-    preview. The preview is a rendering; between it and this call the workspace
-    can have moved, and a save that skipped the second check would write a
-    result answering a question the day no longer asks.
+    Everything is re-read and re-checked here rather than trusted from the
+    preview: between the two, the day can have moved.
     """
-    day = setup.day(day_id)
-    if day is None:
-        raise LookupError(f"No day {day_id}")
-    export = export_answered_by(workspace_id, day_id, raw)
-    if export is None:
-        raise ValueError("Nothing has been exported for this day.")
-    adapter, attempt = _adapter_for(workspace_id, setup, day_id, export, raw)
-    result, report, content_hash = validate_paste(
-        raw,
-        export=export,
-        day=day,
-        workspace_id=workspace_id,
-        day_id=day_id,
-        current_context_key=current_context_key(workspace_id, setup, day_id),
-        adapter=adapter,
-        base_known=bool(setup.trip.starting_base.strip()),
+    export, selection, report, content_hash, attempt = _check(
+        workspace_id=workspace_id, setup=setup, day_id=day_id, raw=raw
     )
-    if result is None or not report.valid:
+    if selection is None or not report.valid:
         raise ValueError(
-            "This result cannot be saved: it did not pass the checks. Preview it "
+            "This answer cannot be saved: it did not pass the checks. Check it "
             "again to see why."
         )
     if expected_content_hash and expected_content_hash != content_hash:
         raise Stale(
-            "The pasted text changed since it was previewed. Preview it again "
-            "before saving."
+            "The answer changed since it was checked. Check it again before saving."
         )
 
     def build(revision: int) -> StoredResult:
@@ -830,7 +891,7 @@ def apply_import(
             result_revision=revision,
             export_id=export.export_id,
             content_hash=content_hash,
-            result=result,
+            selection=selection,
             report=report,
             saved_at=_now(),
         )
@@ -847,6 +908,117 @@ def apply_import(
     if created and attempt is not None:
         store.link_research_result(attempt, stored.result_revision)
     return stored, created
+
+
+# -------------------------------------------------------------------- swap --
+
+
+def swap_pick(
+    *,
+    workspace_id: str,
+    setup: SetupSnapshot,
+    day_id: str,
+    slot_id: str,
+    name: str,
+    area: str,
+    reason: str,
+    expected_revision: int,
+    swap_key: str,
+) -> tuple[StoredResult, bool]:
+    """Put the editor's own place in one stop, as a new version.
+
+    Free: no model is asked. The journeys that touch the stop lose their
+    estimate, because one end moved; any question about the stop is settled by
+    the editor's choice. Every other pick is kept exactly.
+    """
+    day = setup.day(day_id)
+    if day is None:
+        raise LookupError(f"No day {day_id}")
+    slot = next((slot for slot in day.slots if slot.id == slot_id), None)
+    if slot is None:
+        raise LookupError("That stop is not on this day.")
+    if not name.strip():
+        raise ValueError("Name the place to put here.")
+    base = latest_proposal(workspace_id, day_id)
+    if base is None:
+        raise ValueError("This day has no proposal to change.")
+    if base.result_revision != expected_revision:
+        raise store.RevisionConflict(
+            "This proposal changed while you were editing it. Read it again.",
+            base.result_revision,
+        )
+    selection: DaySelection = base.selection
+    picks: list[SelectionPick] = []
+    for pick in selection.picks:
+        if pick.slot_id != slot_id:
+            picks.append(pick)
+            continue
+        picks.append(
+            SelectionPick(
+                slot_id=slot_id,
+                status="selected",
+                name=name.strip()[:300],
+                category=(slot.allowed_categories[0] if len(slot.allowed_categories) == 1 else pick.category),
+                area=area.strip()[:300] or None,
+                address=None,
+                reason=reason.strip()[:600] or "Chosen by the editor.",
+                note="",
+                sources=[],
+                maps_url=map_search_url(name, area) if slot.kind in {"place", "experience"} else None,
+                chosen_by="editor",
+            )
+        )
+    journeys = [
+        leg.model_copy(update={"minutes": None, "note": "Not estimated: the place changed."})
+        if slot_id in (leg.from_ref, leg.to_ref)
+        else leg
+        for leg in selection.journeys
+    ]
+    questions = [question for question in selection.questions if question.slot_id != slot_id]
+    changed = selection.model_copy(
+        update={"picks": picks, "journeys": journeys, "questions": questions}
+    )
+    export = store.load_export(base.export_id)
+    results = _results_by_day(workspace_id, setup)
+    issues = []
+    completeness = base.report.completeness
+    if export is not None:
+        issues = check_structure(
+            changed,
+            export=export,
+            day=day,
+            other_days=_other_day_places(setup, day_id, results),
+        )
+        completeness = completeness_of(changed, export=export, day=day)
+    report = ValidationReport(
+        valid=not any(issue.severity == "error" for issue in issues),
+        issues=issues,
+        completeness=completeness,
+    )
+    content_hash = stable_hash(changed.model_dump(by_alias=True))
+    raw = json.dumps(changed.model_dump(by_alias=True), ensure_ascii=False)
+
+    def build(revision: int) -> StoredResult:
+        return StoredResult(
+            result_revision=revision,
+            export_id=base.export_id,
+            content_hash=content_hash,
+            selection=changed,
+            report=report,
+            saved_at=_now(),
+            origin="editor_swap",
+        )
+
+    return store.apply_result(
+        workspace_id=workspace_id,
+        day_id=day_id,
+        import_key=swap_key,
+        content_hash=content_hash,
+        export_id=base.export_id,
+        raw_paste=raw,
+        build=build,
+        expected_revision=expected_revision,
+    )
 
 
 # -------------------------------------------------------------- the views --
@@ -893,32 +1065,54 @@ def derive_state(
     accepted: DirectionRevision | None,
     export: DayPromptExport | None,
     export_stale: bool,
-    result: StoredResult | None,
+    proposal: StoredResult | None,
 ) -> str:
     """The one word the screen leads with, derived and never stored."""
     if not approved:
         return "layout_needs_review"
-    if result is not None:
-        if export_stale:
-            return "context_changed"
-        return (
-            "saved_complete"
-            if result.report.completeness.complete
-            else "saved_needs_work"
-        )
-    if export is not None and not export_stale:
-        return "prompt_ready"
-    if export is not None and export_stale:
-        return "context_changed"
-    if accepted is not None:
-        return "direction_accepted"
+    if proposal is not None:
+        return "proposal_ready" if proposal.complete else "proposal_open"
     if candidate is not None:
         return "direction_review"
+    if accepted is not None and not accepted.is_summary:
+        return "direction_outdated"
+    if export is not None:
+        return "context_changed" if export_stale else "prompt_ready"
+    if accepted is not None:
+        return "direction_accepted"
     if grill is None:
         return "ready_to_start"
     if grill.status == "agreed":
         return "agreed"
     return "grill_asking"
+
+
+def _previous_view(stored: StoredResult) -> dict[str, Any]:
+    """An article-shaped day, reduced to what someone would want to reread."""
+    result = stored.result
+    return {
+        "revision": stored.result_revision,
+        "saved_at": stored.saved_at,
+        "title": result.title,
+        "intro": result.day_intro,
+        "stops": [
+            {
+                "slot_id": stop.slot_id,
+                "status": stop.status,
+                "name": stop.name,
+                "copy": stop.reader_copy,
+            }
+            for stop in result.stops
+        ],
+    }
+
+
+def _stay_view(setup: SetupSnapshot, day_id: str, workspace_id: str) -> dict[str, Any]:
+    """This day's stay as the screen shows it: resolved from every saved
+    proposal, this day's own included."""
+    return stay_context(
+        setup, day_id, _results_by_day(workspace_id, setup), exclude_own=False
+    )
 
 
 def day_view(
@@ -932,13 +1126,16 @@ def day_view(
     candidate = _candidate_direction(workspace_id, day_id)
     accepted = _accepted_direction(workspace_id, day_id)
     export = current_export(workspace_id, day_id)
-    result = store.latest_result(workspace_id, day_id)
+    history = store.load_results(workspace_id, day_id)
+    proposal = next((stored for stored in reversed(history) if stored.is_selection), None)
+    previous = next((stored for stored in reversed(history) if not stored.is_selection), None)
     key = current_context_key(workspace_id, setup, day_id)
     talking = conversation_key(workspace_id, setup, day_id)
     approved = approval_current(workspace_id, setup, day_id)
     export_stale = export is not None and export.context_key != key
 
-    history = store.load_results(workspace_id, day_id)
+    proposal_export = store.load_export(proposal.export_id) if proposal is not None else None
+    proposal_stale = bool(proposal_export is not None and proposal_export.context_key != key)
     number = setup.day_number(day_id)
 
     return {
@@ -970,7 +1167,7 @@ def day_view(
             accepted=accepted,
             export=export,
             export_stale=export_stale,
-            result=result,
+            proposal=proposal,
         ),
         "grill": _grill_view(grill),
         "grill_context_changed": bool(
@@ -978,10 +1175,9 @@ def day_view(
             and work_row["context_key"]
             and work_row["context_key"] != talking
         ),
-        "candidate_direction": None
-        if candidate is None
-        else candidate.model_dump(),
+        "candidate_direction": None if candidate is None else candidate.model_dump(),
         "accepted_direction": None if accepted is None else accepted.model_dump(),
+        "stay": _stay_view(setup, day_id, workspace_id),
         "export": None
         if export is None
         else {
@@ -989,47 +1185,49 @@ def day_view(
             "created_at": export.created_at,
             "direction_revision": export.direction_revision,
             "input_hash": export.input_hash,
-            "voice_version": export.voice_version,
             "prompt_text": export.prompt_text,
             "stale": export_stale,
+            "changes": _context_changes(export, setup, day_id, workspace_id)
+            if export_stale
+            else [],
             "characters": len(export.prompt_text),
-            "wire_version": export.schema_version,
-            "compact": export.is_compact,
-            # A prompt in the old format can still be copied and answered;
-            # the app will not run it.
-            "legacy": not export.is_compact,
-            "runnable": export.is_compact or not compact_enabled(),
             "sections": export.sections,
             "size": export.size_report,
             "budget": export.research_budget,
+            "revision": None
+            if export.base_revision is None
+            else {
+                "base_revision": export.base_revision,
+                "change": export.change_request,
+                "slot_id": export.change_slot_id,
+            },
         },
-        "result": None
-        if result is None
+        "proposal": None
+        if proposal is None
         else {
-            "result_revision": result.result_revision,
-            "saved_at": result.saved_at,
-            "export_id": result.export_id,
-            "result": result.result.model_dump(by_alias=True),
-            "report": result.report.model_dump(),
-            # What actually arrived, when the saved object was built from it
-            # by the app rather than returned as-is.
-            "returned_raw": store.result_raw(workspace_id, day_id, result.result_revision)
-            if result.result.wire_version
-            else "",
+            "revision": proposal.result_revision,
+            "saved_at": proposal.saved_at,
+            "origin": proposal.origin,
+            "export_id": proposal.export_id,
+            "selection": proposal.selection.model_dump(by_alias=True),
+            "report": proposal.report.model_dump(),
+            "stale": proposal_stale,
+            "changes": _context_changes(proposal_export, setup, day_id, workspace_id)
+            if proposal_stale and proposal_export is not None
+            else [],
         },
-        "result_history": [
+        "previous_version": None if previous is None else _previous_view(previous),
+        "history": [
             {
-                "result_revision": stored.result_revision,
+                "revision": stored.result_revision,
                 "saved_at": stored.saved_at,
-                "title": stored.result.title,
-                "complete": stored.report.completeness.complete,
+                "kind": "proposal" if stored.is_selection else "previous",
+                "origin": stored.origin,
+                "headline": stored.headline(),
+                "complete": stored.complete,
             }
             for stored in history
         ],
-        "review": {
-            "notes": work_row["review_notes"],
-            "evidence_reviewed": work_row["evidence_reviewed"],
-        },
         "research": _research_view(workspace_id, day_id, export),
         "pending_attempt": store.pending_attempt(workspace_id, day_id),
     }
@@ -1131,16 +1329,19 @@ def _research_view(
 def workspace_view(
     *, workspace_id: str, setup: SetupSnapshot, workspace_revision: int
 ) -> dict[str, Any]:
+    """The whole trip at a glance: every day's state and its chosen places."""
     approvals = store.approved_signatures(workspace_id)
+    results = _results_by_day(workspace_id, setup)
     days: list[dict[str, Any]] = []
     for index, day in enumerate(setup.days):
         grill = store.load_day_work(workspace_id, day.id)["grill"]
         accepted = _accepted_direction(workspace_id, day.id)
         candidate = _candidate_direction(workspace_id, day.id)
         export = current_export(workspace_id, day.id)
-        result = store.latest_result(workspace_id, day.id)
+        proposal = results.get(day.id)
         key = current_context_key(workspace_id, setup, day.id)
         approved = approvals.get(day.id) == layout_signature(setup, day)
+        labels = {slot.id: slot.label or slot.id for slot in day.slots}
         days.append(
             {
                 "day_id": day.id,
@@ -1153,17 +1354,95 @@ def workspace_view(
                     accepted=accepted,
                     export=export,
                     export_stale=export is not None and export.context_key != key,
-                    result=result,
+                    proposal=proposal,
                 ),
-                "title": None if result is None else result.result.title,
-                "complete": bool(
-                    result is not None and result.report.completeness.complete
-                ),
+                "complete": bool(proposal is not None and proposal.complete),
+                "overview": proposal.selection.overview if proposal else "",
+                "trip_fit": proposal.selection.trip_fit if proposal else "",
+                "picks": []
+                if proposal is None
+                else [
+                    {
+                        "label": labels.get(pick.slot_id, pick.slot_id),
+                        "name": pick.name,
+                        "status": pick.status,
+                    }
+                    for pick in proposal.selection.picks
+                ],
+                "stay": stay_context(setup, day.id, results, exclude_own=False),
             }
         )
     return {
         "workspace_id": workspace_id,
         "revision": workspace_revision,
         "setup_hash": stable_hash(setup.model_dump(by_alias=True)),
+        "days": days,
+    }
+
+
+def handoff_packet(*, workspace_id: str, setup: SetupSnapshot) -> dict[str, Any]:
+    """The chosen places and their context, for whatever writes the article later.
+
+    Only proposals are handed on. Nothing here writes, publishes or starts
+    anything; it is a read.
+    """
+    results = _results_by_day(workspace_id, setup)
+    trip = setup.trip
+    days = []
+    for index, day in enumerate(setup.days, start=1):
+        stored = results.get(day.id)
+        accepted = _accepted_direction(workspace_id, day.id)
+        summary = accepted.direction if accepted and isinstance(accepted.direction, DaySummary) else None
+        labels = {slot.id: slot for slot in day.slots}
+        selection = stored.selection if stored else None
+        days.append(
+            {
+                "day": index,
+                "label": day.label,
+                "date": day_date_label(trip, index - 1),
+                "window": window_label(day),
+                "angle": summary.angle if summary else "",
+                "stay": stay_context(setup, day.id, results, exclude_own=False),
+                "proposal_version": stored.result_revision if stored else None,
+                "complete": bool(stored and stored.complete),
+                "overview": selection.overview if selection else "",
+                "trip_fit": selection.trip_fit if selection else "",
+                "stops": []
+                if selection is None
+                else [
+                    {
+                        "stop": labels[pick.slot_id].label if pick.slot_id in labels else pick.slot_id,
+                        "kind": labels[pick.slot_id].kind if pick.slot_id in labels else "",
+                        "status": pick.status,
+                        "name": pick.name,
+                        "category": pick.category,
+                        "area": pick.area,
+                        "address": pick.address,
+                        "reason": pick.reason,
+                        "note": pick.note,
+                        "chosen_by": pick.chosen_by,
+                        "map": pick.maps_url,
+                        "sources": [source.model_dump() for source in pick.sources],
+                    }
+                    for pick in selection.picks
+                ],
+                "journeys": []
+                if selection is None
+                else [leg.model_dump(by_alias=True) for leg in selection.journeys],
+                "open_questions": []
+                if selection is None
+                else [question.model_dump(by_alias=True) for question in selection.questions],
+            }
+        )
+    return {
+        "kind": "itinerary-selection-handoff-v1",
+        "workspace_id": workspace_id,
+        "trip": {
+            "title": trip.title_seed,
+            "city": trip.base_city,
+            "timing": trip.timing,
+            "preferred_areas": trip.preferred_areas,
+            "preferences": trip.shared_preferences,
+        },
         "days": days,
     }

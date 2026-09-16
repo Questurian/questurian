@@ -8,6 +8,8 @@ import {
   type DayTemplate,
   type ItinerarySetupDraft,
   type SlotSnapshot,
+  type StayDraft,
+  type StayMode,
   type TripDraft,
 } from './types'
 
@@ -54,6 +56,45 @@ export function emptyTrip(): TripDraft {
       avoid: '',
     },
     getaway: { destination: '', departureDay: null, returnDay: null },
+    stays: [],
+  }
+}
+
+/** How many nights a trip of this many days has by default: the last day
+ *  ends in a departure, but a one-day trip still gets its one night. */
+export function defaultNightCount(dayCount: number): number {
+  return Math.max(1, dayCount - 1)
+}
+
+export function createStay(mode: StayMode, stays: StayDraft[], dayCount: number): StayDraft {
+  const lastCovered = stays.reduce((top, stay) => Math.max(top, stay.lastNight), 0)
+  const nights = defaultNightCount(dayCount)
+  const first = Math.min(lastCovered + 1, Math.max(nights, 1))
+  return {
+    id: createId('stay'),
+    mode,
+    locationId: null,
+    name: '',
+    area: '',
+    note: '',
+    firstNight: first,
+    lastNight: Math.max(first, nights),
+  }
+}
+
+/** The stay covering a night, the earlier one winning an overlap. */
+export function stayForNight(stays: StayDraft[] | undefined, night: number): StayDraft | null {
+  return (stays ?? []).find(stay => stay.firstNight <= night && night <= stay.lastNight) ?? null
+}
+
+/** Where day N (1-based) starts and where the traveller sleeps after it. */
+export function dayStays(
+  stays: StayDraft[] | undefined,
+  dayNumber: number,
+): { start: StayDraft | null; end: StayDraft | null } {
+  return {
+    start: stayForNight(stays, Math.max(1, dayNumber - 1)),
+    end: stayForNight(stays, dayNumber),
   }
 }
 

@@ -4,10 +4,10 @@ Handlers are `def`, not `async def`, for the same reason Prompt2Blog's and the
 listicle's are: the ones that call a model block for seconds, and running that
 on the event loop freezes the whole server for the length of it.
 
-Only three routes here can spend money -- the two interview turns and the
-direction extraction -- and each of them takes an idempotency key. Everything
-else is deterministic: building the prompt, validating a paste and saving a
-result reach no provider at all. That is a property of the design rather than
+The routes that can spend money -- the interview turns, the summary
+extraction, choosing places and asking for a revision -- each take an
+idempotency key. Everything else is deterministic: building the prompt,
+checking an answer, saving it and swapping a place by hand reach no provider. That is a property of the design rather than
 of this file, and it is what makes Copy a free action the screen can offer
 without hedging.
 """
@@ -26,7 +26,7 @@ from ..prompt2blog.dependencies import DefaultPrompt2BlogLLM
 from ..prompt2blog.grill_v4 import GrillUnusableResponse
 from app.shared.model_calls import resolve
 
-from . import research, service, store
+from . import hotels, research, service, store
 from .contracts import SetupSnapshot
 from .direction import DirectionExtractionFailed
 from .validation import MAX_PASTE_BYTES
@@ -71,9 +71,19 @@ class ApplyRequest(PreviewRequest):
     import_key: str = Field(min_length=8, max_length=80)
 
 
-class ReviewRequest(BaseModel):
-    notes: str = Field(default="", max_length=20000)
-    evidence_reviewed: bool = False
+class RevisionRequest(AttemptRequest):
+    base_revision: int = Field(ge=1)
+    change: str = Field(min_length=1, max_length=4000)
+    slot_id: str = Field(default="", max_length=120)
+
+
+class SwapRequest(BaseModel):
+    slot_id: str = Field(min_length=1, max_length=120)
+    name: str = Field(min_length=1, max_length=300)
+    area: str = Field(default="", max_length=300)
+    reason: str = Field(default="", max_length=600)
+    expected_revision: int = Field(ge=1)
+    swap_key: str = Field(min_length=8, max_length=80)
 
 
 def _owner(staff: Any) -> str:
@@ -322,7 +332,7 @@ def research_the_day(
     background: BackgroundTasks,
     staff=Depends(require_staff),
 ):
-    """Run this day's prompt on the subscription, with the web and a schema.
+    """Choose this day's places on the subscription, with the web and a schema.
 
     202, not 200. The claim on the day is written synchronously, before this
     returns, so a double click finds it already there; the research itself is
@@ -369,10 +379,10 @@ def preview_import(
         return {
             "valid": preview["valid"],
             "report": preview["report"].model_dump(),
-            "result": (
+            "selection": (
                 None
-                if preview["result"] is None
-                else preview["result"].model_dump(by_alias=True)
+                if preview["selection"] is None
+                else preview["selection"].model_dump(by_alias=True)
             ),
             "content_hash": preview["content_hash"],
             "export_id": preview["export_id"],
@@ -412,20 +422,80 @@ def apply_import(
     return _guard(work)
 
 
-@router.post("/workspaces/{workspace_id}/days/{day_id}/review")
-def save_review(
-    workspace_id: str, day_id: str, req: ReviewRequest, staff=Depends(require_staff)
+@router.post("/workspaces/{workspace_id}/days/{day_id}/revisions", status_code=202)
+def request_revision(
+    workspace_id: str,
+    day_id: str,
+    req: RevisionRequest,
+    background: BackgroundTasks,
+    staff=Depends(require_staff),
 ):
-    """The operator's own reading. Never rewrites a claim."""
+    """Ask for a changed proposal: a swapped place, a revised day, an answered
+    question. Runs like choosing places does; the answer is previewed before
+    anything is saved."""
 
     def work():
-        service.require_workspace(workspace_id, _owner(staff))
-        store.save_review(
-            workspace_id,
-            day_id,
-            notes=req.notes,
-            evidence_reviewed=req.evidence_reviewed,
+        setup, revision = service.require_workspace(workspace_id, _owner(staff))
+        export = service.request_revision(
+            workspace_id=workspace_id,
+            setup=setup,
+            workspace_revision=revision,
+            day_id=day_id,
+            base_revision=req.base_revision,
+            change_request=req.change,
+            change_slot_id=req.slot_id,
+            attempt_key=req.attempt_key,
+        )
+        background.add_task(
+            service.run_research,
+            attempt_key=req.attempt_key,
+            export=export,
+            model_name=resolve(research.RESEARCH_JOB),
+            call=research.default_transport(),
         )
         return _day(workspace_id, day_id, staff)
 
     return _guard(work)
+
+
+@router.post("/workspaces/{workspace_id}/days/{day_id}/swap")
+def swap_pick(
+    workspace_id: str, day_id: str, req: SwapRequest, staff=Depends(require_staff)
+):
+    """Put the editor's own place in one stop. Free, and saved as a new version."""
+
+    def work():
+        setup, _revision = service.require_workspace(workspace_id, _owner(staff))
+        _stored, created = service.swap_pick(
+            workspace_id=workspace_id,
+            setup=setup,
+            day_id=day_id,
+            slot_id=req.slot_id,
+            name=req.name,
+            area=req.area,
+            reason=req.reason,
+            expected_revision=req.expected_revision,
+            swap_key=req.swap_key,
+        )
+        view = _day(workspace_id, day_id, staff)
+        view["created"] = created
+        return view
+
+    return _guard(work)
+
+
+@router.get("/workspaces/{workspace_id}/handoff")
+def read_handoff(workspace_id: str, staff=Depends(require_staff)):
+    """The chosen places and their context, for the later writing step."""
+
+    def work():
+        setup, _revision = service.require_workspace(workspace_id, _owner(staff))
+        return service.handoff_packet(workspace_id=workspace_id, setup=setup)
+
+    return _guard(work)
+
+
+@router.get("/hotels")
+def list_hotels(city: str = "", staff=Depends(require_staff)):
+    """Location Manager's hotels in the trip's city. A read; never fails the page."""
+    return hotels.hotels_for(city[:200])

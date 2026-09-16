@@ -20,11 +20,14 @@ from typing import Any
 
 from app.features.itinerary_pipeline.contracts import (
     DayDirection,
+    DaySummary,
     DirectionGeography,
     DirectionRhythm,
     SetupSnapshot,
     SlotDirection,
+    SlotSummary,
 )
+from app.features.itinerary_pipeline.selection_contract import SELECTION_CONTRACT_VERSION
 
 
 def _slot(
@@ -103,7 +106,9 @@ DAY_THREE_SLOTS = [
 ]
 
 
-def setup_payload(*, approved: bool = True) -> dict[str, Any]:
+def setup_payload(
+    *, approved: bool = True, stays: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
     def day(day_id: str, label: str, slots: list[dict[str, Any]]) -> dict[str, Any]:
         return {
             "id": day_id,
@@ -149,6 +154,7 @@ def setup_payload(*, approved: bool = True) -> dict[str, Any]:
                 "avoid": "",
             },
             "getaway": {"destination": "", "departureDay": None, "returnDay": None},
+            **({"stays": stays} if stays is not None else {}),
         },
         "days": [
             day("day-1", "Day 1", DAY_ONE_SLOTS),
@@ -162,7 +168,86 @@ def setup(**kwargs: Any) -> SetupSnapshot:
     return SetupSnapshot.model_validate(setup_payload(**kwargs))
 
 
+def stay(
+    stay_id: str = "stay-1",
+    *,
+    first: int = 1,
+    last: int = 2,
+    mode: str = "location_manager",
+    name: str = "Casa Miraflores",
+    area: str = "Miraflores",
+    note: str = "",
+) -> dict[str, Any]:
+    return {
+        "id": stay_id,
+        "mode": mode,
+        "locationId": 7 if mode == "location_manager" else None,
+        "name": name if mode == "location_manager" else "",
+        "area": area if mode == "location_manager" else "",
+        "note": note,
+        "firstNight": first,
+        "lastNight": last,
+    }
+
+
+def summary_for(day_id: str = "day-1", slots: list[str] | None = None) -> DaySummary:
+    slot_ids = slots or [slot["id"] for slot in DAY_ONE_SLOTS]
+    return DaySummary(
+        day_id=day_id,
+        angle="A relaxed Miraflores introduction built around lunch.",
+        trip_fit="The opener; the historic centre is day 2.",
+        area="Miraflores, coast in the morning and streets after lunch.",
+        requirements=["No cliff stairs"],
+        preferences=["Walkable"],
+        avoid=["Barranco"],
+        slots=[SlotSummary(slot_id=slot_id, role=f"role of {slot_id}") for slot_id in slot_ids],
+    )
+
+
+def valid_selection(export: Any, **overrides: Any) -> dict[str, Any]:
+    """A complete, valid proposal answering `export` (anything with
+    `export_id`, `input_hash` and `slot_ids`)."""
+    picks = []
+    for slot_id in export.slot_ids:
+        free = slot_id in {"day2-rest", "day3-transfer"}
+        picks.append(
+            {
+                "slotId": slot_id,
+                "status": "selected",
+                "name": None if free else f"Place for {slot_id}",
+                "category": None,
+                "area": None if free else "Miraflores",
+                "address": None if free else f"Calle {slot_id} 123",
+                "reason": f"It suits {slot_id}.",
+                "note": "",
+                "sources": []
+                if free
+                else [{"url": f"https://example.com/{slot_id}", "title": "Official page"}],
+            }
+        )
+    ids = list(export.slot_ids)
+    payload = {
+        "contractVersion": SELECTION_CONTRACT_VERSION,
+        "workspaceId": "ws",
+        "dayId": "day-1",
+        "exportId": export.export_id,
+        "inputHash": export.input_hash,
+        "overview": "An easy Miraflores day.",
+        "tripFit": "The gentle opener.",
+        "stay": None,
+        "picks": picks,
+        "journeys": [
+            {"from": a, "to": b, "mode": "walk", "minutes": 10, "note": ""}
+            for a, b in zip(ids, ids[1:])
+        ],
+        "questions": [],
+    }
+    payload.update(overrides)
+    return payload
+
+
 def direction_for(day_id: str = "day-1", slots: list[str] | None = None) -> DayDirection:
+    """The older, long agreement shape. Read-only now."""
     slot_ids = slots or [slot["id"] for slot in DAY_ONE_SLOTS]
     return DayDirection(
         day_id=day_id,
@@ -282,7 +367,6 @@ def itinerary_client(monkeypatch):
     from app.features.itinerary_pipeline.contracts import ITINERARY_MARKER_KEYS
     from app.main import app
 
-
     grill_llm = ScriptedGrill(ITINERARY_MARKER_KEYS)
 
     class DirectionLLM:
@@ -290,9 +374,11 @@ def itinerary_client(monkeypatch):
 
         def __init__(self) -> None:
             self.calls = 0
+            self.prompts: list[str] = []
 
         def invoke_json(self, *, prompt, model_name, schema, **kwargs):
             self.calls += 1
+            self.prompts.append(prompt)
             slot_ids = [
                 line.split("—")[0].strip().split()[-1]
                 for line in prompt.splitlines()
@@ -300,46 +386,21 @@ def itinerary_client(monkeypatch):
             ]
             return (
                 {
-                    "promise": "A relaxed Miraflores introduction.",
-                    "trip_role": "The opener.",
-                    "anchors": ["The lunch"],
-                    "geography": {
-                        "required_area": "Miraflores",
-                        "starting_point": "A Miraflores hotel",
-                        "progression": "Coast then streets",
-                        "transfer_tolerance": "Fifteen minutes on foot",
-                        "avoid_today": ["Barranco"],
-                    },
-                    "rhythm": {
-                        "effort": "Low",
-                        "meal_balance": "One big lunch",
-                        "rest_policy": "One explicit gap",
-                        "rest_minutes_minimum": 45,
-                        "optionality": "The evening may go",
-                    },
-                    "constraints": ["No cliff stairs"],
-                    "slot_directions": [
+                    "angle": "A relaxed Miraflores introduction.",
+                    "trip_fit": "The opener.",
+                    "area": "Miraflores, coast then streets.",
+                    "requirements": ["No cliff stairs"],
+                    "preferences": ["Walkable"],
+                    "avoid": ["Barranco"],
+                    "slots": [
                         {
                             "slot_id": slot_id,
                             "role": "role",
-                            "must_have": ["something"],
-                            "nice_to_have": [],
-                            "exclusions": [],
+                            "requirements": [],
+                            "preferences": ["something"],
                         }
                         for slot_id in slot_ids
                     ],
-                    "continuity": {
-                        "covered_elsewhere": [],
-                        "reserved_for_later": ["The historic centre"],
-                        "deliberate_overlaps": [],
-                    },
-                    "change_policy": {
-                        "must_remain": "The six stops",
-                        "may_be_proposed": "A swap, with the reason",
-                        "optional_slots_may_be_omitted": True,
-                    },
-                    "fails_if": ["The afternoon repeats the morning"],
-                    "research_checklist": ["Which of these open every day"],
                 },
                 "raw",
             )
@@ -362,4 +423,5 @@ def itinerary_client(monkeypatch):
     with TestClient(app) as test_client:
         test_client.grill_llm = grill_llm
         test_client.direction_llm = direction_llm
+        test_client.direction_llm_prompts = direction_llm.prompts
         yield test_client
