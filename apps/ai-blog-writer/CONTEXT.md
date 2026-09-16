@@ -58,7 +58,7 @@ Code references: `packages/shared/src/shared/Stage[0..4]Output.py`.
 
 ### Feature
 
-Definition: a pipeline module under `apps/backend/app/features/`. Each feature owns its own routes, prompts, and storage layout. Current features: `youtube2blog`, `url2blog`, `prompt2blog`, `itineraries_pipeline`, `images`, `editor_assist`, `article_types`.
+Definition: a pipeline module under `apps/backend/app/features/`. Each feature owns its own routes, prompts, and storage layout. Current features: `youtube2blog`, `url2blog`, `prompt2blog`, `listicle_pipeline`, `itineraries_pipeline` (the older Autobuild path), `itinerary_pipeline` (the day Grill → prompt → imported day workflow), `images`, `editor_assist`, `article_types`.
 Related terms: Pipeline Route.
 Do not confuse with: frontend "Feature Page" — that's the UI per feature.
 Code references: `apps/backend/app/features/`.
@@ -215,6 +215,76 @@ Long-list rule: selected venue names inform the range and promise of the intro, 
 Category meanings: dining frames the meal decisions the list helps with; nightlife frames the kind of night out the list helps plan; accommodations frames the kind of stay the list helps choose; attractions frames the kind of visit the list helps shape.
 Related terms: List Tone, Listicle Angle.
 Do not confuse with: Listicle Angle, which is operator-selected per item and governs individual blurbs.
+
+### Itinerary Workspace
+
+Definition: the backend-owned copy of one itinerary setup, created the first time a day Grill is started and canonical for that trip's work from that moment. Holds the setup snapshot, every day's interview, its direction revisions, its prompt exports and its saved results, all versioned.
+Related terms: Day Direction, Day Prompt Export, Day Result, Itinerary Setup Draft.
+Do not confuse with: the browser-held **Itinerary Setup Draft**, which is where the setup is edited and which keeps only a pointer to the workspace after handoff; or the **Itinerary Autobuild** draft below, which is the separate older path.
+Code references: `apps/backend/app/features/itinerary_pipeline/store.py`, `apps/frontend/src/features/itineraryPipeline/dayWork/`.
+
+### Day Direction
+
+Definition: the agreed intent for one day plus the criteria a selection must satisfy — its promise, its trip role, its geography, what every slot is for, the rhythm, the change policy, what would make the day wrong, and the factual questions research has to answer. Extracted from an agreed day interview by a dedicated structured call, shown to the operator as a candidate, and immutable once accepted.
+Related terms: Itinerary Workspace, Day Prompt Export.
+Do not confuse with: the **Generation Brief** (the itinerary autobuild's free-text creative input), the **Writer Brief** (the listicle blurb pipeline's per-blurb payload), or the **Article Brief** (Prompt2Blog's vision). Four different objects.
+Rule: it contains no venue facts. The interview that produced it cannot reach a search (ADR 0044), so anything factual belongs in its research checklist as a question.
+Code references: `apps/backend/app/features/itinerary_pipeline/direction.py`.
+
+### Day Prompt Export
+
+Definition: one immutable packet for one day, assembled from four sections — **instructions** (method, Research Allowance, factual boundary, answer rules), the **day brief** (the trip, each approved stop with its agreed requirements folded in, the direction as short labelled lines, other days as continuity), **voice and writing** (the canonical Questurian voice and writing conventions), and the **answer format** (the Compact Day Answer schema). The in-app call is built from those sections directly; the copyable text adds the identity envelope and the schema once each. It records a character count per section.
+Related terms: Day Direction, Day Result, Day Research Run, Compact Day Answer, Research Allowance.
+Rule: building and copying it make no model call and start no research. "Copied" is a UI event and never a claim that research ran. Running it in the app is the one action here that spends.
+Rule: its `inputHash` covers what was asked for — the setup, the direction, the continuity context, the answer format and the prompt policy revision — and deliberately not the prompt prose, so improving an instruction does not invalidate an outstanding request, while a different answer format or research policy does.
+Rule: the interview trace is never sent, and an accepted requirement is never shortened. The only thing removed from a direction is an exact repeat of a line already printed. A brief over 18,000 characters (system prompt + in-app prompt + schema) is labelled with its largest section and still runs; nothing is truncated.
+Rule: the Prompt2Blog house rules are not part of it. Its two rules that matter here (no source names in prose, no unsupported detail) are in the instructions.
+Rule: an export built before the compact format (`schema_version` `itinerary-day-result-v1`) stays copyable and its answers stay importable, but the app will not run it; the operator rebuilds. `ITINERARY_RESEARCH_WIRE=v1` is the rollback switch that restores the original export for new builds.
+Code references: `apps/backend/app/features/itinerary_pipeline/prompt_export.py`, `prompt_export_legacy.py`, `research_contract.py`, `day_schema.py` (v1).
+
+### Research Allowance
+
+Definition: the soft research budget a Day Prompt Export states: for N venue or experience stops, about min(24, 2N + 4) web searches and min(18, N + 5) page reads. Free time and travel stops are not venue searches; journeys share the budget.
+Related terms: Day Prompt Export, Day Research Run.
+Rule: it is guidance to the model, not an enforced gate. The transport cannot stop a call at a tool boundary and still get an answer, so the research timeout stays a failure ceiling and nothing is retried automatically. A run's actual counts are recorded and shown beside the allowance.
+Code references: `apps/backend/app/features/itinerary_pipeline/prompt_export.py` (`research_budget`).
+
+### Compact Day Answer
+
+Definition: the answer format new exports ask for (`itinerary-day-research-v2`): a title, a day introduction, one row per approved stop with its reader paragraph, practical notes and the evidence it rests on (fact, page, title — attached to the stop, no ids), the journeys between consecutive selected stops, rest windows, one issue record per distinct concern (blocking or not, with an optional proposed change), and new next-day notes.
+Related terms: Day Prompt Export, Day Result.
+Rule: it is a request format, not a saved shape. One adapter (`research_adapter.adapt`) turns it into a v1 Day Result at import, with deterministic source and claim ids, `secondary` source types, map-search links, empty `whyHere`/`selectionReason`/`whatToDo`, blocking issues as unresolved feasibility, other issues as editor notes, and a `status` derived from the issues. `wireVersion` on the saved result says the adapter built it.
+Rule: what arrived is kept beside what was saved, and the screen says which of the two it is showing.
+Code references: `apps/backend/app/features/itinerary_pipeline/research_contract.py`, `research_adapter.py`.
+
+### Day Research Run
+
+Definition: one in-app execution of a Day Prompt Export on the Claude subscription, with `WebSearch` and `WebFetch` available and the day's generated schema passed to the CLI as `--json-schema`, which the CLI validates the reply against before this app sees it. Recorded with its model, its cost and its round-trip count.
+Related terms: Day Prompt Export, Day Result.
+Do not confuse with: the operator copying the prompt and running it elsewhere — same packet, same checks afterwards, no record of the call because the app cannot see it.
+Rule: a run's answer is never saved by running it. It lands in the import preview and is judged by the same validator as a paste; the operator saves it.
+Rule: the five identity fields are stamped from the export on this path rather than asked for and checked. A call the app made is by construction the answer to the export it was made for. On the paste path they are still echoed and checked, because there the operator could paste anything.
+Rule: what it did is read off the run, never asked of the model. The CLI's session id names exactly one transcript; that transcript is copied into `data/itinerary-research-audit/` and its `WebSearch` and `WebFetch` calls are counted. When it cannot be found the counts are unknown and shown as unknown — never zero, and never inferred from the number of turns. One round trip still means it never searched.
+Rule: it is one call. There is no planner, verifier, second writer or automatic repair behind it, and a failed run is recorded and left for the operator to run again.
+Rule: its details (what was sent, in characters and as a hash; the allowance; the returned object before the identity was stamped; usage, duration and tool counts; and which saved result it became) live in `itinerary_research_run_details`, beside the run row rather than in it. A run from before that table has no details, which reads as unknown.
+Code references: `apps/backend/app/features/itinerary_pipeline/research.py`, `store.py`.
+
+### Day Result
+
+Definition: what a research-capable model returned for one exported day — one typed row per exported slot, transfers, rest windows, sources, claims, feasibility judgements, proposed changes, trip memory and editor notes. Saved only after a deterministic server-side check, and always against the export it answers.
+Related terms: Day Prompt Export, Import Validity, Planning Completeness, Evidence Review.
+Rule: a stop is `selected`, `unresolved`, or `omitted_optional`, and only an exported optional slot may be omitted. An unresolved stop is a real, valid answer; an invented venue is not.
+Rule: the shape requires only the fields that decide what a thing is. What a row must carry beyond that depends on its kind and its status, and is checked afterwards as a readable rule rather than as "field required". Unknown fields are dropped and named, never a reason to refuse a packet.
+Rule: times are integer minutes from the day's reference midnight, so a value over 1440 is the next morning. Unknown timing is null and yields an incomplete day, never a zero.
+Code references: `apps/backend/app/features/itinerary_pipeline/contracts.py`, `validation.py`.
+
+### Import Validity, Planning Completeness, Evidence Review
+
+Definition: the three separate things a saved day is judged by, derived independently and never collapsed. **Import validity** is deterministic — the shape, the identity (including that the answer is in the format its export asked for), the stop list, the evidence graph and the schedule arithmetic. **Planning completeness** is whether every required stop resolved and got a time, every pair of consecutive selected venues has a journey with a known time that fits before the next start (after any free time and rest), a return to base has both legs, and no blocking issue is outstanding. **Evidence review** is a person saying they read the sources.
+Rule: code proves the arithmetic of a route, never its geography. A missing or unfitting journey leaves a day incomplete but saveable; a stretch over 90 unplanned minutes is a warning, not a reason to add a stop. The day's arrival and departure journeys are required only when the trip names its lodging.
+Rule: the model's own top-level `status` is stored and shown as the model's opinion of its own work, and never becomes the app's badge.
+Rule: a structurally valid, incomplete result is saveable and is labelled "Needs work". Complete for planning is not verified, and neither is publication approval.
+Code references: `apps/backend/app/features/itinerary_pipeline/validation.py`.
 
 ### Itinerary Autobuild
 

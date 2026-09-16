@@ -1,0 +1,234 @@
+{
+ "revision": 1,
+ "status": "accepted",
+ "direction": {
+  "contract_version": "itinerary-day-direction-v1",
+  "day_id": "day_mu28ruv3jg5pczu",
+  "promise": "An eating education taken in the order the city itself takes it: the day starts at everyday street level with the coffee-and-bread habit, moves to a market where the raw material gets explained, climbs to the one regional dish Lima is genuinely famous for at lunch, and finishes at a kitchen doing something ambitious with those same ingredients — so by bedtime the reader can taste the connection between the market stall and the tasting plate, and has the vocabulary to order confidently anywhere else in the country.",
+  "trip_role": "Day one is the trip's culinary education day, teaching the food vocabulary and ingredient knowledge in a low-effort, appetite-paced sequence, so that day two's adventure-focused meals can be eaten quickly and without explanation.",
+  "anchors": [
+   "The signature lunch is the anchor stop",
+   "Destination dinner is the second peak, not the point"
+  ],
+  "geography": {
+   "required_area": "Miraflores for the morning through lunch; Barranco for the afternoon walk through the evening.",
+   "starting_point": "Breakfast / iconic coffee stop in Miraflores.",
+   "progression": "Miraflores holds breakfast, the market, and the signature lunch, each within about fifteen minutes on foot of the stop before it, reading as one continuous errand. A single ride of at most twenty minutes (taxi allowed) carries the day from Miraflores to Barranco after lunch. From the afternoon walk onward, everything — the walk, the tasting, dinner, and the optional dessert/drinks — stays in Barranco on foot, within a few blocks of each other.",
+   "transfer_tolerance": "Exactly one transfer for the whole day, happening after lunch, at most twenty minutes door-to-door, and it is allowed to be a taxi rather than a walk.",
+   "avoid_today": [
+    "Any third neighborhood beyond Miraflores and Barranco",
+    "Any crossing back to Miraflores before bed",
+    "Any stop that forces a return trip to reach the next one"
+   ]
+  },
+  "rhythm": {
+   "effort": "Low-effort and appetite-paced, deliberately unstrenuous so it leaves enough in the tank for day two's active start.",
+   "meal_balance": "Two real meals (lunch and dinner) and two deliberately small tastes (the market's at-most-one-standing-item, and the afternoon tasting), so the reader arrives at dinner hungry rather than full.",
+   "rest_policy": "The afternoon neighborhood walk in Barranco is the day's rest and breathing space, providing digestion and a change of register between the signature lunch and the destination dinner.",
+   "rest_minutes_minimum": 0,
+   "optionality": "The evening dessert/drinks stop is the only optional stop and must remain genuinely droppable without the day feeling unfinished."
+  },
+  "constraints": [
+   "Scope is city-only, Lima, Peru; no venue names, opening hours, distances or prices may appear in this agreement.",
+   "Timing is evergreen — no weekday is assumed; the market choice must operate every day.",
+   "Dietary needs are unspecified — never assume 'none'.",
+   "Access needs are unspecified — never assume 'none'.",
+   "Morning through lunch stays in Miraflores, walkable, no leg more than about fifteen minutes on foot from the prior stop.",
+   "Exactly one transfer for the whole day, after lunch, Miraflores to Barranco, at most twenty minutes, taxi allowed.",
+   "Everything from the afternoon walk onward stays in Barranco on foot, within a few blocks of each other.",
+   "No third neighborhood and no crossing back to Miraflores before bed.",
+   "No stop may require a return trip to reach the next one.",
+   "The market and the afternoon tasting must never become a full meal.",
+   "Market stop: browsing and learning ingredients, at most one thing eaten standing up.",
+   "Signature lunch: one regional specialty done properly with real time at the table, not a fast in-and-out.",
+   "Afternoon tasting: one small portion, roughly twenty to thirty minutes, no table service.",
+   "Lunch and dinner venues must each do the regional specialty properly and also offer a cooked, non-seafood dish substantial enough to read as the main event.",
+   "Lunch and dinner venues must be reachable and seatable without stairs, with a bathroom on the same level.",
+   "The evening dessert/drinks stop must remain genuinely optional — droppable without the day feeling unfinished.",
+   "The day overall must stay low-effort and appetite-paced so day two's active opener is not undermined.",
+   "Day two should not repeat a market, a tasting, or a culinary-destination dinner.",
+   "Nothing is booked or paid for until the reader has filled the dietary and access blanks; research returns a shortlist with questions attached, not a locked day."
+  ],
+  "slot_directions": [
+   {
+    "slot_id": "slot_mu28s5h614jta0vy",
+    "role": "Breakfast / iconic coffee — the everyday food habit at street level, the day's opening register.",
+    "must_have": [
+     "Located in Miraflores",
+     "Reads as an everyday coffee-and-bread habit, not a production",
+     "Small and unhurried"
+    ],
+    "nice_to_have": [],
+    "exclusions": [
+     "Nothing elaborate or heavy that competes with lunch"
+    ]
+   },
+   {
+    "slot_id": "slot_mu28s5h615gp2aek",
+    "role": "Market / food exploration — browsing and learning the ingredients that will show up at lunch and dinner.",
+    "must_have": [
+     "Located in Miraflores, within about fifteen minutes on foot of breakfast",
+     "Operates every day, since no weekday is fixed for this evergreen day",
+     "Tolerates browsing without a purchase",
+     "At most one item eaten standing up — never a seated plate"
+    ],
+    "nice_to_have": [
+     "Explains or displays ingredients tied to the lunch specialty"
+    ],
+    "exclusions": [
+     "A full meal or table service",
+     "A second breakfast"
+    ]
+   },
+   {
+    "slot_id": "slot_mu28s5h616rp9696",
+    "role": "Signature lunch — the anchor of the day, the one regional specialty Lima is genuinely famous for.",
+    "must_have": [
+     "Located in Miraflores, within about fifteen minutes on foot of the market",
+     "Does the regional specialty properly, with real time at the table",
+     "Also offers a cooked, non-seafood dish substantial enough to still read as the main event",
+     "Reachable and seatable without stairs, with a bathroom on the same level",
+     "Does not depend on a booking made weeks out"
+    ],
+    "nice_to_have": [
+     "Takes a reservation"
+    ],
+    "exclusions": [
+     "A fast in-and-out meal",
+     "A menu that only works for a reader with no dietary restrictions"
+    ]
+   },
+   {
+    "slot_id": "slot_mu28s5h6178kpihk",
+    "role": "Neighborhood walk / light activity — the non-food breathing space and the route through Barranco after the transfer.",
+    "must_have": [
+     "Located in Barranco, on foot, following the single post-lunch transfer",
+     "Functions as digestion and a change of register, not another sight to tick off",
+     "Honest description of walking surface, gradient and any stairs, with a flat route around anything steep"
+    ],
+    "nice_to_have": [],
+    "exclusions": [
+     "Another meal or dining stop",
+     "A route that assumes stairs or steep hills are manageable"
+    ]
+   },
+   {
+    "slot_id": "slot_mu28s5h618a2xvcu",
+    "role": "Specialty tasting / snack — one specialty in a small portion, a taste rather than a meal.",
+    "must_have": [
+     "Located in Barranco, within a few blocks of the afternoon walk and dinner",
+     "One small portion, roughly twenty to thirty minutes",
+     "No table service"
+    ],
+    "nice_to_have": [],
+    "exclusions": [
+     "A full meal",
+     "Table service",
+     "Anything that would leave the reader full before dinner"
+    ]
+   },
+   {
+    "slot_id": "slot_mu28s5h6198kc83j",
+    "role": "Destination dinner — the deliberate culinary finish, an ambitious kitchen working with what the market showed that morning.",
+    "must_have": [
+     "Located in Barranco, within a few blocks of the afternoon tasting",
+     "Does the regional specialty properly and also offers a cooked, non-seafood dish substantial enough to read as the main event",
+     "Reachable and seatable without stairs, with a bathroom on the same level",
+     "A deliberate culinary destination, not just a convenient meal"
+    ],
+    "nice_to_have": [
+     "A second kitchen held in reserve as an alternate"
+    ],
+    "exclusions": [
+     "So long or formal that the optional dessert/drinks stop stops being optional",
+     "A menu that only works for a reader with no dietary restrictions"
+    ]
+   },
+   {
+    "slot_id": "slot_mu28s5h61a9eefh0",
+    "role": "Dessert / drinks — an optional small finish suited to appetite and energy.",
+    "must_have": [
+     "Located in Barranco, close enough to dinner that skipping it costs nothing and adding it costs about one block",
+     "Genuinely small and droppable without the day feeling unfinished"
+    ],
+    "nice_to_have": [],
+    "exclusions": [
+     "A second full commitment or long formal experience"
+    ]
+   }
+  ],
+  "continuity": {
+   "covered_elsewhere": [
+    "Day two supplies the trip's active/adventure register, including its own lunch and dinner, so day one does not need to repeat that."
+   ],
+   "reserved_for_later": [
+    "Day two's active opener, signature adventure, hands-on experience, and scenic recovery are day two's territory, not day one's."
+   ],
+   "deliberate_overlaps": [
+    "Day one intentionally teaches food vocabulary and ingredients so that day two's meals can be eaten quickly and without explanation — this one-directional overlap was explicitly agreed."
+   ]
+  },
+  "change_policy": {
+   "must_remain": "The Miraflores-morning-then-Barranco-afternoon shape; the single post-lunch transfer; lunch as the anchor built on the regional specialty; the rule that the market and the afternoon tasting never become full meals; lunch and dinner chosen to survive any dietary/access answer (specialty done properly plus a cooked non-seafood plate substantial enough to read as the main event, reachable and seatable without stairs, bathroom on the same level).",
+   "may_be_proposed": "Which market, which walk, which tasting, which evening stop, and which kitchen takes dinner — each carried with a named alternate, on the understanding that one or more may change once the dietary and access blanks are filled.",
+   "optional_slots_may_be_omitted": true
+  },
+  "fails_if": [
+   "The market or the afternoon tasting arrives as a plate at a table, turning the day into four meals instead of two and leaving the reader full before the destination dinner.",
+   "The lunch venue only serves the specialty as raw seafood with no cooked, non-seafood option, given that dietary needs were never recorded and cannot be assumed absent.",
+   "A market or dinner sits outside the Miraflores-then-Barranco line, turning the single post-lunch ride into two transfers.",
+   "The Barranco stretch depends on cliff stairs or steep hills without a flat alternative, given that access needs were never recorded.",
+   "The destination dinner runs so long or so formal that the optional dessert/drinks stop stops being genuinely optional.",
+   "The day is heavy enough that the reader starts day two's active opener on a food hangover.",
+   "Any stop is booked or paid for before the reader has filled in the dietary and access blanks."
+  ],
+  "research_checklist": [
+   "Which market in Miraflores operates every day (since no weekday is fixed for this evergreen day), and does it tolerate browsing without buying?",
+   "Is the lunch regional specialty genuinely a midday dish where it will be served, and does that kitchen take a reservation?",
+   "How far ahead does the destination dinner need to be booked, what does it cost, and what is a second kitchen to hold in reserve?",
+   "What is the closing day of every stop in the sequence?",
+   "Does each stop, especially lunch and dinner, offer step-free entry, seating and bathroom access on the same level?",
+   "Do the lunch and dinner venues each offer a cooked, non-seafood dish substantial enough to stand in as the main event?",
+   "What is the walking surface, gradient and stair situation on the Barranco stretch, and what is a flat route around anything steep?",
+   "What is the real door-to-door time for the single post-lunch transfer from Miraflores to Barranco, and can it be done by taxi within about twenty minutes?",
+   "Is there a market item that can be eaten standing up without becoming a seated meal?",
+   "What tasting option in Barranco can be delivered in twenty to thirty minutes with no table service?",
+   "Has the reader been asked to fill in their dietary and access needs before anything is booked or paid for?"
+  ],
+  "agreement_trace": [
+   {
+    "decision": "What is this day promising a reader — put plainly, what should they be able to say they understand about Lima by the time they go to bed on night one?",
+    "recommendation": "An eating education, taken in the order the city itself takes it: the day starts at everyday street level — the coffee-and-bread habit, then a market where the raw material gets explained — climbs to the one regional dish Lima is genuinely famous for at lunch, and finishes at a kitchen doing something ambitious with those same ingredients. The promise is that by dinner the reader can taste the connection between the market stall and the tasting plate, and has the vocabulary to order confidently anywhere else in the country. Day one buys understanding; day two spends energy.",
+    "answer": "An eating education, taken in the order the city itself takes it: the day starts at everyday street level — the coffee-and-bread habit, then a market where the raw material gets explained — climbs to the one regional dish Lima is genuinely famous for at lunch, and finishes at a kitchen doing something ambitious with those same ingredients. The promise is that by dinner the reader can taste the connection between the market stall and the tasting plate, and has the vocabulary to order confidently anywhere else in the country. Day one buys understanding; day two spends energy.",
+    "answer_origin": "accepted_recommendation"
+   },
+   {
+    "decision": "Where does this day physically sit, and how many times does it move? Specifically: does the whole eating sequence stay in one neighborhood, or does it break in the middle and carry the reader from one to the other?",
+    "recommendation": "Two neighborhoods, one move, and the move happens after lunch. Morning through lunch stays in Miraflores: breakfast, the market and the signature lunch all close enough to walk between, nothing more than about fifteen minutes on foot from the stop before it, so the first half of the day feels like one continuous errand rather than three appointments. Then a single ride to Barranco — twenty minutes at most, and it is allowed to be a taxi rather than a walk — and everything from the afternoon walk onward stays there on foot: the walk, the tasting and dinner within a few blocks of each other, with the optional dessert or drink close enough that leaving it out costs nothing and adding it costs one block. No third neighborhood, no crossing back before bed, and no stop that requires a return trip to reach the next one.",
+    "answer": "Two neighborhoods, one move, and the move happens after lunch. Morning through lunch stays in Miraflores: breakfast, the market and the signature lunch all close enough to walk between, nothing more than about fifteen minutes on foot from the stop before it, so the first half of the day feels like one continuous errand rather than three appointments. Then a single ride to Barranco — twenty minutes at most, and it is allowed to be a taxi rather than a walk — and everything from the afternoon walk onward stays there on foot: the walk, the tasting and dinner within a few blocks of each other, with the optional dessert or drink close enough that leaving it out costs nothing and adding it costs one block. No third neighborhood, no crossing back before bed, and no stop that requires a return trip to reach the next one.",
+    "answer_origin": "accepted_recommendation"
+   },
+   {
+    "decision": "Which single stop is this day built around — the one that, if it fell through, would mean the day failed rather than just changed: the signature lunch, or the destination dinner?",
+    "recommendation": "The signature lunch is the anchor; the destination dinner is the second peak, not the point. The regional dish at midday is the thing the whole morning has been building an appetite and a vocabulary for — the market stop exists to explain what is about to arrive on that plate, and the afternoon walk exists to recover from it. Lunch is also the version of this day that cannot break: it is the meal Lima serves at the hour Lima serves it, it does not depend on a booking made weeks out, and it does not carry the price or the fixed-menu risk that makes an ambitious dinner the most fragile stop on the list. So research treats lunch as fixed — the one specialty, done properly, with real time at the table rather than a fast in-and-out — and treats dinner as the ambitious finish that should be excellent but is allowed to be swapped for a different kitchen without the day losing its spine. If only one of the two can be booked well, book lunch.",
+    "answer": "The signature lunch is the anchor; the destination dinner is the second peak, not the point. The regional dish at midday is the thing the whole morning has been building an appetite and a vocabulary for — the market stop exists to explain what is about to arrive on that plate, and the afternoon walk exists to recover from it. Lunch is also the version of this day that cannot break: it is the meal Lima serves at the hour Lima serves it, it does not depend on a booking made weeks out, and it does not carry the price or the fixed-menu risk that makes an ambitious dinner the most fragile stop on the list. So research treats lunch as fixed — the one specialty, done properly, with real time at the table rather than a fast in-and-out — and treats dinner as the ambitious finish that should be excellent but is allowed to be swapped for a different kitchen without the day losing its spine. If only one of the two can be booked well, book lunch.",
+    "answer_origin": "accepted_recommendation"
+   },
+   {
+    "decision": "Last thing before research starts: what would make this day wrong — what are the failure modes a researcher could walk into while technically filling every slot?",
+    "recommendation": "Three ways this breaks. First, four meals instead of two: if the market stop or the afternoon tasting arrives as a plate at a table, the reader reaches dinner full and the most ambitious kitchen of the day is wasted — the market is browsing plus at most one thing eaten standing up, and the tasting is one small portion, twenty to thirty minutes, no table service. Second, a lunch the reader cannot eat: the regional specialty is raw seafood, dietary needs were never recorded, and the day may not assume they are absent — the lunch place has to do the specialty properly and also carry a cooked or non-seafood dish strong enough that it still reads as the anchor meal rather than a consolation. Third, geography that quietly lies: a market or a dinner that sits outside the Miraflores-then-Barranco line and turns one post-lunch ride into two, or a Barranco stretch that depends on cliff stairs and steep hills, which cannot be assumed manageable while access needs are unrecorded. Two smaller ways it goes wrong: a dinner so long or so formal that the optional dessert stops being optional and becomes a second commitment, and a day so heavy that day two's active opener starts on a hangover of food. Research has to come back with: which market operates every day, since no weekday is fixed, and whether it tolerates browsing without buying; whether the lunch specialty is genuinely a midday dish where it is served and whether that kitchen takes a reservation; how far ahead the destination dinner books and what it costs, with a second kitchen held in reserve; the closing day of every stop; step-free entry, seating and bathroom access at each; walking surface and gradient on the Barranco stretch; and confirmation that the dietary and access blanks get filled by the reader before anything is locked.",
+    "answer": "Three ways this breaks. First, four meals instead of two: if the market stop or the afternoon tasting arrives as a plate at a table, the reader reaches dinner full and the most ambitious kitchen of the day is wasted — the market is browsing plus at most one thing eaten standing up, and the tasting is one small portion, twenty to thirty minutes, no table service. Second, a lunch the reader cannot eat: the regional specialty is raw seafood, dietary needs were never recorded, and the day may not assume they are absent — the lunch place has to do the specialty properly and also carry a cooked or non-seafood dish strong enough that it still reads as the anchor meal rather than a consolation. Third, geography that quietly lies: a market or a dinner that sits outside the Miraflores-then-Barranco line and turns one post-lunch ride into two, or a Barranco stretch that depends on cliff stairs and steep hills, which cannot be assumed manageable while access needs are unrecorded. Two smaller ways it goes wrong: a dinner so long or so formal that the optional dessert stops being optional and becomes a second commitment, and a day so heavy that day two's active opener starts on a hangover of food. Research has to come back with: which market operates every day, since no weekday is fixed, and whether it tolerates browsing without buying; whether the lunch specialty is genuinely a midday dish where it is served and whether that kitchen takes a reservation; how far ahead the destination dinner books and what it costs, with a second kitchen held in reserve; the closing day of every stop; step-free entry, seating and bathroom access at each; walking surface and gradient on the Barranco stretch; and confirmation that the dietary and access blanks get filled by the reader before anything is locked.",
+    "answer_origin": "accepted_recommendation"
+   },
+   {
+    "decision": "The dietary and access blanks are the one thing that can still sink this day after research is finished. Which way should research be told to handle them: choose every stop so it survives any answer the reader gives later, or choose the best version now and flag the stops that would have to be swapped once the reader fills the blanks?",
+    "recommendation": "Survive any answer for the two meals that cannot move, flag the rest. Lunch and dinner are chosen so they hold up no matter what comes back: each has to do the regional specialty properly and also put out a cooked, non-seafood plate substantial enough to still read as the main event, and each has to be reachable and seatable without stairs, with a bathroom on the same level. Those are filters, not preferences — a kitchen that only works for a reader with no restrictions does not make the list, however good it is. The market, the afternoon walk, the tasting and the optional dessert are chosen for the best version of the day and carried with a named alternate each, on the understanding that one or more may have to change once the reader answers. The Barranco stretch gets described honestly — gradient, surface, stairs, and a flat route around anything steep — rather than declared fine. And nothing is booked or paid for until the reader has actually filled both blanks: research comes back with a shortlist and the questions attached, not a locked day.",
+    "answer": "Survive any answer for the two meals that cannot move, flag the rest. Lunch and dinner are chosen so they hold up no matter what comes back: each has to do the regional specialty properly and also put out a cooked, non-seafood plate substantial enough to still read as the main event, and each has to be reachable and seatable without stairs, with a bathroom on the same level. Those are filters, not preferences — a kitchen that only works for a reader with no restrictions does not make the list, however good it is. The market, the afternoon walk, the tasting and the optional dessert are chosen for the best version of the day and carried with a named alternate each, on the understanding that one or more may have to change once the reader answers. The Barranco stretch gets described honestly — gradient, surface, stairs, and a flat route around anything steep — rather than declared fine. And nothing is booked or paid for until the reader has actually filled both blanks: research comes back with a shortlist and the questions attached, not a locked day.",
+    "answer_origin": "accepted_recommendation"
+   }
+  ]
+ },
+ "context_key": "fbd3f7e9e4a3c37853d444507b31d06a",
+ "created_at": "2026-09-15T21:53:46+00:00",
+ "accepted_at": "2026-09-15T22:14:30+00:00"
+}

@@ -277,6 +277,30 @@
       "defaultModel": "gemini-2.5-flash"
     },
     {
+      "id": "itinerary.grill",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Interview the operator about one day of a trip, using the article grill's engine. Reaches no search: every venue fact belongs to the external research step.",
+      "site": "features/itinerary_pipeline/grill.py",
+      "defaultModel": "claude-opus-5-high"
+    },
+    {
+      "id": "itinerary.day_direction",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Write the agreed day down as the structured direction the research prompt is built from.",
+      "site": "features/itinerary_pipeline/direction.py",
+      "defaultModel": "claude-sonnet-5-medium"
+    },
+    {
+      "id": "itinerary.day_research",
+      "app": "ai-blog-writer",
+      "call": "research",
+      "summary": "Research and write one day of a trip on the Claude subscription, with WebSearch and WebFetch and the day's generated JSON schema enforced by the CLI. Many provider round trips inside one job, not one call.",
+      "site": "features/itinerary_pipeline/research.py",
+      "defaultModel": "claude-sonnet-5-high"
+    },
+    {
       "id": "editor.writer_brief",
       "app": "ai-blog-writer",
       "call": "text",

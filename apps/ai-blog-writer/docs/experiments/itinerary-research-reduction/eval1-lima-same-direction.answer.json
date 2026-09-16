@@ -1,0 +1,361 @@
+{
+ "title": "Bread, market, ceviche, kitchen",
+ "dayIntro": "The day moves the way Lima itself eats: bread and coffee first, then a market that explains what's actually in season, then the ceviche lunch the city is built around, eaten with real time at the table rather than standing at a counter. One taxi ride carries you into Barranco early enough that everything after — a flat clifftop walk, a small taste, a kitchen working the same ingredients at dinner, an optional last drink — stays within a few blocks on foot. Nothing after lunch asks you to decide where to go next.",
+ "stops": [
+  {
+   "slotId": "slot_mu28s5h614jta0vy",
+   "status": "selected",
+   "name": "El Pan de la Chola",
+   "category": "dining",
+   "addressOrMeetingPoint": "Avenida Mariscal La Mar 1081, Miraflores, Lima",
+   "area": "Miraflores",
+   "startMinutes": 540,
+   "durationMinutes": 45,
+   "readerCopy": "Start at El Pan de la Chola, a bakery-café on Avenida Mariscal La Mar that Miraflores treats as its own everyday breakfast spot, not a production. Order at the counter — sourdough, a pastry, a coffee — and take a small table without ceremony. It sets the day's register before the market and the ceviche lunch raise the stakes: an ordinary Lima morning, unhurried, nothing on the plate trying to impress you.",
+   "practicalNotes": [
+    "Open Tuesday–Saturday 8:00–22:00, Sunday 9:00–18:00; closed Monday.",
+    "Counter service; no reservation involved."
+   ],
+   "evidence": [
+    {
+     "fact": "Address Avenida Mariscal La Mar 1081, Miraflores; open Tuesday–Saturday 8:00–22:00, Sunday 9:00–18:00, closed Monday.",
+     "url": "https://www.tripadvisor.com/Restaurant_Review-g294316-d4308896-Reviews-or15-El_Pan_de_la_Chola-Lima_Lima_Region.html",
+     "title": "El Pan de la Chola, Lima – Avenida Mariscal La Mar 1081, Miraflores"
+    },
+    {
+     "fact": "A bakery and café in Miraflores known for its artisanal breads and pastries.",
+     "url": "https://bestofperutravel.com/place/pan-de-la-chola-cafe-bakery-in-miraflores/",
+     "title": "Pan de la Chola Café & Bakery in Miraflores"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h615gp2aek",
+   "status": "selected",
+   "name": "Mercado Nº1 de Surquillo",
+   "category": "attractions",
+   "addressOrMeetingPoint": "Paseo de la República Cdra. 53, esquina Narciso de la Colina, Surquillo",
+   "area": "Miraflores",
+   "startMinutes": 600,
+   "durationMinutes": 60,
+   "readerCopy": "Walk south across the Ricardo Palma bridge to Mercado Nº1 de Surquillo, the market Lima's own chefs shop at, where stalls sorted by category — fish, fruit, chiles, herbs — make the ingredients behind today's ceviche legible before you've ordered any. Browsing without buying is fine; nobody minds. If a juice or anticucho stall has locals eating standing up at midday, that's the one to join — one item, eaten on your feet, then back out.",
+   "practicalNotes": [
+    "Open daily 7:30am–5:00pm.",
+    "Sits just over the Miraflores district line in Surquillo, about a ten-minute walk from the Avenida La Mar corridor via Avenida Ricardo Palma.",
+    "Small food stalls inside sell juices, anticuchos and similar items eaten standing; there's no obligation to buy anything to browse the produce section."
+   ],
+   "evidence": [
+    {
+     "fact": "Open daily 7:30am–5pm; located a few blocks from Parque Kennedy in Miraflores, about a ten-minute walk via Av. Ricardo Palma over the bridge.",
+     "url": "https://www.limaeasy.com/peru-guide/shopping-in-peru/markets-mercados-peru/mercado-surquillo-no-1",
+     "title": "Mercado Surquillo No.1 – LimaEasy"
+    },
+    {
+     "fact": "Peru's public registry (Sunarp) confirmed the market's title belongs to Surquillo district, not Miraflores, amid an ownership dispute between the two municipalities.",
+     "url": "https://www.infobae.com/peru/2026/04/09/miraflores-y-surquillo-enfrentados-sunarp-confirma-titularidad-del-mercado-n-1-para-este-distrito/",
+     "title": "Miraflores y Surquillo enfrentados: Sunarp confirma titularidad del Mercado N.º 1 para este distrito"
+    },
+    {
+     "fact": "Small stalls inside the market sell fresh-squeezed juices and snacks that locals eat standing up.",
+     "url": "https://taste-of-peru.com/a-stroll-in-the-surquillo-market-in-lima/",
+     "title": "A Stroll in The Surquillo Market in Lima"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h616rp9696",
+   "status": "selected",
+   "name": "El Mercado (Rafael Osterling)",
+   "category": "dining",
+   "addressOrMeetingPoint": "Avenida Hipólito Unanue 203, Urb. Santa Cruz, Miraflores",
+   "area": "Miraflores",
+   "startMinutes": 720,
+   "durationMinutes": 90,
+   "readerCopy": "Lunch is the anchor: ceviche at El Mercado, Rafael Osterling's version of the neighborhood cevichería, a few streets from breakfast. There's no reservation to chase — first-come, doors around noon — but it earns the wait, with tiradito and ceviche done properly alongside a kitchen that also grills meat and turns out pasta and chaufa, so the table works even if not everyone eats seafood. Sit down properly: this is the meal the rest of the day explains.",
+   "practicalNotes": [
+    "Sources disagree on the closed day: one lists Tuesday–Sunday 12:30–5:00pm (closed Monday), another Monday–Saturday 12:00–5:00pm (closed Sunday) — confirm before a Sunday or Monday visit.",
+    "No reservations; first-come, first-served, so arriving close to opening helps.",
+    "One listing notes an accessible entrance and a disabled-accessible bathroom; not independently confirmed."
+   ],
+   "evidence": [
+    {
+     "fact": "The cevichería's menu includes grilled meat and fish, chaufa (fried rice), pastas and other Peruvian comfort foods alongside its ceviches.",
+     "url": "https://www.afar.com/places/el-mercado-miraflores",
+     "title": "Review of El Mercado | Miraflores, Peru"
+    },
+    {
+     "fact": "Located at Avenida Hipólito Unanue 203, Miraflores; open Tuesday to Sunday, 12:30pm–5:00pm; no reservations, first-come first-served.",
+     "url": "https://www.enprimeurclub.com/restaurants/el-mercado-miraflores-restaurant",
+     "title": "El Mercado Restaurant, Miraflores | En Primeur Club"
+    },
+    {
+     "fact": "Listed hours Monday through Saturday, 12:00pm–5:00pm; accessible entrance and disabled-accessible bathroom noted.",
+     "url": "https://www.rest.com.pe/detalle/2092/el-mercado/2/",
+     "title": "restaurante – el mercado – miraflores – Pescados y Mariscos"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h6178kpihk",
+   "status": "selected",
+   "name": "Puente de los Suspiros and the Barranco clifftop",
+   "category": "attractions",
+   "addressOrMeetingPoint": "Puente de los Suspiros, Barranco",
+   "area": "Barranco",
+   "startMinutes": 830,
+   "durationMinutes": 90,
+   "readerCopy": "The single taxi ride of the day drops you in Barranco, and the walk that follows is the point, not a warm-up to one: cross the wooden Puente de los Suspiros, then choose. Bajada de los Baños drops toward the beach on brick paving and real stairs; staying on the clifftop Malecón instead keeps the whole stretch flat. Either way, this is digestion time between two serious meals, not another sight to check off.",
+   "practicalNotes": [
+    "Bajada de los Baños is a pedestrian route down to the beach with stairs and uneven brick paving.",
+    "A flat alternative exists by staying on the clifftop Malecón rather than descending."
+   ],
+   "evidence": [
+    {
+     "fact": "The route crosses the wooden Puente de los Suspiros footbridge, then can descend via Bajada de los Baños — a brick-paved pedestrian route with stairs down to the beach; staying on the clifftop Malecón instead avoids the descent and the climb back up.",
+     "url": "https://www.tiffanywhsu.com/home/lima-barranco",
+     "title": "Lima's Barranco in One Afternoon: Walking Itinerary + Map"
+    },
+    {
+     "fact": "The Puente de los Suspiros overlooks the Ermita chapel and the Bajada de Baños pathway leading down to the ocean.",
+     "url": "https://www.incatrailmachu.com/en/travel-blog/bridge-of-sighs-barranco-",
+     "title": "Visit the romantic Bridge of Sighs in Barranco"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h618a2xvcu",
+   "status": "selected",
+   "name": "La Bodega Verde",
+   "category": "dining",
+   "addressOrMeetingPoint": "Jirón Mariscal José Antonio de Sucre 335A, Barranco",
+   "area": "Barranco",
+   "startMinutes": 930,
+   "durationMinutes": 25,
+   "readerCopy": "For the afternoon's one small taste, stop at La Bodega Verde for a lucuma shake — the custardy, caramel-toned fruit that turns up across Peruvian desserts — and take it to go rather than sitting down. Twenty-odd minutes, no table, no menu to work through: just enough to taste the ingredient before dinner reintroduces it in a more ambitious form.",
+   "practicalNotes": [
+    "Open Sunday–Thursday 7:00am–10:00pm, Friday–Saturday 8:00am–10:00pm — operates every day.",
+    "It's a sit-down café by design; ordering to go rather than taking a table is what keeps this a taste rather than a meal."
+   ],
+   "evidence": [
+    {
+     "fact": "Address Jirón Mariscal José Antonio de Sucre 335A, Barranco; open Sunday–Thursday 7:00am–10:00pm, Friday–Saturday 8:00am–10:00pm.",
+     "url": "https://wanderboat.ai/restaurants/peru/lima-metropolitan-area/la-bodega-verde/krn2arinRqWGnOVTOnEtvA",
+     "title": "La Bodega Verde"
+    },
+    {
+     "fact": "A lucuma shake from La Bodega Verde was bought to go and carried while strolling around Barranco, rather than drunk at a table.",
+     "url": "https://talkingpointstpg.substack.com/p/the-perfect-lima-layover-plan",
+     "title": "The perfect Lima layover plan"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h6198kc83j",
+   "status": "selected",
+   "name": "Isolina",
+   "category": "dining",
+   "addressOrMeetingPoint": "Avenida San Martín Prolongación 101, Barranco",
+   "area": "Barranco",
+   "startMinutes": 1140,
+   "durationMinutes": 90,
+   "readerCopy": "Dinner is Isolina, a taberna in a Barranco house doing the same ceviche vocabulary from the market alongside cooked, home-style plates — seco de asado, ají de gallina — that read as full meals rather than sides. It's the kitchen working the day's ingredients with more ambition than lunch attempted, without turning into a tasting menu. Portions are built for sharing, and the ground-floor tables near the bar mean you're not committed to the stairs.",
+   "practicalNotes": [
+    "Hours 10:00–23:00 Tuesday to Saturday; 10:00–17:00 Sunday and Monday — a 7:00pm sitting only works Tuesday through Saturday.",
+    "A reservation isn't necessary unless in a rush, per one account; it can still draw a wait without one.",
+    "Ground-floor seating (small tables and a bar) exists at street level; a second floor offers quieter seating upstairs. Step-free access and a same-level bathroom were not independently confirmed — worth confirming ahead if access is a concern."
+   ],
+   "evidence": [
+    {
+     "fact": "Isolina serves home-style Peruvian dishes including pan con pejerrey, seco de asado (a cilantro beef stew) and ají de gallina (a chicken and pepper stew); a reservation isn't necessary unless in a rush.",
+     "url": "https://www.theglobeandmail.com/life/travel/article-barranco-lima-peru-restaurant-food/",
+     "title": "How to spend three days in Barranco, Lima: Eat, eat, eat"
+    },
+    {
+     "fact": "The first floor has small tables and a bar at street level; a separate upper floor offers a quieter seating area.",
+     "url": "http://limacitykings.com/isolina-taberna-peruana-interior-barranco-lima/",
+     "title": "Isolina Taberna Peruana Interior, Barranco, Lima"
+    },
+    {
+     "fact": "Address Avenida San Martín Prolongación 101, Barranco; hours 10:00–23:00 Tuesday to Saturday, 10:00–17:00 Sunday and Monday.",
+     "url": "https://us.trip.com/restaurant/peru/lima/detail/Isolina-59868671/",
+     "title": "Isolina (Barranco, Lima)"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h61a9eefh0",
+   "status": "selected",
+   "name": "Bodega Piselli",
+   "category": "dining",
+   "addressOrMeetingPoint": "Jirón 28 de Julio 297, Barranco",
+   "area": "Barranco",
+   "startMinutes": 1245,
+   "durationMinutes": 45,
+   "readerCopy": "If there's still an appetite for it, Bodega Piselli is a century-old bodega a few streets from dinner — a pisco sour at a worn wooden table, nothing more elaborate. It's genuinely easy to skip: nothing about the day depends on this stop, and dinner has already closed the meal out properly. Treat it as a last quiet half hour rather than a plan.",
+   "practicalNotes": [
+    "A historic, no-frills neighborhood bar open since 1915; walk-ins, no reservation described.",
+    "Operating hours were not confirmed by any source — check before building the evening around it, since it's the one stop the day doesn't need."
+   ],
+   "evidence": [
+    {
+     "fact": "A historic neighborhood bar on Jirón 28 de Julio in Barranco, open since 1915, known for a well-priced original lime pisco sour and a quiet, walk-in atmosphere.",
+     "url": "https://www.worldofmouth.app/restaurants/bodega-piselli",
+     "title": "Bodega Piselli – World of Mouth"
+    },
+    {
+     "fact": "Address Jirón 28 de Julio 297, Barranco.",
+     "url": "https://pe.latinoplaces.com/lima/bodega-piselli-66989",
+     "title": "Bodega Piselli, 28 De Julio 297, Barranco"
+    }
+   ],
+   "unresolvedReason": null
+  }
+ ],
+ "transfers": [
+  {
+   "from": "slot_mu28s5h614jta0vy",
+   "to": "slot_mu28s5h615gp2aek",
+   "mode": "walk",
+   "minutesMin": 10,
+   "minutesMax": 15,
+   "basis": "sourced",
+   "note": "South across the Ricardo Palma bridge from the Avenida La Mar corridor into Surquillo.",
+   "evidence": [
+    {
+     "fact": "Open daily 7:30am–5pm; located a few blocks from Parque Kennedy in Miraflores, about a ten-minute walk via Av. Ricardo Palma over the bridge.",
+     "url": "https://www.limaeasy.com/peru-guide/shopping-in-peru/markets-mercados-peru/mercado-surquillo-no-1",
+     "title": "Mercado Surquillo No.1 – LimaEasy"
+    }
+   ]
+  },
+  {
+   "from": "slot_mu28s5h615gp2aek",
+   "to": "slot_mu28s5h616rp9696",
+   "mode": "walk",
+   "minutesMin": 15,
+   "minutesMax": 20,
+   "basis": "planning_estimate",
+   "note": "Back north into Miraflores' Santa Cruz area; no sourced door-to-door time for this specific pair, only that both sit in the same compact corridor.",
+   "evidence": []
+  },
+  {
+   "from": "slot_mu28s5h616rp9696",
+   "to": "slot_mu28s5h6178kpihk",
+   "mode": "taxi",
+   "minutesMin": 10,
+   "minutesMax": 20,
+   "basis": "sourced",
+   "note": "The day's one crossing, Miraflores to Barranco; timing depends on traffic.",
+   "evidence": [
+    {
+     "fact": "Taxi between Miraflores and Barranco takes roughly 5 to 15 minutes by one estimate, though other sources cite closer to 15 minutes depending on traffic and exact start point.",
+     "url": "https://www.rome2rio.com/s/Miraflores-Lima/Barranco-Lima-region-Peru",
+     "title": "Miraflores, Lima to Barranco - Rome2Rio"
+    }
+   ]
+  },
+  {
+   "from": "slot_mu28s5h6178kpihk",
+   "to": "slot_mu28s5h618a2xvcu",
+   "mode": "walk",
+   "minutesMin": 5,
+   "minutesMax": 10,
+   "basis": "planning_estimate",
+   "note": "Short walk within central Barranco; not separately sourced.",
+   "evidence": []
+  },
+  {
+   "from": "slot_mu28s5h618a2xvcu",
+   "to": "slot_mu28s5h6198kc83j",
+   "mode": "walk",
+   "minutesMin": 5,
+   "minutesMax": 10,
+   "basis": "planning_estimate",
+   "note": "A short walk, but there's a deliberately long open window before the dinner sitting — see the rest window between these two stops.",
+   "evidence": []
+  },
+  {
+   "from": "slot_mu28s5h6198kc83j",
+   "to": "slot_mu28s5h61a9eefh0",
+   "mode": "walk",
+   "minutesMin": 5,
+   "minutesMax": 8,
+   "basis": "planning_estimate",
+   "note": "Both addresses sit in central Barranco, a few streets apart.",
+   "evidence": []
+  }
+ ],
+ "restWindows": [
+  {
+   "afterSlotId": "slot_mu28s5h618a2xvcu",
+   "beforeSlotId": "slot_mu28s5h6198kc83j",
+   "minutes": 175,
+   "locationPolicy": "stay_nearby",
+   "description": "An open block between the taste and dinner — Barranco's galleries and streets around the Bridge of Sighs, or just a café with a book. Nowhere new to get to; stay within the same few blocks the rest of the evening uses."
+  }
+ ],
+ "issues": [
+  {
+   "slotId": "slot_mu28s5h614jta0vy",
+   "blocking": true,
+   "text": "El Pan de la Chola is closed on Mondays, so this opening stop fails on that one day of the week.",
+   "proposedChange": "For a Monday version of this day, substitute a different Miraflores bakery-café that opens that day; none was researched here."
+  },
+  {
+   "slotId": "slot_mu28s5h616rp9696",
+   "blocking": true,
+   "text": "Sources disagree on El Mercado's closed day — one lists Tuesday–Sunday (closed Monday), another Monday–Saturday (closed Sunday) — so the anchor lunch fails on whichever of those two days is correct.",
+   "proposedChange": "Confirm the current closed day directly before committing to a Sunday or Monday version of this day."
+  },
+  {
+   "slotId": "slot_mu28s5h615gp2aek",
+   "blocking": false,
+   "text": "The only market operating every day within an easy walk of the breakfast-and-lunch corridor is titled to Surquillo district, not Miraflores — a minor breach of the single-neighborhood rule. The market actually inside Miraflores, Mercado Santa Cruz, only opens Tuesday, Thursday and Saturday, so it can't stand in as an evergreen substitute.",
+   "proposedChange": "Accept the short walk across the district line, or restrict this specific day to Tuesday, Thursday or Saturday and use Mercado Santa Cruz instead, which is genuinely inside Miraflores and closer to both breakfast and lunch."
+  },
+  {
+   "slotId": "slot_mu28s5h6198kc83j",
+   "blocking": true,
+   "text": "Isolina's listed hours show it closing at 17:00 on Sundays and Mondays, versus 23:00 the rest of the week — a 19:00 dinner sitting will not work on those two days.",
+   "proposedChange": "For Sunday or Monday travel, either move the sitting to before 17:00 (which collapses the open window built in before it) or hold a second Barranco kitchen in reserve; none was researched here."
+  },
+  {
+   "slotId": "slot_mu28s5h6198kc83j",
+   "blocking": false,
+   "text": "Isolina's step-free access and a same-level bathroom were not confirmed by any source; only ground-floor seating (small tables and a bar) was.",
+   "proposedChange": "Readers with access needs should call ahead and request ground-floor seating specifically."
+  },
+  {
+   "slotId": "slot_mu28s5h618a2xvcu",
+   "blocking": false,
+   "text": "La Bodega Verde is a sit-down café, not a takeaway counter, so keeping this stop to a genuine small taste with no table service depends on ordering to go rather than sitting.",
+   "proposedChange": null
+  },
+  {
+   "slotId": "slot_mu28s5h61a9eefh0",
+   "blocking": false,
+   "text": "No source confirmed Bodega Piselli's operating hours or a closed day.",
+   "proposedChange": "Since this stop is optional, check hours before the day rather than planning the evening around it."
+  },
+  {
+   "slotId": null,
+   "blocking": false,
+   "text": "Dietary and access needs haven't been supplied for this trip. Both the lunch and dinner kitchens were confirmed to serve a cooked, non-seafood main alongside the ceviche, but nothing else here has been checked against specific restrictions, and nothing is booked or paid for.",
+   "proposedChange": "Fill in dietary and access needs before calling ahead or turning up at any of these stops."
+  }
+ ],
+ "nextDayNotes": [
+  "Day one already covers the market visit, the small tasting format, and a culinary-destination dinner, plus the ceviche/causa/ají vocabulary — day two's meals can move faster without re-explaining any of it."
+ ],
+ "contractVersion": "itinerary-day-research-v2",
+ "workspaceId": "151c14dbac1f",
+ "dayId": "day_mu28ruv3jg5pczu",
+ "exportId": "a76468589755",
+ "inputHash": "f6bc01ad76d6134c090f096ba295d6a7"
+}

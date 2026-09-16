@@ -248,15 +248,18 @@ describe('the approval gate', () => {
 })
 
 describe('the day workspace', () => {
-  it('keeps notes with their own day and never asks an AI for anything', async () => {
+  it('keeps notes with their own day and buys nothing on the way in', async () => {
     renderPage()
     const user = await fillTripDetails('2')
     await approveEveryDay(user)
     await user.click(action(/open day workspace/i))
 
     expect(await screen.findByRole('heading', { name: 'Plan each day' })).toBeInTheDocument()
-    expect(screen.getByText(/conversation is not connected yet/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Start day Grill' })).toBeDisabled()
+    // The interview is offered and is not started. Arriving at a day that has
+    // never been handed to the backend asks the network for nothing at all:
+    // opening a screen is not a decision to spend, and a reload must not be.
+    expect(screen.getByRole('button', { name: /Start day Grill/ })).toBeEnabled()
+    expect(screen.queryByRole('textarea')).not.toBeInTheDocument()
 
     await user.type(screen.getByLabelText('Notes for this day'), 'Ask about the Sunday market')
     await user.click(screen.getByRole('button', { name: 'Save notes' }))

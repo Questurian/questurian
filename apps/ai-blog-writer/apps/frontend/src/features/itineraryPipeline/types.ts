@@ -219,6 +219,19 @@ export interface ItinerarySetupDraft {
   schemaVersion: number
   draftId: string
   updatedAt: string
+  /**
+   * Where the backend copy of this trip lives, once there is one.
+   *
+   * Absent until the first day Grill is started. From that moment the backend
+   * is canonical for the work — the interviews, directions, prompts and saved
+   * days — and this is a *pointer*, not a second authoritative copy. The
+   * setup itself is still edited here and pushed across on every change.
+   *
+   * Optional rather than a schema bump on purpose: a draft written before this
+   * existed reads perfectly well without it, and resetting somebody's saved
+   * trip to introduce a pointer would be a worse outcome than not having one.
+   */
+  workspaceId?: string
   trip: TripDraft
   days: DayDraft[]
   ui: {

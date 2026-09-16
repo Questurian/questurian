@@ -6,7 +6,7 @@
     "serve": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "node apps/backend/scripts/show-commands.cjs && PYTHONPATH=apps/backend:packages/shared/src:packages/utils/src .venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 4003"
+        "command": "node apps/backend/scripts/show-commands.cjs && PYTHONPATH=apps/backend:packages/shared/src:packages/utils/src .venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 4003 --timeout-graceful-shutdown 10"
       }
     },
     "lint": {

@@ -1,0 +1,43 @@
+{
+ "what": "The audited in-app research run of 2026-09-16 on Day 1 of the Lima trip. Observed values, read from data/pipeline.db and the run's own transcript; nothing here is a target.",
+ "workspace_id": "151c14dbac1f",
+ "day_id": "day_mu28ruv3jg5pczu",
+ "export_id": "2531a216451b",
+ "attempt_key": "9c5b295a9a0f4c0ab43a22135f64544f",
+ "session_id": "00111cfe-42f9-4e4c-9d91-24513a84782b",
+ "export_characters": 49412,
+ "export_sections": {
+  "agreed_direction_with_trace": 20044,
+  "response_schema": 13928,
+  "writing_and_house_rules": 7379,
+  "method": 3295,
+  "the_day": 2680
+ },
+ "sent_prompt_characters": 35803,
+ "tool_calls": {
+  "WebSearch": 51,
+  "WebFetch": 20,
+  "ToolSearch": 1,
+  "StructuredOutput": 2
+ },
+ "turns": 75,
+ "elapsed_seconds": 1286,
+ "recorded_cost_usd": 3.6682646,
+ "model": "claude-sonnet-5",
+ "response_characters": 40070,
+ "response_counts": {
+  "stops": 7,
+  "claims": 24,
+  "sources": 17,
+  "transfers": 8,
+  "feasibility": 9
+ },
+ "problems_seen": [
+  "Morning walks justified with market-to-Parque-Kennedy evidence, not the selected endpoints.",
+  "A San Isidro delivery menu supports a dish at the Miraflores lunch branch.",
+  "Dinner at 19:00 against a Sunday closing of 19:00, left in notes rather than the schedule.",
+  "The selected market is in Surquillo, outside the required Miraflores area.",
+  "Step-free access for lunch and dinner is unconfirmed.",
+  "A 195-minute afternoon gap with no stated purpose."
+ ]
+}

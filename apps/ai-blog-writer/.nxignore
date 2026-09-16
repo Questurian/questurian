@@ -1,0 +1,11 @@
+# Agent worktrees: scratch checkouts of this same repo, nested under it.
+#
+# Without this nx globs into them, finds @questurian/abw-server and every other
+# project defined in two places at once, and refuses to build the graph at all
+# -- which is not a warning, it is the whole dev server failing to start with
+# "Failed to process project graph". Seen for real on 2026-09-16.
+#
+# The repo-root .gitignore covers these too, but nx reads the .gitignore at its
+# own workspace root, which is this directory and not the repo root, so that
+# one never reaches it. Hence a file here.
+.claude/worktrees/

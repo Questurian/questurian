@@ -24,16 +24,20 @@ export interface DialogProps {
   footer: ReactNode
   /** Widen for side-by-side comparisons such as a layout preview. */
   wide?: boolean
+  /** A panel on the right edge, for reference the operator glances at and closes. */
+  drawer?: boolean
 }
 
-export function Dialog({ title, description, onClose, children, footer, wide }: DialogProps) {
+export function Dialog({ title, description, onClose, children, footer, wide, drawer }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     returnFocusRef.current = document.activeElement as HTMLElement | null
     const panel = panelRef.current
-    const first = panel?.querySelector<HTMLElement>(FOCUSABLE)
+    // A drawer is read from the top; focusing its first field would scroll
+    // past the part that says what it is.
+    const first = drawer ? null : panel?.querySelector<HTMLElement>(FOCUSABLE)
     ;(first ?? panel)?.focus()
     return () => returnFocusRef.current?.focus?.()
   }, [])
@@ -68,13 +72,13 @@ export function Dialog({ title, description, onClose, children, footer, wide }: 
 
   return (
     <div
-      className="ip-backdrop"
+      className={drawer ? 'ip-backdrop ip-backdrop-drawer' : 'ip-backdrop'}
       onMouseDown={event => {
         if (event.target === event.currentTarget) onClose()
       }}
     >
       <div
-        className={wide ? 'ip-dialog ip-dialog-wide' : 'ip-dialog'}
+        className={drawer ? 'ip-dialog ip-drawer' : wide ? 'ip-dialog ip-dialog-wide' : 'ip-dialog'}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ip-dialog-title"

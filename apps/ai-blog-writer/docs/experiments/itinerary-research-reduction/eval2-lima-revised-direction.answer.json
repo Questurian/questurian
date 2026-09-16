@@ -1,0 +1,306 @@
+{
+ "title": "The Ceviche Throughline",
+ "dayIntro": "Lima's food logic runs in one direction: bread and coffee at street level, a market that explains what's fresh, then the dish the city is actually known for, eaten properly and at length. Today follows that order — on foot through Miraflores until early afternoon, then a short taxi into Barranco, where the kitchens turn more ambitious with the same ingredients. Nothing here is booked weeks out, and nothing before dinner should leave you full. By day's end you'll have the vocabulary to order confidently anywhere else in the country.",
+ "stops": [
+  {
+   "slotId": "slot_mu28s5h614jta0vy",
+   "status": "selected",
+   "name": "El Pan de la Chola",
+   "category": "dining",
+   "addressOrMeetingPoint": "Avenida Mariscal La Mar 1081, Miraflores",
+   "area": "Miraflores",
+   "startMinutes": 540,
+   "durationMinutes": 45,
+   "readerCopy": "Start at El Pan de la Chola on Avenida Mariscal La Mar, a bakery-café built around sourdough bread and its own roasted coffee rather than a breakfast menu. Order at the counter and take ten unhurried minutes with bread and coffee — this is the everyday habit, not a meal, and everything today is paced to keep you hungry for what comes later. It closes on Mondays, so have a backup ready if that's your day.",
+   "practicalNotes": [
+    "Open 8:00–22:00 Tuesday to Saturday, 9:00–18:00 Sunday, closed Monday.",
+    "Counter service, no reservation needed."
+   ],
+   "evidence": [
+    {
+     "fact": "El Pan de la Chola is at Avenida Mariscal La Mar 1081, Miraflores, open 8:00 AM–10:00 PM Tuesday through Saturday and 9:00 AM–6:00 PM Sunday, closed Mondays.",
+     "url": "https://www.tripadvisor.com/Restaurant_Review-g294316-d4308896-Reviews-or15-El_Pan_de_la_Chola-Lima_Lima_Region.html",
+     "title": "El Pan de la Chola, Lima - Miraflores - Restaurant Reviews - Tripadvisor"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h615gp2aek",
+   "status": "selected",
+   "name": "Mercado Municipal Santa Cruz",
+   "category": "attractions",
+   "addressOrMeetingPoint": "Avenida General Mendiburu 1175, Miraflores",
+   "area": "Miraflores",
+   "startMinutes": 600,
+   "durationMinutes": 40,
+   "readerCopy": "A short walk on Mendiburu brings you to Mercado Municipal Santa Cruz, the everyday market that actually serves this stretch of Miraflores, open all seven days. Walk the aisles past the fish counters where the day's catch is laid out — the raw material that becomes ceviche within the hour. Buying nothing is fine; a coffee or small bite from one of the stalls inside covers this stop's one standing snack.",
+   "practicalNotes": [
+    "Open daily 7:00–18:00.",
+    "Municipal market with produce, meat, fish, grocery and prepared-food stalls; no admission fee."
+   ],
+   "evidence": [
+    {
+     "fact": "Mercado Municipal Santa Cruz, at Avenida General Mendiburu 1175, Miraflores, operates Monday through Sunday from 7:00 a.m. to 6:00 p.m. and recently added stalls selling fruit, vegetables, groceries, spices, prepared food and coffee.",
+     "url": "https://www.miraflores.gob.pe/miraflores-da-la-bienvenida-a-nuevos-comerciantes-en-el-mercado-municipal-santa-cruz/",
+     "title": "Miraflores da la bienvenida a nuevos comerciantes en el Mercado Municipal Santa Cruz - Municipalidad de Miraflores"
+    },
+    {
+     "fact": "The market's meat and fish counters carry local meats and the day's fresh catch, alongside cafeterías and restaurants inside the market.",
+     "url": "https://amlq.org.pe/mercado-municipal-santa-cruz/",
+     "title": "Mercado Municipal Santa Cruz - AMLQ"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h616rp9696",
+   "status": "selected",
+   "name": "Pescados Capitales",
+   "category": "dining",
+   "addressOrMeetingPoint": "Avenida Mariscal La Mar 1337, Miraflores",
+   "area": "Miraflores",
+   "startMinutes": 720,
+   "durationMinutes": 120,
+   "readerCopy": "Pescados Capitales, a few doors from breakfast on the same street, is where the day's specialty gets its proper sitting: ceviche and tiradito built around fish like what the market just showed you, eaten at a table with time to notice how it's made. It opens at noon and takes phone reservations — which matters, because Lima's more famous cevichería nearby doesn't, and can mean waiting an hour or more at the bar before lunch even starts.",
+   "practicalNotes": [
+    "Open Monday–Saturday 12:00–23:00, Sunday 12:00–18:00.",
+    "Phone reservations accepted; menu centers on ceviche and tiradito."
+   ],
+   "evidence": [
+    {
+     "fact": "Pescados Capitales' Miraflores restaurant is at Avenida Mariscal La Mar 1337, open Monday to Saturday 12:00–23:00 and Sunday 12:00–18:00, takes phone reservations, and describes cebiches and tiraditos as the essence of its Peruvian marine cuisine.",
+     "url": "https://www.pescadoscapitales.com/",
+     "title": "Pescados Capitales - Cocina Marina Peruana"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h6178kpihk",
+   "status": "selected",
+   "name": "Puente de los Suspiros and the Barranco malecón",
+   "category": "attractions",
+   "addressOrMeetingPoint": "Puente de los Suspiros, Barranco",
+   "area": "Barranco",
+   "startMinutes": 855,
+   "durationMinutes": 60,
+   "readerCopy": "The taxi drops you near the Puente de los Suspiros, the wooden footbridge that gives Barranco its postcard. From here the ground stays flat along the clifftop Malecón if you want an easy digestive lap; the more atmospheric option is the paved path down the Bajada de Baños toward the sea, past murals and old wooden houses, though it's a real slope both ways — treat the descent as optional rather than the default if stairs and grades aren't for you.",
+   "practicalNotes": [
+    "Free, public streets and park; no ticket.",
+    "Bajada de Baños is a paved, graded descent rather than open stairs, but some connecting routes back to the park use stairs; the bridge and Malecón stay level for a flat version of the walk."
+   ],
+   "evidence": [
+    {
+     "fact": "The walk passes Federico Villarreal Park and the wooden Puente de los Suspiros, then the Bajada de los Baños, a paved path down a ravine to the beach with murals and old wooden houses, before climbing back to the clifftop Malecón de Barranco; optional taxi rides cover the steeper sections.",
+     "url": "https://www.tiffanywhsu.com/home/lima-barranco",
+     "title": "Lima's Barranco in One Afternoon: Walking Itinerary + Map — Two Shoes One World"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h618a2xvcu",
+   "status": "selected",
+   "name": "Caprilú",
+   "category": "dining",
+   "addressOrMeetingPoint": "Bajada de Baños 367, Barranco",
+   "area": "Barranco",
+   "startMinutes": 920,
+   "durationMinutes": 25,
+   "readerCopy": "Caprilú, a street stand partway down the Bajada de Baños, sells picarones — rings of fried squash and sweet potato dough soaked in cane syrup — cooked to order and eaten standing, no table involved. One portion is enough; it's a dessert-register snack, not a meal, and the kind of thing you eat mid-stroll without breaking stride on the way toward dinner.",
+   "practicalNotes": [
+    "Street stand with no posted hours; confirm it's open when you pass, as informal stands here run on their own schedule.",
+    "Cash purchase, eaten standing at the stand."
+   ],
+   "evidence": [
+    {
+     "fact": "Caprilú is a street food stand (puesto) in Barranco serving large, crispy picarones.",
+     "url": "https://elcomercio.pe/vamos/seis-mejores-lugares-comer-picarones-lima-noticia-476094-noticia/",
+     "title": "Seis de los mejores lugares para comer picarones en Lima - El Comercio"
+    },
+    {
+     "fact": "Picarones are rings of fried sweet potato and squash dough served drenched in chancaca, an unrefined cane syrup.",
+     "url": "https://en.wikipedia.org/wiki/Picarones",
+     "title": "Picarones - Wikipedia"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h6198kc83j",
+   "status": "selected",
+   "name": "Isolina Taberna Peruana",
+   "category": "dining",
+   "addressOrMeetingPoint": "Avenida San Martín Prolongación 101, Barranco",
+   "area": "Barranco",
+   "startMinutes": 1140,
+   "durationMinutes": 120,
+   "readerCopy": "Isolina, a few streets over on San Martín, is the night's destination: a colonial house turned tavern doing criollo cooking with real ambition, including a ceviche built for sharing alongside offal and slow-cooked classics most kitchens have quietly dropped. Plates are sized for two or three, service is unhurried but not formal, and you can leave straight after the meal without it feeling cut short — which is exactly what keeps the next stop optional rather than required.",
+   "practicalNotes": [
+    "Open 10:00–23:00 Tuesday–Saturday; 10:00–17:00 Sunday and Monday — dinner isn't served those two evenings.",
+    "Phone booking available: (+51) 1 247 5075; à la carte, dishes sized for sharing."
+   ],
+   "evidence": [
+    {
+     "fact": "Isolina, at Avenida San Martín Prolongación 101, Barranco, is open 10:00–23:00 Tuesday to Saturday and 10:00–17:00 Sunday and Monday, and serves criollo classics for sharing — including ceviche with fried squid — in a casual, unhurried tavern set in a 1906 building.",
+     "url": "https://bestofperutravel.com/place/isolina-restaurant-in-barranco/",
+     "title": "Isolina Restaurant in Lima Review | Info & Photos - Best of Peru Travel"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h61a9eefh0",
+   "status": "selected",
+   "name": "Helado de Lima",
+   "category": "dining",
+   "addressOrMeetingPoint": "Jirón Colina 109, Barranco",
+   "area": "Barranco",
+   "startMinutes": 1265,
+   "durationMinutes": 30,
+   "readerCopy": "If you still have room, Helado de Lima is two minutes from dinner on Jirón Colina — ultra-creamy ice cream in flavors like pistachio or mascarpone-raspberry, from the team behind a well-known local café. It's genuinely skippable: order one scoop to walk with, or skip it and let the market-to-Isolina line stand as the day's finish. Either way costs nothing.",
+   "practicalNotes": [
+    "Hours not confirmed for this location; treat as an easy walk-by option rather than a planned stop."
+   ],
+   "evidence": [
+    {
+     "fact": "Helado de Lima, at Jirón Colina 109, Barranco, is an ice cream shop from the team behind Café de Lima, making ultra-creamy ice creams in flavors such as pistachio and mascarpone-raspberry.",
+     "url": "https://www.heladodelima.pe/",
+     "title": "Helado de Lima"
+    }
+   ],
+   "unresolvedReason": null
+  }
+ ],
+ "transfers": [
+  {
+   "from": "slot_mu28s5h614jta0vy",
+   "to": "slot_mu28s5h615gp2aek",
+   "mode": "walk",
+   "minutesMin": 12,
+   "minutesMax": 18,
+   "basis": "planning_estimate",
+   "note": "Both addresses sit on nearby Miraflores streets; flat, ordinary sidewalks.",
+   "evidence": []
+  },
+  {
+   "from": "slot_mu28s5h615gp2aek",
+   "to": "slot_mu28s5h616rp9696",
+   "mode": "walk",
+   "minutesMin": 12,
+   "minutesMax": 18,
+   "basis": "planning_estimate",
+   "note": "Back toward Mariscal La Mar on the same easy blocks.",
+   "evidence": []
+  },
+  {
+   "from": "slot_mu28s5h616rp9696",
+   "to": "slot_mu28s5h6178kpihk",
+   "mode": "taxi",
+   "minutesMin": 10,
+   "minutesMax": 20,
+   "basis": "sourced",
+   "note": "The single post-lunch transfer; normal-conditions time is around ten to fifteen minutes, with traffic able to push it toward twenty.",
+   "evidence": [
+    {
+     "fact": "A taxi between Miraflores and Barranco normally takes around 15 minutes in normal conditions, though traffic can add significant time.",
+     "url": "https://www.rome2rio.com/s/Miraflores-Lima/Barranco-Lima-region-Peru",
+     "title": "Miraflores, Lima to Barranco - Rome2rio"
+    }
+   ]
+  },
+  {
+   "from": "slot_mu28s5h6178kpihk",
+   "to": "slot_mu28s5h618a2xvcu",
+   "mode": "walk",
+   "minutesMin": 3,
+   "minutesMax": 8,
+   "basis": "planning_estimate",
+   "note": "The stand sits on the same Bajada de Baños the walk already covers.",
+   "evidence": []
+  },
+  {
+   "from": "slot_mu28s5h618a2xvcu",
+   "to": "slot_mu28s5h6198kc83j",
+   "mode": "walk",
+   "minutesMin": 5,
+   "minutesMax": 10,
+   "basis": "planning_estimate",
+   "note": "A short walk to San Martín; a long free window sits between the two, covered below.",
+   "evidence": []
+  },
+  {
+   "from": "slot_mu28s5h6198kc83j",
+   "to": "slot_mu28s5h61a9eefh0",
+   "mode": "walk",
+   "minutesMin": 3,
+   "minutesMax": 8,
+   "basis": "planning_estimate",
+   "note": "Both addresses are within a couple of blocks of each other in central Barranco.",
+   "evidence": []
+  }
+ ],
+ "restWindows": [
+  {
+   "afterSlotId": "slot_mu28s5h615gp2aek",
+   "beforeSlotId": "slot_mu28s5h616rp9696",
+   "minutes": 65,
+   "locationPolicy": "stay_nearby",
+   "description": "Miraflores streets near Mariscal La Mar — the market ends well before the cevichería opens at noon, so use this stretch to wander rather than rush."
+  },
+  {
+   "afterSlotId": "slot_mu28s5h618a2xvcu",
+   "beforeSlotId": "slot_mu28s5h6198kc83j",
+   "minutes": 195,
+   "locationPolicy": "stay_nearby",
+   "description": "Open time in Barranco between the picarones stand and the dinner reservation — shops, galleries, cafés or just sitting near the malecón; Lima dinners run late, so this gap is by design, not a scheduling gap to fill with another meal."
+  }
+ ],
+ "issues": [
+  {
+   "slotId": "slot_mu28s5h614jta0vy",
+   "blocking": true,
+   "text": "El Pan de la Chola closes on Mondays, so this opening stop doesn't exist that day.",
+   "proposedChange": "On a Monday, swap in a different Miraflores coffee-and-bread counter (not researched here) rather than starting the walk to the market hungry."
+  },
+  {
+   "slotId": "slot_mu28s5h6198kc83j",
+   "blocking": true,
+   "text": "Isolina only serves until 17:00 on Sunday and Monday, so the 19:00 dinner this plan assumes doesn't exist on those two evenings.",
+   "proposedChange": "Hold a second Barranco kitchen in reserve for Sunday and Monday nights — Chala, also on the Bajada de Baños, is a plausible candidate but its hours and ceviche weren't verified here."
+  },
+  {
+   "slotId": "slot_mu28s5h616rp9696",
+   "blocking": false,
+   "text": "Lima's most famous cevichería, La Mar, was deliberately passed over for this slot: it takes no reservations and reviewers report waits toward ninety minutes at peak times, which would unravel a schedule built around a single afternoon transfer.",
+   "proposedChange": null
+  },
+  {
+   "slotId": "slot_mu28s5h618a2xvcu",
+   "blocking": false,
+   "text": "No posted operating hours were found for Caprilú's picarones stand; informal street stands like this typically don't publish hours online.",
+   "proposedChange": "Confirm on the ground; other picaronerías along the same stretch of Barranco are a fallback if the stand isn't out."
+  },
+  {
+   "slotId": "slot_mu28s5h6178kpihk",
+   "blocking": false,
+   "text": "The Bajada de Baños descent is a paved, graded path rather than open stairs, but it is a genuine slope in both directions, and some routes back up to the park use stairs; access needs weren't specified for this trip.",
+   "proposedChange": "Stay on the Puente de los Suspiros and the clifftop Malecón for a flat version of the walk, and treat the beach descent as optional."
+  },
+  {
+   "slotId": "slot_mu28s5h61a9eefh0",
+   "blocking": false,
+   "text": "Hours for Helado de Lima weren't confirmed.",
+   "proposedChange": null
+  }
+ ],
+ "nextDayNotes": [
+  "Day one finishes late in Barranco, with dinner running to around 21:00 and the optional dessert stop past that — day two's active opener shouldn't be scheduled too early the following morning."
+ ],
+ "contractVersion": "itinerary-day-research-v2",
+ "workspaceId": "151c14dbac1f",
+ "dayId": "day_mu28ruv3jg5pczu",
+ "exportId": "a82d80184755",
+ "inputHash": "45d4faa528675b6abad2086b9bd2d54a"
+}

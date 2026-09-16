@@ -1,0 +1,162 @@
+{
+  "contractVersion": "itinerary-day-direction-dry-run-v1",
+  "dayId": "dry-run-day-1",
+  "provenance": "Simulated agreement for prompt testing, not actual user testimony",
+  "promise": "A relaxed Miraflores introduction with distinctly Peruvian lunch as the main event.",
+  "tripRole": "First full day; save historic-center culture for Day 2 and Barranco/art/later evening for Day 3.",
+  "geography": {
+    "requiredArea": "Miraflores",
+    "startingPoint": "Miraflores hotel unspecified; first hotel-to-stop transfer cannot be calculated precisely",
+    "avoidToday": [
+      "Barranco",
+      "historic center"
+    ]
+  },
+  "constraints": {
+    "timeWindow": "09:00–21:00, illustrative evergreen schedule",
+    "walkTargetMinutesPerLeg": 15,
+    "walkTargetPolicy": "Planning target, not verified travel time; propose taxi or flag unresolved when unsuitable",
+    "avoid": [
+      "cliff stairs",
+      "beach descent",
+      "clubs",
+      "tasting-menu commitments",
+      "second major meal",
+      "repetitive scenic afternoon"
+    ],
+    "restMinutesMinimum": 45,
+    "restPolicy": "Explicit unallocated recovery interval; do not silently add a seventh venue slot",
+    "dietaryNeeds": "unspecified; do not infer none",
+    "accessNeeds": "unspecified; short walking does not establish wheelchair accessibility"
+  },
+  "slotDirections": [
+    {
+      "slotId": "day1-coffee_light_breakfast",
+      "role": "gentle opener",
+      "mustHave": [
+        "Light breakfast or coffee",
+        "Fits morning route"
+      ],
+      "niceToHave": [
+        "Bakery"
+      ]
+    },
+    {
+      "slotId": "day1-scenic_low_effort",
+      "role": "low-effort coastal highlight",
+      "mustHave": [
+        "Coastal view from above",
+        "No beach descent"
+      ],
+      "niceToHave": [
+        "Seating"
+      ]
+    },
+    {
+      "slotId": "day1-special_lunch",
+      "role": "food anchor",
+      "mustHave": [
+        "Distinctly Peruvian food",
+        "Fits Miraflores route",
+        "A la carte or comparably flexible meal"
+      ],
+      "niceToHave": [
+        "Special setting"
+      ]
+    },
+    {
+      "slotId": "day1-leisure_exploration",
+      "role": "neighborhood contrast",
+      "mustHave": [
+        "Adds streets, shops or local texture",
+        "No second scenic-park repeat"
+      ],
+      "niceToHave": [
+        "Easy to shorten"
+      ]
+    },
+    {
+      "slotId": "day1-dinner",
+      "role": "lighter recovery meal",
+      "mustHave": [
+        "Casual and lighter than lunch"
+      ],
+      "niceToHave": [
+        "Near final daytime area"
+      ]
+    },
+    {
+      "slotId": "day1-relaxed_evening",
+      "role": "optional quiet finish",
+      "mustHave": [
+        "Conversation-friendly setting",
+        "Fits end of route"
+      ],
+      "niceToHave": [
+        "Near dinner"
+      ]
+    }
+  ],
+  "changePolicy": {
+    "requiredSlots": "Preserve ids, order and categories; if incompatible, return unresolved slot plus proposed change for operator review",
+    "optionalEvening": "May be omitted with explicit reason",
+    "layoutApproval": "This fixture has no real app approval record; importing or changing a real layout requires the actual app workflow"
+  },
+  "failsIf": [
+    "Day consists of disconnected venues with excessive transfers",
+    "Afternoon repeats the morning",
+    "Two heavy destination meals dominate",
+    "Evergreen timing is presented as guaranteed on every weekday",
+    "Factual gaps are disguised as confirmed recommendations"
+  ],
+  "agreementTrace": [
+    {
+      "turn": 1,
+      "decision": "What should make Day 1 worth following?",
+      "recommendation": "An easy coastal introduction, with lunch as the main destination and room to settle into the city.",
+      "answer": "Yes, but lunch should feel distinctly Peruvian. The view alone is not enough.",
+      "answerOrigin": "simulated_operator",
+      "relationship": "operator_modified_recommendation"
+    },
+    {
+      "turn": 2,
+      "decision": "How tightly should we keep the day geographically?",
+      "recommendation": "Keep Day 1 in Miraflores; reserve the historic center and Barranco for later days.",
+      "answer": "Agreed. Do not use Barranco today merely to find a stronger restaurant.",
+      "answerOrigin": "simulated_operator",
+      "relationship": "operator_modified_recommendation"
+    },
+    {
+      "turn": 3,
+      "decision": "How much walking should each stretch ask of the reader?",
+      "recommendation": "Aim for walks of about 15 minutes or less, with taxis for longer transfers.",
+      "answer": "Use 15 minutes as the target. No cliff stairs or walk down to the beach; a coastal view from above is enough.",
+      "answerOrigin": "simulated_operator",
+      "relationship": "operator_modified_recommendation"
+    },
+    {
+      "turn": 4,
+      "decision": "What should the afternoon add after the coastal visit?",
+      "recommendation": "A short exploration of neighborhood streets and shops, with an explicit rest break.",
+      "answer": "Yes. Avoid a second scenic park that repeats the morning. Keep the afternoon flexible.",
+      "answerOrigin": "simulated_operator",
+      "relationship": "operator_modified_recommendation"
+    },
+    {
+      "turn": 5,
+      "decision": "What role should dinner play after the main lunch?",
+      "recommendation": "A smaller, casual meal, with the quiet evening stop entirely optional.",
+      "answer": "Keep that. No second destination meal or tasting menu.",
+      "answerOrigin": "simulated_operator",
+      "relationship": "operator_modified_recommendation"
+    },
+    {
+      "turn": 6,
+      "decision": "If good candidates cannot fit the route, what may change?",
+      "recommendation": "Propose a slot change rather than forcing a distant venue into the day.",
+      "answer": "Leave required slots unresolved and tell me the exact tradeoff. You can omit the optional evening if nothing fits.",
+      "answerOrigin": "simulated_operator",
+      "relationship": "operator_modified_recommendation"
+    }
+  ]
+}

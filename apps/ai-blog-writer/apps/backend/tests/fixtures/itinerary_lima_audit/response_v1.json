@@ -1,0 +1,819 @@
+{
+ "claims": [
+  {
+   "id": "c1",
+   "text": "El Pan de la Chola's Miraflores 'Pan y Café' location at Av. Mariscal La Mar 918 is open daily from 7:00 to 21:00.",
+   "sourceIds": [
+    "s_pandelachola"
+   ],
+   "appliesTo": "slot_mu28s5h614jta0vy"
+  },
+  {
+   "id": "c2",
+   "text": "El Pan de la Chola is a bakery and café built around natural sourdough fermentation and local grains and flours.",
+   "sourceIds": [
+    "s_pandelachola"
+   ],
+   "appliesTo": "slot_mu28s5h614jta0vy"
+  },
+  {
+   "id": "c3",
+   "text": "Mercado Nº1 de Surquillo sits in the Surquillo district, just over the line from Miraflores, with guides describing it as a roughly ten-minute walk from Parque Kennedy in central Miraflores.",
+   "sourceIds": [
+    "s_afar",
+    "s_myguide"
+   ],
+   "appliesTo": "slot_mu28s5h615gp2aek"
+  },
+  {
+   "id": "c4",
+   "text": "The market tolerates browsing without buying and displays fresh fish, ají peppers, onion and lime alongside native potatoes, camu camu and maca.",
+   "sourceIds": [
+    "s_afar"
+   ],
+   "appliesTo": "slot_mu28s5h615gp2aek"
+  },
+  {
+   "id": "c5",
+   "text": "Deeper inside the market are food stalls used mainly by locals for breakfast, serving ceviche, chicharrón and tiradito, plus juice stands where fruit is blended to order.",
+   "sourceIds": [
+    "s_tasteofperu"
+   ],
+   "appliesTo": "slot_mu28s5h615gp2aek"
+  },
+  {
+   "id": "c6",
+   "text": "Market vendors can be wary of cameras; it is customary to ask before photographing a stall.",
+   "sourceIds": [
+    "s_afar"
+   ],
+   "appliesTo": "slot_mu28s5h615gp2aek"
+  },
+  {
+   "id": "c7",
+   "text": "Pescados Capitales' Miraflores branch (Av. Mariscal La Mar 1337) opens daily at noon, closing at 23:00 Monday to Saturday and 18:00 on Sunday.",
+   "sourceIds": [
+    "s_pescados_official"
+   ],
+   "appliesTo": "slot_mu28s5h616rp9696"
+  },
+  {
+   "id": "c8",
+   "text": "The branch's delivery menu separates 'Cebiches y Tiraditos' (including cebiche clásico, cebiche mixto, tiradito al rocoto and leche de tigre) from 'Platos de Fondo'; among the mains, ají de gallina is the one cooked, non-seafood dish, the rest being rice, pasta and fish preparations.",
+   "sourceIds": [
+    "s_rappi"
+   ],
+   "appliesTo": "slot_mu28s5h616rp9696"
+  },
+  {
+   "id": "c9",
+   "text": "Reservations can be made through Pescados Capitales' own booking system or by WhatsApp.",
+   "sourceIds": [
+    "s_pescados_official"
+   ],
+   "appliesTo": "slot_mu28s5h616rp9696"
+  },
+  {
+   "id": "c10",
+   "text": "The Puente de los Suspiros is a roughly 30-metre pedestrian bridge connecting Ayacucho street with the Ermita church, beside a small park with a statue of the singer Chabuca Granda.",
+   "sourceIds": [
+    "s_howtoperu"
+   ],
+   "appliesTo": "slot_mu28s5h6178kpihk"
+  },
+  {
+   "id": "c11",
+   "text": "Immediately below the bridge, the Bajada de los Baños is a stepped stone pathway, once used by fishermen, that descends to the beach; it is a separate, optional detour rather than part of crossing the bridge itself.",
+   "sourceIds": [
+    "s_howtoperu"
+   ],
+   "appliesTo": "slot_mu28s5h6178kpihk"
+  },
+  {
+   "id": "c12",
+   "text": "Barranco's central streets, including the gallery-lined Jirón Sáenz Peña, are generally flat and paved, and the district is described as easy to explore on foot.",
+   "sourceIds": [
+    "s_culturetrip",
+    "s_komoot"
+   ],
+   "appliesTo": "slot_mu28s5h6178kpihk"
+  },
+  {
+   "id": "c13",
+   "text": "Barranco's Parque Municipal/Plaza de Armas sits about 196 metres from the Puente de los Suspiros, roughly a 3-minute walk.",
+   "sourceIds": [
+    "s_moovit_bridge"
+   ],
+   "appliesTo": "slot_mu28s5h6178kpihk"
+  },
+  {
+   "id": "c14",
+   "text": "Crem de la Crem, at Parque Municipal 109 in Barranco, is an artisan ice-cream shop making gelato since 2013, with lúcuma among its signature flavours.",
+   "sourceIds": [
+    "s_cremdelacrem"
+   ],
+   "appliesTo": "slot_mu28s5h618a2xvcu"
+  },
+  {
+   "id": "c15",
+   "text": "Crem de la Crem's hours are Monday to Thursday 12:00–18:00 and Friday to Sunday 11:00–18:00.",
+   "sourceIds": [
+    "s_cremdelacrem"
+   ],
+   "appliesTo": "slot_mu28s5h618a2xvcu"
+  },
+  {
+   "id": "c16",
+   "text": "Isolina's Barranco location, at Av. Prolongación San Martín 101, sits close to the Puente de los Suspiros.",
+   "sourceIds": [
+    "s_isolina_official",
+    "s_elcomercio_isolina"
+   ],
+   "appliesTo": "slot_mu28s5h6198kc83j"
+  },
+  {
+   "id": "c17",
+   "text": "Isolina's Barranco hours are Monday to Wednesday 12:00–22:00, Thursday and Friday 12:00–23:00, Saturday 9:00–11:00 and 12:00–23:00, and Sunday 9:00–11:00 and 12:00–19:00.",
+   "sourceIds": [
+    "s_isolina_official"
+   ],
+   "appliesTo": "slot_mu28s5h6198kc83j"
+  },
+  {
+   "id": "c18",
+   "text": "Isolina's menu lists a ceviche with octopus at S/ 101, alongside cooked, non-seafood mains including lomo saltado, ají de gallina, seco de asado, costillar a la chorrillana and estofado de osobuco.",
+   "sourceIds": [
+    "s_isolina_official"
+   ],
+   "appliesTo": "slot_mu28s5h6198kc83j"
+  },
+  {
+   "id": "c19",
+   "text": "Isolina takes reservations via WhatsApp or its own online booking system.",
+   "sourceIds": [
+    "s_isolina_official"
+   ],
+   "appliesTo": "slot_mu28s5h6198kc83j"
+  },
+  {
+   "id": "c20",
+   "text": "Isolina was opened by chef José del Castillo as a tribute to traditional Lima taberna cooking, named after his mother.",
+   "sourceIds": [
+    "s_50best_isolina"
+   ],
+   "appliesTo": "slot_mu28s5h6198kc83j"
+  },
+  {
+   "id": "c21",
+   "text": "Juanito Bodega Bar sits at Av. Grau 270, facing Barranco's Parque Municipal, and has operated since 1939.",
+   "sourceIds": [
+    "s_juanito_blog",
+    "s_juanito_hours"
+   ],
+   "appliesTo": "slot_mu28s5h61a9eefh0"
+  },
+  {
+   "id": "c22",
+   "text": "Juanito's current hours are Monday to Thursday 10:00–01:00, Friday and Saturday 10:00–02:00, and Sunday 10:00–23:00.",
+   "sourceIds": [
+    "s_juanito_hours"
+   ],
+   "appliesTo": "slot_mu28s5h61a9eefh0"
+  },
+  {
+   "id": "c23",
+   "text": "Miraflores and Barranco are commonly estimated to be a few kilometres apart, with taxi/rideshare travel time between them varying with traffic.",
+   "sourceIds": [
+    "s_rome2rio"
+   ],
+   "appliesTo": ""
+  },
+  {
+   "id": "c24",
+   "text": "Guides commonly describe Mercado Nº1 de Surquillo as a roughly ten-minute walk from Parque Kennedy in central Miraflores.",
+   "sourceIds": [
+    "s_myguide"
+   ],
+   "appliesTo": "slot_mu28s5h615gp2aek"
+  }
+ ],
+ "dayIntro": "Day one teaches a vocabulary before it asks anything of it. The morning stays inside a single Miraflores errand — coffee and bread, a working market, then the ceviche lunch the whole city measures itself against — before one taxi ride carries the day to Barranco, where a flat walk, a small ice-cream tasting and a generous dinner all sit within a few blocks of each other. Nothing here is a production: two real meals, two small tastes, and a rest built in on purpose, so day two's active start doesn't begin on a full stomach.",
+ "editorNotes": [
+  "Mercado Nº1 de Surquillo is administratively in Surquillo, not Miraflores; no comparable daily produce market was found strictly inside Miraflores' own boundary, so this is a deliberate compromise on the brief's neighbourhood-purity rule rather than an oversight. Flagging for a call on whether that technicality matters.",
+  "Step-free entry, ground-floor seating and same-level restrooms could not be confirmed from any public source for Pescados Capitales (lunch) or Isolina (dinner). Both otherwise clear the harder filter — a proper ceviche plus a substantial cooked, non-seafood main — but the access filter itself is unconfirmed, not confirmed.",
+  "No verified second kitchen was identified to hold in reserve for dinner. Canta Rana (a long-running Barranco ceviche institution) was considered but its non-seafood main-course strength wasn't confirmed in the time available, so it was left out rather than named as an unverified backup.",
+  "Pescados Capitales' own 2026 seasonal-menu press coverage reads as entirely seafood; the ají de gallina claim rests on the restaurant's Rappi delivery-menu listing, which is treated as authoritative for what's actually orderable but is a secondary source, not the restaurant's printed carta.",
+  "The Miraflores→Barranco taxi time is a generic distance/time estimate for the two districts, not a verified door-to-door time between these specific addresses."
+ ],
+ "feasibility": [
+  {
+   "topic": "Opening-day compatibility",
+   "status": "conditional",
+   "detail": "El Pan de la Chola (daily 7:00–21:00), Mercado Nº1 de Surquillo (daily, hours vary slightly by source), Pescados Capitales (daily from noon), Crem de la Crem (daily, closes 18:00) and Juanito's (daily) all run on a normal seven-day schedule with no closing day found. Isolina is the exception: its Sunday hours end at 19:00, two to three hours earlier than the rest of the week, so the scheduled 19:00 dinner only works Monday through Saturday and needs to shift roughly ninety minutes earlier on a Sunday visit.",
+   "sourceIds": [
+    "s_pandelachola",
+    "s_pescados_official",
+    "s_cremdelacrem",
+    "s_juanito_hours",
+    "s_isolina_official"
+   ]
+  },
+  {
+   "topic": "Total time including transfers and rest",
+   "status": "supported",
+   "detail": "As scheduled the day runs from an 8:00 breakfast to a 21:30 close at Juanito's — about thirteen and a half hours — including one taxi transfer and roughly three hours of unstructured free time between the afternoon tasting and dinner, on top of the dedicated walk itself.",
+   "sourceIds": []
+  },
+  {
+   "topic": "Walking and effort",
+   "status": "conditional",
+   "detail": "The three Miraflores legs (breakfast–market–lunch) are each roughly a ten-to-fifteen-minute walk; the single Miraflores–Barranco leg is planned as a taxi rather than a walk; the Barranco stretch afterward is flat and paved, with the only stairs (the descent to the beach) avoidable. No formal accessibility audit of any surface was found, so this reads as generally easy underfoot rather than a wheelchair-verified route.",
+   "sourceIds": [
+    "s_howtoperu",
+    "s_komoot",
+    "s_culturetrip"
+   ]
+  },
+  {
+   "topic": "Meal balance",
+   "status": "supported",
+   "detail": "The day holds to two real sit-down meals (lunch, dinner) and two deliberately small tastes (one market item eaten standing, one twenty-to-thirty-minute ice-cream stop), with the optional stop adding a drink rather than food — consistent with arriving at dinner hungry rather than full.",
+   "sourceIds": []
+  },
+  {
+   "topic": "Geographic continuity",
+   "status": "conditional",
+   "detail": "Breakfast, the market and lunch sit within a ten-to-fifteen-minute walk of each other in central Miraflores; one taxi transfer carries the day to central Barranco, where the walk, tasting, dinner and optional stop all sit within a few blocks of Barranco's Parque Municipal and the Puente de los Suspiros. The wrinkle: the market lies just across the Miraflores/Surquillo line rather than strictly inside Miraflores, since no comparable market was found inside Miraflores itself.",
+   "sourceIds": [
+    "s_afar",
+    "s_myguide",
+    "s_rome2rio",
+    "s_moovit_bridge"
+   ]
+  },
+  {
+   "topic": "Unknown start and end of day",
+   "status": "not_applicable",
+   "detail": "Where the day begins and ends depends on the reader's lodging, which wasn't specified; the transfers to breakfast and from the optional bar stop are left with unknown timing and mode rather than assumed.",
+   "sourceIds": []
+  },
+  {
+   "topic": "Overlap with the trip's other day",
+   "status": "supported",
+   "detail": "Day two is an adventure-focused day with its own lunch and dinner and has no researched content yet. The overlap with day one is deliberate and one-directional: the ceviche, leche de tigre, ají de gallina and lomo saltado vocabulary taught here is meant to let day two's meals move quickly without needing explanation.",
+   "sourceIds": []
+  },
+  {
+   "topic": "Dietary needs",
+   "status": "unresolved",
+   "detail": "Dietary needs weren't specified. Lunch and dinner were each chosen because they pair a proper ceviche with a cooked, non-seafood main (ají de gallina at lunch; lomo saltado, ají de gallina, seco de asado, costillar or osobuco at dinner), so both survive a no-seafood answer. Neither venue's vegetarian, vegan, gluten-free or allergen accommodations beyond that were verified, and Pescados Capitales' kitchen is otherwise entirely seafood-focused, so broader restrictions need direct confirmation before booking.",
+   "sourceIds": [
+    "s_rappi",
+    "s_isolina_official"
+   ]
+  },
+  {
+   "topic": "Access needs",
+   "status": "unresolved",
+   "detail": "Access needs weren't specified. Step-free entry, ground-floor seating and same-level restrooms could not be confirmed from any published source for Pescados Capitales or Isolina, and the Barranco walking route has no formal accessibility audit beyond general 'flat and paved' descriptions. This is flagged rather than assumed.",
+   "sourceIds": []
+  }
+ ],
+ "proposedChanges": [
+  {
+   "slotId": "slot_mu28s5h615gp2aek",
+   "proposal": "Confirm whether a market physically inside Miraflores' own district line is a hard requirement. If so, this stop may need to shrink to a smaller ingredient-focused stall or stand nearer Parque Kennedy rather than the full Surquillo market.",
+   "reason": "No daily produce market was found strictly inside Miraflores; Mercado Nº1 de Surquillo is the practical, universally recommended choice immediately across the district line."
+  },
+  {
+   "slotId": "slot_mu28s5h6198kc83j",
+   "proposal": "Hold a second Barranco kitchen in reserve in case Isolina's step-free access doesn't hold up once the reader's access needs are known.",
+   "reason": "The brief calls for a reserve kitchen as a nice-to-have, and Isolina's own accessibility details are unconfirmed; research did not turn up a verified equally-strong alternate in the time available."
+  },
+  {
+   "slotId": "slot_mu28s5h616rp9696",
+   "proposal": "Verify directly with Pescados Capitales whether the ají de gallina is prepared without cross-contact with seafood, if the reader's dietary need turns out to be an allergy rather than a preference.",
+   "reason": "The kitchen is otherwise entirely seafood-focused, so cross-contact risk for an allergy (as opposed to a simple seafood preference) hasn't been ruled out."
+  }
+ ],
+ "research": {
+  "performedAt": "2026-09-16",
+  "browsingUsed": true,
+  "limitations": [
+   "Could not confirm step-free/ground-floor accessibility or same-level restroom placement for Pescados Capitales (lunch) or Isolina (dinner) from any published source.",
+   "Could not verify Mercado Nº1 de Surquillo's exact daily closing time (sources ranged between 17:00 and 18:00) or confirm whether it closes on any public holiday.",
+   "Could not verify vegetarian, vegan, gluten-free or allergen-specific accommodations at Pescados Capitales or Isolina beyond the named non-seafood mains.",
+   "The Miraflores→Barranco taxi transfer time is a general planning estimate based on typical district-to-district distance/time estimators, not a verified door-to-door timing between these two specific addresses.",
+   "No formal accessibility audit of Barranco's walking surfaces (cobblestones in places) was found; the 'flat and paved' description comes from general travel-guide characterisations, not a mobility-specific survey.",
+   "Could not identify and verify a solid second-kitchen alternate for dinner to hold in reserve, as the brief's change policy allows for.",
+   "Isolina's founding story (2015, named for chef José del Castillo's mother) rests on a single secondary source and was not cross-checked against the restaurant's own site, which does not mention it."
+  ]
+ },
+ "restWindows": [
+  {
+   "afterSlotId": "slot_mu28s5h618a2xvcu",
+   "beforeSlotId": "slot_mu28s5h6198kc83j",
+   "minutes": 195,
+   "locationPolicy": "stay_nearby",
+   "description": "Unstructured time in central Barranco to let lunch and the tasting settle before dinner — browse the galleries on Jirón Sáenz Peña, sit in the Parque Municipal, or head back to lodging and return. Nothing is scheduled here on purpose."
+  }
+ ],
+ "scheduleLabel": "Full day · Miraflores morning, Barranco afternoon and evening",
+ "sources": [
+  {
+   "id": "s_pandelachola",
+   "url": "https://elpandelachola.com/",
+   "title": "El Pan de la Chola — official site",
+   "publisher": "El Pan de la Chola",
+   "sourceType": "official",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_afar",
+   "url": "https://www.afar.com/places/mercado-de-surquillo-lima",
+   "title": "Review of Mercado de Surquillo",
+   "publisher": "AFAR",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_tasteofperu",
+   "url": "https://taste-of-peru.com/a-stroll-in-the-surquillo-market-in-lima/",
+   "title": "A Stroll in The Surquillo Market in Lima",
+   "publisher": "Taste of Peru",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_myguide",
+   "url": "https://www.myguideperu.com/shopping/mercado-surquillo-no-1-surquillo-market",
+   "title": "Mercado Surquillo in Peru",
+   "publisher": "My Guide Peru",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_pescados_official",
+   "url": "https://www.pescadoscapitales.com/",
+   "title": "Pescados Capitales — official site",
+   "publisher": "Pescados Capitales",
+   "sourceType": "official",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_rappi",
+   "url": "https://www.rappi.com.pe/restaurantes/9635-pescados-capitales-san-isidro",
+   "title": "Pescados Capitales — delivery menu",
+   "publisher": "Rappi",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_howtoperu",
+   "url": "https://howtoperu.com/puente-de-los-suspiros-barranco-bridge-of-sighs/",
+   "title": "The Puente de los Suspiros, Barranco's Bridge of Sighs",
+   "publisher": "How To Peru",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_komoot",
+   "url": "https://www.komoot.com/guide/2879924/hiking-in-barranco",
+   "title": "The best walks and hikes in Barranco",
+   "publisher": "Komoot",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_culturetrip",
+   "url": "https://theculturetrip.com/south-america/peru/articles/an-insiders-guide-to-barranco-lima",
+   "title": "An Insider's Guide To Barranco, Lima",
+   "publisher": "The Culture Trip",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_cremdelacrem",
+   "url": "https://wanderlog.com/list/geoCategory/52490/best-ice-cream-shops-in-barranco",
+   "title": "The 14 best ice cream shops in Barranco",
+   "publisher": "Wanderlog",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_isolina_official",
+   "url": "https://isolina.pe/",
+   "title": "Isolina Taberna Peruana — official site",
+   "publisher": "Isolina",
+   "sourceType": "official",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_elcomercio_isolina",
+   "url": "https://elcomercio.pe/provecho/isolina-cuanto-cuesta-comer-en-la-prestigiosa-taberna-criolla-barranco-surco-jose-del-castillo-chef-noticia/",
+   "title": "Isolina: ¿cuánto cuesta comer en la prestigiosa taberna criolla?",
+   "publisher": "El Comercio",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_50best_isolina",
+   "url": "https://www.theworlds50best.com/discovery/Establishments/Peru/Lima/Isolina.html",
+   "title": "Isolina — Lima",
+   "publisher": "50 Best Discovery",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_juanito_blog",
+   "url": "http://perufood.blogspot.com/2006/12/juanito-barranco.html",
+   "title": "Peru Food: Juanito Bodega Bar in Barranco",
+   "publisher": "Peru Food blog",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_juanito_hours",
+   "url": "https://www.gpsmycity.com/attractions/juanito-barranco-23769.html",
+   "title": "Juanito Barranco, Lima",
+   "publisher": "GPSmyCity",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_rome2rio",
+   "url": "https://www.rome2rio.com/s/Miraflores-Lima/Barranco-Lima-region-Peru",
+   "title": "Miraflores, Lima to Barranco",
+   "publisher": "Rome2Rio",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  },
+  {
+   "id": "s_moovit_bridge",
+   "url": "https://moovitapp.com/index/en/public_transit-Puente_De_Los_Suspiros-Lima-street_10241034-1102",
+   "title": "How to get to Puente De Los Suspiros, Barranco",
+   "publisher": "Moovit",
+   "sourceType": "secondary",
+   "accessedAt": "2026-09-16",
+   "publishedOrUpdatedAt": null
+  }
+ ],
+ "status": "needs_decision",
+ "stops": [
+  {
+   "slotId": "slot_mu28s5h614jta0vy",
+   "status": "selected",
+   "name": "El Pan de la Chola (Pan y Café, Av. Mariscal La Mar)",
+   "category": "dining",
+   "addressOrMeetingPoint": "Av. Mariscal La Mar 918, Miraflores, Lima",
+   "area": "Miraflores",
+   "mapsUrl": "https://www.google.com/maps/search/?api=1&query=El+Pan+de+la+Chola+Av+Mariscal+La+Mar+918+Miraflores+Lima",
+   "startMinutes": 480,
+   "durationMinutes": 60,
+   "whyHere": "Opens the day at street level — the coffee-and-bread habit rather than a hotel breakfast — on the same street as lunch, so the whole morning reads as one walk rather than three appointments.",
+   "readerCopy": "Start at El Pan de la Chola on Avenida Mariscal La Mar, the bakery credited with putting sourdough into Lima's everyday rotation rather than treating it as a novelty. The Miraflores location opens at seven every morning and runs on natural fermentation and local grain — order a coffee and something off the bread counter, take a table, and don't linger over a full plate. This is meant to read as an everyday errand, not a production: the real eating starts at the market shortly, and lunch is the meal doing the heavy lifting today.",
+   "whatToDo": [
+    "Order coffee and a piece of bread or a simple sandwich at the counter rather than a full cooked breakfast",
+    "Take an outdoor or window table if one's free — it's a place for watching the street, not settling in for the morning",
+    "Keep it under an hour; the point is an ordinary Lima morning, not a first big meal"
+   ],
+   "practicalNotes": [
+    "Open daily 7:00–21:00, per the bakery's own site",
+    "This is one of three Miraflores locations under the same name; this is the bread-and-coffee 'Pan y Café' address at Av. Mariscal La Mar 918, not the separate brunch-and-pizza branch a few doors down",
+    "No information on step-free access or restroom location was published; worth confirming by phone if access needs matter"
+   ],
+   "claimIds": [
+    "c1",
+    "c2"
+   ],
+   "selectionReason": "It's the bakery most directly built around Lima's sourdough movement, sits on the same street as lunch, and functions as counter-and-coffee rather than a seated production — the everyday register the morning needs.",
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h615gp2aek",
+   "status": "selected",
+   "name": "Mercado Nº1 de Surquillo",
+   "category": "attractions",
+   "addressOrMeetingPoint": "Av. Paseo de la República at Calle Narciso de la Colina, Surquillo (main entrance opposite the Ricardo Palma Metropolitano station)",
+   "area": "Surquillo (bordering Miraflores)",
+   "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Mercado+No+1+de+Surquillo+Av+Paseo+de+la+Republica+Surquillo+Lima",
+   "startMinutes": 555,
+   "durationMinutes": 120,
+   "whyHere": "Turns the vocabulary — ají, camote, the raw components of leche de tigre — into something seen and priced before it's eaten, so lunch reads as a continuation rather than a cold start.",
+   "readerCopy": "From breakfast it's about a ten-minute walk to Mercado Nº1 de Surquillo — technically just over the line from Miraflores, in Surquillo, though every guide to the area treats it as the neighbourhood's own market. This is a working market for Lima households, not a tourist stall row: browsing is normal, buying isn't required, and the point is to see what's about to show up at lunch — fish, ají peppers, onion and lime laid out at the same stalls, alongside native potatoes, camu camu and maca. If a fresh juice stand catches you, that's the one thing worth eating standing up; skip the market's own sit-down ceviche counters deeper inside — lunch is coming.",
+   "whatToDo": [
+    "Walk the produce aisles and ask vendors what an unfamiliar fruit or root is — camu camu, lúcuma and chirimoya are worth learning to recognise now",
+    "Look specifically at the fish, ají, onion and lime stalls — the same raw ingredients that become lunch's ceviche within the hour",
+    "Get a fresh juice from a stand and drink it standing up, rather than sitting down at one of the market's own ceviche counters",
+    "Ask before photographing a stall — this is a local market, not a tourist set piece"
+   ],
+   "practicalNotes": [
+    "Sits in Surquillo, not administratively inside Miraflores, though it's a roughly ten-minute walk from Parque Kennedy and functions as Miraflores' de facto market; no comparable daily produce market was found strictly inside Miraflores itself",
+    "Sources give slightly different hours (roughly 6:00–18:00 or 7:30–17:00); no closing day was found, but treat the hours as approximate",
+    "This is a working local market, not set up for tourists — go earlier rather than later for the freshest stalls"
+   ],
+   "claimIds": [
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c24"
+   ],
+   "selectionReason": "Operates every day with no fixed closing day found, tolerates browsing without a purchase, and its produce stalls map directly onto what lunch will serve.",
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h616rp9696",
+   "status": "selected",
+   "name": "Pescados Capitales (Miraflores)",
+   "category": "dining",
+   "addressOrMeetingPoint": "Av. Mariscal La Mar 1337, Miraflores, Lima",
+   "area": "Miraflores",
+   "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Pescados+Capitales+Av+Mariscal+La+Mar+1337+Miraflores+Lima",
+   "startMinutes": 720,
+   "durationMinutes": 90,
+   "whyHere": "This is the anchor: the specialty the whole morning has been building toward, eaten properly at a real table, with the market's ingredients now on the plate.",
+   "readerCopy": "Pescados Capitales, a few minutes back down Avenida Mariscal La Mar, opens at noon every day and is where the morning's ingredients arrive as the dish itself. Order a classic cebiche — the kitchen's cebiches and tiraditos are the point of the place — and take real time over it rather than treating it as a fast stop. The menu is otherwise seafood-first, but ají de gallina, a shredded-chicken dish in an ají amarillo cream sauce, is on it as a genuine cooked main for anyone not eating fish; ask for it by name rather than assuming a workaround exists.",
+   "whatToDo": [
+    "Order a cebiche clásico or cebiche mixto and eat it as a proper sit-down course, not a quick plate",
+    "If seafood is off the table for any reason, order ají de gallina rather than assuming another option will be offered — it's the one confirmed cooked, non-seafood main",
+    "Book ahead by WhatsApp or the restaurant's own booking system, especially right at the noon opening"
+   ],
+   "practicalNotes": [
+    "Open daily from noon — Monday to Saturday until 23:00, Sunday until 18:00 — per the restaurant's own site",
+    "The main-course list is otherwise entirely seafood (rice, pasta and fish dishes); ají de gallina is the sole cooked non-seafood option confirmed on the delivery menu, so a reader with broader dietary limits should call ahead",
+    "No published information on step-free entry, ground-floor seating or restroom access was found; worth confirming directly if access needs matter",
+    "Arriving straight from the market may mean a short wait before the noon opening — worth timing the walk back to land close to, not well before, noon"
+   ],
+   "claimIds": [
+    "c7",
+    "c8",
+    "c9"
+   ],
+   "selectionReason": "Does cebiche as the centrepiece rather than an afterthought, takes reservations (unlike some of Lima's best-known cebicherías), and carries one confirmed cooked non-seafood main rather than none.",
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h6178kpihk",
+   "status": "selected",
+   "name": "Parque Municipal de Barranco to Puente de los Suspiros",
+   "category": "attractions",
+   "addressOrMeetingPoint": "Parque Municipal de Barranco (Plaza de Armas), Barranco",
+   "area": "Barranco",
+   "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Parque+Municipal+de+Barranco+Lima",
+   "startMinutes": 840,
+   "durationMinutes": 45,
+   "whyHere": "The day's only non-food stop, placed exactly where it needs to be: after the anchor meal, before the tasting and dinner that follow it on foot.",
+   "readerCopy": "The taxi from Miraflores lands in central Barranco, and the next stretch has no destination beyond walking it off. Start at the Parque Municipal and wander toward the Puente de los Suspiros, a roughly 30-metre pedestrian bridge that connects Ayacucho street to the Ermita church past a small park with a statue of the singer Chabuca Granda; the bridge itself is flat and needs no climbing. Immediately below it, the Bajada de los Baños drops steeply to the beach on a stepped stone path fishermen once used — worth a look from the top, not worth descending unless stairs aren't a concern. The surrounding streets, including gallery-lined Jirón Sáenz Peña, stay flat and paved.",
+   "whatToDo": [
+    "Walk from Parque Municipal toward Jirón Sáenz Peña, where restored mansions now hold art galleries, before continuing to the bridge",
+    "Cross the Puente de los Suspiros itself — flat, no stairs — rather than detouring down to the beach",
+    "Look at the Bajada de los Baños stairway from the top rather than descending it, unless steep stone steps aren't an issue"
+   ],
+   "practicalNotes": [
+    "The bridge and the streets around Parque Municipal are flat and paved; the only stairs nearby are the optional descent to the beach, which this route does not require",
+    "No formal accessibility survey of the surfaces (cobblestones in places) was found; treat this as a general 'flat but not audited' description rather than a guarantee for a wheelchair or mobility device"
+   ],
+   "claimIds": [
+    "c10",
+    "c11",
+    "c12",
+    "c13"
+   ],
+   "selectionReason": "It's the digestion break the day needs — no meal, no ticket, no timed entry — built around a landmark close enough to lunch's taxi drop-off and the rest of the evening that nothing has to double back.",
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h618a2xvcu",
+   "status": "selected",
+   "name": "Crem de la Crem",
+   "category": "dining",
+   "addressOrMeetingPoint": "Parque Municipal 109, Barranco, Lima",
+   "area": "Barranco",
+   "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Crem+de+la+Crem+Parque+Municipal+109+Barranco+Lima",
+   "startMinutes": 900,
+   "durationMinutes": 30,
+   "whyHere": "Placed here because it costs nothing in extra walking and stays small enough that the reader arrives at dinner hungry rather than full, which is the whole point of the afternoon.",
+   "readerCopy": "Crem de la Crem sits right on Barranco's main square, an artisan ice-cream counter making gelato since 2013. Order a small cup — lúcuma, the custardy Peruvian fruit that turns up in half the country's desserts, is worth trying if it's new — and eat it on your feet or on a bench in the plaza rather than taking a table. It closes at six every evening, comfortably covering a mid-afternoon stop, and the whole thing is over in the twenty or thirty minutes it's meant to take: a taste, not a sitting.",
+   "whatToDo": [
+    "Order one scoop or a small cup rather than a full sundae — this is a taste, not dessert-as-meal",
+    "Try lúcuma if it's unfamiliar; it's one of the shop's signature flavours and a genuinely Peruvian one",
+    "Eat it standing at the counter or on a bench in the plaza, skipping the shop's own seating"
+   ],
+   "practicalNotes": [
+    "Open Monday to Thursday 12:00–18:00 and Friday to Sunday 11:00–18:00, per aggregator listings; no official hours page was found, so treat these as approximate",
+    "Located at Parque Municipal 109, directly on Barranco's main plaza, a short walk from both the bridge and dinner"
+   ],
+   "claimIds": [
+    "c14",
+    "c15"
+   ],
+   "selectionReason": "A genuine small portion with no table service required, tied to a distinctly Peruvian ingredient, sitting exactly on the square the walk already passes through.",
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h6198kc83j",
+   "status": "selected",
+   "name": "Isolina Taberna Peruana (Barranco)",
+   "category": "dining",
+   "addressOrMeetingPoint": "Av. Prolongación San Martín 101, Barranco, Lima",
+   "area": "Barranco",
+   "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Isolina+Taberna+Peruana+Av+Prolongacion+San+Martin+101+Barranco+Lima",
+   "startMinutes": 1140,
+   "durationMinutes": 90,
+   "whyHere": "The second peak, not the point: an ambitious, generous kitchen working the same ingredients the day started with, close enough to everything else in Barranco that nothing requires backtracking.",
+   "readerCopy": "Isolina, a few minutes from the bridge on Prolongación San Martín, is where the day's ambition shows up. It's a taberna built around old Lima home cooking rather than a tasting menu — order the ceviche with octopus for one more pass at the specialty, or lomo saltado, ají de gallina, seco de asado or another of its slow-cooked, non-seafood mains if the specialty has already done its work. Portions here are built for sharing rather than plated restraint, its own kind of ambition after a day of small tastes. Book ahead; the house fills, and Sunday hours end two to three hours earlier than the rest of the week.",
+   "whatToDo": [
+    "Order the ceviche with octopus for one more pass at the specialty, prepared differently than at lunch",
+    "Order lomo saltado, ají de gallina, seco de asado, costillar a la chorrillana or an osobuco stew as the cooked, non-seafood main",
+    "Share plates rather than ordering individually — the kitchen's portions are built for it",
+    "Book by WhatsApp or Isolina's own booking system rather than walking in"
+   ],
+   "practicalNotes": [
+    "Ceviche with octopus is priced at S/ 101 on the restaurant's own menu, current as of this research (September 2026)",
+    "Hours run Monday to Wednesday 12:00–22:00, Thursday and Friday 12:00–23:00, Saturday 9:00–11:00 and 12:00–23:00, and Sunday 9:00–11:00 and 12:00–19:00 — on a Sunday, the evening needs to move roughly ninety minutes earlier or dinner won't fit before closing",
+    "Housed in a converted historic building; ground-floor seating and a same-level bathroom could not be confirmed in any published source, so ask for a ground-floor table when booking if that matters",
+    "No independently verified second kitchen was identified to hold in reserve; if Isolina falls through, that substitution still needs research"
+   ],
+   "claimIds": [
+    "c16",
+    "c17",
+    "c18",
+    "c19",
+    "c20"
+   ],
+   "selectionReason": "Carries both halves of the requirement for real — a serious ceviche and several substantial cooked mains — in a casual, sociable format that doesn't run so long or formal it swallows the optional stop after it.",
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "slot_mu28s5h61a9eefh0",
+   "status": "selected",
+   "name": "Juanito Bodega Bar",
+   "category": "nightlife",
+   "addressOrMeetingPoint": "Av. Grau 270, Barranco, Lima (facing Parque Municipal)",
+   "area": "Barranco",
+   "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Juanito+Bodega+Bar+Av+Grau+270+Barranco+Lima",
+   "startMinutes": 1245,
+   "durationMinutes": 45,
+   "whyHere": "The only stop the day doesn't need — offered because it costs one block and nothing else, not because the evening is incomplete without it.",
+   "readerCopy": "Juanito's — officially Juanito Bodega Bar — sits directly across from the Parque Municipal, a beer-and-pisco counter that's run since 1939 and still feels like exactly that. There's no plan here beyond a drink standing at the bar or at one of its small tables: skip it without the day feeling unfinished, or add it and treat it as one block's detour rather than a second dinner. It stays open into the small hours most nights, so it accommodates whatever's left of the evening rather than dictating it.",
+   "whatToDo": [
+    "Order a beer or a pisco at the counter — this isn't a cocktail-list stop",
+    "Treat it as genuinely optional: if dinner already ran long, skip it"
+   ],
+   "practicalNotes": [
+    "Located at Av. Grau 270, facing Barranco's Parque Municipal — the same square as the afternoon's ice-cream stop",
+    "Open Monday to Thursday 10:00–01:00, Friday and Saturday 10:00–02:00, Sunday 10:00–23:00, per current listings",
+    "Run by the same family, the Casusol brothers, since 1939, according to a long-running local food blog"
+   ],
+   "claimIds": [
+    "c21",
+    "c22"
+   ],
+   "selectionReason": "Genuinely small, a block from dinner, open long enough to flex around whenever the evening actually ends, and carries none of the weight that would make skipping it feel like missing something.",
+   "unresolvedReason": null
+  }
+ ],
+ "title": "The ceviche day: Miraflores to Barranco",
+ "transfers": [
+  {
+   "from": "base_start",
+   "to": "slot_mu28s5h614jta0vy",
+   "mode": "unspecified",
+   "minutesMin": null,
+   "minutesMax": null,
+   "basis": "unknown",
+   "sourceIds": [],
+   "note": "Depends on the reader's lodging in Miraflores; not assumed here."
+  },
+  {
+   "from": "slot_mu28s5h614jta0vy",
+   "to": "slot_mu28s5h615gp2aek",
+   "mode": "walk",
+   "minutesMin": 10,
+   "minutesMax": 15,
+   "basis": "planning_estimate",
+   "sourceIds": [
+    "s_myguide"
+   ],
+   "note": "Guides put the market at roughly ten minutes from Parque Kennedy; the bakery sits a few minutes short of the park on the same corridor."
+  },
+  {
+   "from": "slot_mu28s5h615gp2aek",
+   "to": "slot_mu28s5h616rp9696",
+   "mode": "walk",
+   "minutesMin": 10,
+   "minutesMax": 15,
+   "basis": "planning_estimate",
+   "sourceIds": [
+    "s_myguide"
+   ],
+   "note": "Same corridor in reverse toward Av. Mariscal La Mar; Pescados Capitales doesn't open until noon, so this walk can run slower than the outbound one."
+  },
+  {
+   "from": "slot_mu28s5h616rp9696",
+   "to": "slot_mu28s5h6178kpihk",
+   "mode": "taxi",
+   "minutesMin": 10,
+   "minutesMax": 20,
+   "basis": "planning_estimate",
+   "sourceIds": [
+    "s_rome2rio"
+   ],
+   "note": "General distance/time estimators put Miraflores–Barranco taxi rides at roughly five to twenty minutes depending on traffic; twenty minutes is treated here as the planning ceiling, not a verified door-to-door time between these two specific addresses."
+  },
+  {
+   "from": "slot_mu28s5h6178kpihk",
+   "to": "slot_mu28s5h618a2xvcu",
+   "mode": "walk",
+   "minutesMin": 3,
+   "minutesMax": 8,
+   "basis": "sourced",
+   "sourceIds": [
+    "s_moovit_bridge"
+   ],
+   "note": "The bridge sits about 196 metres — roughly three minutes on foot — from Barranco's Parque Municipal, where the tasting stop sits."
+  },
+  {
+   "from": "slot_mu28s5h618a2xvcu",
+   "to": "slot_mu28s5h6198kc83j",
+   "mode": "walk",
+   "minutesMin": 5,
+   "minutesMax": 15,
+   "basis": "planning_estimate",
+   "sourceIds": [],
+   "note": "Both sit within a few blocks of Barranco's Parque Municipal; the gap between them is mostly the unstructured rest window, not travel time."
+  },
+  {
+   "from": "slot_mu28s5h6198kc83j",
+   "to": "slot_mu28s5h61a9eefh0",
+   "mode": "walk",
+   "minutesMin": 3,
+   "minutesMax": 8,
+   "basis": "planning_estimate",
+   "sourceIds": [],
+   "note": "Both face or sit beside the same Parque Municipal."
+  },
+  {
+   "from": "slot_mu28s5h61a9eefh0",
+   "to": "base_end",
+   "mode": "unspecified",
+   "minutesMin": null,
+   "minutesMax": null,
+   "basis": "unknown",
+   "sourceIds": [],
+   "note": "Depends on the reader's lodging; not assumed here."
+  }
+ ],
+ "tripMemory": {
+  "usedPlaces": [
+   "El Pan de la Chola",
+   "Mercado Nº1 de Surquillo",
+   "Pescados Capitales",
+   "Parque Municipal de Barranco",
+   "Puente de los Suspiros",
+   "Crem de la Crem",
+   "Isolina Taberna Peruana",
+   "Juanito Bodega Bar"
+  ],
+  "coveredExperiences": [
+   "Ceviche lunch as the regional-specialty anchor",
+   "Peruvian criollo destination dinner",
+   "market-level ingredient education (ají, camote, camu camu, maca, fish)",
+   "Barranco bohemian walking route",
+   "Peruvian fruit ice cream (lúcuma)",
+   "historic Barranco bodega bar"
+  ],
+  "reservedForLater": [
+   "A verified second dinner kitchen in Barranco, if Isolina needs to be swapped once access needs are known",
+   "Any further seafood or tasting-menu format, left for day two to avoid repeating day one's registers"
+  ],
+  "nextDayImplications": [
+   "The reader now has working vocabulary — ceviche, leche de tigre, ají de gallina, lomo saltado — so day two's lunch and dinner can move quickly without needing it explained again.",
+   "Day two should not repeat a market, a small tasting, or a culinary-destination dinner format, since day one has already covered that register.",
+   "Day one is deliberately low-effort and appetite-paced; day two's active opener assumes the reader isn't starting from a food hangover."
+  ]
+ },
+ "tripRole": "Day one is the trip's culinary education day: it teaches the food vocabulary and ingredient knowledge — ceviche, leche de tigre, ají de gallina, lomo saltado — at a low-effort, appetite-paced rhythm, so that day two's adventure-focused meals can be eaten quickly and without explanation.",
+ "contractVersion": "itinerary-day-result-v1",
+ "workspaceId": "151c14dbac1f",
+ "dayId": "day_mu28ruv3jg5pczu",
+ "exportId": "2531a216451b",
+ "inputHash": "8fbea4b08dbb58814ba38e8b8409bff0"
+}

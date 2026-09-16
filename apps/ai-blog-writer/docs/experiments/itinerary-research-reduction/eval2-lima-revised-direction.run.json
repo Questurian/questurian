@@ -1,0 +1,200 @@
+{
+ "workspace_id": "151c14dbac1f",
+ "day_id": "day_mu28ruv3jg5pczu",
+ "export_id": "a82d80184755",
+ "wire_version": "itinerary-day-research-v2",
+ "before": {
+  "size_report": {
+   "sections": {
+    "system": 384,
+    "instructions": 2601,
+    "brief": 11219,
+    "writing": 4280,
+    "schema": 4520
+   },
+   "total": 23094,
+   "budget": 18000,
+   "over_budget": true,
+   "largest_section": "brief",
+   "copy_characters": 23324
+  },
+  "sent": {
+   "system": 384,
+   "prompt": 18190,
+   "schema": 4520,
+   "total": 23094
+  },
+  "budget": {
+   "venues": 7,
+   "searches": 18,
+   "fetches": 12
+  },
+  "constraints": [
+   "Scope is city-only, Lima, Peru; no venue names, opening hours, distances or prices may appear in this agreement.",
+   "Timing is evergreen — no weekday is assumed; the market choice must operate every day.",
+   "Dietary needs are unspecified — never assume 'none'.",
+   "Access needs are unspecified — never assume 'none'.",
+   "Morning through lunch stays in Miraflores, walkable, no leg more than about fifteen minutes on foot from the prior stop.",
+   "Exactly one transfer for the whole day, after lunch, Miraflores to Barranco, at most twenty minutes, taxi allowed.",
+   "Everything from the afternoon walk onward stays in Barranco on foot, within a few blocks of each other.",
+   "No third neighborhood and no crossing back to Miraflores before bed.",
+   "No stop may require a return trip to reach the next one.",
+   "The market and the afternoon tasting must never become a full meal.",
+   "Market stop: browsing and learning ingredients, at most one thing eaten standing up.",
+   "Signature lunch: one regional specialty done properly with real time at the table, not a fast in-and-out.",
+   "Afternoon tasting: one small portion, roughly twenty to thirty minutes, no table service.",
+   "Lunch and dinner venues must each do the regional specialty properly.",
+   "The evening dessert/drinks stop must remain genuinely optional — droppable without the day feeling unfinished.",
+   "The day overall must stay low-effort and appetite-paced so day two's active opener is not undermined.",
+   "Day two should not repeat a market, a tasting, or a culinary-destination dinner.",
+   "Nothing is booked or paid for."
+  ],
+  "copy_characters": 23324
+ },
+ "after": {
+  "attempt_key": "7b60d6cc0c054d1e9a917d43c74cdd2a",
+  "model_requested": "claude-sonnet-5-high",
+  "wall_seconds": 596.8,
+  "state": "done",
+  "detail": "",
+  "fault": "",
+  "model": "claude-sonnet-5",
+  "cost_usd": 1.5735520000000003,
+  "turns": 36,
+  "duration_ms": 595645,
+  "searches": 21,
+  "fetches": 12,
+  "tool_counts": {
+   "ToolSearch": 1,
+   "WebSearch": 21,
+   "WebFetch": 12,
+   "StructuredOutput": 1
+  },
+  "returned_characters": 14707,
+  "session_id": "b778092a-a754-4dcf-a0f7-e76ab77cbc60",
+  "transcript_path": "/private/tmp/claude-502/-Users-alanmalpartida-Desktop-questurian-apps-ai-blog-writer/76f52d4b-4bcd-4916-a1f2-6c7123e6bba5/scratchpad/evaldb/itinerary-research-audit/7b60d6cc0c054d1e9a917d43c74cdd2a.jsonl",
+  "preview": {
+   "valid": true,
+   "from_research_run": true,
+   "completeness": {
+    "selected": 7,
+    "unresolved": 0,
+    "omitted_optional": 0,
+    "required_unresolved": [],
+    "missing_timing": [],
+    "outstanding_checks": [
+     "Breakfast / iconic coffee: El Pan de la Chola closes on Mondays, so this opening stop doesn't exist that day.",
+     "Destination dinner: Isolina only serves until 17:00 on Sunday and Monday, so the 19:00 dinner this plan assumes doesn't exist on those two evenings."
+    ],
+    "missing_legs": [],
+    "schedule_conflicts": [
+     "Breakfast / iconic coffee → Market / food exploration",
+     "Market / food exploration → Signature lunch",
+     "Signature lunch → Neighborhood walk / light activity",
+     "Neighborhood walk / light activity → Specialty tasting / snack",
+     "Specialty tasting / snack → Destination dinner",
+     "Destination dinner → Dessert / drinks"
+    ],
+    "complete": false
+   },
+   "issues": [
+    {
+     "severity": "warning",
+     "layer": "schedule",
+     "path": "stops → Market / food exploration",
+     "message": "Breakfast / iconic coffee finishes at 09:45 and Market / food exploration starts at 10:00: 15 min, and the journey need up to 18. It is 3 min short."
+    },
+    {
+     "severity": "warning",
+     "layer": "schedule",
+     "path": "stops → Signature lunch",
+     "message": "Market / food exploration finishes at 10:40 and Signature lunch starts at 12:00: 80 min, and the journey and the rest need up to 83. It is 3 min short."
+    },
+    {
+     "severity": "warning",
+     "layer": "schedule",
+     "path": "stops → Neighborhood walk / light activity",
+     "message": "Signature lunch finishes at 14:00 and Neighborhood walk / light activity starts at 14:15: 15 min, and the journey need up to 20. It is 5 min short."
+    },
+    {
+     "severity": "warning",
+     "layer": "schedule",
+     "path": "stops → Specialty tasting / snack",
+     "message": "Neighborhood walk / light activity finishes at 15:15 and Specialty tasting / snack starts at 15:20: 5 min, and the journey need up to 8. It is 3 min short."
+    },
+    {
+     "severity": "warning",
+     "layer": "schedule",
+     "path": "stops → Destination dinner",
+     "message": "Specialty tasting / snack finishes at 15:45 and Destination dinner starts at 19:00: 195 min, and the journey and the rest need up to 205. It is 10 min short."
+    },
+    {
+     "severity": "warning",
+     "layer": "schedule",
+     "path": "stops → Dessert / drinks",
+     "message": "Destination dinner finishes at 21:00 and Dessert / drinks starts at 21:05: 5 min, and the journey need up to 8. It is 3 min short."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "feasibility → unresolved",
+     "message": "Breakfast / iconic coffee: El Pan de la Chola closes on Mondays, so this opening stop doesn't exist that day.: El Pan de la Chola closes on Mondays, so this opening stop doesn't exist that day."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "feasibility → unresolved",
+     "message": "Destination dinner: Isolina only serves until 17:00 on Sunday and Monday, so the 19:00 dinner this plan assumes doesn't exist on those two evenings.: Isolina only serves until 17:00 on Sunday and Monday, so the 19:00 dinner this plan assumes doesn't exist on those two evenings."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → slot_mu28s5h614jta0vy",
+     "message": "Proposed change to the layout: On a Monday, swap in a different Miraflores coffee-and-bread counter (not researched here) rather than starting the walk to the market hungry. — El Pan de la Chola closes on Mondays, so this opening stop doesn't exist that day."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → slot_mu28s5h6198kc83j",
+     "message": "Proposed change to the layout: Hold a second Barranco kitchen in reserve for Sunday and Monday nights — Chala, also on the Bajada de Baños, is a plausible candidate but its hours and ceviche weren't verified here. — Isolina only serves until 17:00 on Sunday and Monday, so the 19:00 dinner this plan assumes doesn't exist on those two evenings."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → slot_mu28s5h618a2xvcu",
+     "message": "Proposed change to the layout: Confirm on the ground; other picaronerías along the same stretch of Barranco are a fallback if the stand isn't out. — No posted operating hours were found for Caprilú's picarones stand; informal street stands like this typically don't publish hours online."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → slot_mu28s5h6178kpihk",
+     "message": "Proposed change to the layout: Stay on the Puente de los Suspiros and the clifftop Malecón for a flat version of the walk, and treat the beach descent as optional. — The Bajada de Baños descent is a paved, graded path rather than open stairs, but it is a genuine slope in both directions, and some routes back up to the park use stairs; access needs weren't specified for this trip."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "editor notes",
+     "message": "Signature lunch: Lima's most famous cevichería, La Mar, was deliberately passed over for this slot: it takes no reservations and reviewers report waits toward ninety minutes at peak times, which would unravel a schedule built around a single afternoon transfer."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "editor notes",
+     "message": "Specialty tasting / snack: No posted operating hours were found for Caprilú's picarones stand; informal street stands like this typically don't publish hours online."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "editor notes",
+     "message": "Neighborhood walk / light activity: The Bajada de Baños descent is a paved, graded path rather than open stairs, but it is a genuine slope in both directions, and some routes back up to the park use stairs; access needs weren't specified for this trip."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "editor notes",
+     "message": "Dessert / drinks: Hours for Helado de Lima weren't confirmed."
+    }
+   ]
+  }
+ }
+}

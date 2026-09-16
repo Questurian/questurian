@@ -1,0 +1,596 @@
+{
+ "export_id": "2531a216451b",
+ "workspace_id": "151c14dbac1f",
+ "day_id": "day_mu28ruv3jg5pczu",
+ "direction_revision": 1,
+ "workspace_revision": 1,
+ "input_hash": "8fbea4b08dbb58814ba38e8b8409bff0",
+ "context_key": "bb5df7dfbfc23b16113a746d9f1cafc4",
+ "slot_ids": [
+  "slot_mu28s5h614jta0vy",
+  "slot_mu28s5h615gp2aek",
+  "slot_mu28s5h616rp9696",
+  "slot_mu28s5h6178kpihk",
+  "slot_mu28s5h618a2xvcu",
+  "slot_mu28s5h6198kc83j",
+  "slot_mu28s5h61a9eefh0"
+ ],
+ "optional_slot_ids": [
+  "slot_mu28s5h61a9eefh0"
+ ],
+ "schema_version": "itinerary-day-result-v1",
+ "voice_version": "ead20acae2c3b293",
+ "created_at": "2026-09-15T22:28:48+00:00",
+ "prompt_text": "# Research and write one day of a trip\n\nReturn ONE complete JSON object matching the schema at the end of this\nmessage. No Markdown fences, no explanation before or after it, nothing but the\nobject.\n\nUse web research. This is planning and writing work: make no bookings, no\npurchases, no accounts and no reservations, and do not publish anything.\n\n## Identity — copy these back exactly\n\n    \"contractVersion\": \"itinerary-day-result-v1\"\n    \"workspaceId\":     \"151c14dbac1f\"\n    \"dayId\":           \"day_mu28ruv3jg5pczu\"\n    \"exportId\":        \"2531a216451b\"\n    \"inputHash\":       \"8fbea4b08dbb58814ba38e8b8409bff0\"\n\nThese five are how the app knows which request your answer belongs to. Changing\none does not retarget the answer; it makes it unusable.\n\n## The job\n\nTurn the agreed direction below into one researched day: real named places,\na workable order and times, and reader-facing prose.\n\nChoose the day as a WHOLE. An excellent venue that breaks the route is a poor\nselection, and six individually attractive places are not a day. Research more\ncandidates than you need, and return one selection per stop -- never a menu of\nalternatives.\n\nEverything in the setup and the direction is a PREFERENCE. None of it is\nevidence about any real place. The operator has looked nothing up. Every\nreal-world fact in your answer has to come from a page you actually read.\n\n## The day\n\nDay 1 of 2 · usable time: Full day\n6 required stop(s), 1 optional.\n\nTHE TRIP (entered once, inherited by every day):\n- Working title: 2 Day in Lima Peru\n- Base city: Lima, Peru\n- Scope: city only\n- Timing: evergreen — no weekday is chosen, so nothing may assume one\n- Preferred areas: Miraflores, Barranco\n- Dietary needs: not specified — treat as unknown, never as 'none'\n- Access needs: not specified — treat as unknown, never as 'none'\n\nTHE DAY YOU ARE PLANNING: day 1 of 2 · id day_mu28ruv3jg5pczu\n- Layout: Food-Focused Full Day\n- Usable time: Full day\n- Approved stops, in order:\n  - [slot_mu28s5h614jta0vy] Breakfast / iconic coffee · kind: place · time of day: morning · categories allowed: dining · preferred: dining · purpose: Introduce local food culture through breakfast or a distinctive cafe. · cues: local food culture; breakfast; distinctive cafe\n  - [slot_mu28s5h615gp2aek] Market / food exploration · kind: experience · time of day: morning · categories allowed: attractions, dining · preferred: attractions · purpose: Browse a market and learn about ingredients; avoid another full meal. · cues: market; ingredients · exclusions: full meal\n  - [slot_mu28s5h616rp9696] Signature lunch · kind: place · time of day: lunch · categories allowed: dining · preferred: dining · purpose: Anchor lunch around a regional specialty. · cues: regional specialty\n  - [slot_mu28s5h6178kpihk] Neighborhood walk / light activity · kind: place · time of day: afternoon · categories allowed: attractions · preferred: attractions · purpose: Create a non-food breathing space between meals. · cues: walk; breathing space\n  - [slot_mu28s5h618a2xvcu] Specialty tasting / snack · kind: place · time of day: afternoon · categories allowed: dining, attractions · preferred: dining · purpose: Try one specialty in a small portion, not another full meal. · cues: specialty; small portion; tasting · exclusions: full meal\n  - [slot_mu28s5h6198kc83j] Destination dinner · kind: place · time of day: dinner · categories allowed: dining · preferred: dining · purpose: Make dinner a deliberate culinary destination. · cues: culinary destination; deliberate\n  - [slot_mu28s5h61a9eefh0] Dessert / drinks · kind: place · time of day: evening · OPTIONAL · categories allowed: dining, nightlife · preferred: dining · purpose: Offer an optional small finish suited to appetite and energy. · cues: dessert; small finish; drinks\n\nTHE OTHER DAYS OF THIS TRIP:\nDay 2 · layout: Adventure Full Day · Full day\n    stops: Active opener, Signature adventure, Lunch, Hands-on / immersive experience, Scenic recovery activity, Dinner\n    No researched day saved yet — this is intent, not a booking.\n\n## The agreed direction\n\nThis was settled with the operator before any research. Treat it as the\nrequirements, not as a suggestion.\n\n{\n  \"contract_version\": \"itinerary-day-direction-v1\",\n  \"day_id\": \"day_mu28ruv3jg5pczu\",\n  \"promise\": \"An eating education taken in the order the city itself takes it: the day starts at everyday street level with the coffee-and-bread habit, moves to a market where the raw material gets explained, climbs to the one regional dish Lima is genuinely famous for at lunch, and finishes at a kitchen doing something ambitious with those same ingredients — so by bedtime the reader can taste the connection between the market stall and the tasting plate, and has the vocabulary to order confidently anywhere else in the country.\",\n  \"trip_role\": \"Day one is the trip's culinary education day, teaching the food vocabulary and ingredient knowledge in a low-effort, appetite-paced sequence, so that day two's adventure-focused meals can be eaten quickly and without explanation.\",\n  \"anchors\": [\n    \"The signature lunch is the anchor stop\",\n    \"Destination dinner is the second peak, not the point\"\n  ],\n  \"geography\": {\n    \"required_area\": \"Miraflores for the morning through lunch; Barranco for the afternoon walk through the evening.\",\n    \"starting_point\": \"Breakfast / iconic coffee stop in Miraflores.\",\n    \"progression\": \"Miraflores holds breakfast, the market, and the signature lunch, each within about fifteen minutes on foot of the stop before it, reading as one continuous errand. A single ride of at most twenty minutes (taxi allowed) carries the day from Miraflores to Barranco after lunch. From the afternoon walk onward, everything — the walk, the tasting, dinner, and the optional dessert/drinks — stays in Barranco on foot, within a few blocks of each other.\",\n    \"transfer_tolerance\": \"Exactly one transfer for the whole day, happening after lunch, at most twenty minutes door-to-door, and it is allowed to be a taxi rather than a walk.\",\n    \"avoid_today\": [\n      \"Any third neighborhood beyond Miraflores and Barranco\",\n      \"Any crossing back to Miraflores before bed\",\n      \"Any stop that forces a return trip to reach the next one\"\n    ]\n  },\n  \"rhythm\": {\n    \"effort\": \"Low-effort and appetite-paced, deliberately unstrenuous so it leaves enough in the tank for day two's active start.\",\n    \"meal_balance\": \"Two real meals (lunch and dinner) and two deliberately small tastes (the market's at-most-one-standing-item, and the afternoon tasting), so the reader arrives at dinner hungry rather than full.\",\n    \"rest_policy\": \"The afternoon neighborhood walk in Barranco is the day's rest and breathing space, providing digestion and a change of register between the signature lunch and the destination dinner.\",\n    \"rest_minutes_minimum\": 0,\n    \"optionality\": \"The evening dessert/drinks stop is the only optional stop and must remain genuinely droppable without the day feeling unfinished.\"\n  },\n  \"constraints\": [\n    \"Scope is city-only, Lima, Peru; no venue names, opening hours, distances or prices may appear in this agreement.\",\n    \"Timing is evergreen — no weekday is assumed; the market choice must operate every day.\",\n    \"Dietary needs are unspecified — never assume 'none'.\",\n    \"Access needs are unspecified — never assume 'none'.\",\n    \"Morning through lunch stays in Miraflores, walkable, no leg more than about fifteen minutes on foot from the prior stop.\",\n    \"Exactly one transfer for the whole day, after lunch, Miraflores to Barranco, at most twenty minutes, taxi allowed.\",\n    \"Everything from the afternoon walk onward stays in Barranco on foot, within a few blocks of each other.\",\n    \"No third neighborhood and no crossing back to Miraflores before bed.\",\n    \"No stop may require a return trip to reach the next one.\",\n    \"The market and the afternoon tasting must never become a full meal.\",\n    \"Market stop: browsing and learning ingredients, at most one thing eaten standing up.\",\n    \"Signature lunch: one regional specialty done properly with real time at the table, not a fast in-and-out.\",\n    \"Afternoon tasting: one small portion, roughly twenty to thirty minutes, no table service.\",\n    \"Lunch and dinner venues must each do the regional specialty properly and also offer a cooked, non-seafood dish substantial enough to read as the main event.\",\n    \"Lunch and dinner venues must be reachable and seatable without stairs, with a bathroom on the same level.\",\n    \"The evening dessert/drinks stop must remain genuinely optional — droppable without the day feeling unfinished.\",\n    \"The day overall must stay low-effort and appetite-paced so day two's active opener is not undermined.\",\n    \"Day two should not repeat a market, a tasting, or a culinary-destination dinner.\",\n    \"Nothing is booked or paid for until the reader has filled the dietary and access blanks; research returns a shortlist with questions attached, not a locked day.\"\n  ],\n  \"slot_directions\": [\n    {\n      \"slot_id\": \"slot_mu28s5h614jta0vy\",\n      \"role\": \"Breakfast / iconic coffee — the everyday food habit at street level, the day's opening register.\",\n      \"must_have\": [\n        \"Located in Miraflores\",\n        \"Reads as an everyday coffee-and-bread habit, not a production\",\n        \"Small and unhurried\"\n      ],\n      \"nice_to_have\": [],\n      \"exclusions\": [\n        \"Nothing elaborate or heavy that competes with lunch\"\n      ]\n    },\n    {\n      \"slot_id\": \"slot_mu28s5h615gp2aek\",\n      \"role\": \"Market / food exploration — browsing and learning the ingredients that will show up at lunch and dinner.\",\n      \"must_have\": [\n        \"Located in Miraflores, within about fifteen minutes on foot of breakfast\",\n        \"Operates every day, since no weekday is fixed for this evergreen day\",\n        \"Tolerates browsing without a purchase\",\n        \"At most one item eaten standing up — never a seated plate\"\n      ],\n      \"nice_to_have\": [\n        \"Explains or displays ingredients tied to the lunch specialty\"\n      ],\n      \"exclusions\": [\n        \"A full meal or table service\",\n        \"A second breakfast\"\n      ]\n    },\n    {\n      \"slot_id\": \"slot_mu28s5h616rp9696\",\n      \"role\": \"Signature lunch — the anchor of the day, the one regional specialty Lima is genuinely famous for.\",\n      \"must_have\": [\n        \"Located in Miraflores, within about fifteen minutes on foot of the market\",\n        \"Does the regional specialty properly, with real time at the table\",\n        \"Also offers a cooked, non-seafood dish substantial enough to still read as the main event\",\n        \"Reachable and seatable without stairs, with a bathroom on the same level\",\n        \"Does not depend on a booking made weeks out\"\n      ],\n      \"nice_to_have\": [\n        \"Takes a reservation\"\n      ],\n      \"exclusions\": [\n        \"A fast in-and-out meal\",\n        \"A menu that only works for a reader with no dietary restrictions\"\n      ]\n    },\n    {\n      \"slot_id\": \"slot_mu28s5h6178kpihk\",\n      \"role\": \"Neighborhood walk / light activity — the non-food breathing space and the route through Barranco after the transfer.\",\n      \"must_have\": [\n        \"Located in Barranco, on foot, following the single post-lunch transfer\",\n        \"Functions as digestion and a change of register, not another sight to tick off\",\n        \"Honest description of walking surface, gradient and any stairs, with a flat route around anything steep\"\n      ],\n      \"nice_to_have\": [],\n      \"exclusions\": [\n        \"Another meal or dining stop\",\n        \"A route that assumes stairs or steep hills are manageable\"\n      ]\n    },\n    {\n      \"slot_id\": \"slot_mu28s5h618a2xvcu\",\n      \"role\": \"Specialty tasting / snack — one specialty in a small portion, a taste rather than a meal.\",\n      \"must_have\": [\n        \"Located in Barranco, within a few blocks of the afternoon walk and dinner\",\n        \"One small portion, roughly twenty to thirty minutes\",\n        \"No table service\"\n      ],\n      \"nice_to_have\": [],\n      \"exclusions\": [\n        \"A full meal\",\n        \"Table service\",\n        \"Anything that would leave the reader full before dinner\"\n      ]\n    },\n    {\n      \"slot_id\": \"slot_mu28s5h6198kc83j\",\n      \"role\": \"Destination dinner — the deliberate culinary finish, an ambitious kitchen working with what the market showed that morning.\",\n      \"must_have\": [\n        \"Located in Barranco, within a few blocks of the afternoon tasting\",\n        \"Does the regional specialty properly and also offers a cooked, non-seafood dish substantial enough to read as the main event\",\n        \"Reachable and seatable without stairs, with a bathroom on the same level\",\n        \"A deliberate culinary destination, not just a convenient meal\"\n      ],\n      \"nice_to_have\": [\n        \"A second kitchen held in reserve as an alternate\"\n      ],\n      \"exclusions\": [\n        \"So long or formal that the optional dessert/drinks stop stops being optional\",\n        \"A menu that only works for a reader with no dietary restrictions\"\n      ]\n    },\n    {\n      \"slot_id\": \"slot_mu28s5h61a9eefh0\",\n      \"role\": \"Dessert / drinks — an optional small finish suited to appetite and energy.\",\n      \"must_have\": [\n        \"Located in Barranco, close enough to dinner that skipping it costs nothing and adding it costs about one block\",\n        \"Genuinely small and droppable without the day feeling unfinished\"\n      ],\n      \"nice_to_have\": [],\n      \"exclusions\": [\n        \"A second full commitment or long formal experience\"\n      ]\n    }\n  ],\n  \"continuity\": {\n    \"covered_elsewhere\": [\n      \"Day two supplies the trip's active/adventure register, including its own lunch and dinner, so day one does not need to repeat that.\"\n    ],\n    \"reserved_for_later\": [\n      \"Day two's active opener, signature adventure, hands-on experience, and scenic recovery are day two's territory, not day one's.\"\n    ],\n    \"deliberate_overlaps\": [\n      \"Day one intentionally teaches food vocabulary and ingredients so that day two's meals can be eaten quickly and without explanation — this one-directional overlap was explicitly agreed.\"\n    ]\n  },\n  \"change_policy\": {\n    \"must_remain\": \"The Miraflores-morning-then-Barranco-afternoon shape; the single post-lunch transfer; lunch as the anchor built on the regional specialty; the rule that the market and the afternoon tasting never become full meals; lunch and dinner chosen to survive any dietary/access answer (specialty done properly plus a cooked non-seafood plate substantial enough to read as the main event, reachable and seatable without stairs, bathroom on the same level).\",\n    \"may_be_proposed\": \"Which market, which walk, which tasting, which evening stop, and which kitchen takes dinner — each carried with a named alternate, on the understanding that one or more may change once the dietary and access blanks are filled.\",\n    \"optional_slots_may_be_omitted\": true\n  },\n  \"fails_if\": [\n    \"The market or the afternoon tasting arrives as a plate at a table, turning the day into four meals instead of two and leaving the reader full before the destination dinner.\",\n    \"The lunch venue only serves the specialty as raw seafood with no cooked, non-seafood option, given that dietary needs were never recorded and cannot be assumed absent.\",\n    \"A market or dinner sits outside the Miraflores-then-Barranco line, turning the single post-lunch ride into two transfers.\",\n    \"The Barranco stretch depends on cliff stairs or steep hills without a flat alternative, given that access needs were never recorded.\",\n    \"The destination dinner runs so long or so formal that the optional dessert/drinks stop stops being genuinely optional.\",\n    \"The day is heavy enough that the reader starts day two's active opener on a food hangover.\",\n    \"Any stop is booked or paid for before the reader has filled in the dietary and access blanks.\"\n  ],\n  \"research_checklist\": [\n    \"Which market in Miraflores operates every day (since no weekday is fixed for this evergreen day), and does it tolerate browsing without buying?\",\n    \"Is the lunch regional specialty genuinely a midday dish where it will be served, and does that kitchen take a reservation?\",\n    \"How far ahead does the destination dinner need to be booked, what does it cost, and what is a second kitchen to hold in reserve?\",\n    \"What is the closing day of every stop in the sequence?\",\n    \"Does each stop, especially lunch and dinner, offer step-free entry, seating and bathroom access on the same level?\",\n    \"Do the lunch and dinner venues each offer a cooked, non-seafood dish substantial enough to stand in as the main event?\",\n    \"What is the walking surface, gradient and stair situation on the Barranco stretch, and what is a flat route around anything steep?\",\n    \"What is the real door-to-door time for the single post-lunch transfer from Miraflores to Barranco, and can it be done by taxi within about twenty minutes?\",\n    \"Is there a market item that can be eaten standing up without becoming a seated meal?\",\n    \"What tasting option in Barranco can be delivered in twenty to thirty minutes with no table service?\",\n    \"Has the reader been asked to fill in their dietary and access needs before anything is booked or paid for?\"\n  ]\n}\n\n### How it was agreed\n\n1. What is this day promising a reader — put plainly, what should they be able to say they understand about Lima by the time they go to bed on night one?\n   They accepted the interviewer's suggestion unchanged: An eating education, taken in the order the city itself takes it: the day starts at everyday street level — the coffee-and-bread habit, then a market where the raw material gets explained — climbs to the one regional dish Lima is genuinely famous for at lunch, and finishes at a kitchen doing something ambitious with those same ingredients. The promise is that by dinner the reader can taste the connection between the market stall and the tasting plate, and has the vocabulary to order confidently anywhere else in the country. Day one buys understanding; day two spends energy.\n2. Where does this day physically sit, and how many times does it move? Specifically: does the whole eating sequence stay in one neighborhood, or does it break in the middle and carry the reader from one to the other?\n   They accepted the interviewer's suggestion unchanged: Two neighborhoods, one move, and the move happens after lunch. Morning through lunch stays in Miraflores: breakfast, the market and the signature lunch all close enough to walk between, nothing more than about fifteen minutes on foot from the stop before it, so the first half of the day feels like one continuous errand rather than three appointments. Then a single ride to Barranco — twenty minutes at most, and it is allowed to be a taxi rather than a walk — and everything from the afternoon walk onward stays there on foot: the walk, the tasting and dinner within a few blocks of each other, with the optional dessert or drink close enough that leaving it out costs nothing and adding it costs one block. No third neighborhood, no crossing back before bed, and no stop that requires a return trip to reach the next one.\n3. Which single stop is this day built around — the one that, if it fell through, would mean the day failed rather than just changed: the signature lunch, or the destination dinner?\n   They accepted the interviewer's suggestion unchanged: The signature lunch is the anchor; the destination dinner is the second peak, not the point. The regional dish at midday is the thing the whole morning has been building an appetite and a vocabulary for — the market stop exists to explain what is about to arrive on that plate, and the afternoon walk exists to recover from it. Lunch is also the version of this day that cannot break: it is the meal Lima serves at the hour Lima serves it, it does not depend on a booking made weeks out, and it does not carry the price or the fixed-menu risk that makes an ambitious dinner the most fragile stop on the list. So research treats lunch as fixed — the one specialty, done properly, with real time at the table rather than a fast in-and-out — and treats dinner as the ambitious finish that should be excellent but is allowed to be swapped for a different kitchen without the day losing its spine. If only one of the two can be booked well, book lunch.\n4. Last thing before research starts: what would make this day wrong — what are the failure modes a researcher could walk into while technically filling every slot?\n   They accepted the interviewer's suggestion unchanged: Three ways this breaks. First, four meals instead of two: if the market stop or the afternoon tasting arrives as a plate at a table, the reader reaches dinner full and the most ambitious kitchen of the day is wasted — the market is browsing plus at most one thing eaten standing up, and the tasting is one small portion, twenty to thirty minutes, no table service. Second, a lunch the reader cannot eat: the regional specialty is raw seafood, dietary needs were never recorded, and the day may not assume they are absent — the lunch place has to do the specialty properly and also carry a cooked or non-seafood dish strong enough that it still reads as the anchor meal rather than a consolation. Third, geography that quietly lies: a market or a dinner that sits outside the Miraflores-then-Barranco line and turns one post-lunch ride into two, or a Barranco stretch that depends on cliff stairs and steep hills, which cannot be assumed manageable while access needs are unrecorded. Two smaller ways it goes wrong: a dinner so long or so formal that the optional dessert stops being optional and becomes a second commitment, and a day so heavy that day two's active opener starts on a hangover of food. Research has to come back with: which market operates every day, since no weekday is fixed, and whether it tolerates browsing without buying; whether the lunch specialty is genuinely a midday dish where it is served and whether that kitchen takes a reservation; how far ahead the destination dinner books and what it costs, with a second kitchen held in reserve; the closing day of every stop; step-free entry, seating and bathroom access at each; walking surface and gradient on the Barranco stretch; and confirmation that the dietary and access blanks get filled by the reader before anything is locked.\n5. The dietary and access blanks are the one thing that can still sink this day after research is finished. Which way should research be told to handle them: choose every stop so it survives any answer the reader gives later, or choose the best version now and flag the stops that would have to be swapped once the reader fills the blanks?\n   They accepted the interviewer's suggestion unchanged: Survive any answer for the two meals that cannot move, flag the rest. Lunch and dinner are chosen so they hold up no matter what comes back: each has to do the regional specialty properly and also put out a cooked, non-seafood plate substantial enough to still read as the main event, and each has to be reachable and seatable without stairs, with a bathroom on the same level. Those are filters, not preferences — a kitchen that only works for a reader with no restrictions does not make the list, however good it is. The market, the afternoon walk, the tasting and the optional dessert are chosen for the best version of the day and carried with a named alternate each, on the understanding that one or more may have to change once the reader answers. The Barranco stretch gets described honestly — gradient, surface, stairs, and a flat route around anything steep — rather than declared fine. And nothing is booked or paid for until the reader has actually filled both blanks: research comes back with a shortlist and the questions attached, not a locked day.\n\nWhere they accepted the interviewer's suggestion unchanged, that is the\ninterviewer's wording rather than a fact the operator supplied. It is still a\ndecision they stand behind; it is not first-hand knowledge of anything.\n\n## Method, and the factual boundary\n\n1. **Build a geographic sequence first, then fill it.** Establish where the day\n   goes and in what order, anchored on whatever the direction names as the\n   anchor. Then find stops that fit that route. Validate that a place is the\n   branch you think it is: chains have several, and the wrong one breaks the\n   route.\n\n2. **Prefer official pages for identity, offerings, hours and conditions.**\n   Read them. A guessed URL, a search snippet or a generic homepage is not\n   evidence for a detailed claim. Use secondary sources where you must, and say\n   plainly that is what they are.\n\n3. **Walking before taxis.** Work out whether a leg is actually walkable before\n   proposing a taxi for it. If you cannot establish a route, say the routing is\n   unknown -- do not default every leg to a taxi, and do not present a straight-\n   line distance as a walking time.\n\n4. **Opening hours are not availability.** \"Open at 18:30\" does not mean a\n   table is free at 18:30. A delivery menu is not evidence about dining in at a\n   particular branch. If something needs booking, say so as a condition.\n\n5. **Evergreen unless the setup names a date.** If the trip has no chosen\n   weekday, do not invent one. State opening-day conditions that would matter.\n   If a critical opening-day question cannot be settled, the stop is unresolved,\n   not ready.\n\n6. **Times are integers.** `startMinutes` is minutes after midnight on the day\n   itself: 09:30 is 570, 20:15 is 1215. Anything after midnight uses a value\n   over 1440 (00:30 the next morning is 1470). Null means you genuinely cannot\n   say, and an unknown time makes the day incomplete -- it is never a zero.\n\n7. **Account for rest and say where it happens.** Every rest window carries a\n   `locationPolicy`. `return_to_base` means two more legs and both must appear\n   in `transfers`. A long unallocated gap is a preference the direction asked\n   for; it is not by itself proof that the day is relaxed or coherent.\n\n8. **A full window is not a reason to add stops.** Effort, number of stops and\n   available time are three different things. The stop list below is approved\n   and settled: return exactly these rows, in this order. If you believe one\n   should change, put it in `proposedChanges` and leave the stop itself\n   unresolved -- never add, drop or reorder a row yourself.\n\n9. **An unresolved stop is a real, valid answer.** Null name, null address,\n   null times, empty reader copy, and a clear `unresolvedReason`. Never invent a\n   venue to fill a row. An optional stop may be `omitted_optional` with a reason;\n   a required stop may not.\n\n10. **Free time and travel are not venue searches.** Both still get their own\n    row in `stops`, and both are `selected` when you have planned them.\n\n    A free-time stop needs a duration and a purpose in its row, a null name and\n    no address. A travel stop needs a duration in its row AND a matching entry\n    in `transfers` carrying the endpoints, the mode, the time range and what\n    that range is based on. Do not put a business in either of them.\n\n11. **If you cannot browse**, say so: `browsingUsed` false, empty sources and\n    claims, every stop unresolved, `status` `insufficient_evidence`. Do not\n    present remembered venues as researched ones.\n\n## Evidence\n\nEvery factual assertion in `readerCopy`, `whatToDo`, `practicalNotes`, the\naddress and `selectionReason` needs a claim in `claims`, and every claim needs\nat least one source in `sources` that you actually read. Ids must be unique and\nevery reference must resolve.\n\nJudgement is not a claim. \"This is the right lunch for this day\" is your\nopinion and belongs in `whyHere` or `selectionReason`; \"it opens at noon on\nSundays\" is a fact and needs a source.\n\n`feasibility` must cover, at minimum: opening-day compatibility; total time\nincluding transfers and rest; walking and effort; meal balance; geographic\ncontinuity; the unknown start and end of the day; and any overlap with the\nother days of this trip.\n\n## The writing\n\nUse the canonical voice below for reader-facing text only -- `title`,\n`dayIntro` and `readerCopy`. Every other field is literal and technical.\n\nWrite a day title, a day introduction of roughly 70-110 words, and roughly\n60-100 words of reader copy per selected stop. Lengths are guidance; being true\nand complete wins.\n\nEach stop says what to do there and why it belongs at this point in the day.\nLet the progression carry the day rather than \"next, head to\" transitions. Never\nwrite a sensory scene you did not read somewhere. Research provenance belongs in\nclaims and sources, not in reader prose. Practical caveats belong in\n`practicalNotes`; things you could not check belong in `editorNotes` and\n`research.limitations`.\n\n---\nid: questurian-voice\nlabel: Questurian Voice\ndescription: What Questurian is like. The only voice; there is no tone layer (ADR 0032).\nsummary: What a Questurian article is like: adult, unsold, warm through attention, opinionated, never about itself.\ndefault: true\norder: 1\n---\n\n# The Questurian voice\n\n**It treats you as an adult with a decision to make.** Not a tourist to be\ndelighted, not a beginner to be managed. It assumes you can take the real\nanswer, including when the real answer is inconvenient, expensive or dull.\n\n**It isn't selling anything.** Not the destination, not the trip, not itself. It\nhas no stake in whether you go. That is why it can tell you a place is a\nfour-hour round trip for a view that is fogged in most mornings.\n\n**Its warmth is attention.** There are no warm words in a Questurian article and\nit still reads as generous, because someone went to the trouble of finding out\nthe thing that actually matters — that one neighbourhood is flat and the other\nis built on a slope, and what that does to your walk home with the groceries.\nCare is the warmth. Adjectives are not.\n\n**It is interested without being impressed.** Places deserve attention; none of\nthem are miracles. It never gushes, never performs enthusiasm it doesn't have,\nand never tells you somewhere is special instead of showing you why you'd go.\n\n**It would rather tell you the annoying true thing than the pleasant vague one.**\nA caveat that costs the reader something is worth more than three sentences of\nreassurance.\n\n**It has a view and says it.** It won't rank things for the sake of it, but it\nnever hides behind even-handedness either. Where there's a call to make, it\nmakes it and says what the call costs.\n\n**It doesn't make you wait.** No warming up, no scene-setting before the point,\nno restating the heading. It respects that you came for something.\n\n**It knows the difference between what it knows and what it's guessing** — and\nleaves the second thing out. What it does know, it says plainly and with its\nreal limits attached: the price as of a month, the route only two operators\nrun, the hours that change out of season. A limit that would change your\ndecision is part of the fact, not a hedge on it. What it never does is pad a\nclaim it cannot stand behind — no \"it seems\", no \"arguably\", no asking you to\ngrade how sure it is.\n\n**It never talks about itself.** Not about its research, not about how it knows\nsomething, not about what it couldn't find out. The reader is here for the\nplace, not the process.\n\n**It is never generic.** A paragraph that could sit in any publication's article\nabout any city is not Questurian.\n\n---\nid: writing-conventions\nlabel: Writing conventions\ndescription: The mechanical conventions that cannot be inferred from the voice. Not the pipeline's house-rules.md, which is a different document.\nsummary: The mechanical conventions the voice cannot imply: address, numbers, dates, names, attribution, headings.\ndefault: true\norder: 2\n---\n\n# Writing conventions\n\nThese are conventions, not character. The voice document says what Questurian\nis like; this says how it sets things down. Where the two seem to conflict, the\nvoice wins — nothing here is worth a sentence that reads wrong.\n\n**Address.** \"You\" is the reader making the decision, and it is the default\naddress. Never \"we\" for the publication: state the recommendation instead of\nannouncing that you are making one.\n\n**Experience.** Never invent a trip, meal, walk, conversation or visit. First\nperson is available only for material the brief records as first-hand, and only\nin the words it records.\n\n**Numbers and dates.** Give a price with its currency and an as-of frame — \"COP\n38,000 (about USD 9) as of March 2026\". Write dates in full. Give opening hours\nas sourced, with the day range. Do not round a number the source did not round.\n\n**Names.** Use the local proper name on first mention with an English gloss\nwhere it helps, then the local name alone, transliterated the same way\nthroughout.\n\n**Attribution.** An unconfirmed detail is cut, never attributed. No \"sources\nreport\", no \"according to\", no \"the publication noted\". Attribution belongs in\nthe evidence record and never in the article.\n\n**Headings and structure.** Sentence case, no terminal punctuation, no stacked\ngerunds. No one-sentence sections. Lists only for genuinely parallel items,\nnever to chop up an argument.\n\n---\nid: house-rules\nlabel: Prompt2Blog house rules\nsummary: Sets publication-wide standards for brief fidelity, evidence, usefulness, and prose.\norder: 1\n---\n\n# Prompt2Blog house rules\n\n## Brief fidelity\n\nPreserve the approved brief: location, spine, primary subject, scope mode, reference roles, and everything under must name. Answer the core reader question and deliver the promised outcome. Context-only references may calibrate a fact or explain significance; they cannot become co-subjects, recurring sections, rankings, or verdicts. Do not change form because source material suggests another article.\n\n## Evidence discipline\n\nUse only claims the facts you were given support. Preserve their meaning, dates, geography, units, and stated uncertainty. Attribution is internal to the evidence record: the prose never names a source, outlet, publication, or site. Never invent a bridge fact, scene, quotation, experience, statistic, price, consensus, or practical detail. A point the evidence does not support is left out of the article — not hedged, not labelled unconfirmed, not narrated as something research could not establish. Prefer a narrower true article over a complete-looking unsupported one.\n\n## Reader service\n\nWrite for the named primary audience. Explain unfamiliar terms before relying on them. Make constraints, tradeoffs, dates, exceptions, and consequential actions easy to find. Audience tags adjust emphasis; they do not dictate structure or justify stereotypes.\n\n## Prose\n\nUse direct, specific language and varied, readable paragraphs. Lead sections with meaning, not throat-clearing. Avoid generic travel praise, repeated conclusions, fake scene-setting, clichés, “hidden gem,” “vibrant tapestry,” and claims that a place has “something for everyone.” Use lists only when sequence or comparison benefits.\n\n## Safety and fairness\n\nDo not overstate medical, legal, financial, immigration, safety, accessibility, or environmental advice. Identify the deciding authority and limits. Describe people and communities precisely, without exoticism or treating one voice as representative. State a limit that changes what the reader should do; a material conflict the evidence leaves unsettled is not written as settled.\n\n## Required output JSON Schema\n\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\n    \"contractVersion\",\n    \"workspaceId\",\n    \"dayId\",\n    \"exportId\",\n    \"inputHash\",\n    \"research\",\n    \"status\",\n    \"title\",\n    \"dayIntro\",\n    \"tripRole\",\n    \"scheduleLabel\",\n    \"stops\",\n    \"transfers\",\n    \"restWindows\",\n    \"sources\",\n    \"claims\",\n    \"feasibility\",\n    \"proposedChanges\",\n    \"tripMemory\",\n    \"editorNotes\"\n  ],\n  \"properties\": {\n    \"contractVersion\": {\n      \"const\": \"itinerary-day-result-v1\"\n    },\n    \"workspaceId\": {\n      \"const\": \"151c14dbac1f\"\n    },\n    \"dayId\": {\n      \"const\": \"day_mu28ruv3jg5pczu\"\n    },\n    \"exportId\": {\n      \"const\": \"2531a216451b\"\n    },\n    \"inputHash\": {\n      \"const\": \"8fbea4b08dbb58814ba38e8b8409bff0\",\n      \"description\": \"Echo this back exactly. It is how the app knows which request this answers.\"\n    },\n    \"research\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"required\": [\n        \"performedAt\",\n        \"browsingUsed\",\n        \"limitations\"\n      ],\n      \"properties\": {\n        \"performedAt\": {\n          \"type\": [\n            \"string\",\n            \"null\"\n          ],\n          \"description\": \"ISO date you did the research, or null.\"\n        },\n        \"browsingUsed\": {\n          \"type\": \"boolean\"\n        },\n        \"limitations\": {\n          \"type\": \"array\",\n          \"description\": \"Everything you could not check. Be specific and complete; this is read by a person before the day is used.\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        }\n      }\n    },\n    \"status\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"ready_for_editor_review\",\n        \"needs_decision\",\n        \"insufficient_evidence\"\n      ],\n      \"description\": \"Your own judgement. The app records it as yours and derives its own state from the packet.\"\n    },\n    \"title\": {\n      \"type\": \"string\"\n    },\n    \"dayIntro\": {\n      \"type\": \"string\"\n    },\n    \"tripRole\": {\n      \"type\": \"string\"\n    },\n    \"scheduleLabel\": {\n      \"type\": \"string\"\n    },\n    \"stops\": {\n      \"type\": \"array\",\n      \"minItems\": 7,\n      \"maxItems\": 7,\n      \"description\": \"Exactly one row per approved stop, in the approved order.\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"required\": [\n          \"slotId\",\n          \"status\",\n          \"name\",\n          \"category\",\n          \"addressOrMeetingPoint\",\n          \"area\",\n          \"mapsUrl\",\n          \"startMinutes\",\n          \"durationMinutes\",\n          \"whyHere\",\n          \"readerCopy\",\n          \"whatToDo\",\n          \"practicalNotes\",\n          \"claimIds\",\n          \"selectionReason\",\n          \"unresolvedReason\"\n        ],\n        \"properties\": {\n          \"slotId\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"slot_mu28s5h614jta0vy\",\n              \"slot_mu28s5h615gp2aek\",\n              \"slot_mu28s5h616rp9696\",\n              \"slot_mu28s5h6178kpihk\",\n              \"slot_mu28s5h618a2xvcu\",\n              \"slot_mu28s5h6198kc83j\",\n              \"slot_mu28s5h61a9eefh0\"\n            ]\n          },\n          \"status\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"selected\",\n              \"unresolved\",\n              \"omitted_optional\"\n            ]\n          },\n          \"name\": {\n            \"type\": [\n              \"string\",\n              \"null\"\n            ]\n          },\n          \"category\": {\n            \"type\": [\n              \"string\",\n              \"null\"\n            ],\n            \"enum\": [\n              \"attractions\",\n              \"dining\",\n              \"nightlife\",\n              null\n            ]\n          },\n          \"addressOrMeetingPoint\": {\n            \"type\": [\n              \"string\",\n              \"null\"\n            ]\n          },\n          \"area\": {\n            \"type\": [\n              \"string\",\n              \"null\"\n            ]\n          },\n          \"mapsUrl\": {\n            \"type\": [\n              \"string\",\n              \"null\"\n            ]\n          },\n          \"startMinutes\": {\n            \"type\": [\n              \"integer\",\n              \"null\"\n            ],\n            \"minimum\": 0,\n            \"maximum\": 2880,\n            \"description\": \"Minutes after midnight on the day itself. 09:30 is 570. A stop that runs past midnight uses a value over 1440 (00:30 the next morning is 1470). Null when you genuinely cannot say.\"\n          },\n          \"durationMinutes\": {\n            \"type\": [\n              \"integer\",\n              \"null\"\n            ],\n            \"minimum\": 0,\n            \"maximum\": 1440\n          },\n          \"whyHere\": {\n            \"type\": \"string\"\n          },\n          \"readerCopy\": {\n            \"type\": \"string\"\n          },\n          \"whatToDo\": {\n            \"type\": \"array\",\n            \"description\": \"Concrete things to do at this stop.\",\n            \"items\": {\n              \"type\": \"string\"\n            }\n          },\n          \"practicalNotes\": {\n            \"type\": \"array\",\n            \"description\": \"Real-world caveats a reader needs: hours, booking, cost.\",\n            \"items\": {\n              \"type\": \"string\"\n            }\n          },\n          \"claimIds\": {\n            \"type\": \"array\",\n            \"description\": \"Ids from `claims` supporting every fact in this row.\",\n            \"items\": {\n              \"type\": \"string\"\n            }\n          },\n          \"selectionReason\": {\n            \"type\": \"string\"\n          },\n          \"unresolvedReason\": {\n            \"type\": [\n              \"string\",\n              \"null\"\n            ]\n          }\n        }\n      }\n    },\n    \"transfers\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"required\": [\n          \"from\",\n          \"to\",\n          \"mode\",\n          \"minutesMin\",\n          \"minutesMax\",\n          \"basis\",\n          \"sourceIds\",\n          \"note\"\n        ],\n        \"properties\": {\n          \"from\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"slot_mu28s5h614jta0vy\",\n              \"slot_mu28s5h615gp2aek\",\n              \"slot_mu28s5h616rp9696\",\n              \"slot_mu28s5h6178kpihk\",\n              \"slot_mu28s5h618a2xvcu\",\n              \"slot_mu28s5h6198kc83j\",\n              \"slot_mu28s5h61a9eefh0\",\n              \"base_start\",\n              \"base_end\"\n            ]\n          },\n          \"to\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"slot_mu28s5h614jta0vy\",\n              \"slot_mu28s5h615gp2aek\",\n              \"slot_mu28s5h616rp9696\",\n              \"slot_mu28s5h6178kpihk\",\n              \"slot_mu28s5h618a2xvcu\",\n              \"slot_mu28s5h6198kc83j\",\n              \"slot_mu28s5h61a9eefh0\",\n              \"base_start\",\n              \"base_end\"\n            ]\n          },\n          \"mode\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"walk\",\n              \"public_transport\",\n              \"taxi\",\n              \"car\",\n              \"train\",\n              \"bus\",\n              \"unspecified\"\n            ]\n          },\n          \"minutesMin\": {\n            \"type\": [\n              \"integer\",\n              \"null\"\n            ],\n            \"minimum\": 0\n          },\n          \"minutesMax\": {\n            \"type\": [\n              \"integer\",\n              \"null\"\n            ],\n            \"minimum\": 0\n          },\n          \"basis\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"sourced\",\n              \"planning_estimate\",\n              \"unknown\"\n            ]\n          },\n          \"sourceIds\": {\n            \"type\": \"array\",\n            \"description\": \"Sources behind a `sourced` time.\",\n            \"items\": {\n              \"type\": \"string\"\n            }\n          },\n          \"note\": {\n            \"type\": \"string\"\n          }\n        }\n      }\n    },\n    \"restWindows\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"required\": [\n          \"afterSlotId\",\n          \"beforeSlotId\",\n          \"minutes\",\n          \"locationPolicy\",\n          \"description\"\n        ],\n        \"properties\": {\n          \"afterSlotId\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"slot_mu28s5h614jta0vy\",\n              \"slot_mu28s5h615gp2aek\",\n              \"slot_mu28s5h616rp9696\",\n              \"slot_mu28s5h6178kpihk\",\n              \"slot_mu28s5h618a2xvcu\",\n              \"slot_mu28s5h6198kc83j\",\n              \"slot_mu28s5h61a9eefh0\"\n            ]\n          },\n          \"beforeSlotId\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"slot_mu28s5h614jta0vy\",\n              \"slot_mu28s5h615gp2aek\",\n              \"slot_mu28s5h616rp9696\",\n              \"slot_mu28s5h6178kpihk\",\n              \"slot_mu28s5h618a2xvcu\",\n              \"slot_mu28s5h6198kc83j\",\n              \"slot_mu28s5h61a9eefh0\"\n            ]\n          },\n          \"minutes\": {\n            \"type\": \"integer\",\n            \"minimum\": 0\n          },\n          \"locationPolicy\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"stay_nearby\",\n              \"named_location\",\n              \"return_to_base\",\n              \"unknown\"\n            ],\n            \"description\": \"Where the rest happens. `return_to_base` means two extra legs, and they must appear in transfers.\"\n          },\n          \"description\": {\n            \"type\": \"string\"\n          }\n        }\n      }\n    },\n    \"sources\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"required\": [\n          \"id\",\n          \"url\",\n          \"title\",\n          \"publisher\",\n          \"sourceType\",\n          \"accessedAt\",\n          \"publishedOrUpdatedAt\"\n        ],\n        \"properties\": {\n          \"id\": {\n            \"type\": \"string\"\n          },\n          \"url\": {\n            \"type\": \"string\",\n            \"description\": \"A real http(s) page you actually read.\"\n          },\n          \"title\": {\n            \"type\": \"string\"\n          },\n          \"publisher\": {\n            \"type\": \"string\"\n          },\n          \"sourceType\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"official\",\n              \"map\",\n              \"secondary\"\n            ]\n          },\n          \"accessedAt\": {\n            \"type\": [\n              \"string\",\n              \"null\"\n            ]\n          },\n          \"publishedOrUpdatedAt\": {\n            \"type\": [\n              \"string\",\n              \"null\"\n            ]\n          }\n        }\n      }\n    },\n    \"claims\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"required\": [\n          \"id\",\n          \"text\",\n          \"sourceIds\",\n          \"appliesTo\"\n        ],\n        \"properties\": {\n          \"id\": {\n            \"type\": \"string\"\n          },\n          \"text\": {\n            \"type\": \"string\"\n          },\n          \"sourceIds\": {\n            \"type\": \"array\",\n            \"description\": \"Ids from `sources`.\",\n            \"items\": {\n              \"type\": \"string\"\n            }\n          },\n          \"appliesTo\": {\n            \"type\": \"string\",\n            \"description\": \"The slot id this claim is about, or empty for a day-level claim.\"\n          }\n        }\n      }\n    },\n    \"feasibility\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"required\": [\n          \"topic\",\n          \"status\",\n          \"detail\",\n          \"sourceIds\"\n        ],\n        \"properties\": {\n          \"topic\": {\n            \"type\": \"string\"\n          },\n          \"status\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"supported\",\n              \"conditional\",\n              \"unresolved\",\n              \"not_applicable\"\n            ]\n          },\n          \"detail\": {\n            \"type\": \"string\"\n          },\n          \"sourceIds\": {\n            \"type\": \"array\",\n            \"description\": \"Sources behind this judgement.\",\n            \"items\": {\n              \"type\": \"string\"\n            }\n          }\n        }\n      }\n    },\n    \"proposedChanges\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"required\": [\n          \"slotId\",\n          \"proposal\",\n          \"reason\"\n        ],\n        \"properties\": {\n          \"slotId\": {\n            \"type\": \"string\"\n          },\n          \"proposal\": {\n            \"type\": \"string\"\n          },\n          \"reason\": {\n            \"type\": \"string\"\n          }\n        }\n      }\n    },\n    \"tripMemory\": {\n      \"type\": \"object\",\n      \"additionalProperties\": false,\n      \"required\": [\n        \"usedPlaces\",\n        \"coveredExperiences\",\n        \"reservedForLater\",\n        \"nextDayImplications\"\n      ],\n      \"properties\": {\n        \"usedPlaces\": {\n          \"type\": \"array\",\n          \"description\": \"Named places this day actually uses.\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        },\n        \"coveredExperiences\": {\n          \"type\": \"array\",\n          \"description\": \"Experiences this day covers.\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        },\n        \"reservedForLater\": {\n          \"type\": \"array\",\n          \"description\": \"What you are leaving for later days.\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        },\n        \"nextDayImplications\": {\n          \"type\": \"array\",\n          \"description\": \"What the next day has to take into account.\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        }\n      }\n    },\n    \"editorNotes\": {\n      \"type\": \"array\",\n      \"description\": \"For the editor, never for the reader: planning choices, open questions, anything you want a person to decide.\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    }\n  }\n}\n",
+ "response_schema": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+   "contractVersion",
+   "workspaceId",
+   "dayId",
+   "exportId",
+   "inputHash",
+   "research",
+   "status",
+   "title",
+   "dayIntro",
+   "tripRole",
+   "scheduleLabel",
+   "stops",
+   "transfers",
+   "restWindows",
+   "sources",
+   "claims",
+   "feasibility",
+   "proposedChanges",
+   "tripMemory",
+   "editorNotes"
+  ],
+  "properties": {
+   "contractVersion": {
+    "const": "itinerary-day-result-v1"
+   },
+   "workspaceId": {
+    "const": "151c14dbac1f"
+   },
+   "dayId": {
+    "const": "day_mu28ruv3jg5pczu"
+   },
+   "exportId": {
+    "const": "2531a216451b"
+   },
+   "inputHash": {
+    "const": "8fbea4b08dbb58814ba38e8b8409bff0",
+    "description": "Echo this back exactly. It is how the app knows which request this answers."
+   },
+   "research": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "performedAt",
+     "browsingUsed",
+     "limitations"
+    ],
+    "properties": {
+     "performedAt": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "ISO date you did the research, or null."
+     },
+     "browsingUsed": {
+      "type": "boolean"
+     },
+     "limitations": {
+      "type": "array",
+      "description": "Everything you could not check. Be specific and complete; this is read by a person before the day is used.",
+      "items": {
+       "type": "string"
+      }
+     }
+    }
+   },
+   "status": {
+    "type": "string",
+    "enum": [
+     "ready_for_editor_review",
+     "needs_decision",
+     "insufficient_evidence"
+    ],
+    "description": "Your own judgement. The app records it as yours and derives its own state from the packet."
+   },
+   "title": {
+    "type": "string"
+   },
+   "dayIntro": {
+    "type": "string"
+   },
+   "tripRole": {
+    "type": "string"
+   },
+   "scheduleLabel": {
+    "type": "string"
+   },
+   "stops": {
+    "type": "array",
+    "minItems": 7,
+    "maxItems": 7,
+    "description": "Exactly one row per approved stop, in the approved order.",
+    "items": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "slotId",
+      "status",
+      "name",
+      "category",
+      "addressOrMeetingPoint",
+      "area",
+      "mapsUrl",
+      "startMinutes",
+      "durationMinutes",
+      "whyHere",
+      "readerCopy",
+      "whatToDo",
+      "practicalNotes",
+      "claimIds",
+      "selectionReason",
+      "unresolvedReason"
+     ],
+     "properties": {
+      "slotId": {
+       "type": "string",
+       "enum": [
+        "slot_mu28s5h614jta0vy",
+        "slot_mu28s5h615gp2aek",
+        "slot_mu28s5h616rp9696",
+        "slot_mu28s5h6178kpihk",
+        "slot_mu28s5h618a2xvcu",
+        "slot_mu28s5h6198kc83j",
+        "slot_mu28s5h61a9eefh0"
+       ]
+      },
+      "status": {
+       "type": "string",
+       "enum": [
+        "selected",
+        "unresolved",
+        "omitted_optional"
+       ]
+      },
+      "name": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "category": {
+       "type": [
+        "string",
+        "null"
+       ],
+       "enum": [
+        "attractions",
+        "dining",
+        "nightlife",
+        null
+       ]
+      },
+      "addressOrMeetingPoint": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "area": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "mapsUrl": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "startMinutes": {
+       "type": [
+        "integer",
+        "null"
+       ],
+       "minimum": 0,
+       "maximum": 2880,
+       "description": "Minutes after midnight on the day itself. 09:30 is 570. A stop that runs past midnight uses a value over 1440 (00:30 the next morning is 1470). Null when you genuinely cannot say."
+      },
+      "durationMinutes": {
+       "type": [
+        "integer",
+        "null"
+       ],
+       "minimum": 0,
+       "maximum": 1440
+      },
+      "whyHere": {
+       "type": "string"
+      },
+      "readerCopy": {
+       "type": "string"
+      },
+      "whatToDo": {
+       "type": "array",
+       "description": "Concrete things to do at this stop.",
+       "items": {
+        "type": "string"
+       }
+      },
+      "practicalNotes": {
+       "type": "array",
+       "description": "Real-world caveats a reader needs: hours, booking, cost.",
+       "items": {
+        "type": "string"
+       }
+      },
+      "claimIds": {
+       "type": "array",
+       "description": "Ids from `claims` supporting every fact in this row.",
+       "items": {
+        "type": "string"
+       }
+      },
+      "selectionReason": {
+       "type": "string"
+      },
+      "unresolvedReason": {
+       "type": [
+        "string",
+        "null"
+       ]
+      }
+     }
+    }
+   },
+   "transfers": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "from",
+      "to",
+      "mode",
+      "minutesMin",
+      "minutesMax",
+      "basis",
+      "sourceIds",
+      "note"
+     ],
+     "properties": {
+      "from": {
+       "type": "string",
+       "enum": [
+        "slot_mu28s5h614jta0vy",
+        "slot_mu28s5h615gp2aek",
+        "slot_mu28s5h616rp9696",
+        "slot_mu28s5h6178kpihk",
+        "slot_mu28s5h618a2xvcu",
+        "slot_mu28s5h6198kc83j",
+        "slot_mu28s5h61a9eefh0",
+        "base_start",
+        "base_end"
+       ]
+      },
+      "to": {
+       "type": "string",
+       "enum": [
+        "slot_mu28s5h614jta0vy",
+        "slot_mu28s5h615gp2aek",
+        "slot_mu28s5h616rp9696",
+        "slot_mu28s5h6178kpihk",
+        "slot_mu28s5h618a2xvcu",
+        "slot_mu28s5h6198kc83j",
+        "slot_mu28s5h61a9eefh0",
+        "base_start",
+        "base_end"
+       ]
+      },
+      "mode": {
+       "type": "string",
+       "enum": [
+        "walk",
+        "public_transport",
+        "taxi",
+        "car",
+        "train",
+        "bus",
+        "unspecified"
+       ]
+      },
+      "minutesMin": {
+       "type": [
+        "integer",
+        "null"
+       ],
+       "minimum": 0
+      },
+      "minutesMax": {
+       "type": [
+        "integer",
+        "null"
+       ],
+       "minimum": 0
+      },
+      "basis": {
+       "type": "string",
+       "enum": [
+        "sourced",
+        "planning_estimate",
+        "unknown"
+       ]
+      },
+      "sourceIds": {
+       "type": "array",
+       "description": "Sources behind a `sourced` time.",
+       "items": {
+        "type": "string"
+       }
+      },
+      "note": {
+       "type": "string"
+      }
+     }
+    }
+   },
+   "restWindows": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "afterSlotId",
+      "beforeSlotId",
+      "minutes",
+      "locationPolicy",
+      "description"
+     ],
+     "properties": {
+      "afterSlotId": {
+       "type": "string",
+       "enum": [
+        "slot_mu28s5h614jta0vy",
+        "slot_mu28s5h615gp2aek",
+        "slot_mu28s5h616rp9696",
+        "slot_mu28s5h6178kpihk",
+        "slot_mu28s5h618a2xvcu",
+        "slot_mu28s5h6198kc83j",
+        "slot_mu28s5h61a9eefh0"
+       ]
+      },
+      "beforeSlotId": {
+       "type": "string",
+       "enum": [
+        "slot_mu28s5h614jta0vy",
+        "slot_mu28s5h615gp2aek",
+        "slot_mu28s5h616rp9696",
+        "slot_mu28s5h6178kpihk",
+        "slot_mu28s5h618a2xvcu",
+        "slot_mu28s5h6198kc83j",
+        "slot_mu28s5h61a9eefh0"
+       ]
+      },
+      "minutes": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "locationPolicy": {
+       "type": "string",
+       "enum": [
+        "stay_nearby",
+        "named_location",
+        "return_to_base",
+        "unknown"
+       ],
+       "description": "Where the rest happens. `return_to_base` means two extra legs, and they must appear in transfers."
+      },
+      "description": {
+       "type": "string"
+      }
+     }
+    }
+   },
+   "sources": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "id",
+      "url",
+      "title",
+      "publisher",
+      "sourceType",
+      "accessedAt",
+      "publishedOrUpdatedAt"
+     ],
+     "properties": {
+      "id": {
+       "type": "string"
+      },
+      "url": {
+       "type": "string",
+       "description": "A real http(s) page you actually read."
+      },
+      "title": {
+       "type": "string"
+      },
+      "publisher": {
+       "type": "string"
+      },
+      "sourceType": {
+       "type": "string",
+       "enum": [
+        "official",
+        "map",
+        "secondary"
+       ]
+      },
+      "accessedAt": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "publishedOrUpdatedAt": {
+       "type": [
+        "string",
+        "null"
+       ]
+      }
+     }
+    }
+   },
+   "claims": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "id",
+      "text",
+      "sourceIds",
+      "appliesTo"
+     ],
+     "properties": {
+      "id": {
+       "type": "string"
+      },
+      "text": {
+       "type": "string"
+      },
+      "sourceIds": {
+       "type": "array",
+       "description": "Ids from `sources`.",
+       "items": {
+        "type": "string"
+       }
+      },
+      "appliesTo": {
+       "type": "string",
+       "description": "The slot id this claim is about, or empty for a day-level claim."
+      }
+     }
+    }
+   },
+   "feasibility": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "topic",
+      "status",
+      "detail",
+      "sourceIds"
+     ],
+     "properties": {
+      "topic": {
+       "type": "string"
+      },
+      "status": {
+       "type": "string",
+       "enum": [
+        "supported",
+        "conditional",
+        "unresolved",
+        "not_applicable"
+       ]
+      },
+      "detail": {
+       "type": "string"
+      },
+      "sourceIds": {
+       "type": "array",
+       "description": "Sources behind this judgement.",
+       "items": {
+        "type": "string"
+       }
+      }
+     }
+    }
+   },
+   "proposedChanges": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "slotId",
+      "proposal",
+      "reason"
+     ],
+     "properties": {
+      "slotId": {
+       "type": "string"
+      },
+      "proposal": {
+       "type": "string"
+      },
+      "reason": {
+       "type": "string"
+      }
+     }
+    }
+   },
+   "tripMemory": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "usedPlaces",
+     "coveredExperiences",
+     "reservedForLater",
+     "nextDayImplications"
+    ],
+    "properties": {
+     "usedPlaces": {
+      "type": "array",
+      "description": "Named places this day actually uses.",
+      "items": {
+       "type": "string"
+      }
+     },
+     "coveredExperiences": {
+      "type": "array",
+      "description": "Experiences this day covers.",
+      "items": {
+       "type": "string"
+      }
+     },
+     "reservedForLater": {
+      "type": "array",
+      "description": "What you are leaving for later days.",
+      "items": {
+       "type": "string"
+      }
+     },
+     "nextDayImplications": {
+      "type": "array",
+      "description": "What the next day has to take into account.",
+      "items": {
+       "type": "string"
+      }
+     }
+    }
+   },
+   "editorNotes": {
+    "type": "array",
+    "description": "For the editor, never for the reader: planning choices, open questions, anything you want a person to decide.",
+    "items": {
+     "type": "string"
+    }
+   }
+  }
+ }
+}

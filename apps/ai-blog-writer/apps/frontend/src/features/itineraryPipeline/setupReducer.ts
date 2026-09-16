@@ -69,6 +69,9 @@ export type SetupAction =
   | { type: 'approveDay'; dayId: string }
   | { type: 'reopenDay'; dayId: string }
   | { type: 'acknowledge'; dayId: string; kind: string }
+  /** Remember where the backend copy of this trip lives. Written only after
+   *  the server has confirmed it exists. */
+  | { type: 'linkWorkspace'; workspaceId: string }
 
 export function initialState(draft: ItinerarySetupDraft = createEmptyDraft()): SetupState {
   return { draft, lastRemoval: null }
@@ -372,6 +375,13 @@ export function setupReducer(state: SetupState, action: SetupAction): SetupState
           acknowledgments: [...day.acknowledgments, acknowledgmentKey(action.kind, day)],
         })),
       }
+
+    case 'linkWorkspace':
+      // Written once and never rewritten. A draft that repointed at a second
+      // workspace would leave the first one holding real, paid work with
+      // nothing in this browser able to reach it.
+      if (draft.workspaceId === action.workspaceId) return state
+      return { ...state, draft: touch({ ...draft, workspaceId: action.workspaceId }) }
 
     default:
       return state

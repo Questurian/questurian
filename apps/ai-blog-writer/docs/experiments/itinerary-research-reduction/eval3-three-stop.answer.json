@@ -1,0 +1,191 @@
+{
+ "dayIntro": "This day has one hinge: a long lunch on a pier over the Pacific, and everything else is built to protect it. Start with coffee facing the cliff edge in Parque del Amor, then walk the flat Malecón path toward the water before a short taxi down to the restaurant. Two and a half hours at the table gets you home well before dusk, with the evening left open for a quiet cocktail or nothing at all.",
+ "title": "Cliff edge to long table",
+ "stops": [
+  {
+   "slotId": "s-coffee",
+   "status": "selected",
+   "name": "Beso Francés (Parque del Amor)",
+   "category": "dining",
+   "addressOrMeetingPoint": "Malecón Cisneros, Parque del Amor, Miraflores",
+   "area": "Miraflores (Parque del Amor / Malecón)",
+   "startMinutes": 570,
+   "durationMinutes": 60,
+   "readerCopy": "Beso Francés's outdoor terrace at Parque del Amor puts a table right at the cliff edge, with the Costa Verde and the Pacific laid out below — no inland café substitutes for this. It's open from 7:00 a.m. daily, so there's no rush to arrive by 9:30. Order a crepe or coffee, not a meal: this is a small, unhurried start, not the day's food.",
+   "practicalNotes": [
+    "Outdoor terrace seating directly facing the ocean at Malecón Cisneros, Parque del Amor.",
+    "Open Monday–Thursday 7:00 a.m.–11:00 p.m. and Friday–Sunday 7:00 a.m.–midnight.",
+    "Menu is crepes, sandwiches and coffee drinks — treat it as a pastry stop, not a sit-down breakfast.",
+    "No reservation needed; it's walk-in seating."
+   ],
+   "evidence": [
+    {
+     "fact": "This Beso Francés location is an outdoor café at Malecón Cisneros, Parque del Amor, Miraflores, with terrace seating and an ocean view, open Monday–Thursday 7:00 a.m.–11:00 p.m. and Friday–Sunday 7:00 a.m.–midnight.",
+     "url": "https://www.tripadvisor.com/Restaurant_Review-g294316-d14154833-Reviews-Beso_Frances_Creperia_Parque_del_Amor-Lima_Lima_Region.html",
+     "title": "BESO FRANCÉS CREPERÍA - PARQUE DEL AMOR, Lima - Menu, Prices & Restaurant Reviews - Tripadvisor"
+    },
+    {
+     "fact": "Beso Francés's menu centers on crepes, textured-milk coffee drinks, and French-toast-style sandwiches — a pastry and light-bite menu, not a full breakfast.",
+     "url": "https://www.rappi.com.pe/restaurantes/9994-besofrances-miraflores",
+     "title": "Pedí Delivery en Beso Francés Av. Larco 1291 - Miraflores en minutos | Rappi"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "s-lunch",
+   "status": "selected",
+   "name": "La Rosa Náutica",
+   "category": "dining",
+   "addressOrMeetingPoint": "Espigón 4, Circuito de Playas, Miraflores, Lima 18",
+   "area": "Miraflores (Costa Verde pier)",
+   "startMinutes": 720,
+   "durationMinutes": 150,
+   "readerCopy": "La Rosa Náutica sits on its own pier off the Miraflores cliffs, reached by a short taxi hop down from the clifftop. The seafood menu runs à la carte, not a fixed tasting format, built around ceviche and the day's catch — more room to work around dietary needs than a set menu allows. Lunch runs from noon to five, so a table booked well ahead for midday leaves the whole afternoon intact.",
+   "practicalNotes": [
+    "Address: Espigón 4, Circuito de Playas, Miraflores — on a pier reached from the clifftop, not a walk at a relaxed pace.",
+    "Lunch service is 12:00–17:00 daily; dinner is a separate service from 17:00 (to 23:00 Monday–Saturday, to 21:00 Sunday).",
+    "Reserve by phone (+51 1 445 0149) or through the restaurant's own booking page; weekend tables are reported hard to get without booking ahead, though no source gave an exact lead time.",
+    "Menu is à la carte seafood under chef Pedro Miguel Schiaffino, built around ceviche and daily catch — raise any dietary needs when you book, since accommodation isn't detailed online."
+   ],
+   "evidence": [
+    {
+     "fact": "Lunch service runs 12:00–17:00 daily, with dinner as a separate service from 17:00 (to 23:00 Monday–Saturday, to 21:00 Sunday); the seafood menu is built around ceviche and daily catch under chef Pedro Miguel Schiaffino, served à la carte rather than as a fixed tasting menu; the restaurant sits on a pier off the Miraflores cliffs.",
+     "url": "https://jre.eu/en/restaurants/la-rosa-nautica",
+     "title": "JRE | La Rosa Náutica"
+    },
+    {
+     "fact": "Address is Espigón 4, Circuito de Playas, Miraflores, Lima 18.",
+     "url": "https://us.trip.com/travel-guide/restaurant/miraflores-1701491-restaurantdetail/la-rosa-nautica-restaurant-17386914.html",
+     "title": "La Rosa Nautica Restaurant (Miraflores) - Restaurant Reviews, Menu & Contact | Trip.com"
+    },
+    {
+     "fact": "Advance reservation is recommended by phone (+51 1 445 0149) or email, and weekend tables are reported hard to get without booking ahead.",
+     "url": "https://www.tripadvisor.com/Restaurant_Review-g294316-d969815-Reviews-La_Rosa_Nautica-Lima_Lima_Region.html",
+     "title": "LA ROSA NÁUTICA, Lima - Restaurant Reviews, Photos & Phone Number - Tripadvisor"
+    }
+   ],
+   "unresolvedReason": null
+  },
+  {
+   "slotId": "s-evening",
+   "status": "selected",
+   "name": "Belo Bar, Belmond Miraflores Park",
+   "category": "nightlife",
+   "addressOrMeetingPoint": "Belmond Miraflores Park, Av. Malecón de la Reserva 1035, Miraflores",
+   "area": "Miraflores",
+   "startMinutes": 1140,
+   "durationMinutes": 75,
+   "readerCopy": "Belo Bar, the ground-floor bar at the Belmond Miraflores Park, is a short walk from most hotels in central Miraflores and set up for exactly one or two drinks — a cocktail list built around pisco, with light fare on hand if you want it, not expected if you don't. It's a hotel bar rather than a nightlife stop, which is the point: nowhere to be, nothing to book, an easy walk back.",
+   "practicalNotes": [
+    "Address: Belmond Miraflores Park, Av. Malecón de la Reserva 1035, Miraflores.",
+    "Ground-floor bar with light fare and an extensive cocktail menu, with a bartender specializing in pisco sours.",
+    "Exact daily opening hours weren't confirmed by research; call ahead (+51 1 610 4000) to check hours and walk-in access if you want certainty.",
+    "Optional and genuinely droppable — skip it if lunch runs long or rich, and nothing replaces it."
+   ],
+   "evidence": [
+    {
+     "fact": "Belo Bar is a ground-floor (first-floor) bar at the hotel offering light fare and an extensive cocktail menu, with a bartender specializing in pisco sours.",
+     "url": "https://wetu.com/iBrochure/en/Information/27097/miraflores_park_a_belmond_hotel_lima/Restaurants",
+     "title": "Miraflores Park, A Belmond Hotel, Lima - Enjoy"
+    },
+    {
+     "fact": "Belo Bar is described as one of Lima's best cocktail bars; the hotel is located at Av. Malecón de la Reserva 1035, Miraflores.",
+     "url": "https://www.belmond.com/hotels/south-america/peru/lima/belmond-miraflores-park/dining",
+     "title": "Top Lima Restaurants | Lima, Peru Nightlife"
+    }
+   ],
+   "unresolvedReason": null
+  }
+ ],
+ "transfers": [
+  {
+   "from": "base_start",
+   "to": "s-coffee",
+   "mode": "walk",
+   "minutesMin": 10,
+   "minutesMax": 20,
+   "basis": "planning_estimate",
+   "note": "Distance depends on the exact hotel, but central Miraflores addresses sit within a short flat walk of Parque del Amor.",
+   "evidence": []
+  },
+  {
+   "from": "s-coffee",
+   "to": "s-lunch",
+   "mode": "taxi",
+   "minutesMin": 10,
+   "minutesMax": 20,
+   "basis": "planning_estimate",
+   "note": "Covers the short taxi descent from the clifftop to the pier after the coastal walk (see the rest window below); no exact point-to-point taxi time was sourced.",
+   "evidence": []
+  },
+  {
+   "from": "s-lunch",
+   "to": "s-evening",
+   "mode": "taxi",
+   "minutesMin": 15,
+   "minutesMax": 25,
+   "basis": "planning_estimate",
+   "note": "Return trip from the pier back up to central Miraflores; treated as slightly longer than the outbound leg to allow for the climb back up.",
+   "evidence": []
+  },
+  {
+   "from": "s-evening",
+   "to": "base_end",
+   "mode": "walk",
+   "minutesMin": 5,
+   "minutesMax": 15,
+   "basis": "planning_estimate",
+   "note": "Belo Bar sits in central Miraflores, an easy walk back to most hotels in the area.",
+   "evidence": []
+  }
+ ],
+ "restWindows": [
+  {
+   "afterSlotId": "s-coffee",
+   "beforeSlotId": "s-lunch",
+   "minutes": 70,
+   "locationPolicy": "stay_nearby",
+   "description": "The day's unhurried coastal walk: the flat Malecón cliff path from Parque del Amor toward the Larcomar/pier area, with the Pacific in view the whole way, before the short taxi hop down to lunch."
+  },
+  {
+   "afterSlotId": "s-lunch",
+   "beforeSlotId": "s-evening",
+   "minutes": 245,
+   "locationPolicy": "stay_nearby",
+   "description": "Unscheduled afternoon and early evening — rest at the hotel, freshen up, or wander central Miraflores independently before the optional evening drink. No fixed plan."
+  }
+ ],
+ "issues": [
+  {
+   "slotId": "s-evening",
+   "blocking": false,
+   "text": "Belo Bar's exact daily opening hours weren't confirmed by research, and it's described in one source as 'one of Lima's best cocktail bars,' which sits ambiguously against the quiet, not-a-scene requirement for this stop.",
+   "proposedChange": "Call the hotel to confirm hours and gauge the room, or treat the stop as skippable, which it's designed to be."
+  },
+  {
+   "slotId": "s-lunch",
+   "blocking": false,
+   "text": "No source gave an exact recommended lead time for booking; only that weekend tables are reported hard to get without advance notice.",
+   "proposedChange": "Reserve as far ahead as the restaurant's system allows, particularly for a weekend lunch."
+  },
+  {
+   "slotId": "s-lunch",
+   "blocking": false,
+   "text": "No source detailed La Rosa Náutica's specific dietary accommodations; the à la carte seafood format is more flexible than a fixed tasting menu, but that's an inference, not a confirmed policy.",
+   "proposedChange": "Flag any dietary needs at the time of booking rather than assuming they'll be handled."
+  },
+  {
+   "slotId": null,
+   "blocking": false,
+   "text": "The taxi times between the clifftop and La Rosa Náutica's pier, and between the pier and central Miraflores, are short-hop planning estimates rather than sourced trip times, since neither the exact hotel nor traffic conditions are fixed for an evergreen itinerary.",
+   "proposedChange": null
+  }
+ ],
+ "nextDayNotes": [],
+ "contractVersion": "itinerary-day-research-v2",
+ "workspaceId": "20c6daba898b",
+ "dayId": "d1",
+ "exportId": "0cd6a0937d17",
+ "inputHash": "acdad4c3b8ed7784c9f99c5e3a514290"
+}

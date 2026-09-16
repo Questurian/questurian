@@ -1,0 +1,11 @@
+{
+  "schemaErrors": [],
+  "reviewIssues": [
+    "Returned status says ready for editor review. Treat this preview as needing review: dinner\u2019s dine-in offerings and breakfast seating remain unconfirmed.",
+    "\u201cAn early table is no problem\u201d implies availability that was not checked. Opening hours alone do not establish a table.",
+    "Every inter-stop transfer is a taxi estimate. Same district does not by itself establish a compact or low-friction route.",
+    "The 165-minute rest block has no fixed location. A hotel return adds two unknown legs, so the full day\u2019s timing remains conditional.",
+    "Later-day memory turns overlap into blanket bans. Repeating an area can work when the next experience contributes something different."
+  ],
+  "scope": "Structural and internal-consistency review; not a full independent source audit. Original JSON and copy preserved."
+}
