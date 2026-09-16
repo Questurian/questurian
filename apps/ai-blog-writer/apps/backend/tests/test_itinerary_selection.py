@@ -366,3 +366,102 @@ def test_a_stored_proposal_round_trips():
     assert again.is_selection
     assert again.chosen_names()[0] == "Place for day1-coffee"
     assert again.headline() == "An easy Miraflores day."
+
+
+# ---------------------------------------------------------- the summary --
+
+
+def _agreed(accepted: list[bool]):
+    from app.features.itinerary_pipeline.contracts import ITINERARY_MARKER_KEYS
+    from app.features.prompt2blog.contracts_v4 import GrillQuestion, GrillState, GrillTurn
+
+    return GrillState(
+        run_id="r",
+        seed="Day 1",
+        status="agreed",
+        consensus="Agreed.",
+        marker_keys=ITINERARY_MARKER_KEYS,
+        markers_covered=list(ITINERARY_MARKER_KEYS),
+        turns=[
+            GrillTurn(
+                question=GrillQuestion(
+                    question_id=f"q{index}", topic="limits", ask="?", recommendation="Must be step-free."
+                ),
+                # Accepted as drafted means the answer IS the suggestion.
+                answer="Must be step-free." if flag else "Step-free, my own words.",
+            )
+            for index, flag in enumerate(accepted)
+        ],
+    )
+
+
+def test_a_requirement_needs_a_source_the_operator_wrote():
+    from app.features.itinerary_pipeline.direction import firm_or_not
+
+    state = _agreed([True, False])
+    firm, soft = firm_or_not(
+        [
+            {"text": "From an accepted suggestion", "from": "Q1"},
+            {"text": "In their own words", "from": "Q2"},
+            {"text": "A question that never happened", "from": "Q9"},
+            {"text": "Claimed from the setup", "from": "setup"},
+            {"text": "No source at all", "from": ""},
+            "A bare string",
+        ],
+        state,
+        setup_musts=False,
+    )
+    assert firm == ["In their own words"]
+    assert soft == [
+        "From an accepted suggestion",
+        "A question that never happened",
+        "Claimed from the setup",
+        "No source at all",
+        "A bare string",
+    ]
+    firm, _soft = firm_or_not(
+        [{"text": "Claimed from the setup", "from": "setup"}], state, setup_musts=True
+    )
+    assert firm == ["Claimed from the setup"]
+
+
+def test_an_agreement_made_only_of_accepted_suggestions_has_no_firm_requirements():
+    """The saved Lima conversation: five answers, all accepted as drafted."""
+    from app.features.itinerary_pipeline.direction import summary_from
+
+    setup = _setup()
+    day = setup.days[0]
+    state = _agreed([True] * 5)
+    summary = summary_from(
+        {
+            "angle": "Food.",
+            "trip_fit": "",
+            "area": "Miraflores.",
+            "requirements": [{"text": "Step-free lunch", "from": "Q5"}],
+            "preferences": ["Low effort"],
+            "avoid": [],
+            "slots": [
+                {
+                    "slot_id": day.slots[2].id,
+                    "role": "Lunch",
+                    "requirements": [{"text": "Non-seafood main", "from": "Q5"}],
+                    "preferences": [],
+                }
+            ],
+        },
+        state,
+        day,
+        setup.trip,
+    )
+    assert summary.requirements == []
+    assert summary.preferences == ["Step-free lunch", "Low effort"]
+    assert summary.slots[2].requirements == []
+    assert summary.slots[2].preferences == ["Non-seafood main"]
+
+
+def test_the_summary_schema_names_only_real_questions():
+    from app.features.itinerary_pipeline.direction import summary_schema
+
+    schema = summary_schema(_agreed([True, False, True]))
+    sources = schema["properties"]["requirements"]["items"]["properties"]["from"]["enum"]
+    assert sources == ["setup", "Q1", "Q2", "Q3"]

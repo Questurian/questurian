@@ -282,7 +282,8 @@ def test_the_summary_covers_every_approved_stop_and_is_short(client):
     ]
     # Requirements and preferences are kept apart; nothing else is asked for.
     assert summary["requirements"] == ["No cliff stairs"]
-    assert summary["preferences"] == ["Walkable"]
+    # A "setup" must with no must in the setup is kept, as a preference.
+    assert summary["preferences"] == ["Step-free everywhere", "Walkable"]
     for gone in ("fails_if", "research_checklist", "change_policy", "rhythm"):
         assert gone not in summary
 
@@ -295,8 +296,9 @@ def test_the_extraction_is_told_an_accepted_suggestion_is_only_a_preference(clie
         json={"attempt_key": key()},
     )
     prompt = client.direction_llm_prompts[-1]
-    assert "anything that came only from an accepted suggestion" in prompt
-    assert "Blank dietary or access needs stay blank" in prompt
+    assert "is never the source of" in prompt
+    assert "write nothing about" in prompt
+    assert "Answer to Q1:" in prompt
 
 
 def test_the_agreement_trace_remembers_an_accepted_suggestion(client):
@@ -351,7 +353,7 @@ def test_the_prompt_asks_for_places_not_an_article(client):
     prompt = view["export"]["prompt_text"]
     assert "# Choose the places for one day" in prompt
     assert "Firm requirements: No cliff stairs" in prompt
-    assert "Preferences (adjust if needed): Walkable" in prompt
+    assert "Preferences (adjust if needed): Step-free everywhere; Walkable" in prompt
     # No voice, no reader copy, no evidence graph.
     for gone in ("Questurian voice", "readerCopy", "dayIntro", "claimIds", "feasibility"):
         assert gone not in prompt

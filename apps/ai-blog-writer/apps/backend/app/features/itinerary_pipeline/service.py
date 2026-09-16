@@ -409,7 +409,7 @@ def prepare_direction(
 
     def work() -> DirectionRevision:
         extracted = direction_module.extract(
-            state=state, brief=brief, day=day, llm=llm
+            state=state, brief=brief, day=day, llm=llm, trip=setup.trip
         )
         revision = DirectionRevision(
             revision=store.next_direction_revision(workspace_id, day_id),

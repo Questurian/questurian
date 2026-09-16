@@ -389,7 +389,11 @@ def itinerary_client(monkeypatch):
                     "angle": "A relaxed Miraflores introduction.",
                     "trip_fit": "The opener.",
                     "area": "Miraflores, coast then streets.",
-                    "requirements": ["No cliff stairs"],
+                    "requirements": [
+                        {"text": "No cliff stairs", "from": "Q2"},
+                        # The setup states no musts, so this cannot stay firm.
+                        {"text": "Step-free everywhere", "from": "setup"},
+                    ],
                     "preferences": ["Walkable"],
                     "avoid": ["Barranco"],
                     "slots": [
