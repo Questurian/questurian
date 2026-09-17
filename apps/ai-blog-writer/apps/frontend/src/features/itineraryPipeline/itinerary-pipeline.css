@@ -51,6 +51,13 @@
   border-bottom: 1px solid var(--ip-line);
 }
 
+.ip-page-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .ip-stage-nav ol {
   display: flex;
   flex-wrap: wrap;

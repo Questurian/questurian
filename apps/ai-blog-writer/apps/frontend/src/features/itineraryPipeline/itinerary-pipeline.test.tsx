@@ -318,3 +318,32 @@ describe('the saved-layout library', () => {
     expect(options.map(option => option.textContent)).toContain('Culture & Stroll Day')
   })
 })
+
+describe('starting over', () => {
+  it('asks first, then clears the trip and its workspace link', async () => {
+    const key = `${STORAGE_PREFIX}:staff-1`
+    renderPage()
+    const user = await fillTripDetails()
+    expect(screen.getByRole('heading', { name: 'Shape your days' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Start over/ }))
+    // Keeping the trip changes nothing.
+    await user.click(screen.getByRole('button', { name: 'Keep this trip' }))
+    expect(screen.getByRole('heading', { name: 'Shape your days' })).toBeInTheDocument()
+
+    const before = JSON.parse(window.localStorage.getItem(key) ?? '{}')
+    await user.click(screen.getByRole('button', { name: /Start over/ }))
+    const dialog = screen.getByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Start over' }))
+
+    expect(screen.getByLabelText('Itinerary title')).toHaveValue('')
+    expect(screen.getByLabelText('Base city')).toHaveValue('')
+    const after = JSON.parse(window.localStorage.getItem(key) ?? 'null')
+    // A new draft id means the next interview starts a new run.
+    if (after) {
+      expect(after.draftId).not.toBe(before.draftId)
+      expect(after.workspaceId).toBeUndefined()
+    }
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+})
