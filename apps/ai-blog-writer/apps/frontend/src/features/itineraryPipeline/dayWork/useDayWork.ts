@@ -15,12 +15,12 @@ import {
   readWorkspace,
   reopenGrill,
   requestRevision,
-  setupPayload,
   startGrill,
   startResearch,
   swapPick,
   updateSetup,
 } from './api'
+import { SETUP_PUSHED_EVENT, noteSent, type SetupPushedDetail } from './setupSync'
 import type { DayWorkView, ImportPreview, WorkspaceView } from './types'
 import type { ItinerarySetupDraft } from '../types'
 
@@ -47,10 +47,8 @@ import type { ItinerarySetupDraft } from '../types'
  * and reused by every retry of that decision, so a double-click or a retry
  * after a timeout cannot buy the turn twice.
  *
- * **Setup edits reach the server on their own.** Changing a hotel or a note
- * after a proposal exists has to show up as "this changed" without waiting for
- * the next paid move, so a linked draft is pushed (debounced) whenever what it
- * would send changes. Pushing an unchanged setup is a no-op on the server.
+ * **Setup edits reach the server on their own**, through `setupSync` at page
+ * level; this hook re-reads the day when one lands.
  */
 
 type Busy =
@@ -73,12 +71,6 @@ type Busy =
  * asked about more often, and every poll is a request.
  */
 const RESEARCH_POLL_MS = 5_000
-
-/** How long setup edits settle before they are pushed. */
-const SETUP_SYNC_MS = 700
-
-/** What each workspace was last sent, across remounts of this screen. */
-const pushedSetups = new Map<string, string>()
 
 export interface UseDayWork {
   /** The workspace this draft is linked to, once it exists. */
@@ -241,37 +233,29 @@ export function useDayWork(
     }
   }, [workspaceId, dayId, refreshTrip])
 
-  // Push setup edits made while linked. Re-read only when the server says the
-  // setup actually moved: an unchanged push changes nothing worth a read.
-  const setupSignature = workspaceId ? JSON.stringify(setupPayload(draft)) : ''
+  // A setup edit was pushed (see `setupSync`). Re-read only when the server
+  // says the setup actually moved.
   useEffect(() => {
-    if (!workspaceId || !setupSignature) return
-    if (pushedSetups.get(workspaceId) === setupSignature) return
-    const timer = setTimeout(() => {
-      void (async () => {
-        const known = draftRef.current
-        try {
-          const before = trip?.revision ?? day?.workspace_revision
-          const result = await updateSetup(workspaceId, known, null)
-          pushedSetups.set(workspaceId, setupSignature)
-          const moved = typeof result?.revision === 'number' && result.revision !== before
-          if (!moved || movesInFlight.current > 0) return
-          if (Array.isArray(result.days)) setTrip(result)
-          const target = showing.current
-          if (!target) return
-          const found = await readDay(workspaceId, target)
+    if (!workspaceId) return
+    let known: number | null = null
+    const onPushed = (event: Event) => {
+      const detail = (event as CustomEvent<SetupPushedDetail>).detail
+      if (!detail || detail.workspaceId !== workspaceId || detail.revision === null) return
+      if (detail.revision === known) return
+      known = detail.revision
+      const target = showing.current
+      if (movesInFlight.current > 0) return
+      void refreshTrip(workspaceId)
+      if (!target) return
+      void readDay(workspaceId, target)
+        .then(found => {
           if (showing.current === target && movesInFlight.current === 0) setDay(found)
-        } catch {
-          // Another tab moved it, or the server is away. The next move pushes
-          // the setup again before it asks anything.
-        }
-      })()
-    }, SETUP_SYNC_MS)
-    return () => clearTimeout(timer)
-    // `day` and `trip` are read for the revision only; a new one must not
-    // restart the wait.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId, setupSignature])
+        })
+        .catch(() => {})
+    }
+    window.addEventListener(SETUP_PUSHED_EVENT, onPushed)
+    return () => window.removeEventListener(SETUP_PUSHED_EVENT, onPushed)
+  }, [workspaceId, refreshTrip])
 
   /**
    * Hand the setup to the backend, once, and remember where it went.
@@ -288,7 +272,7 @@ export function useDayWork(
       // since the handoff reaches the backend before anything is asked of it.
       try {
         await updateSetup(current.workspaceId, current, null)
-        pushedSetups.set(current.workspaceId, JSON.stringify(setupPayload(current)))
+        noteSent(current.workspaceId, current)
       } catch (caught) {
         if (!(caught instanceof ConflictError)) throw caught
         // Another tab moved it. Its version is the one that exists; this one

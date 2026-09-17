@@ -173,10 +173,45 @@ def test_hotels_are_matched_on_the_city_inside_the_location_path():
         {"id": 2, "name": "Elsewhere", "location": "Peru > Cusco > Centro", "type": "hotel"},
         {"id": 3, "name": "Bare", "location": "Peru > Lima", "type": "hotel"},
     ]
-    found = hotels.hotels_for("Lima, Peru", fetch=lambda: rows)
+    found = hotels.hotels_for("Lima, Peru", fetch=lambda: rows, fetch_full=lambda key: [])
     assert found["available"]
     assert [hotel["name"] for hotel in found["hotels"]] == ["Bare", "Casa"]
     assert found["hotels"][1]["area"] == "Miraflores"
+
+
+def test_each_hotel_carries_one_picture_from_the_city_list():
+    rows = [
+        {"id": 1, "name": "Casa", "location": "Peru > Lima > Miraflores", "locationKey": "peru|lima|miraflores"},
+        {"id": 2, "name": "Insta", "location": "Peru > Lima > Barranco", "locationKey": "peru|lima|barranco"},
+        {"id": 3, "name": "Bare", "location": "Peru > Lima > Barranco", "locationKey": "peru|lima|barranco"},
+    ]
+    asked: list[str] = []
+
+    def full(key):
+        asked.append(key)
+        return [
+            {"id": 1, "uploads": [{"imageSet": {"sourceImage": {"path": "data/images/casa/u/source_0.webp"}}}],
+             "instagram_embeds": [{"images": ["data/images/casa/i/image_0.jpg"]}]},
+            {"id": 2, "uploads": [], "instagram_embeds": [{"images": ["data/images/insta/i/image_0.jpg"]}]},
+            {"id": 3, "uploads": [{"imageSet": {"sourceImage": {"path": "/etc/passwd"}}}]},
+        ]
+
+    found = {hotel["name"]: hotel["image"] for hotel in hotels.hotels_for("Lima", fetch=lambda: rows, fetch_full=full)["hotels"]}
+    assert asked == ["peru|lima"], "one request for the whole city"
+    assert found["Casa"].endswith("/api/images/casa/u/source_0.webp")
+    assert found["Insta"].endswith("/api/images/insta/i/image_0.jpg")
+    assert found["Bare"] == ""
+
+
+def test_pictures_failing_still_lists_the_names():
+    rows = [{"id": 1, "name": "Casa", "location": "Peru > Lima > Miraflores", "locationKey": "peru|lima|x"}]
+
+    def full(key):
+        raise hotels.HotelsUnavailable("timeout")
+
+    found = hotels.hotels_for("Lima", fetch=lambda: rows, fetch_full=full)
+    assert found["available"]
+    assert found["hotels"] == [{"id": 1, "name": "Casa", "area": "Miraflores", "type": "", "image": ""}]
 
 
 def test_no_city_lists_nothing_and_a_dead_location_manager_says_so():

@@ -372,6 +372,8 @@ export interface HotelOption {
   name: string
   area: string
   type: string
+  /** A picture Location Manager serves; empty when it has none. */
+  image: string
 }
 
 export interface HotelList {

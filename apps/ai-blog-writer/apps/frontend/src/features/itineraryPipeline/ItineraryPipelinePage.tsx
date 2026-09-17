@@ -13,6 +13,7 @@ import { StaysPanel } from './components/StaysPanel'
 import { TripDetailsForm } from './components/TripDetailsForm'
 import { useCustomTemplates } from './customTemplates'
 import { useItineraryDraft } from './useItineraryDraft'
+import { useSetupSync } from './dayWork/setupSync'
 import { isApprovalCurrent, parsedDayCount } from './draft'
 import {
   canOpenReview,
@@ -43,6 +44,7 @@ export default function ItineraryPipelinePage() {
   const controller = useItineraryDraft(user?.id ?? null)
   const customTemplates = useCustomTemplates()
   const { draft, dispatch, validation, state } = controller
+  useSetupSync(draft, controller.loading)
 
   const [showTripIssues, setShowTripIssues] = useState(false)
   const [showDayIssues, setShowDayIssues] = useState(false)

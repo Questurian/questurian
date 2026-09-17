@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BedDouble, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { listHotels } from '../dayWork/api'
+import { HotelPicker } from './HotelPicker'
 import { dayStays, defaultNightCount } from '../draft'
 import type { HotelList } from '../dayWork/types'
 import type { SetupAction } from '../setupReducer'
@@ -173,36 +174,22 @@ export function StaysPanel({ trip, dayCount, dispatch }: StaysPanelProps) {
                     </div>
                   ) : (
                     <div className="ip-stay-fields">
-                      <label htmlFor={`${id}-hotel`}>Hotel in {trip.baseCity || 'the city'}</label>
-                      <select
-                        id={`${id}-hotel`}
-                        value={stay.locationId ?? ''}
-                        disabled={loading}
-                        onChange={event => {
-                          const chosen = list?.hotels.find(
-                            hotel => hotel.id === Number(event.target.value),
-                          )
+                      <HotelPicker
+                        id={id}
+                        city={trip.baseCity}
+                        hotels={list?.hotels ?? []}
+                        loading={loading || list === null}
+                        selectedId={stay.locationId}
+                        selectedName={stay.name}
+                        selectedArea={stay.area}
+                        onPick={hotel =>
                           patch(
-                            chosen
-                              ? { locationId: chosen.id, name: chosen.name, area: chosen.area }
+                            hotel
+                              ? { locationId: hotel.id, name: hotel.name, area: hotel.area }
                               : { locationId: null, name: '', area: '' },
                           )
-                        }}
-                      >
-                        <option value="">
-                          {loading
-                            ? 'Loading hotels…'
-                            : list && list.hotels.length === 0
-                              ? 'No hotels in Location Manager for this city'
-                              : 'Choose a hotel'}
-                        </option>
-                        {(list?.hotels ?? []).map(hotel => (
-                          <option key={hotel.id} value={hotel.id}>
-                            {hotel.name}
-                            {hotel.area ? ` — ${hotel.area}` : ''}
-                          </option>
-                        ))}
-                      </select>
+                        }
+                      />
                     </div>
                   )
                 ) : (

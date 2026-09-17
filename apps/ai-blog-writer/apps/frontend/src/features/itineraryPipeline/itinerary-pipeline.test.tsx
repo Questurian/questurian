@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ItineraryPipelinePage from './ItineraryPipelinePage'
 import { AuthContext, type AuthContextValue } from '../auth'
 import { STORAGE_PREFIX } from './draftRepository'
+import { resetSetupSync } from './dayWork/setupSync'
 
 /**
  * The whole workflow, driven the way an operator drives it.
@@ -69,6 +70,7 @@ async function approveEveryDay(user: ReturnType<typeof userEvent.setup>) {
 }
 
 beforeEach(() => {
+  resetSetupSync()
   window.localStorage.clear()
   listLibraryDayShells.mockResolvedValue([])
   fetchSpy.mockReset()
@@ -345,5 +347,73 @@ describe('starting over', () => {
       expect(after.workspaceId).toBeUndefined()
     }
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('choosing a hotel', () => {
+  it('shows hotels as pictures and folds to the one picked', async () => {
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        available: true,
+        error: '',
+        hotels: [
+          { id: 1, name: 'Casa Pucllana', area: 'Miraflores', type: 'boutique', image: 'http://lm/api/images/casa.webp' },
+          { id: 2, name: 'Villa Barranco', area: 'Barranco', type: 'hotel', image: '' },
+        ],
+      }),
+    })
+    renderPage()
+    const user = await fillTripDetails()
+    // Nothing is asked for until a stay needs a hotel.
+    expect(fetchSpy).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: /Pick a hotel/ }))
+    const grid = await screen.findByRole('list', { name: /Hotels in Lima/ })
+    const cards = within(grid).getAllByRole('button')
+    expect(cards).toHaveLength(2)
+    expect(cards[0].querySelector('img')).toHaveAttribute('src', 'http://lm/api/images/casa.webp')
+    // A hotel with no picture gets a plain tile, not a broken image.
+    expect(cards[1].querySelector('img')).toBeNull()
+
+    await user.type(screen.getByPlaceholderText(/Find a hotel/), 'barr')
+    expect(within(grid).getAllByRole('button')).toHaveLength(1)
+
+    await user.click(within(grid).getByRole('button', { name: /Villa Barranco/ }))
+    expect(screen.queryByRole('list', { name: /Hotels in Lima/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Villa Barranco')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Change hotel' })).toBeInTheDocument()
+    expect(screen.getByText('Day 1:').closest('li')).toHaveTextContent('Villa Barranco')
+  })
+})
+
+describe('keeping the server up to date', () => {
+  it('sends nothing for opening a linked trip, and sends an edit', async () => {
+    const key = `${STORAGE_PREFIX}:staff-1`
+    const first = renderPage()
+    await fillTripDetails()
+    const saved = JSON.parse(window.localStorage.getItem(key) ?? '{}')
+    window.localStorage.setItem(key, JSON.stringify({ ...saved, workspaceId: 'ws1' }))
+    first.unmount()
+
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ workspace_id: 'ws1', revision: 2, setup_hash: 'h', days: [], available: true, error: '', hotels: [] }),
+    })
+    renderPage()
+    await screen.findByRole('heading', { name: 'Shape your days' })
+    // An old tab opened later must not overwrite what the server holds.
+    await new Promise(resolve => setTimeout(resolve, 900))
+    expect(fetchSpy.mock.calls.filter(([url]) => String(url).includes('/setup'))).toHaveLength(0)
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /Let AI recommend one/ }))
+    await new Promise(resolve => setTimeout(resolve, 900))
+    const pushes = fetchSpy.mock.calls.filter(([url]) => String(url).includes('/workspaces/ws1/setup'))
+    expect(pushes).toHaveLength(1)
+    const body = JSON.parse(String(pushes[0][1]?.body))
+    expect(body.setup.trip.stays).toHaveLength(1)
   })
 })
