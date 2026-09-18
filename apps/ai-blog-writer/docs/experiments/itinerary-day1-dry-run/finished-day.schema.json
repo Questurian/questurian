@@ -1,0 +1,478 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "dayId",
+    "research",
+    "status",
+    "title",
+    "dayIntro",
+    "tripRole",
+    "scheduleLabel",
+    "stops",
+    "transfers",
+    "restWindows",
+    "sources",
+    "claims",
+    "feasibility",
+    "proposedChanges",
+    "tripMemory",
+    "editorNotes"
+  ],
+  "properties": {
+    "contractVersion": {
+      "const": "itinerary-finished-day-dry-run-v1"
+    },
+    "dayId": {
+      "const": "dry-run-day-1"
+    },
+    "research": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "performedAt",
+        "browsingUsed",
+        "limitations"
+      ],
+      "properties": {
+        "performedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "browsingUsed": {
+          "type": "boolean"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ready_for_editor_review",
+        "needs_decision",
+        "insufficient_evidence"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "dayIntro": {
+      "type": "string"
+    },
+    "tripRole": {
+      "type": "string"
+    },
+    "scheduleLabel": {
+      "const": "Illustrative evergreen plan; check opening days before use"
+    },
+    "stops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "slotId",
+          "status",
+          "name",
+          "category",
+          "addressOrMeetingPoint",
+          "area",
+          "mapsUrl",
+          "suggestedStart",
+          "durationMinutes",
+          "whyHere",
+          "readerCopy",
+          "whatToDo",
+          "practicalNotes",
+          "claimIds",
+          "selectionReason",
+          "unresolvedReason"
+        ],
+        "properties": {
+          "slotId": {
+            "type": "string",
+            "enum": [
+              "day1-coffee_light_breakfast",
+              "day1-scenic_low_effort",
+              "day1-special_lunch",
+              "day1-leisure_exploration",
+              "day1-dinner",
+              "day1-relaxed_evening"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "selected",
+              "unresolved",
+              "omitted_optional"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "dining",
+              "attractions",
+              "nightlife"
+            ]
+          },
+          "addressOrMeetingPoint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "area": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mapsUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "suggestedStart": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "durationMinutes": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "whyHere": {
+            "type": "string"
+          },
+          "readerCopy": {
+            "type": "string"
+          },
+          "whatToDo": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "practicalNotes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claimIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "selectionReason": {
+            "type": "string"
+          },
+          "unresolvedReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "minItems": 6,
+      "maxItems": 6
+    },
+    "transfers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "mode",
+          "minutesMin",
+          "minutesMax",
+          "basis",
+          "sourceIds",
+          "note"
+        ],
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "walk",
+              "taxi",
+              "unspecified"
+            ]
+          },
+          "minutesMin": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "minutesMax": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "sourced",
+              "planning_estimate",
+              "unknown"
+            ]
+          },
+          "sourceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "restWindows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "afterSlotId",
+          "beforeSlotId",
+          "minutes",
+          "description"
+        ],
+        "properties": {
+          "afterSlotId": {
+            "type": "string"
+          },
+          "beforeSlotId": {
+            "type": "string"
+          },
+          "minutes": {
+            "type": "number",
+            "minimum": 45
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "url",
+          "title",
+          "publisher",
+          "sourceType",
+          "accessedAt",
+          "publishedOrUpdatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "publisher": {
+            "type": "string"
+          },
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "official",
+              "map",
+              "secondary"
+            ]
+          },
+          "accessedAt": {
+            "type": "string"
+          },
+          "publishedOrUpdatedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "text",
+          "sourceIds",
+          "appliesTo"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "sourceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "appliesTo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "feasibility": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "topic",
+          "status",
+          "detail",
+          "sourceIds"
+        ],
+        "properties": {
+          "topic": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "supported",
+              "conditional",
+              "unresolved",
+              "not_applicable"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "sourceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "proposedChanges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "slotId",
+          "proposal",
+          "reason",
+          "requiresAgreement"
+        ],
+        "properties": {
+          "slotId": {
+            "type": "string"
+          },
+          "proposal": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "requiresAgreement": {
+            "const": true
+          }
+        }
+      }
+    },
+    "tripMemory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "usedPlaces",
+        "coveredExperiences",
+        "reservedForLater",
+        "nextDayImplications"
+      ],
+      "properties": {
+        "usedPlaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "coveredExperiences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reservedForLater": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "nextDayImplications": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "editorNotes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

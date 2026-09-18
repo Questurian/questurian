@@ -33,6 +33,7 @@ def _shell_payload(shell_id: str = "custom_day_shell_test", name: str = "Coffee 
             {
                 "id": "morning_coffee_1",
                 "label": "Morning coffee",
+                "moment": "coffee",
                 "daypart": "morning",
                 "acceptable_collections": ["dining"],
                 "preferred_collections": ["dining"],
@@ -65,6 +66,8 @@ def test_shell_library_crud_round_trip(tmp_path, monkeypatch):
     assert [shell["id"] for shell in listed] == ["custom_day_shell_test"]
     assert [slot["id"] for slot in listed[0]["slots"]] == ["morning_coffee_1", "dinner_2"]
 
+    assert listed[0]["slots"][0]["moment"] == "coffee"
+
     updated_payload = _shell_payload(name="Coffee culture night v2")
     updated = client.put(
         "/itineraries-pipeline/day-shells/custom_day_shell_test", json=updated_payload
@@ -87,17 +90,17 @@ def test_built_in_shells_are_immutable(tmp_path, monkeypatch):
     client = _build_client(tmp_path, monkeypatch)
 
     collide = client.post(
-        "/itineraries-pipeline/day-shells", json=_shell_payload(shell_id="full_day_balanced")
+        "/itineraries-pipeline/day-shells", json=_shell_payload(shell_id="rich_standard_day")
     )
     assert collide.status_code == 409
 
     update = client.put(
-        "/itineraries-pipeline/day-shells/full_day_balanced",
-        json=_shell_payload(shell_id="full_day_balanced"),
+        "/itineraries-pipeline/day-shells/rich_standard_day",
+        json=_shell_payload(shell_id="rich_standard_day"),
     )
     assert update.status_code == 409
 
-    delete = client.delete("/itineraries-pipeline/day-shells/full_day_balanced")
+    delete = client.delete("/itineraries-pipeline/day-shells/rich_standard_day")
     assert delete.status_code == 409
 
 

@@ -165,3 +165,6 @@ temp/
 # AI Assistant files
 CLAUDE.md
 AGENTS.md
+
+# Itinerary research run transcripts: this machine's own audit copies, never committed.
+data/itinerary-research-audit/

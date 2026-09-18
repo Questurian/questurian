@@ -30,6 +30,7 @@ export type BuilderHeaderPanelProps<TDraft extends DraftLike> = {
   updateHeader: (next: Partial<HeaderShape>) => void
   isLocked: boolean
   isSynced?: boolean
+  showWorkflowActions?: boolean
   onContinueStep2: () => void
   onUpdateStep2: () => void
   onSaveStep2: () => void
@@ -57,6 +58,7 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
   updateHeader,
   isLocked,
   isSynced = false,
+  showWorkflowActions = true,
   onContinueStep2,
   onUpdateStep2,
   onSaveStep2,
@@ -198,7 +200,7 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
 
   return (
     <section className="stl-panel">
-      <BuilderStepHeader
+      {showWorkflowActions ? <BuilderStepHeader
         stepLabel="Step 2"
         title="Header"
         isSynced={isSynced}
@@ -210,7 +212,7 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
         onCancelUpdate={onCancelStep2Update}
         updateLabel="Update Header"
         saveLabel="Save Header"
-      />
+      /> : <div className="stl-panel-header"><h2><span className="stl-kicker">Step 2</span> Header</h2></div>}
 
       <fieldset className="stl-panel-fieldset" disabled={!isSynced && isLocked}>
         <div className="stl-field">

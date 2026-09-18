@@ -1,3 +1,4 @@
+import { populateEmptyDaysFromShells } from '../services/day-shell-stops.service'
 import type { Dispatch, SetStateAction } from 'react'
 import { useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
@@ -81,7 +82,7 @@ export function useBuilderDraftActions({
         typeof next.location === 'string' &&
         normalizeLocationKey(next.location) !==
           normalizeLocationKey(current.location)
-      return {
+      const updated = {
         ...current,
         ...next,
         sharedNeighborhoods:
@@ -91,6 +92,7 @@ export function useBuilderDraftActions({
               ? []
               : current.sharedNeighborhoods
       }
+      return next.step1_complete ? populateEmptyDaysFromShells(updated) : updated
     })
   }
 
@@ -159,7 +161,7 @@ export function useBuilderDraftActions({
         if (!current) return current
         return {
           ...current,
-          days: current.days.map(() => createEmptyDaySlice()),
+          days: populateEmptyDaysFromShells({ ...current, days: current.days.map((day) => ({ ...createEmptyDaySlice(), id: day.id })) }).days,
           in_update_mode: false,
           step1_complete: true,
           step2_complete: false,
@@ -179,7 +181,7 @@ export function useBuilderDraftActions({
         if (!current) return current
         return {
           ...current,
-          days: current.days.map(() => createEmptyDaySlice()),
+          days: populateEmptyDaysFromShells({ ...current, days: current.days.map((day) => ({ ...createEmptyDaySlice(), id: day.id })) }).days,
           in_update_mode: false,
           step1_complete: true,
           step2_complete: false,

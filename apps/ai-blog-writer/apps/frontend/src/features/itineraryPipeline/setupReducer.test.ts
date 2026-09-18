@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createEmptyDraft, isApprovalCurrent } from './draft'
+import { createEmptyDraft, dayStays, isApprovalCurrent } from './draft'
 import { initialState, setupReducer, type SetupAction, type SetupState } from './setupReducer'
 import { BUILT_IN_TEMPLATES, findTemplate } from './templates'
 import type { ItinerarySetupDraft } from './types'
@@ -257,5 +257,52 @@ describe('approval', () => {
       patch: { preparationNotes: 'Ask about the Sunday market' },
     })
     expect(isApprovalCurrent(state.draft.days[0], state.draft.trip)).toBe(true)
+  })
+})
+
+describe('stays', () => {
+  it('defaults a new stay to the nights the trip has, leaving departure day free', () => {
+    const state = setupReducer(threeDays(), { type: 'addStay', mode: 'location_manager' })
+    const [stay] = state.draft.trip.stays ?? []
+    expect([stay.firstNight, stay.lastNight]).toEqual([1, 2])
+    expect(dayStays(state.draft.trip.stays, 3)).toEqual({ start: stay, end: null })
+  })
+
+  it('starts the next stay after the nights already covered', () => {
+    let state = threeDays()
+    state = setupReducer(state, { type: 'addStay', mode: 'location_manager' })
+    const first = state.draft.trip.stays![0]
+    state = setupReducer(state, {
+      type: 'patchStay',
+      stayId: first.id,
+      patch: { lastNight: 1, name: 'Casa' },
+    })
+    state = setupReducer(state, { type: 'addStay', mode: 'recommend' })
+    const second = state.draft.trip.stays![1]
+    expect([second.mode, second.firstNight, second.lastNight]).toEqual(['recommend', 2, 2])
+    // Day 2 starts where night 1 was spent and ends where night 2 is.
+    expect(dayStays(state.draft.trip.stays, 2)).toEqual({ start: state.draft.trip.stays![0], end: second })
+  })
+
+  it('never reopens an approved layout', () => {
+    let state = threeDays()
+    for (const day of state.draft.days) {
+      state = setupReducer(state, { type: 'approveDay', dayId: day.id })
+    }
+    state = setupReducer(state, { type: 'addStay', mode: 'location_manager' })
+    const stay = state.draft.trip.stays![0]
+    state = setupReducer(state, { type: 'patchStay', stayId: stay.id, patch: { name: 'Hotel B' } })
+    expect(state.draft.days.every(day => isApprovalCurrent(day, state.draft.trip))).toBe(true)
+    state = setupReducer(state, { type: 'removeStay', stayId: stay.id })
+    expect(state.draft.trip.stays).toEqual([])
+    expect(state.draft.days.every(day => isApprovalCurrent(day, state.draft.trip))).toBe(true)
+  })
+
+  it('reads a draft saved before stays existed', () => {
+    const old = createEmptyDraft()
+    delete (old.trip as { stays?: unknown }).stays
+    const state = setupReducer(initialState(old), { type: 'addStay', mode: 'recommend' })
+    expect(state.draft.trip.stays).toHaveLength(1)
+    expect(dayStays(old.trip.stays, 1)).toEqual({ start: null, end: null })
   })
 })

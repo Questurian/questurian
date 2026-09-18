@@ -42,6 +42,7 @@ class ShellSlot(BaseModel):
     id: str = Field(..., min_length=1, max_length=80)
     label: str = Field(..., min_length=1, max_length=120)
     daypart: Daypart
+    moment: str | None = Field(default=None, max_length=48)
     acceptable_collections: list[Category] = Field(..., min_length=1)
     preferred_collections: list[Category] = Field(default_factory=list)
     intent_tags: list[str] = Field(default_factory=list)

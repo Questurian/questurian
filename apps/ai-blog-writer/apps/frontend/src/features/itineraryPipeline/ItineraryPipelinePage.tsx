@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, CircleAlert, CloudOff, Info } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, CircleAlert, CloudOff, Info, RotateCcw } from 'lucide-react'
 import { useAuth } from '../auth'
 import { DayLayoutEditor } from './components/DayLayoutEditor'
 import { DayTabs } from './components/DayTabs'
 import { DayWorkspace } from './components/DayWorkspace'
+import { Dialog } from './components/Dialog'
 import { ErrorSummary } from './components/ErrorSummary'
 import { LayoutReview } from './components/LayoutReview'
 import { RemoveDaysDialog } from './components/RemoveDaysDialog'
 import { StageNav } from './components/StageNav'
+import { StaysPanel } from './components/StaysPanel'
 import { TripDetailsForm } from './components/TripDetailsForm'
 import { useCustomTemplates } from './customTemplates'
 import { useItineraryDraft } from './useItineraryDraft'
+import { useSetupSync } from './dayWork/setupSync'
 import { isApprovalCurrent, parsedDayCount } from './draft'
 import {
   canOpenReview,
@@ -41,10 +44,12 @@ export default function ItineraryPipelinePage() {
   const controller = useItineraryDraft(user?.id ?? null)
   const customTemplates = useCustomTemplates()
   const { draft, dispatch, validation, state } = controller
+  useSetupSync(draft, controller.loading)
 
   const [showTripIssues, setShowTripIssues] = useState(false)
   const [showDayIssues, setShowDayIssues] = useState(false)
   const [pendingRemoval, setPendingRemoval] = useState<number | null>(null)
+  const [confirmingReset, setConfirmingReset] = useState(false)
   const [announcement, setAnnouncement] = useState('')
   const headingRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<Stage>(draft.ui.stage)
@@ -201,8 +206,48 @@ export default function ItineraryPipelinePage() {
     <div className="ip-page">
       <div className="ip-page-head">
         <StageNav stage={stage} reachable={reachable} blockedReason={blockedReason} onGo={goToStage} />
-        <SaveStatus controller={controller} />
+        <div className="ip-page-head-actions">
+          <SaveStatus controller={controller} />
+          <button
+            type="button"
+            className="ip-button-quiet ip-button-small"
+            onClick={() => setConfirmingReset(true)}
+          >
+            <RotateCcw size={14} aria-hidden /> Start over
+          </button>
+        </div>
       </div>
+
+      {confirmingReset ? (
+        <Dialog
+          title="Start over with a new trip?"
+          description="This clears the trip, its days and hotels from this browser."
+          onClose={() => setConfirmingReset(false)}
+          footer={
+            <>
+              <button type="button" className="ip-button-quiet" onClick={() => setConfirmingReset(false)}>
+                Keep this trip
+              </button>
+              <button
+                type="button"
+                className="ip-button-danger"
+                onClick={() => {
+                  controller.resetDraft()
+                  setConfirmingReset(false)
+                  announce('Started a new trip.')
+                }}
+              >
+                Start over
+              </button>
+            </>
+          }
+        >
+          <p className="ip-dialog-lead">
+            The next interview starts a brand-new run. Work already saved for this trip —
+            interviews and proposals — is not deleted; it just stops showing here.
+          </p>
+        </Dialog>
+      ) : null}
 
       {controller.incompatible ? (
         <div className="ip-banner ip-banner-warning" role="alert">
@@ -280,6 +325,8 @@ export default function ItineraryPipelinePage() {
                 Edit trip details
               </button>
             </div>
+
+            <StaysPanel trip={draft.trip} dayCount={days.length} dispatch={dispatch} />
 
             {dayStageIssues.length > 0 ? (
               <ErrorSummary

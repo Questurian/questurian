@@ -1,0 +1,1132 @@
+{
+  "shells": [
+    {
+      "id": "lima_barranco_art_after_dark",
+      "name": "Lima · Barranco: Art into After Dark",
+      "description": "A Barranco-focused progression from neighborhood art and independent design to the coast, dinner, and live music.",
+      "slots": [
+        {
+          "id": "breakfast_1",
+          "label": "Breakfast in Barranco",
+          "moment": "breakfast",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "breakfast in barranco"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "morning_walk_2",
+          "label": "Walk the neighborhood streets",
+          "moment": "morning-walk",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "walk the neighborhood streets"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "culture_3",
+          "label": "Read the murals and street art",
+          "moment": "culture",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "read the murals and street art"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "culture_4",
+          "label": "Explore a contemporary gallery",
+          "moment": "culture",
+          "daypart": "late_morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "explore a contemporary gallery"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "lunch_5",
+          "label": "A neighborhood lunch",
+          "moment": "lunch",
+          "daypart": "lunch",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "a neighborhood lunch"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "shopping_6",
+          "label": "Browse independent designers",
+          "moment": "shopping",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "browse independent designers"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "scenic_viewpoint_7",
+          "label": "Pause at a coastal viewpoint",
+          "moment": "scenic-viewpoint",
+          "daypart": "evening",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "pause at a coastal viewpoint"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "dinner_8",
+          "label": "Dinner before the music",
+          "moment": "dinner",
+          "daypart": "dinner",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "dinner before the music"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "nightlife_9",
+          "label": "Live music to close the night",
+          "moment": "nightlife",
+          "daypart": "nightlife",
+          "acceptable_collections": [
+            "nightlife"
+          ],
+          "preferred_collections": [
+            "nightlife"
+          ],
+          "intent_tags": [
+            "live music to close the night"
+          ],
+          "avoid_tags": []
+        }
+      ]
+    },
+    {
+      "id": "lima_historic_layers",
+      "name": "Lima · Lima, Layer by Layer",
+      "description": "Explore the historic center through civic landmarks, historic interiors, local food, and museum stories. Keep the route within a compact area.",
+      "slots": [
+        {
+          "id": "coffee_1",
+          "label": "Coffee near the historic center",
+          "moment": "coffee",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "coffee near the historic center"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "landmark_2",
+          "label": "Start with a historic plaza",
+          "moment": "landmark",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "start with a historic plaza"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "landmark_3",
+          "label": "Read a major architectural landmark",
+          "moment": "landmark",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "read a major architectural landmark"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "historic_site_4",
+          "label": "Step inside a historic building",
+          "moment": "historic-site",
+          "daypart": "late_morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "step inside a historic building"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "lunch_5",
+          "label": "Traditional lunch in the center",
+          "moment": "lunch",
+          "daypart": "lunch",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "traditional lunch in the center"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "museum_visit_6",
+          "label": "A museum that connects the history",
+          "moment": "museum-visit",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "a museum that connects the history"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "shopping_7",
+          "label": "Browse an old shopping passage",
+          "moment": "shopping",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "browse an old shopping passage"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "sweet_treat_8",
+          "label": "Try a traditional sweet",
+          "moment": "sweet-treat",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "try a traditional sweet"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "dinner_9",
+          "label": "An early dinner to finish",
+          "moment": "dinner",
+          "daypart": "dinner",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "an early dinner to finish"
+          ],
+          "avoid_tags": []
+        }
+      ]
+    },
+    {
+      "id": "lima_pacific_surf_lunch",
+      "name": "Lima · Pacific Morning, Limeño Lunch",
+      "description": "A coastal day built around one surf lesson and a seafood lunch, with small recovery stops. Allow time to change and travel between beach and clifftop.",
+      "slots": [
+        {
+          "id": "breakfast_1",
+          "label": "Breakfast before the beach",
+          "moment": "breakfast",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "breakfast before the beach"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "active_adventure_2",
+          "label": "A surf lesson on the Costa Verde",
+          "moment": "active-adventure",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "a surf lesson on the costa verde"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "beach_time_3",
+          "label": "Beach cooldown after the lesson",
+          "moment": "beach-time",
+          "daypart": "late_morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "beach cooldown after the lesson"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "coffee_4",
+          "label": "Coffee after changing out of beach gear",
+          "moment": "coffee",
+          "daypart": "late_morning",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "coffee after changing out of beach gear"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "lunch_5",
+          "label": "Ceviche and a relaxed seafood lunch",
+          "moment": "lunch",
+          "daypart": "lunch",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "ceviche and a relaxed seafood lunch"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "scenic_viewpoint_6",
+          "label": "Take in the coast from above",
+          "moment": "scenic-viewpoint",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "take in the coast from above"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "outdoor_7",
+          "label": "An easy coastal park pause",
+          "moment": "outdoor",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "an easy coastal park pause"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "dinner_8",
+          "label": "A casual dinner to finish",
+          "moment": "dinner",
+          "daypart": "dinner",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "a casual dinner to finish"
+          ],
+          "avoid_tags": []
+        }
+      ]
+    },
+    {
+      "id": "lima_criollo_table",
+      "name": "Lima · The Criollo Table",
+      "description": "Follow Lima’s criollo food traditions through ingredients, neighborhood heritage, small tastes, and music. Choose a compact route and keep snack portions small.",
+      "slots": [
+        {
+          "id": "breakfast_1",
+          "label": "A traditional Limeño breakfast",
+          "moment": "breakfast",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "a traditional limeño breakfast"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "local_market_2",
+          "label": "Explore the ingredients at a market",
+          "moment": "local-market",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "explore the ingredients at a market"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "historic_site_3",
+          "label": "A neighborhood heritage stop",
+          "moment": "historic-site",
+          "daypart": "late_morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "a neighborhood heritage stop"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "lunch_4",
+          "label": "A lunch built around criollo cooking",
+          "moment": "lunch",
+          "daypart": "lunch",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "a lunch built around criollo cooking"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "outdoor_5",
+          "label": "A gentle neighborhood park walk",
+          "moment": "outdoor",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "a gentle neighborhood park walk"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "sweet_treat_6",
+          "label": "One traditional sweet",
+          "moment": "sweet-treat",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "one traditional sweet"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "culture_7",
+          "label": "Explore a living local tradition",
+          "moment": "culture",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "explore a living local tradition"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "street_food_8",
+          "label": "Anticuchos for an informal supper",
+          "moment": "street-food",
+          "daypart": "dinner",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "anticuchos for an informal supper"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "nightlife_9",
+          "label": "An evening of criollo music",
+          "moment": "nightlife",
+          "daypart": "nightlife",
+          "acceptable_collections": [
+            "nightlife"
+          ],
+          "preferred_collections": [
+            "nightlife"
+          ],
+          "intent_tags": [
+            "an evening of criollo music"
+          ],
+          "avoid_tags": []
+        }
+      ]
+    },
+    {
+      "id": "lima_ancient_living_city",
+      "name": "Lima · Ancient Lima, Living City",
+      "description": "Connect pre-Hispanic Lima with its present-day neighborhoods. Pair one archaeological anchor with a complementary museum; allow for transfers.",
+      "slots": [
+        {
+          "id": "breakfast_1",
+          "label": "Breakfast near the archaeological anchor",
+          "moment": "breakfast",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "breakfast near the archaeological anchor"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "historic_site_2",
+          "label": "Explore a pre-Hispanic site",
+          "moment": "historic-site",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "explore a pre-hispanic site"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "guided_tour_3",
+          "label": "A guided interpretation of the site",
+          "moment": "guided-tour",
+          "daypart": "late_morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "a guided interpretation of the site"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "coffee_4",
+          "label": "Coffee in the surrounding neighborhood",
+          "moment": "coffee",
+          "daypart": "late_morning",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "coffee in the surrounding neighborhood"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "lunch_5",
+          "label": "A local lunch between eras",
+          "moment": "lunch",
+          "daypart": "lunch",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "a local lunch between eras"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "museum_visit_6",
+          "label": "A museum that deepens the ancient story",
+          "moment": "museum-visit",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "a museum that deepens the ancient story"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "outdoor_7",
+          "label": "A garden pause back in the living city",
+          "moment": "outdoor",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "a garden pause back in the living city"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "dinner_8",
+          "label": "Contemporary Peruvian dinner",
+          "moment": "dinner",
+          "daypart": "dinner",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "contemporary peruvian dinner"
+          ],
+          "avoid_tags": []
+        }
+      ]
+    },
+    {
+      "id": "lima_pueblo_libre_museums_tables",
+      "name": "Lima · Pueblo Libre: Museums & Old Tables",
+      "description": "A Pueblo Libre neighborhood day centered on one substantial museum visit, local heritage, traditional food, and a tavern finish.",
+      "slots": [
+        {
+          "id": "breakfast_1",
+          "label": "Breakfast in Pueblo Libre",
+          "moment": "breakfast",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "breakfast in pueblo libre"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "landmark_2",
+          "label": "Get oriented at a neighborhood plaza",
+          "moment": "landmark",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "get oriented at a neighborhood plaza"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "museum_visit_3",
+          "label": "The day’s main museum visit",
+          "moment": "museum-visit",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "the day’s main museum visit"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "lunch_4",
+          "label": "A traditional neighborhood lunch",
+          "moment": "lunch",
+          "daypart": "lunch",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "a traditional neighborhood lunch"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "historic_site_5",
+          "label": "Explore a neighborhood heritage site",
+          "moment": "historic-site",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "explore a neighborhood heritage site"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "shopping_6",
+          "label": "Browse Peruvian artisan work",
+          "moment": "shopping",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "browse peruvian artisan work"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "sweet_treat_7",
+          "label": "A local sweet and a seated pause",
+          "moment": "sweet-treat",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "a local sweet and a seated pause"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "dinner_8",
+          "label": "Dinner at a traditional tavern",
+          "moment": "dinner",
+          "daypart": "dinner",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "dinner at a traditional tavern"
+          ],
+          "avoid_tags": []
+        }
+      ]
+    },
+    {
+      "id": "lima_callao_port_art_sea",
+      "name": "Lima · Callao: Port, Art & Sea",
+      "description": "A Lima-area day connecting Callao’s port history and art with a coastal finish. Plan transfers between the port/art district and La Punta as needed.",
+      "slots": [
+        {
+          "id": "breakfast_1",
+          "label": "Breakfast to begin the port day",
+          "moment": "breakfast",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "breakfast to begin the port day"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "historic_site_2",
+          "label": "Discover a maritime-history landmark",
+          "moment": "historic-site",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "discover a maritime-history landmark"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "culture_3",
+          "label": "Explore the port district’s street art",
+          "moment": "culture",
+          "daypart": "late_morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "explore the port district’s street art"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "culture_4",
+          "label": "Visit a local gallery",
+          "moment": "culture",
+          "daypart": "late_morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "visit a local gallery"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "lunch_5",
+          "label": "A seafood lunch",
+          "moment": "lunch",
+          "daypart": "lunch",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "a seafood lunch"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "outdoor_6",
+          "label": "A gentle coastal walk",
+          "moment": "outdoor",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "a gentle coastal walk"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "scenic_viewpoint_7",
+          "label": "Pause over the waterfront view",
+          "moment": "scenic-viewpoint",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "pause over the waterfront view"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "dinner_8",
+          "label": "An early coastal dinner",
+          "moment": "dinner",
+          "daypart": "dinner",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "an early coastal dinner"
+          ],
+          "avoid_tags": []
+        }
+      ]
+    },
+    {
+      "id": "lima_pachacamac_sanctuary_countryside",
+      "name": "Lima · Pachacámac: Sanctuary & Countryside",
+      "description": "A southern Lima excursion around the sanctuary and countryside lunch. Reserve time for outbound and return travel; interpretation can share the main site visit.",
+      "slots": [
+        {
+          "id": "breakfast_1",
+          "label": "Breakfast before the excursion",
+          "moment": "breakfast",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "breakfast before the excursion"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "museum_visit_2",
+          "label": "Get context at the site museum",
+          "moment": "museum-visit",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "get context at the site museum"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "historic_site_3",
+          "label": "Explore the archaeological sanctuary",
+          "moment": "historic-site",
+          "daypart": "morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "explore the archaeological sanctuary"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "guided_tour_4",
+          "label": "Interpret the landscape with a guide",
+          "moment": "guided-tour",
+          "daypart": "late_morning",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "interpret the landscape with a guide"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "lunch_5",
+          "label": "A countryside lunch",
+          "moment": "lunch",
+          "daypart": "lunch",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "a countryside lunch"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "culture_6",
+          "label": "Discover local craft",
+          "moment": "culture",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "discover local craft"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "outdoor_7",
+          "label": "A gentle garden or outdoor pause",
+          "moment": "outdoor",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "attractions"
+          ],
+          "preferred_collections": [
+            "attractions"
+          ],
+          "intent_tags": [
+            "a gentle garden or outdoor pause"
+          ],
+          "avoid_tags": []
+        },
+        {
+          "id": "coffee_8",
+          "label": "Coffee before the journey back",
+          "moment": "coffee",
+          "daypart": "afternoon",
+          "acceptable_collections": [
+            "dining"
+          ],
+          "preferred_collections": [
+            "dining"
+          ],
+          "intent_tags": [
+            "coffee before the journey back"
+          ],
+          "avoid_tags": []
+        }
+      ]
+    }
+  ]
+}

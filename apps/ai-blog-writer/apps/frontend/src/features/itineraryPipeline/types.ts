@@ -197,6 +197,29 @@ export interface GetawayPlan {
   returnDay: number | null
 }
 
+/**
+ * Where the traveller sleeps for a run of nights. Night N is the night after
+ * day N, so a stay on nights 1–2 is where day 1 ends, day 2 starts and ends,
+ * and day 3 starts.
+ *
+ * Either a hotel Location Manager already holds, or a request for the
+ * selection to recommend one — a suggestion, never a booking.
+ */
+export type StayMode = 'location_manager' | 'recommend'
+
+export interface StayDraft {
+  id: string
+  mode: StayMode
+  /** Location Manager's id, when picked from there. */
+  locationId: number | null
+  name: string
+  area: string
+  /** For a recommendation: what kind of stay to look for. */
+  note: string
+  firstNight: number
+  lastNight: number
+}
+
 export interface TripDraft {
   titleSeed: string
   /**
@@ -211,6 +234,12 @@ export interface TripDraft {
   startingBase: string
   sharedPreferences: SharedPreferences
   getaway: GetawayPlan
+  /**
+   * Optional so a draft saved before stays existed still reads as-is. Stays
+   * are not part of any approval: changing a hotel changes where days start
+   * and end, not what their layouts are.
+   */
+  stays?: StayDraft[]
 }
 
 export type Stage = 'trip' | 'days' | 'review' | 'workspace'
@@ -219,6 +248,19 @@ export interface ItinerarySetupDraft {
   schemaVersion: number
   draftId: string
   updatedAt: string
+  /**
+   * Where the backend copy of this trip lives, once there is one.
+   *
+   * Absent until the first day Grill is started. From that moment the backend
+   * is canonical for the work — the interviews, directions, prompts and saved
+   * days — and this is a *pointer*, not a second authoritative copy. The
+   * setup itself is still edited here and pushed across on every change.
+   *
+   * Optional rather than a schema bump on purpose: a draft written before this
+   * existed reads perfectly well without it, and resetting somebody's saved
+   * trip to introduce a pointer would be a worse outcome than not having one.
+   */
+  workspaceId?: string
   trip: TripDraft
   days: DayDraft[]
   ui: {

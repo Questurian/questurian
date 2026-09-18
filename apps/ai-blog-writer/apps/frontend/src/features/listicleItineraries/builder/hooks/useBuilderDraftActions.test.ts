@@ -99,6 +99,57 @@ function useHarness(initialDraft: ListicleItineraryDraft) {
 }
 
 describe('listicleItineraries useBuilderDraftActions', () => {
+  it('continues with only templates and seeds all days without requiring header content', () => {
+    const draft = createEmptyDraft()
+    draft.dayCount = 2
+    draft.days.push({ id: 'second-day', items: [], whereStaying: [] })
+    draft.dayShellSelections = [
+      { dayId: draft.days[0].id, shellId: 'rich_standard_day' },
+      { dayId: 'second-day', shellId: 'gardens_and_slow_living' },
+    ]
+    const { result } = renderHook(() => useHarness(draft))
+    act(() => result.current.handleContinue())
+    expect(result.current.draft?.step1_complete).toBe(true)
+    expect(result.current.draft?.step2_complete).toBe(false)
+    expect(result.current.draft?.days.map((day) => day.items.length)).toEqual([11, 8])
+    expect(result.current.draft?.days[0].items.map((item) => item.blockType)).toEqual([
+      'itinerary-dining', 'itinerary-attractions', 'itinerary-attractions',
+      'itinerary-dining', 'itinerary-attractions', 'itinerary-dining',
+      'itinerary-attractions', 'itinerary-dining', 'itinerary-attractions',
+      'itinerary-dining', 'itinerary-nightlife',
+    ])
+    expect(result.current.draft?.days[0].items[0].shellSlotLabel).toBe('Breakfast')
+    const ids = result.current.draft!.days.flatMap((day) => day.items.map((item) => item.id))
+    expect(new Set(ids).size).toBe(19)
+    act(() => result.current.handleContinue())
+    expect(result.current.draft!.days.flatMap((day) => day.items.map((item) => item.id))).toEqual(ids)
+  })
+
+  it('uses saved custom templates and preserves existing stops when setup is saved again', () => {
+    const draft = createEmptyDraft()
+    draft.customDayShells = [{ id: 'custom', name: 'My day', description: '', slots: [
+      { id: 'coffee', label: 'Coffee break', daypart: 'morning', acceptableCollections: ['dining'], preferredCollections: ['dining'], intentTags: [] },
+    ] }]
+    draft.dayShellSelections = [{ dayId: draft.days[0].id, shellId: 'custom' }]
+    const { result } = renderHook(() => useHarness(draft))
+    act(() => result.current.handleContinue())
+    expect(result.current.draft?.days[0].items).toHaveLength(1)
+    const id = result.current.draft!.days[0].items[0].id
+    act(() => result.current.updateItem(id, (item) => ({ ...item, blurbMarkdown: 'Keep my writing' })))
+    act(() => result.current.handleUpdateSetup())
+    act(() => result.current.handleSaveSetup())
+    expect(result.current.draft?.days[0].items[0].blurbMarkdown).toBe('Keep my writing')
+  })
+
+  it('rejects missing template references', () => {
+    const draft = createEmptyDraft()
+    draft.dayShellSelections = [{ dayId: draft.days[0].id, shellId: 'deleted-template' }]
+    const { result } = renderHook(() => useHarness(draft))
+    act(() => result.current.handleContinue())
+    expect(result.current.draft?.step1_complete).toBe(false)
+    expect(result.current.draft?.days[0].items).toHaveLength(0)
+  })
+
   it('allows Step 2 to pass empty without invalidating completed Step 3', () => {
     const draft = buildDraft()
     draft.step2_complete = false
@@ -139,7 +190,8 @@ describe('listicleItineraries useBuilderDraftActions', () => {
     expect(result.current.draft?.seoSection.metaDescription).toBe(
       'Keep this itinerary SEO description'
     )
-    expect(result.current.draft?.days[0]?.items).toEqual([])
+    expect(result.current.draft?.days[0]?.items).toHaveLength(11)
+    expect(result.current.draft?.days[0]?.items.every((item) => item.item === null)).toBe(true)
   })
 
   it('clears the Selection reason and blurb when a stop identity is swapped (ADR 0020)', () => {

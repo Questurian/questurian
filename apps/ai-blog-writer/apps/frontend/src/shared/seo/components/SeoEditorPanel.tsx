@@ -28,6 +28,7 @@ type SeoEditorPanelProps = {
   onAutoFillOgUrl?: () => void
   onRegenerateStructuredData?: () => void
   canRegenerateStructuredData?: boolean
+  showAiActions?: boolean
   stepLabel?: string
   title?: string
 }
@@ -44,6 +45,7 @@ export function SeoEditorPanel({
   onAutoFillOgUrl,
   onRegenerateStructuredData,
   canRegenerateStructuredData = false,
+  showAiActions = true,
   stepLabel = 'Step 4',
   title = 'SEO & Metadata',
 }: SeoEditorPanelProps) {
@@ -66,7 +68,7 @@ export function SeoEditorPanel({
     setIsOgUploadModalOpen(true)
   }
 
-  const renderAiButton = (target: SeoAiTarget, label = 'AI') => (
+  const renderAiButton = (target: SeoAiTarget, label = 'AI') => showAiActions ? (
     <button
       type="button"
       className="stl-btn stl-btn-secondary stl-seo-ai-btn"
@@ -75,7 +77,7 @@ export function SeoEditorPanel({
     >
       {isGeneratingSeoTarget === target ? 'Generating...' : label}
     </button>
-  )
+  ) : null
 
   return (
     <>
@@ -84,7 +86,7 @@ export function SeoEditorPanel({
           <h2>
             <span className="stl-kicker">{stepLabel}</span> {title}
           </h2>
-          <div className="stl-inline-actions">
+          {showAiActions && <div className="stl-inline-actions">
             <button
               type="button"
               className="stl-btn stl-btn-secondary"
@@ -93,7 +95,7 @@ export function SeoEditorPanel({
             >
               {isGeneratingSeoTarget === 'all' ? 'Generating...' : 'Generate SEO (AI)'}
             </button>
-          </div>
+          </div>}
         </div>
 
         <div className="stl-seo-stack">

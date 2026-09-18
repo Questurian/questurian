@@ -21,7 +21,7 @@ export function buildDayShellSelections(
 ): DayShellSelection[] {
   return draft.days.map((day) => ({
     dayId: day.id,
-    shellId: getShellIdForDay(draft, day.id) || fallbackShellId,
+    shellId: draft.dayShellSelections?.find((entry) => entry.dayId === day.id)?.shellId ?? fallbackShellId,
   }))
 }
 

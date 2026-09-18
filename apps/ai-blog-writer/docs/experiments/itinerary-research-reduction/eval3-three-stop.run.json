@@ -1,0 +1,127 @@
+{
+ "workspace_id": "20c6daba898b",
+ "day_id": "d1",
+ "export_id": "0cd6a0937d17",
+ "wire_version": "itinerary-day-research-v2",
+ "before": {
+  "size_report": {
+   "sections": {
+    "system": 384,
+    "instructions": 2877,
+    "brief": 8694,
+    "writing": 4280,
+    "schema": 3696
+   },
+   "total": 20021,
+   "budget": 18000,
+   "over_budget": true,
+   "largest_section": "brief",
+   "copy_characters": 20217
+  },
+  "sent": {
+   "system": 384,
+   "prompt": 15941,
+   "schema": 3696,
+   "total": 20021
+  },
+  "budget": {
+   "venues": 3,
+   "searches": 10,
+   "fetches": 8
+  },
+  "constraints": [
+   "Evergreen: no weekday is chosen, so no stop may depend on a fixed weekday; anything that closes on a fixed day is out.",
+   "Everything stays within Miraflores, on foot, out from and back to the hotel; nothing crosses the city.",
+   "A transfer is only allowed for lunch, and only a short taxi hop, not a trip across the city.",
+   "If the best lunch candidate sits outside Miraflores, it must earn that by being the single best version of this meal, and the café and bar must then both be walkable from the hotel to compensate.",
+   "The one swap never allowed is trading the long lunch for two smaller meals; if nothing bookable holds up, the fallback is a later, longer, more serious dinner in place of [s-evening], not a day with no anchor.",
+   "Dietary needs are unspecified — assume nothing; a candidate that cannot adapt is the wrong candidate.",
+   "Access needs are unspecified — assume nothing about step-free entry, lifts, clifftop paths, or kerbs.",
+   "Mid-range budget, with lunch treated as the one place it stretches.",
+   "Relaxed pace, short walking tolerance, getting around by walking and taxi."
+  ],
+  "copy_characters": 20217
+ },
+ "after": {
+  "attempt_key": "89a65d888f694ddab39342c7834cf4d1",
+  "model_requested": "claude-sonnet-5-high",
+  "wall_seconds": 487.7,
+  "state": "done",
+  "detail": "",
+  "fault": "",
+  "model": "claude-sonnet-5",
+  "cost_usd": 1.0930587999999999,
+  "turns": 21,
+  "duration_ms": 485697,
+  "searches": 12,
+  "fetches": 6,
+  "tool_counts": {
+   "ToolSearch": 1,
+   "WebSearch": 12,
+   "WebFetch": 6,
+   "StructuredOutput": 1
+  },
+  "returned_characters": 9710,
+  "session_id": "a9ec9ee5-5bba-4e77-b556-8ff7cba627be",
+  "transcript_path": "data/itinerary-research-audit/89a65d888f694ddab39342c7834cf4d1.jsonl",
+  "preview": {
+   "valid": true,
+   "from_research_run": true,
+   "completeness": {
+    "selected": 3,
+    "unresolved": 0,
+    "omitted_optional": 0,
+    "required_unresolved": [],
+    "missing_timing": [],
+    "outstanding_checks": [],
+    "missing_legs": [],
+    "schedule_conflicts": [],
+    "complete": true
+   },
+   "issues": [
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → s-evening",
+     "message": "Proposed change to the layout: Call the hotel to confirm hours and gauge the room, or treat the stop as skippable, which it's designed to be. — Belo Bar's exact daily opening hours weren't confirmed by research, and it's described in one source as 'one of Lima's best cocktail bars,' which sits ambiguously against the quiet, not-a-scene requirement for this stop."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → s-lunch",
+     "message": "Proposed change to the layout: Reserve as far ahead as the restaurant's system allows, particularly for a weekend lunch. — No source gave an exact recommended lead time for booking; only that weekend tables are reported hard to get without advance notice."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → s-lunch",
+     "message": "Proposed change to the layout: Flag any dietary needs at the time of booking rather than assuming they'll be handled. — No source detailed La Rosa Náutica's specific dietary accommodations; the à la carte seafood format is more flexible than a fixed tasting menu, but that's an inference, not a confirmed policy."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "editor notes",
+     "message": "Relaxed evening: Belo Bar's exact daily opening hours weren't confirmed by research, and it's described in one source as 'one of Lima's best cocktail bars,' which sits ambiguously against the quiet, not-a-scene requirement for this stop."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "editor notes",
+     "message": "Special lunch: No source gave an exact recommended lead time for booking; only that weekend tables are reported hard to get without advance notice."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "editor notes",
+     "message": "Special lunch: No source detailed La Rosa Náutica's specific dietary accommodations; the à la carte seafood format is more flexible than a fixed tasting menu, but that's an inference, not a confirmed policy."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "editor notes",
+     "message": "The whole day: The taxi times between the clifftop and La Rosa Náutica's pier, and between the pier and central Miraflores, are short-hop planning estimates rather than sourced trip times, since neither the exact hotel nor traffic conditions are fixed for an evergreen itinerary."
+    }
+   ]
+  }
+ }
+}

@@ -158,6 +158,7 @@ function normalizeStoredDraft(
           ? slotValue.label
           : `Custom slot ${slotIndex + 1}`,
       daypart: slotValue.daypart as ShellSlotDaypart,
+      moment: isItineraryMoment(slotValue.moment) ? slotValue.moment : undefined,
       acceptableCollections,
       preferredCollections,
       intentTags: Array.isArray(slotValue.intentTags)

@@ -7,6 +7,7 @@ type ApiShellSlot = {
   id: string
   label: string
   daypart: DayShellSlot['daypart']
+  moment?: DayShellSlot['moment']
   acceptable_collections: DayShellSlot['acceptableCollections']
   preferred_collections: DayShellSlot['preferredCollections']
   intent_tags: string[]
@@ -25,6 +26,7 @@ function toApiSlot(slot: DayShellSlot): ApiShellSlot {
     id: slot.id,
     label: slot.label,
     daypart: slot.daypart,
+    moment: slot.moment,
     acceptable_collections: slot.acceptableCollections,
     preferred_collections: slot.preferredCollections,
     intent_tags: slot.intentTags,
@@ -37,6 +39,7 @@ function fromApiSlot(slot: ApiShellSlot): DayShellSlot {
     id: slot.id,
     label: slot.label,
     daypart: slot.daypart,
+    moment: slot.moment,
     acceptableCollections: slot.acceptable_collections,
     preferredCollections: slot.preferred_collections,
     intentTags: slot.intent_tags,

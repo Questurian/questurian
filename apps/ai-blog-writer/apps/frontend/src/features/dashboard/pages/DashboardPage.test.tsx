@@ -13,6 +13,9 @@ const PRIMARY_CARD_TITLES = [
   'Media Library',
 ]
 
+/** Decommissioned: the builder replaced it, so it has no card anywhere. */
+const RETIRED_CARD_TITLE = 'Itinerary Pipeline'
+
 const OCCASIONAL_CARD_TITLES = [
   'Itineraries Pipeline',
   'Image Recreation Prompts',
@@ -93,6 +96,24 @@ describe('DashboardPage', () => {
     ).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getByRole('heading', { level: 3, name: 'Media Library' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { level: 3, name: 'Batch Image Recreation' })).not.toBeInTheDocument()
+  })
+
+  it('leads Article Generation with the itinerary builder and drops the retired pipeline', () => {
+    renderPage()
+
+    const articleGenerationCards = screen
+      .getByRole('heading', { level: 2, name: 'Article Generation' })
+      .closest('section')
+
+    expect(
+      Array.from(articleGenerationCards?.querySelectorAll('h3') ?? []).map((heading) => heading.textContent),
+    ).toEqual(['Listicle Itineraries', 'Prompt → Articles', 'Listicle Pipeline'])
+
+    fireEvent.click(screen.getByRole('button', { name: /show occasional tools/i }))
+
+    expect(
+      screen.queryByRole('heading', { level: 3, name: RETIRED_CARD_TITLE }),
+    ).not.toBeInTheDocument()
   })
 
   it('hides homepage featured content for writer accounts', () => {

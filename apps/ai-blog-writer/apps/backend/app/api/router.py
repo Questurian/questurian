@@ -12,6 +12,7 @@ from app.features.listicle_pipeline import router as listicle_pipeline_router
 from app.features.prompt2blog import router as prompt2blog_router
 from app.features.editor_assist import router as editor_assist_router
 from app.features.itineraries_pipeline import router as itineraries_pipeline_router
+from app.features.itinerary_pipeline import router as itinerary_pipeline_router
 from app.features.staged_drafts import router as staged_drafts_router
 from app.features.claude_connection import router as claude_connection_router
 
@@ -45,6 +46,10 @@ router.include_router(prompt2blog_router)
 router.include_router(listicle_pipeline_router)
 router.include_router(editor_assist_router)
 router.include_router(itineraries_pipeline_router)
+# The singular one is the new day workflow (Grill -> prompt -> imported day).
+# The plural one above is the old Autobuild path and is deliberately
+# untouched; they share a word and nothing else.
+router.include_router(itinerary_pipeline_router)
 router.include_router(staged_drafts_router)
 router.include_router(claude_connection_router)
 # Retired pipelines answer 410 rather than 404 (ADR 0032). Mounted last so a

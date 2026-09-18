@@ -34,7 +34,7 @@ import {
   readLexicalFromJsonText,
   stripLexicalEditorStateId
 } from '../../../../shared/builder/utils/lexical-json.utils'
-import { validateStep1 } from '../validators/setup.validators'
+import { validateSetupForSync } from '../validators/setup.validators'
 import {
   validateSeoSection,
   validateStep2,
@@ -197,7 +197,7 @@ export function useItinerarySubmit({
     const submitDraft = draft
     const schemaPublisherConfig = getSchemaPublisherConfig()
 
-    const stepIssues = validateStep1(submitDraft)
+    const stepIssues = validateSetupForSync(submitDraft)
     if (stepIssues.length > 0) {
       onError(stepIssues.join('. '))
       return

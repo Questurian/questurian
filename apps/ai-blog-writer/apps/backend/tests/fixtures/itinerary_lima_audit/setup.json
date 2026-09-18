@@ -1,0 +1,362 @@
+{
+ "draftId": "draft_mu27iaav43axyae",
+ "trip": {
+  "titleSeed": "2 Day in Lima Peru",
+  "baseCity": "Lima, Peru",
+  "scope": "city_only",
+  "timing": {
+   "mode": "evergreen",
+   "startDate": "",
+   "firstWeekday": ""
+  },
+  "preferredAreas": [
+   "Miraflores",
+   "Barranco"
+  ],
+  "startingBase": "",
+  "sharedPreferences": {
+   "audience": "",
+   "budgetStyle": "unspecified",
+   "budgetNote": "",
+   "pace": "unspecified",
+   "transport": [],
+   "transportNote": "",
+   "walkingTolerance": "unspecified",
+   "dietaryNeeds": "",
+   "accessNeeds": "",
+   "mustInclude": "",
+   "avoid": ""
+  },
+  "getaway": {
+   "destination": "",
+   "departureDay": null,
+   "returnDay": null
+  }
+ },
+ "days": [
+  {
+   "id": "day_mu28ruv3jg5pczu",
+   "label": "Day 1",
+   "sourceTemplateName": "Food-Focused Full Day",
+   "availableTime": {
+    "id": "full_day",
+    "customStart": "",
+    "customEnd": "",
+    "endsNextDay": false
+   },
+   "slots": [
+    {
+     "id": "slot_mu28s5h614jta0vy",
+     "sourceSlotId": "breakfast_iconic_coffee",
+     "kind": "place",
+     "label": "Breakfast / iconic coffee",
+     "daypart": "morning",
+     "optional": false,
+     "purpose": "Introduce local food culture through breakfast or a distinctive cafe.",
+     "allowedCategories": [
+      "dining"
+     ],
+     "preferredCategories": [
+      "dining"
+     ],
+     "cues": [
+      "local food culture",
+      "breakfast",
+      "distinctive cafe"
+     ],
+     "exclusions": [],
+     "travel": null
+    },
+    {
+     "id": "slot_mu28s5h615gp2aek",
+     "sourceSlotId": "market_food_exploration",
+     "kind": "experience",
+     "label": "Market / food exploration",
+     "daypart": "morning",
+     "optional": false,
+     "purpose": "Browse a market and learn about ingredients; avoid another full meal.",
+     "allowedCategories": [
+      "attractions",
+      "dining"
+     ],
+     "preferredCategories": [
+      "attractions"
+     ],
+     "cues": [
+      "market",
+      "ingredients"
+     ],
+     "exclusions": [
+      "full meal"
+     ],
+     "travel": null
+    },
+    {
+     "id": "slot_mu28s5h616rp9696",
+     "sourceSlotId": "signature_lunch",
+     "kind": "place",
+     "label": "Signature lunch",
+     "daypart": "lunch",
+     "optional": false,
+     "purpose": "Anchor lunch around a regional specialty.",
+     "allowedCategories": [
+      "dining"
+     ],
+     "preferredCategories": [
+      "dining"
+     ],
+     "cues": [
+      "regional specialty"
+     ],
+     "exclusions": [],
+     "travel": null
+    },
+    {
+     "id": "slot_mu28s5h6178kpihk",
+     "sourceSlotId": "neighborhood_walk",
+     "kind": "place",
+     "label": "Neighborhood walk / light activity",
+     "daypart": "afternoon",
+     "optional": false,
+     "purpose": "Create a non-food breathing space between meals.",
+     "allowedCategories": [
+      "attractions"
+     ],
+     "preferredCategories": [
+      "attractions"
+     ],
+     "cues": [
+      "walk",
+      "breathing space"
+     ],
+     "exclusions": [],
+     "travel": null
+    },
+    {
+     "id": "slot_mu28s5h618a2xvcu",
+     "sourceSlotId": "specialty_tasting",
+     "kind": "place",
+     "label": "Specialty tasting / snack",
+     "daypart": "afternoon",
+     "optional": false,
+     "purpose": "Try one specialty in a small portion, not another full meal.",
+     "allowedCategories": [
+      "dining",
+      "attractions"
+     ],
+     "preferredCategories": [
+      "dining"
+     ],
+     "cues": [
+      "specialty",
+      "small portion",
+      "tasting"
+     ],
+     "exclusions": [
+      "full meal"
+     ],
+     "travel": null
+    },
+    {
+     "id": "slot_mu28s5h6198kc83j",
+     "sourceSlotId": "destination_dinner",
+     "kind": "place",
+     "label": "Destination dinner",
+     "daypart": "dinner",
+     "optional": false,
+     "purpose": "Make dinner a deliberate culinary destination.",
+     "allowedCategories": [
+      "dining"
+     ],
+     "preferredCategories": [
+      "dining"
+     ],
+     "cues": [
+      "culinary destination",
+      "deliberate"
+     ],
+     "exclusions": [],
+     "travel": null
+    },
+    {
+     "id": "slot_mu28s5h61a9eefh0",
+     "sourceSlotId": "dessert_drinks",
+     "kind": "place",
+     "label": "Dessert / drinks",
+     "daypart": "evening",
+     "optional": true,
+     "purpose": "Offer an optional small finish suited to appetite and energy.",
+     "allowedCategories": [
+      "dining",
+      "nightlife"
+     ],
+     "preferredCategories": [
+      "dining"
+     ],
+     "cues": [
+      "dessert",
+      "small finish",
+      "drinks"
+     ],
+     "exclusions": [],
+     "travel": null
+    }
+   ],
+   "setupNotes": "",
+   "preparationNotes": "",
+   "tripRevision": "[\"2 Day in Lima Peru\",\"2\",\"Lima, Peru\",\"city_only\",\"evergreen\",\"\",\"\",[\"Miraflores\",\"Barranco\"],\"\",[\"\",\"unspecified\",\"\",\"unspecified\",[],\"\",\"unspecified\",\"\",\"\",\"\",\"\"],null]",
+   "layoutRevision": "[\"Day 1\",\"food_focused_full_day\",{\"id\":\"full_day\",\"customStart\":\"\",\"customEnd\":\"\",\"endsNextDay\":false},[[\"place\",\"Breakfast / iconic coffee\",\"morning\",false,\"Introduce local food culture through breakfast or a distinctive cafe.\",[\"dining\"],[\"dining\"],[\"local food culture\",\"breakfast\",\"distinctive cafe\"],[],null],[\"experience\",\"Market / food exploration\",\"morning\",false,\"Browse a market and learn about ingredients; avoid another full meal.\",[\"attractions\",\"dining\"],[\"attractions\"],[\"market\",\"ingredients\"],[\"full meal\"],null],[\"place\",\"Signature lunch\",\"lunch\",false,\"Anchor lunch around a regional specialty.\",[\"dining\"],[\"dining\"],[\"regional specialty\"],[],null],[\"place\",\"Neighborhood walk / light activity\",\"afternoon\",false,\"Create a non-food breathing space between meals.\",[\"attractions\"],[\"attractions\"],[\"walk\",\"breathing space\"],[],null],[\"place\",\"Specialty tasting / snack\",\"afternoon\",false,\"Try one specialty in a small portion, not another full meal.\",[\"dining\",\"attractions\"],[\"dining\"],[\"specialty\",\"small portion\",\"tasting\"],[\"full meal\"],null],[\"place\",\"Destination dinner\",\"dinner\",false,\"Make dinner a deliberate culinary destination.\",[\"dining\"],[\"dining\"],[\"culinary destination\",\"deliberate\"],[],null],[\"place\",\"Dessert / drinks\",\"evening\",true,\"Offer an optional small finish suited to appetite and energy.\",[\"dining\",\"nightlife\"],[\"dining\"],[\"dessert\",\"small finish\",\"drinks\"],[],null]]]",
+   "approvedAt": ""
+  },
+  {
+   "id": "day_mu28ruv3qsupzqj",
+   "label": "Day 2",
+   "sourceTemplateName": "Adventure Full Day",
+   "availableTime": {
+    "id": "full_day",
+    "customStart": "",
+    "customEnd": "",
+    "endsNextDay": false
+   },
+   "slots": [
+    {
+     "id": "slot_mu28tt3j2ja6tdtz",
+     "sourceSlotId": "active_opener",
+     "kind": "experience",
+     "label": "Active opener",
+     "daypart": "morning",
+     "optional": false,
+     "purpose": "Warm up with a walk, hike or outdoor activity.",
+     "allowedCategories": [
+      "attractions"
+     ],
+     "preferredCategories": [
+      "attractions"
+     ],
+     "cues": [
+      "walk",
+      "hike",
+      "outdoor"
+     ],
+     "exclusions": [],
+     "travel": null
+    },
+    {
+     "id": "slot_mu28tt3j2kux7k9c",
+     "sourceSlotId": "signature_adventure",
+     "kind": "experience",
+     "label": "Signature adventure",
+     "daypart": "morning",
+     "optional": false,
+     "purpose": "Anchor the day in a distinctive adventure suited to traveler ability.",
+     "allowedCategories": [
+      "attractions"
+     ],
+     "preferredCategories": [
+      "attractions"
+     ],
+     "cues": [
+      "distinctive adventure",
+      "traveler ability"
+     ],
+     "exclusions": [],
+     "travel": null
+    },
+    {
+     "id": "slot_mu28tt3j2lddy9a8",
+     "sourceSlotId": "lunch",
+     "kind": "place",
+     "label": "Lunch",
+     "daypart": "lunch",
+     "optional": false,
+     "purpose": "Refuel and pause between active experiences.",
+     "allowedCategories": [
+      "dining"
+     ],
+     "preferredCategories": [
+      "dining"
+     ],
+     "cues": [
+      "refuel",
+      "pause"
+     ],
+     "exclusions": [],
+     "travel": null
+    },
+    {
+     "id": "slot_mu28tt3j2ma8b1af",
+     "sourceSlotId": "hands_on_experience",
+     "kind": "experience",
+     "label": "Hands-on / immersive experience",
+     "daypart": "afternoon",
+     "optional": false,
+     "purpose": "Participate in a class, guided experience or water activity.",
+     "allowedCategories": [
+      "attractions"
+     ],
+     "preferredCategories": [
+      "attractions"
+     ],
+     "cues": [
+      "class",
+      "guided experience",
+      "water activity"
+     ],
+     "exclusions": [],
+     "travel": null
+    },
+    {
+     "id": "slot_mu28tt3j2nwontg0",
+     "sourceSlotId": "scenic_recovery",
+     "kind": "place",
+     "label": "Scenic recovery activity",
+     "daypart": "afternoon",
+     "optional": false,
+     "purpose": "Slow down at a waterfront, park or easy viewpoint; recovery is the purpose.",
+     "allowedCategories": [
+      "attractions"
+     ],
+     "preferredCategories": [
+      "attractions"
+     ],
+     "cues": [
+      "waterfront",
+      "park",
+      "easy viewpoint"
+     ],
+     "exclusions": [
+      "strenuous",
+      "all-day commitment"
+     ],
+     "travel": null
+    },
+    {
+     "id": "slot_mu28tt3j2o913gy3",
+     "sourceSlotId": "dinner",
+     "kind": "place",
+     "label": "Dinner",
+     "daypart": "dinner",
+     "optional": false,
+     "purpose": "Finish with a comfortable, restorative meal.",
+     "allowedCategories": [
+      "dining"
+     ],
+     "preferredCategories": [
+      "dining"
+     ],
+     "cues": [
+      "comfortable",
+      "restorative"
+     ],
+     "exclusions": [],
+     "travel": null
+    }
+   ],
+   "setupNotes": "",
+   "preparationNotes": "",
+   "tripRevision": "[\"2 Day in Lima Peru\",\"2\",\"Lima, Peru\",\"city_only\",\"evergreen\",\"\",\"\",[\"Miraflores\",\"Barranco\"],\"\",[\"\",\"unspecified\",\"\",\"unspecified\",[],\"\",\"unspecified\",\"\",\"\",\"\",\"\"],null]",
+   "layoutRevision": "[\"Day 2\",\"adventure_full_day\",{\"id\":\"full_day\",\"customStart\":\"\",\"customEnd\":\"\",\"endsNextDay\":false},[[\"experience\",\"Active opener\",\"morning\",false,\"Warm up with a walk, hike or outdoor activity.\",[\"attractions\"],[\"attractions\"],[\"walk\",\"hike\",\"outdoor\"],[],null],[\"experience\",\"Signature adventure\",\"morning\",false,\"Anchor the day in a distinctive adventure suited to traveler ability.\",[\"attractions\"],[\"attractions\"],[\"distinctive adventure\",\"traveler ability\"],[],null],[\"place\",\"Lunch\",\"lunch\",false,\"Refuel and pause between active experiences.\",[\"dining\"],[\"dining\"],[\"refuel\",\"pause\"],[],null],[\"experience\",\"Hands-on / immersive experience\",\"afternoon\",false,\"Participate in a class, guided experience or water activity.\",[\"attractions\"],[\"attractions\"],[\"class\",\"guided experience\",\"water activity\"],[],null],[\"place\",\"Scenic recovery activity\",\"afternoon\",false,\"Slow down at a waterfront, park or easy viewpoint; recovery is the purpose.\",[\"attractions\"],[\"attractions\"],[\"waterfront\",\"park\",\"easy viewpoint\"],[\"strenuous\",\"all-day commitment\"],null],[\"place\",\"Dinner\",\"dinner\",false,\"Finish with a comfortable, restorative meal.\",[\"dining\"],[\"dining\"],[\"comfortable\",\"restorative\"],[],null]]]",
+   "approvedAt": ""
+  }
+ ]
+}

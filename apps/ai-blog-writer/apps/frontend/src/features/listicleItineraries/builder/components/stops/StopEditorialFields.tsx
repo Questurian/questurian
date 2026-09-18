@@ -1,3 +1,4 @@
+import { SHOW_ITINERARY_AI } from '../../constants/editor-features'
 import { MarkdownBlockEditor } from '../../../../../shared/markdown-editor'
 import type { ItineraryItemBlock, ListicleAngle } from '../../../types'
 import type { getItineraryAngleOptions } from '../../../types'
@@ -40,7 +41,7 @@ export function StopEditorialFields({
       <div className="stl-field">
         <div className="stl-field-label-row stl-blurb-label-row">
           <span>Blurb *</span>
-          <div className="stl-inline-actions stl-blurb-actions">
+          {SHOW_ITINERARY_AI && <div className="stl-inline-actions stl-blurb-actions">
             {angleOptions.length > 0 ? (
               <select
                 className="stl-field-input stl-angle-select"
@@ -89,7 +90,7 @@ export function StopEditorialFields({
                   ? 'Regenerate'
                   : 'Auto Write'}
             </button>
-          </div>
+          </div>}
         </div>
         <MarkdownBlockEditor
           blockId={`${item.id}_blurb`}
@@ -120,12 +121,12 @@ export function StopEditorialFields({
         </p>
       ) : null}
 
-      <StopReasonField
+      {SHOW_ITINERARY_AI && <StopReasonField
         item={item}
         disabled={isLocked}
         onUpdateItem={onUpdateItem}
         onRefineStopReason={onRefineStopReason}
-      />
+      />}
     </>
   )
 }

@@ -174,6 +174,20 @@ class GrillDependencies:
     # None means the article interview, whose prompt is defined further down
     # this module and so cannot be named as a default here.
     build_prompt: Callable[[GrillState], str] | None = None
+    # Whether this interview may reach the web at all, and it is two switches
+    # rather than one because they are two spends at two moments.
+    #
+    # `seed_research_enabled` is the lookup before the first question (G2).
+    # `mid_turn_lookup_enabled` is the budgeted lookup the model may ask for
+    # while the conversation is running.
+    #
+    # Both default to on, so every interview that exists today behaves exactly
+    # as it did. The itinerary interview turns both off, and turning them off
+    # is enforced HERE rather than by asking the prompt nicely -- a model that
+    # ignores its instructions and sets `lookup` anyway must not be able to
+    # spend money the pipeline said it could not spend.
+    seed_research_enabled: bool = True
+    mid_turn_lookup_enabled: bool = True
 
 
 def research_seed(dependencies: GrillDependencies, seed: str) -> tuple[str, list[str], int | None]:
@@ -728,6 +742,16 @@ def _advance_once(
         # read: the model is saying "I need to know this before I decide".
         # Bounded by the budget, and the budget is spent even on a failure, so
         # this cannot become a turn that never ends.
+        if not dependencies.mid_turn_lookup_enabled and lookup:
+            # A lookup asked for by an interview that cannot look anything up.
+            # Ignored rather than obeyed, and not an error: the rest of the
+            # reply is usually a perfectly good question, and refusing it
+            # would cost a turn to punish the model for reading past a line in
+            # its own prompt.
+            logger.info(
+                "Grill asked to look up %r with lookups disabled; ignoring", lookup
+            )
+            lookup = ""
         if lookup and payload.get("done") is not True and _lookups_left(state):
             logger.info("Grill looked up %r mid-interview", lookup)
             state = look_up_mid_interview(state, dependencies, lookup)
@@ -813,7 +837,14 @@ def start_grill(
     It defaults to the article brief's, and is carried on the state from here
     so every later turn is judged against the checklist the run opened with.
     """
-    digest, source_urls, _tokens = research_seed(dependencies, seed)
+    if dependencies.seed_research_enabled:
+        digest, source_urls, _tokens = research_seed(dependencies, seed)
+    else:
+        # Not "it failed and we carried on ungrounded" -- it was never asked
+        # for. An interview whose facts come from a setup the operator filled
+        # in has nothing to look up, and a seed search here would be one paid
+        # call per interview buying a city briefing nobody reads.
+        digest, source_urls = "", []
     opening = GrillState(
         run_id=run_id,
         seed=seed,

@@ -11,8 +11,12 @@ from __future__ import annotations
 
 BUILT_IN_DAY_SHELL_IDS: frozenset[str] = frozenset(
     {
-        "full_day_balanced",
-        "light_full_day",
+        "rich_standard_day",
+        "city_photo_walk",
+        "hands_on_local_day",
+        "gardens_and_slow_living",
+        "markets_and_live_music",
+        "work_and_wander_day",
         "food_focused_full_day",
         "adventure_full_day",
         "nightlife_full_day",

@@ -1,0 +1,663 @@
+{
+  "contractVersion": "itinerary-finished-day-dry-run-v1",
+  "dayId": "dry-run-day-1",
+  "research": {
+    "performedAt": "2026-09-15",
+    "browsingUsed": true,
+    "limitations": [
+      "No map routing tool was run. Every transfer time is a planning estimate. The breakfast-to-park leg is based only on coordinates published on official pages.",
+      "No live reservation or table availability was checked for any venue.",
+      "The Restaurante Huaca Pucllana menu PDF linked from the official site is undated. Its prices are reported as seen on 2026-09-15.",
+      "Secondary sources disagree on Restaurante Huaca Pucllana's hours. El Comercio (2023) gives Sunday until 8pm, and a guide listing seen only in search results implied different days. The official site was treated as authoritative.",
+      "Mercado Indio's hours come from its own site, last updated 2023, which gives both 09:00 and 09:30 as opening time. Hours for the other Petit Thouars galleries were not checked individually.",
+      "The Pardos Chicken dine-in menu for the Benavides branch was not viewed. Only the chain's online menu categories were read.",
+      "Seating and table service at the El Pan de la Chola Alcanfores branch were not confirmed. Only the address, hours and branch menu were read.",
+      "The official site for La Lucha Sanguchería (considered for dinner) shows only a 'coming soon' page, so its current hours could not be confirmed from an official source.",
+      "No accessibility audit was possible. Ramps listed in the MINCETUR inventory for Parque del Amor do not establish step-free access along the whole route."
+    ]
+  },
+  "status": "ready_for_editor_review",
+  "title": "An easy Miraflores day built around lunch at Huaca Pucllana",
+  "dayIntro": "This day stays inside Miraflores and asks little of your legs. It starts with sourdough and coffee, then takes in the Pacific from the top of the cliffs at Parque del Amor. Its weight falls on a long lunch of Peruvian classics at a restaurant set inside Huaca Pucllana, an archaeological site of the Lima culture. The afternoon trades views for the craft galleries on Avenida Petit Thouars, then leaves a long gap to rest. Dinner is deliberately small. Every move between stops is a short taxi ride, and nothing on the route involves cliff stairs or a walk down to the beach.",
+  "tripRole": "First full day: a low-effort introduction to Miraflores with a Peruvian lunch as the main event. Historic-centre culture is kept for Day 2 and Barranco, art and a later evening for Day 3.",
+  "scheduleLabel": "Illustrative evergreen plan; check opening days before use",
+  "stops": [
+    {
+      "slotId": "day1-coffee_light_breakfast",
+      "status": "selected",
+      "name": "El Pan de la Chola (Alcanfores)",
+      "category": "dining",
+      "addressOrMeetingPoint": "Calle Alcanfores 410, Miraflores, Lima",
+      "area": "Central Miraflores",
+      "mapsUrl": "https://maps.google.com/maps?q=-12.1234568,-77.0279651",
+      "suggestedStart": "09:30",
+      "durationMinutes": 45,
+      "whyHere": "A gentle opener in central Miraflores, open from early morning every day, with a short taxi ride to the clifftop park.",
+      "readerCopy": "El Pan de la Chola is a Lima bakery that works with natural fermentation and local flours, some of them ground on its own stone mill. Its Alcanfores branch opens at 7am every day. Keep breakfast simple: a croissant or a morning bun with a cappuccino, or avocado and egg on sourdough toast if you want more. The point is to eat lightly. Lunch is the meal this day is built around, and anything heavier now works against it.",
+      "whatToDo": [
+        "Order coffee with a pastry such as a classic croissant or a morning bun",
+        "Choose a toast, such as avocado and egg or hummus, if a pastry is not enough"
+      ],
+      "practicalNotes": [
+        "Posted hours: Monday to Sunday, 7am–9pm.",
+        "As listed on the branch menu in September 2026: classic croissant PEN 8, cappuccino PEN 11, avocado and egg toast PEN 24.",
+        "The bakery states that allergens are present in its kitchens and keeps an allergen sheet at the counter."
+      ],
+      "claimIds": [
+        "c-chola-location-hours",
+        "c-chola-menu",
+        "c-chola-method",
+        "c-chola-prices",
+        "c-chola-allergens"
+      ],
+      "selectionReason": "It is an official Miraflores branch of a sourdough bakery with posted daily hours starting at 7am. Its branch menu lists coffee, pastries and light toasts, which meets the 'light breakfast or coffee' and 'bakery' criteria. It was chosen over the chain's La Mar branches because Alcanfores is on the southern, clifftop side of central Miraflores, which suits the morning route.",
+      "unresolvedReason": null
+    },
+    {
+      "slotId": "day1-scenic_low_effort",
+      "status": "selected",
+      "name": "Parque del Amor (Love Park)",
+      "category": "attractions",
+      "addressOrMeetingPoint": "Malecón Cisneros, block 4, Miraflores, Lima",
+      "area": "Miraflores clifftop (Malecón Cisneros)",
+      "mapsUrl": "https://maps.app.goo.gl/m7stLRap9zAHGMQ3A",
+      "suggestedStart": "10:30",
+      "durationMinutes": 60,
+      "whyHere": "The low-effort coastal highlight: an ocean view from the top of the cliffs, reached by taxi, with no beach descent.",
+      "readerCopy": "Parque del Amor sits on Malecón Cisneros at the edge of the Miraflores cliffs, so the Pacific is laid out below you without a single step down to the shore. The park opened on 14 February 1993 around El Beso, Víctor Delfín's large sculpture of a couple kissing. Its tiled surrounds carry lines by Peruvian poets including Martín Adán and César Moro, and the design draws on Gaudí's Park Güell. An hour is enough: look at the sea, read the walls, then cross to Marcelo Wong's Cupido sculpture opposite.",
+      "whatToDo": [
+        "Take in the Pacific view from the clifftop",
+        "Look at El Beso and read the poets' lines set into the tiled surrounds",
+        "Cross to see Marcelo Wong's Cupido sculpture directly opposite the park"
+      ],
+      "practicalNotes": [
+        "Entry is free and the park is open 24 hours; the recommended visiting time is 8am–9pm.",
+        "Public toilets and food and drink kiosks are listed at the park.",
+        "Ramps are listed for visitors with physical disabilities."
+      ],
+      "claimIds": [
+        "c-amor-identity",
+        "c-amor-cliff-view",
+        "c-amor-access-services",
+        "c-amor-cupido"
+      ],
+      "selectionReason": "Official municipal and MINCETUR records place the park at the edge of the Malecón Cisneros cliffs, with a view of the Pacific, free entry and 24-hour access. This meets the 'coastal view from above' and 'no beach descent' requirements. The park also has substance beyond the view (the Delfín sculpture and the poetry mosaics). Larcomar was rejected because it is a shopping centre and would overlap with the afternoon shopping stop.",
+      "unresolvedReason": null
+    },
+    {
+      "slotId": "day1-special_lunch",
+      "status": "selected",
+      "name": "Restaurante Huaca Pucllana",
+      "category": "dining",
+      "addressOrMeetingPoint": "Calle General Borgoño, block 8, Huaca Pucllana, Miraflores, Lima",
+      "area": "North Miraflores",
+      "mapsUrl": null,
+      "suggestedStart": "12:00",
+      "durationMinutes": 105,
+      "whyHere": "The food anchor of the day: an à la carte Peruvian menu in a setting inside an archaeological site, all within Miraflores.",
+      "readerCopy": "Restaurante Huaca Pucllana is set inside Huaca Pucllana, a site of the Lima culture dating to between 200 and 700 AD, and you eat with a view of the ruins. The menu is à la carte, so you can linger over a long lunch without committing to a tasting menu. Order from the section headed Tradición peruana, which includes chupe de camarones, cau cau, lomo saltado and seco de lomo, or start with a classic ceviche. The restaurant says 7.6% of its sales go toward restoring the monument.",
+      "whatToDo": [
+        "Book a table ahead through the restaurant's official booking link",
+        "Order from the Tradición peruana section, or begin with the classic ceviche",
+        "Take your time; nothing is scheduled until mid-afternoon"
+      ],
+      "practicalNotes": [
+        "Posted hours: Monday to Saturday 12pm–10pm, Sunday 12pm–5pm.",
+        "Bookings are taken through the link on the restaurant's website, or by email at reservas@resthuacapucllana.com.",
+        "On the menu posted in September 2026, the Tradición peruana dishes cost PEN 51–74 and the classic ceviche PEN 55. Prices include taxes and service."
+      ],
+      "claimIds": [
+        "c-huaca-identity",
+        "c-huaca-hours-booking",
+        "c-huaca-menu",
+        "c-huaca-restoration",
+        "c-huaca-prices",
+        "c-huaca-view"
+      ],
+      "selectionReason": "The official site identifies this as a Peruvian restaurant inside Huaca Pucllana in Miraflores. The official menu is à la carte with a dedicated Peruvian-tradition section, and El Comercio reports its view over the Lima-culture archaeological site. This meets 'distinctly Peruvian', 'a la carte' and 'special setting' without leaving Miraflores or using Barranco. Its posted hours cover a noon lunch on every day of the week.",
+      "unresolvedReason": null
+    },
+    {
+      "slotId": "day1-leisure_exploration",
+      "status": "selected",
+      "name": "Boulevard Artesanal de Miraflores (Avenida Petit Thouars craft galleries)",
+      "category": "attractions",
+      "addressOrMeetingPoint": "Av. Petit Thouars, blocks 52–55, Miraflores; start at Mercado Indio, Av. Petit Thouars 5245",
+      "area": "Central Miraflores (Petit Thouars)",
+      "mapsUrl": "https://maps.app.goo.gl/wW1QjvTry3DsFQra6",
+      "suggestedStart": "14:00",
+      "durationMinutes": 75,
+      "whyHere": "It contrasts with the morning: streets and shops instead of a view, and it is easy to cut short before the rest break.",
+      "readerCopy": "After a view and a long lunch, the afternoon turns to shopping. Blocks 52 to 55 of Avenida Petit Thouars hold 14 craft galleries with more than 1,500 artisans between them. Their work comes from across Peru: woodcarving, textiles, ceramics, carved gourds (mates burilados), silverwork and retablos. This is shopping aimed at visitors rather than a neighbourhood market, and it is easy to cut short. Walk one side, cross, walk back, and leave when you have had enough. Indian Market and Inka Plaza are both on the 5300 block.",
+      "whatToDo": [
+        "Browse the galleries between Mercado Indio at number 5245 and the 5400 block",
+        "Look for regional work such as mates burilados, retablos and silverwork",
+        "Stop when you have had enough; nothing later depends on this stop"
+      ],
+      "practicalNotes": [
+        "Mercado Indio, at number 5245, posts opening hours of every day until 8pm."
+      ],
+      "claimIds": [
+        "c-petit-boulevard",
+        "c-petit-galleries",
+        "c-petit-mercado-indio-hours",
+        "c-petit-municipal-listing"
+      ],
+      "selectionReason": "The Miraflores municipal tourism site lists this handicraft boulevard, its location on blocks 52–55 and the range of crafts sold. It adds shops and street-level texture and does not repeat the morning's scenic park. It can be shortened at will. Mercado Indio's posted daily hours cover the afternoon slot.",
+      "unresolvedReason": null
+    },
+    {
+      "slotId": "day1-dinner",
+      "status": "selected",
+      "name": "Pardos Chicken (Benavides)",
+      "category": "dining",
+      "addressOrMeetingPoint": "Av. Benavides 730, Miraflores, Lima",
+      "area": "Central Miraflores",
+      "mapsUrl": null,
+      "suggestedStart": "18:30",
+      "durationMinutes": 60,
+      "whyHere": "A casual, lighter recovery meal in central Miraflores after the main lunch, open early enough for an 18:30 table every day.",
+      "readerCopy": "Dinner is small on purpose. Pardos Chicken is a Peruvian chain built around pollo a la brasa. Its branch on Avenida Benavides opens every day from noon until at least 11pm, so an early table is no problem. After the lunch at Huaca Pucllana, order from the sandwich or salad sections, or share the chicken between two. An hour is plenty. This is the meal that lets you eat well today and still have energy for tomorrow.",
+      "whatToDo": [
+        "Order from the sandwich or salad sections, or share a chicken order",
+        "Keep dinner to about an hour"
+      ],
+      "practicalNotes": [
+        "Posted hours: Monday to Thursday 12pm–12am, Friday and Saturday 12pm–1am, Sunday 12pm–11pm.",
+        "The branch takes reservations by phone (241-0215 or 998 158 770) and by email (reservas@pardosbenavides.com)."
+      ],
+      "claimIds": [
+        "c-pardos-location-hours",
+        "c-pardos-menu"
+      ],
+      "selectionReason": "The official branch page confirms the Miraflores address and daily hours that cover an 18:30 dinner. The chain's official menu includes sandwich and salad sections, so the reader can keep the meal lighter than lunch while still eating distinctly Peruvian food. La Lucha Sanguchería was considered as a lighter sandwich option but rejected because its official site shows no current hours.",
+      "unresolvedReason": null
+    },
+    {
+      "slotId": "day1-relaxed_evening",
+      "status": "selected",
+      "name": "Haití (café, bar and restaurant)",
+      "category": "nightlife",
+      "addressOrMeetingPoint": "Av. Diagonal 160, Miraflores, Lima",
+      "area": "Central Miraflores (Parque Central)",
+      "mapsUrl": null,
+      "suggestedStart": "19:45",
+      "durationMinutes": 45,
+      "whyHere": "An optional, conversation-friendly café-bar finish near dinner in central Miraflores, open well past the day's end.",
+      "readerCopy": "Haití has faced the Parque Central de Miraflores since 23 February 1962. It is a café, bar and restaurant that grew out of a café opened on Plaza Pizarro in 1952. It stays open until 1am every day, so you are nowhere near closing time: take a table and order an espresso or a glass from the wine list. Skip it if the day has already been enough. Nothing later depends on it.",
+      "whatToDo": [
+        "Order an espresso or a drink from the wine list",
+        "Leave by about 20:30 to reach your hotel by 21:00"
+      ],
+      "practicalNotes": [
+        "Posted hours: Monday to Sunday, 7:30am–1am."
+      ],
+      "claimIds": [
+        "c-haiti-location-hours",
+        "c-haiti-history",
+        "c-haiti-offer"
+      ],
+      "selectionReason": "The official site describes Haití as a family-run restaurant, café and bar with a long history on the Parque Central de Miraflores, a wine list and daily hours to 1am. That suits a quiet, social finish that is not a club. It stays optional; removing it leaves the required day intact.",
+      "unresolvedReason": null
+    }
+  ],
+  "transfers": [
+    {
+      "from": "hotel_base",
+      "to": "day1-coffee_light_breakfast",
+      "mode": "unspecified",
+      "minutesMin": null,
+      "minutesMax": null,
+      "basis": "unknown",
+      "sourceIds": [],
+      "note": "Exact hotel is unknown. The schedule leaves 09:00–09:30 for this leg; take a taxi if it is more than a short walk."
+    },
+    {
+      "from": "day1-coffee_light_breakfast",
+      "to": "day1-scenic_low_effort",
+      "mode": "taxi",
+      "minutesMin": 5,
+      "minutesMax": 15,
+      "basis": "planning_estimate",
+      "sourceIds": [
+        "s-chola-locales",
+        "s-visitamiraflores-amor"
+      ],
+      "note": "Coordinates on the two official pages put these points roughly 1.3 km apart in a straight line. Walking would likely exceed the 15-minute target, so a taxi is planned. The time range is an estimate, not a routed time."
+    },
+    {
+      "from": "day1-scenic_low_effort",
+      "to": "day1-special_lunch",
+      "mode": "taxi",
+      "minutesMin": 10,
+      "minutesMax": 25,
+      "basis": "planning_estimate",
+      "sourceIds": [],
+      "note": "Clifftop park to north Miraflores. This is an unrouted estimate; allow the full range at midday."
+    },
+    {
+      "from": "day1-special_lunch",
+      "to": "day1-leisure_exploration",
+      "mode": "taxi",
+      "minutesMin": 5,
+      "minutesMax": 15,
+      "basis": "planning_estimate",
+      "sourceIds": [],
+      "note": "This is an unrouted estimate. A walk may be close to or above the 15-minute target, so a taxi is planned after the long lunch."
+    },
+    {
+      "from": "day1-leisure_exploration",
+      "to": "day1-dinner",
+      "mode": "taxi",
+      "minutesMin": 5,
+      "minutesMax": 20,
+      "basis": "planning_estimate",
+      "sourceIds": [],
+      "note": "This leg runs after the rest window (departing around 18:00). If the reader rests at the hotel, it becomes two unknown hotel legs of uncertain length."
+    },
+    {
+      "from": "day1-dinner",
+      "to": "day1-relaxed_evening",
+      "mode": "taxi",
+      "minutesMin": 5,
+      "minutesMax": 15,
+      "basis": "planning_estimate",
+      "sourceIds": [],
+      "note": "Both venues are in central Miraflores, but the walking distance was not routed; a taxi is planned. This leg applies only if the optional evening is kept."
+    },
+    {
+      "from": "day1-relaxed_evening",
+      "to": "hotel_base",
+      "mode": "unspecified",
+      "minutesMin": null,
+      "minutesMax": null,
+      "basis": "unknown",
+      "sourceIds": [],
+      "note": "Exact hotel is unknown. The schedule leaves 20:30–21:00 for this leg."
+    },
+    {
+      "from": "day1-dinner",
+      "to": "hotel_base",
+      "mode": "unspecified",
+      "minutesMin": null,
+      "minutesMax": null,
+      "basis": "unknown",
+      "sourceIds": [],
+      "note": "Used only if the optional evening is skipped; the reader would leave dinner around 19:30. Exact hotel is unknown."
+    }
+  ],
+  "restWindows": [
+    {
+      "afterSlotId": "day1-leisure_exploration",
+      "beforeSlotId": "day1-dinner",
+      "minutes": 165,
+      "description": "Unallocated recovery from about 15:15 to 18:00. Return to the hotel if it is close, or rest wherever suits. No venue is attached. The length reflects the relaxed pace and the brief's request to leave energy for Day 2."
+    }
+  ],
+  "sources": [
+    {
+      "id": "s-huaca-official",
+      "url": "https://www.resthuacapucllana.com/?lang=en",
+      "title": "Restaurante Huaca Pucllana | Miraflores, Lima, Perú",
+      "publisher": "Restaurant Huaca Pucllana SAC",
+      "sourceType": "official",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": null
+    },
+    {
+      "id": "s-huaca-menu",
+      "url": "https://www.resthuacapucllana.com/_files/ugd/8a31fd_697226d9cb494762ad28024100402047.pdf",
+      "title": "Nuestra carta (menu PDF)",
+      "publisher": "Restaurant Huaca Pucllana SAC",
+      "sourceType": "official",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": null
+    },
+    {
+      "id": "s-elcomercio-huaca",
+      "url": "https://elcomercio.pe/vamos/peru/cuanto-cuesta-y-que-hay-para-cenar-en-la-huaca-pucllana-miraflores-restaurante-lima-comida-peruana-noticia/",
+      "title": "Cuánto cuesta y qué hay para cenar en la Huaca Pucllana",
+      "publisher": "El Comercio (Perú)",
+      "sourceType": "secondary",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": "2023-05-09"
+    },
+    {
+      "id": "s-visitamiraflores-amor",
+      "url": "https://visitamiraflores.com/en/lugares/parque-del-amor/",
+      "title": "Parque del Amor - Visita Miraflores",
+      "publisher": "Visita Miraflores (Municipalidad de Miraflores tourism portal)",
+      "sourceType": "official",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": "2025-06-17"
+    },
+    {
+      "id": "s-mincetur-amor",
+      "url": "https://consultasenlinea.mincetur.gob.pe/fichaInventario/index.aspx?cod_Ficha=8832",
+      "title": "Parque Del Amor - Parque Alberto Andrade Carmona (Inventario de Recursos Turísticos)",
+      "publisher": "MINCETUR / Municipalidad de Miraflores",
+      "sourceType": "official",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": "2024-06-13"
+    },
+    {
+      "id": "s-chola-locales",
+      "url": "https://elpandelachola.com/locales/",
+      "title": "El Pan de la Chola – Locales",
+      "publisher": "El Pan de la Chola",
+      "sourceType": "official",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": null
+    },
+    {
+      "id": "s-chola-menu",
+      "url": "https://elpandelachola.com/wp-content/uploads/2026/01/CARTA-ALCANFORES-6.pdf",
+      "title": "Carta Alcanfores (branch menu PDF)",
+      "publisher": "El Pan de la Chola",
+      "sourceType": "official",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": null
+    },
+    {
+      "id": "s-chola-home",
+      "url": "https://elpandelachola.com/",
+      "title": "El Pan de la Chola",
+      "publisher": "El Pan de la Chola",
+      "sourceType": "official",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": null
+    },
+    {
+      "id": "s-visitamiraflores-boulevard",
+      "url": "https://visitamiraflores.com/lugares/boulevard-de-los-artesanos-mercados-artesanales/",
+      "title": "Boulevard Artesanal de Miraflores - Visita Miraflores",
+      "publisher": "Visita Miraflores (Municipalidad de Miraflores tourism portal)",
+      "sourceType": "official",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": "2025-04-07"
+    },
+    {
+      "id": "s-visitamiraflores-shopping",
+      "url": "https://visitamiraflores.com/en/what-to-do-in-miraflores/shopping-and-handicrafts/",
+      "title": "Shopping and Handicrafts - Visita Miraflores",
+      "publisher": "Visita Miraflores (Municipalidad de Miraflores tourism portal)",
+      "sourceType": "official",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": "2025-06-16"
+    },
+    {
+      "id": "s-mercadoindio",
+      "url": "https://mercadoindio.com/",
+      "title": "Mercado Indio | Centro Artesanal",
+      "publisher": "Mercado Indio",
+      "sourceType": "official",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": "2023-09-01"
+    },
+    {
+      "id": "s-pardos-benavides",
+      "url": "https://www.pardoschicken.pe/restaurantes/pardos-chicken-benavides",
+      "title": "Pardos Chicken Benavides | Ubicación, Horarios y Reservas",
+      "publisher": "Pardos Chicken",
+      "sourceType": "official",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": null
+    },
+    {
+      "id": "s-pardos-home",
+      "url": "https://www.pardoschicken.pe/",
+      "title": "Pardos Chicken | Pollo a la Brasa, Sánguches, Promociones y Delivery",
+      "publisher": "Pardos Chicken",
+      "sourceType": "official",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": null
+    },
+    {
+      "id": "s-haiti-nosotros",
+      "url": "https://www.haitimiraflores.com.pe/nosotros/",
+      "title": "Nosotros – Haití Miraflores",
+      "publisher": "Haití Miraflores",
+      "sourceType": "official",
+      "accessedAt": "2026-09-15",
+      "publishedOrUpdatedAt": null
+    }
+  ],
+  "claims": [
+    {
+      "id": "c-chola-location-hours",
+      "text": "El Pan de la Chola's Alcanfores branch is at Calle Alcanfores 410, Miraflores, and posts hours of Monday to Sunday, 7am–9pm.",
+      "sourceIds": ["s-chola-locales"],
+      "appliesTo": "day1-coffee_light_breakfast"
+    },
+    {
+      "id": "c-chola-menu",
+      "text": "The Alcanfores branch menu lists espresso-based coffees, pastries including a classic croissant and a morning bun, and toasts including avocado and egg and hummus. It states that its breads are 100% sourdough.",
+      "sourceIds": ["s-chola-menu"],
+      "appliesTo": "day1-coffee_light_breakfast"
+    },
+    {
+      "id": "c-chola-method",
+      "text": "El Pan de la Chola says it respects natural dough fermentation and uses local flours and cereals, some of which it mills in its workshop on a traditional stone mill.",
+      "sourceIds": ["s-chola-home"],
+      "appliesTo": "day1-coffee_light_breakfast"
+    },
+    {
+      "id": "c-chola-prices",
+      "text": "The Alcanfores branch menu, accessed 2026-09-15, lists a classic croissant at PEN 8, a cappuccino at PEN 11 and avocado and egg toast at PEN 24.",
+      "sourceIds": ["s-chola-menu"],
+      "appliesTo": "day1-coffee_light_breakfast"
+    },
+    {
+      "id": "c-chola-allergens",
+      "text": "The branch menu states that all products are prepared where allergens are present and that an allergen sheet is available at the counter.",
+      "sourceIds": ["s-chola-menu"],
+      "appliesTo": "day1-coffee_light_breakfast"
+    },
+    {
+      "id": "c-amor-identity",
+      "text": "Parque del Amor is on Malecón Cisneros (block 4), Miraflores. It was inaugurated on 14 February 1993 and centres on the sculpture El Beso by Víctor Delfín. Its surrounds are decorated with verses by Peruvian poets including Martín Adán and César Moro.",
+      "sourceIds": ["s-visitamiraflores-amor", "s-mincetur-amor"],
+      "appliesTo": "day1-scenic_low_effort"
+    },
+    {
+      "id": "c-amor-cliff-view",
+      "text": "The park was built at the edge of the Malecón Cisneros cliffs and offers a view of the Pacific Ocean. Its design is inspired by Gaudí's Park Güell in Barcelona.",
+      "sourceIds": ["s-mincetur-amor"],
+      "appliesTo": "day1-scenic_low_effort"
+    },
+    {
+      "id": "c-amor-access-services",
+      "text": "The MINCETUR inventory lists free entry, 24-hour opening with a recommended visiting time of 8am–9pm, restrooms, food and drink kiosks, and ramps for people with physical disabilities.",
+      "sourceIds": ["s-mincetur-amor"],
+      "appliesTo": "day1-scenic_low_effort"
+    },
+    {
+      "id": "c-amor-cupido",
+      "text": "The sculpture Cupido by Peruvian artist Marcelo Wong stands directly across from the park.",
+      "sourceIds": ["s-visitamiraflores-amor"],
+      "appliesTo": "day1-scenic_low_effort"
+    },
+    {
+      "id": "c-huaca-identity",
+      "text": "Restaurante Huaca Pucllana is a Peruvian-cuisine restaurant located inside Huaca Pucllana at Calle General Borgoño, block 8, Miraflores.",
+      "sourceIds": ["s-huaca-official"],
+      "appliesTo": "day1-special_lunch"
+    },
+    {
+      "id": "c-huaca-hours-booking",
+      "text": "The official site lists hours of Monday to Saturday 12:00pm–10:00pm and Sunday 12:00pm–5:00pm. It provides a booking link and the email reservas@resthuacapucllana.com.",
+      "sourceIds": ["s-huaca-official"],
+      "appliesTo": "day1-special_lunch"
+    },
+    {
+      "id": "c-huaca-menu",
+      "text": "The official menu is à la carte. Its 'Tradición peruana' section includes chupe de camarones, cau cau Don Arturo, lomo saltado and seco de lomo, and the menu also lists a classic ceviche.",
+      "sourceIds": ["s-huaca-menu"],
+      "appliesTo": "day1-special_lunch"
+    },
+    {
+      "id": "c-huaca-restoration",
+      "text": "The menu states that the company contributes 7.6% of its sales to the restoration of the historic monument, and that prices include taxes and service.",
+      "sourceIds": ["s-huaca-menu"],
+      "appliesTo": "day1-special_lunch"
+    },
+    {
+      "id": "c-huaca-prices",
+      "text": "On the official menu PDF accessed 2026-09-15, the 'Tradición peruana' dishes range from PEN 51 to PEN 74 and the classic ceviche is PEN 55.",
+      "sourceIds": ["s-huaca-menu"],
+      "appliesTo": "day1-special_lunch"
+    },
+    {
+      "id": "c-huaca-view",
+      "text": "The restaurant offers a view of the archaeological site where the Lima culture (200–700 AD) developed.",
+      "sourceIds": ["s-elcomercio-huaca"],
+      "appliesTo": "day1-special_lunch"
+    },
+    {
+      "id": "c-petit-boulevard",
+      "text": "The Miraflores handicraft boulevard occupies blocks 52–55 of Av. Petit Thouars and houses more than 1,500 artisans in 14 galleries. Its crafts from across the country include woodcarving, textiles, ceramics, mates burilados, jewellery, silverwork and retablos.",
+      "sourceIds": ["s-visitamiraflores-boulevard"],
+      "appliesTo": "day1-leisure_exploration"
+    },
+    {
+      "id": "c-petit-galleries",
+      "text": "Galleries listed by the municipality include Centro Artesanal Adaprep (Av. Petit Thouars 5245), Indian Market (Av. Petit Thouars 5321-50) and Inka Plaza (Av. Petit Thouars 5330).",
+      "sourceIds": ["s-visitamiraflores-boulevard"],
+      "appliesTo": "day1-leisure_exploration"
+    },
+    {
+      "id": "c-petit-mercado-indio-hours",
+      "text": "Mercado Indio, at Av. Petit Thouars 5245, lists opening every day until 20:00. The same page gives the opening time as 09:00 in one place and 09:30 in another.",
+      "sourceIds": ["s-mercadoindio"],
+      "appliesTo": "day1-leisure_exploration"
+    },
+    {
+      "id": "c-petit-municipal-listing",
+      "text": "The Miraflores municipal tourism site presents the Av. Petit Thouars handicraft boulevard as the district's place for handmade crafts and souvenirs.",
+      "sourceIds": ["s-visitamiraflores-shopping"],
+      "appliesTo": "day1-leisure_exploration"
+    },
+    {
+      "id": "c-pardos-location-hours",
+      "text": "Pardos Chicken Benavides is at Av. Benavides 730. Its posted hours are Monday–Thursday 12:00pm–12:00am, Friday–Saturday 12:00pm–1:00am and Sunday 12:00pm–11:00pm. It takes reservations at 241-0215 / 998158770 and reservas@pardosbenavides.com.",
+      "sourceIds": ["s-pardos-benavides"],
+      "appliesTo": "day1-dinner"
+    },
+    {
+      "id": "c-pardos-menu",
+      "text": "Pardos Chicken presents itself as a pollo a la brasa restaurant. Its online menu categories include sánguches, ensaladas and anticuchos.",
+      "sourceIds": ["s-pardos-home"],
+      "appliesTo": "day1-dinner"
+    },
+    {
+      "id": "c-haiti-location-hours",
+      "text": "Haití is at Av. Diagonal 160, Miraflores, and posts hours of Monday to Sunday, 07:30am–01:00am.",
+      "sourceIds": ["s-haiti-nosotros"],
+      "appliesTo": "day1-relaxed_evening"
+    },
+    {
+      "id": "c-haiti-history",
+      "text": "Haití describes itself as a restaurant, café and bar. Its café began operating on Plaza Pizarro in early 1952, and on 23 February 1962 it opened opposite the Parque Central de Miraflores.",
+      "sourceIds": ["s-haiti-nosotros"],
+      "appliesTo": "day1-relaxed_evening"
+    },
+    {
+      "id": "c-haiti-offer",
+      "text": "Haití offers espresso coffee, Mediterranean, Peruvian and international dishes, and a wine list.",
+      "sourceIds": ["s-haiti-nosotros"],
+      "appliesTo": "day1-relaxed_evening"
+    }
+  ],
+  "feasibility": [
+    {
+      "topic": "Opening-day compatibility",
+      "status": "conditional",
+      "detail": "Every selected venue posts hours that cover its scheduled slot on all seven days: the bakery (daily 7am–9pm), the park (open 24 hours), lunch (Mon–Sat from noon, Sun noon–5pm), Mercado Indio (daily to 8pm), Pardos (daily from noon) and Haití (daily 7:30am–1am). The condition is that the lunch hours are official, but secondary listings disagree. Mercado Indio's hours come from a 2023 page, and the other galleries' hours were not checked. Confirm lunch by phone or booking before relying on a Monday.",
+      "sourceIds": ["s-chola-locales", "s-mincetur-amor", "s-huaca-official", "s-elcomercio-huaca", "s-mercadoindio", "s-pardos-benavides", "s-haiti-nosotros"]
+    },
+    {
+      "topic": "Total time including transfers and rest",
+      "status": "supported",
+      "detail": "Scheduled activity runs from 09:30 to 20:30. It includes 45 + 60 + 105 + 75 + 60 + 45 minutes at stops, five taxi legs estimated at 30–90 minutes in total, and one 165-minute rest window. There are 30-minute buffers at 09:00–09:30 and 20:30–21:00 for the unknown hotel legs. If the optional evening is dropped, the day ends around 19:30.",
+      "sourceIds": []
+    },
+    {
+      "topic": "Walking and effort",
+      "status": "conditional",
+      "detail": "Every leg between stops is planned as a taxi, so walking is limited to moving within each stop. The coastal stop is at the top of the cliffs, with no stairs or beach descent. The condition is that walking distances between stops were not routed, so the reader should not swap taxis for walks without checking.",
+      "sourceIds": ["s-mincetur-amor"]
+    },
+    {
+      "topic": "Meal balance",
+      "status": "conditional",
+      "detail": "The day has one main meal: an à la carte Peruvian lunch. Breakfast is a light bakery stop. Dinner is at a casual chain whose menu includes sandwich and salad sections. Keeping dinner lighter than lunch depends on what the reader orders, which the copy steers but cannot guarantee.",
+      "sourceIds": ["s-chola-menu", "s-huaca-menu", "s-pardos-home"]
+    },
+    {
+      "topic": "Geographic continuity",
+      "status": "supported",
+      "detail": "All six stops are in Miraflores, and none are in Barranco or the historic centre. The route runs from central Miraflores to the clifftop, north to Huaca Pucllana, back to Petit Thouars, then to central Miraflores for dinner and the evening. Each leg is a short taxi ride rather than a cross-city transfer.",
+      "sourceIds": ["s-chola-locales", "s-visitamiraflores-amor", "s-huaca-official", "s-visitamiraflores-boulevard", "s-pardos-benavides", "s-haiti-nosotros"]
+    },
+    {
+      "topic": "Unknown hotel boundaries",
+      "status": "unresolved",
+      "detail": "The exact hotel is unspecified, so the first leg (to breakfast), the final leg (from Haití or from Pardos), and any hotel visit during the rest window cannot be timed. The 30-minute buffers are assumptions and fit only a hotel within central Miraflores.",
+      "sourceIds": []
+    },
+    {
+      "topic": "Overlap with later days",
+      "status": "conditional",
+      "detail": "Lunch overlooks Huaca Pucllana but does not include a site visit. If Day 2's substantial cultural visit is planned at Huaca Pucllana, it would partly repeat Day 1. Craft shopping and the Parque Central area are now covered and should not recur. Day 3 in Barranco should avoid another clifftop viewpoint that repeats Parque del Amor.",
+      "sourceIds": ["s-elcomercio-huaca"]
+    },
+    {
+      "topic": "Reservations",
+      "status": "conditional",
+      "detail": "No bookings were made and no live availability was checked. Lunch has an official booking channel and is the only reservation worth making in advance. Pardos also accepts reservations.",
+      "sourceIds": ["s-huaca-official", "s-pardos-benavides"]
+    }
+  ],
+  "proposedChanges": [],
+  "tripMemory": {
+    "usedPlaces": [
+      "El Pan de la Chola (Alcanfores), Calle Alcanfores 410, Miraflores",
+      "Parque del Amor, Malecón Cisneros, Miraflores",
+      "Restaurante Huaca Pucllana, Calle General Borgoño block 8, Miraflores",
+      "Boulevard Artesanal de Miraflores, Av. Petit Thouars blocks 52–55",
+      "Pardos Chicken (Benavides), Av. Benavides 730, Miraflores",
+      "Haití, Av. Diagonal 160, Miraflores (optional)"
+    ],
+    "coveredExperiences": [
+      "Clifftop Pacific view on the Miraflores malecón",
+      "Peruvian criollo lunch with a view of a Lima-culture archaeological site",
+      "Craft and souvenir shopping on Av. Petit Thouars",
+      "Pollo a la brasa at a Peruvian chain",
+      "Historic café-bar on the Parque Central de Miraflores"
+    ],
+    "reservedForLater": [
+      "Day 2: historic centre and a substantial cultural visit (venues unselected)",
+      "Day 3: Barranco, art and a later evening (venues unselected)",
+      "No bookings exist for any day; the Day 1 lunch booking is recommended but has not been made"
+    ],
+    "nextDayImplications": [
+      "Avoid another craft market or souvenir strip on Day 2 or Day 3.",
+      "If Day 2 considers the Huaca Pucllana site visit as its cultural anchor, flag the partial overlap with Day 1 lunch; a historic-centre museum avoids it.",
+      "Do not repeat pollo a la brasa or the Parque Central area as a dinner or evening base.",
+      "Day 1 ends with a light dinner and an early finish, so Day 2 can carry a fuller lunch or a longer cultural visit.",
+      "Day 3 in Barranco should not rely on another clifftop sea view as its main scenic element."
+    ]
+  },
+  "editorNotes": [
+    "Visit durations, start times, the 165-minute rest and the choice of taxis for every leg are planning choices, not sourced facts.",
+    "Before publication, confirm Restaurante Huaca Pucllana's Monday and Sunday lunch service by phone or through the booking system. The official site says Mon–Sat 12–10pm and Sun 12–5pm; El Comercio (2023) and a guide listing seen only in search results disagree.",
+    "The Huaca Pucllana menu PDF is undated. Its prices differ from those in El Comercio's 2023 article, so reprice before publication.",
+    "Pardos Chicken was chosen over La Lucha Sanguchería because La Lucha's official site has no current hours. If the editor prefers a sandwich-focused dinner, La Lucha (Av. Diagonal 308) could replace it once its hours are confirmed directly.",
+    "The Pardos Benavides dine-in menu was not viewed. The copy relies on the chain's online sandwich and salad categories, so confirm they are served in the dining room.",
+    "Confirm that the El Pan de la Chola Alcanfores branch has seating. Only its address, hours and menu were read.",
+    "El Beso's height is given as 2 m by MINCETUR and 3 m by Visita Miraflores, so dimensions were left out of the copy.",
+    "Walking distances and taxi times between stops were not routed. Run a mapping check before any leg is changed to a walk.",
+    "No accessibility claims beyond the MINCETUR ramp listing are made. Access needs are unspecified in the brief.",
+    "The Mercado Indio hours (daily until 8pm) come from its own site, last updated 2023. Hours for the other galleries on the boulevard are unverified."
+  ]
+}

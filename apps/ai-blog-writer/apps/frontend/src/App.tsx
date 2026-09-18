@@ -87,6 +87,9 @@ export default function App() {
               <Route path="listicle-itineraries" element={<ListicleItinerariesPage />} />
               <Route path="listicle-itineraries/builder" element={<ListicleItineraryBuilderPage />} />
 
+              {/* Itinerary Pipeline: decommissioned, kept only so old links open.
+                  The Listicle Itineraries builder above replaced it, and the card
+                  is gone from the home page. See features/itineraryPipeline. */}
               <Route path="itinerary-pipeline" element={<ItineraryPipelinePage />} />
 
               {/* Itineraries Pipeline */}

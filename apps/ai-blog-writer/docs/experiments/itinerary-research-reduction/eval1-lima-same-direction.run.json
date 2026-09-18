@@ -1,0 +1,189 @@
+{
+ "workspace_id": "151c14dbac1f",
+ "day_id": "day_mu28ruv3jg5pczu",
+ "export_id": "a76468589755",
+ "wire_version": "itinerary-day-research-v2",
+ "before": {
+  "size_report": {
+   "sections": {
+    "system": 384,
+    "instructions": 2601,
+    "brief": 12697,
+    "writing": 4280,
+    "schema": 4520
+   },
+   "total": 24572,
+   "budget": 18000,
+   "over_budget": true,
+   "largest_section": "brief",
+   "copy_characters": 24802
+  },
+  "sent": {
+   "system": 384,
+   "prompt": 19668,
+   "schema": 4520,
+   "total": 24572
+  },
+  "budget": {
+   "venues": 7,
+   "searches": 18,
+   "fetches": 12
+  },
+  "constraints": [
+   "Scope is city-only, Lima, Peru; no venue names, opening hours, distances or prices may appear in this agreement.",
+   "Timing is evergreen — no weekday is assumed; the market choice must operate every day.",
+   "Dietary needs are unspecified — never assume 'none'.",
+   "Access needs are unspecified — never assume 'none'.",
+   "Morning through lunch stays in Miraflores, walkable, no leg more than about fifteen minutes on foot from the prior stop.",
+   "Exactly one transfer for the whole day, after lunch, Miraflores to Barranco, at most twenty minutes, taxi allowed.",
+   "Everything from the afternoon walk onward stays in Barranco on foot, within a few blocks of each other.",
+   "No third neighborhood and no crossing back to Miraflores before bed.",
+   "No stop may require a return trip to reach the next one.",
+   "The market and the afternoon tasting must never become a full meal.",
+   "Market stop: browsing and learning ingredients, at most one thing eaten standing up.",
+   "Signature lunch: one regional specialty done properly with real time at the table, not a fast in-and-out.",
+   "Afternoon tasting: one small portion, roughly twenty to thirty minutes, no table service.",
+   "Lunch and dinner venues must each do the regional specialty properly and also offer a cooked, non-seafood dish substantial enough to read as the main event.",
+   "Lunch and dinner venues must be reachable and seatable without stairs, with a bathroom on the same level.",
+   "The evening dessert/drinks stop must remain genuinely optional — droppable without the day feeling unfinished.",
+   "The day overall must stay low-effort and appetite-paced so day two's active opener is not undermined.",
+   "Day two should not repeat a market, a tasting, or a culinary-destination dinner.",
+   "Nothing is booked or paid for until the reader has filled the dietary and access blanks; research returns a shortlist with questions attached, not a locked day."
+  ],
+  "copy_characters": 24802
+ },
+ "after": {
+  "attempt_key": "ffb5dacaf3d54faa8b63084f8337e8bc",
+  "model_requested": "claude-sonnet-5-high",
+  "wall_seconds": 757.8,
+  "state": "done",
+  "detail": "",
+  "fault": "",
+  "model": "claude-sonnet-5",
+  "cost_usd": 2.1533325999999997,
+  "turns": 45,
+  "duration_ms": 756244,
+  "searches": 36,
+  "fetches": 6,
+  "tool_counts": {
+   "ToolSearch": 1,
+   "WebSearch": 36,
+   "WebFetch": 6,
+   "StructuredOutput": 1
+  },
+  "returned_characters": 18624,
+  "session_id": "b6d47dbb-d122-46ed-b124-3d31eaf6414d",
+  "transcript_path": "data/itinerary-research-audit/ffb5dacaf3d54faa8b63084f8337e8bc.jsonl",
+  "preview": {
+   "valid": true,
+   "from_research_run": true,
+   "completeness": {
+    "selected": 7,
+    "unresolved": 0,
+    "omitted_optional": 0,
+    "required_unresolved": [],
+    "missing_timing": [],
+    "outstanding_checks": [
+     "Breakfast / iconic coffee: El Pan de la Chola is closed on Mondays, so this opening stop fails on that one day of the week.",
+     "Signature lunch: Sources disagree on El Mercado's closed day — one lists Tuesday–Sunday (closed Monday), another Monday–Saturday (closed Sunday) — so the anchor lunch fails on whichever of those…",
+     "Destination dinner: Isolina's listed hours show it closing at 17:00 on Sundays and Mondays, versus 23:00 the rest of the week — a 19:00 dinner sitting will not work on those two days."
+    ],
+    "missing_legs": [],
+    "schedule_conflicts": [],
+    "complete": false
+   },
+   "issues": [
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "feasibility → unresolved",
+     "message": "Breakfast / iconic coffee: El Pan de la Chola is closed on Mondays, so this opening stop fails on that one day of the week.: El Pan de la Chola is closed on Mondays, so this opening stop fails on that one day of the week."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "feasibility → unresolved",
+     "message": "Signature lunch: Sources disagree on El Mercado's closed day — one lists Tuesday–Sunday (closed Monday), another Monday–Saturday (closed Sunday) — so the anchor lunch fails on whichever of those…: Sources disagree on El Mercado's closed day — one lists Tuesday–Sunday (closed Monday), another Monday–Saturday (closed Sunday) — so the anchor lunch fails on whichever of those two days is correct."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "feasibility → unresolved",
+     "message": "Destination dinner: Isolina's listed hours show it closing at 17:00 on Sundays and Mondays, versus 23:00 the rest of the week — a 19:00 dinner sitting will not work on those two days.: Isolina's listed hours show it closing at 17:00 on Sundays and Mondays, versus 23:00 the rest of the week — a 19:00 dinner sitting will not work on those two days."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → slot_mu28s5h614jta0vy",
+     "message": "Proposed change to the layout: For a Monday version of this day, substitute a different Miraflores bakery-café that opens that day; none was researched here. — El Pan de la Chola is closed on Mondays, so this opening stop fails on that one day of the week."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → slot_mu28s5h616rp9696",
+     "message": "Proposed change to the layout: Confirm the current closed day directly before committing to a Sunday or Monday version of this day. — Sources disagree on El Mercado's closed day — one lists Tuesday–Sunday (closed Monday), another Monday–Saturday (closed Sunday) — so the anchor lunch fails on whichever of those two days is correct."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → slot_mu28s5h615gp2aek",
+     "message": "Proposed change to the layout: Accept the short walk across the district line, or restrict this specific day to Tuesday, Thursday or Saturday and use Mercado Santa Cruz instead, which is genuinely inside Miraflores and closer to both breakfast and lunch. — The only market operating every day within an easy walk of the breakfast-and-lunch corridor is titled to Surquillo district, not Miraflores — a minor breach of the single-neighborhood rule. The market actually inside Miraflores, Mercado Santa Cruz, only opens Tuesday, Thursday and Saturday, so it can't stand in as an evergreen substitute."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → slot_mu28s5h6198kc83j",
+     "message": "Proposed change to the layout: For Sunday or Monday travel, either move the sitting to before 17:00 (which collapses the open window built in before it) or hold a second Barranco kitchen in reserve; none was researched here. — Isolina's listed hours show it closing at 17:00 on Sundays and Mondays, versus 23:00 the rest of the week — a 19:00 dinner sitting will not work on those two days."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → slot_mu28s5h6198kc83j",
+     "message": "Proposed change to the layout: Readers with access needs should call ahead and request ground-floor seating specifically. — Isolina's step-free access and a same-level bathroom were not confirmed by any source; only ground-floor seating (small tables and a bar) was."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → slot_mu28s5h61a9eefh0",
+     "message": "Proposed change to the layout: Since this stop is optional, check hours before the day rather than planning the evening around it. — No source confirmed Bodega Piselli's operating hours or a closed day."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "proposed change → the day",
+     "message": "Proposed change to the layout: Fill in dietary and access needs before calling ahead or turning up at any of these stops. — Dietary and access needs haven't been supplied for this trip. Both the lunch and dinner kitchens were confirmed to serve a cooked, non-seafood main alongside the ceviche, but nothing else here has been checked against specific restrictions, and nothing is booked or paid for."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "editor notes",
+     "message": "Market / food exploration: The only market operating every day within an easy walk of the breakfast-and-lunch corridor is titled to Surquillo district, not Miraflores — a minor breach of the single-neighborhood rule. The market actually inside Miraflores, Mercado Santa Cruz, only opens Tuesday, Thursday and Saturday, so it can't stand in as an evergreen substitute."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "editor notes",
+     "message": "Destination dinner: Isolina's step-free access and a same-level bathroom were not confirmed by any source; only ground-floor seating (small tables and a bar) was."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "editor notes",
+     "message": "Specialty tasting / snack: La Bodega Verde is a sit-down café, not a takeaway counter, so keeping this stop to a genuine small taste with no table service depends on ordering to go rather than sitting."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "editor notes",
+     "message": "Dessert / drinks: No source confirmed Bodega Piselli's operating hours or a closed day."
+    },
+    {
+     "severity": "warning",
+     "layer": "review",
+     "path": "editor notes",
+     "message": "The whole day: Dietary and access needs haven't been supplied for this trip. Both the lunch and dinner kitchens were confirmed to serve a cooked, non-seafood main alongside the ceviche, but nothing else here has been checked against specific restrictions, and nothing is booked or paid for."
+    }
+   ]
+  }
+ }
+}

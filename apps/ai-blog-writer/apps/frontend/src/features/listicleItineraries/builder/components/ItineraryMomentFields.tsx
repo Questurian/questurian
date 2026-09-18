@@ -32,16 +32,18 @@ import {
   Wine,
   type LucideIcon
 } from 'lucide-react'
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { Fragment, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { EVERYDAY_ITINERARY_MOMENTS } from '../../model/moments'
 import type { ItineraryItemBlock, ItineraryMoment } from '../../types'
 
 type MomentOption = {
   value: ItineraryMoment
   label: string
   Icon: LucideIcon
+  specialist?: boolean
 }
 
-const ITINERARY_MOMENT_OPTIONS: MomentOption[] = [
+const MOMENT_OPTIONS: MomentOption[] = [
   { value: 'breakfast', label: 'Breakfast', Icon: Croissant },
   { value: 'coffee', label: 'Coffee break', Icon: Coffee },
   { value: 'morning-walk', label: 'Morning walk', Icon: Footprints },
@@ -51,6 +53,7 @@ const ITINERARY_MOMENT_OPTIONS: MomentOption[] = [
   { value: 'street-food', label: 'Street food', Icon: CookingPot },
   { value: 'sweet-treat', label: 'Sweet treat', Icon: IceCreamBowl },
   { value: 'culture', label: 'Culture stop', Icon: Palette },
+  { value: 'culture', label: 'Hands-on workshop', Icon: Palette, specialist: true },
   { value: 'historic-site', label: 'Historic site', Icon: ScrollText },
   { value: 'museum-visit', label: 'Museum visit', Icon: University },
   { value: 'landmark', label: 'Must-see landmark', Icon: Landmark },
@@ -58,8 +61,10 @@ const ITINERARY_MOMENT_OPTIONS: MomentOption[] = [
   { value: 'local-market', label: 'Local market', Icon: Store },
   { value: 'shopping', label: 'Shopping stop', Icon: ShoppingBag },
   { value: 'outdoor', label: 'Outdoor break', Icon: Trees },
+  { value: 'outdoor', label: 'Picnic break', Icon: Trees },
   { value: 'beach-time', label: 'Beach time', Icon: Waves },
   { value: 'scenic-viewpoint', label: 'Scenic viewpoint', Icon: Binoculars },
+  { value: 'scenic-viewpoint', label: 'Photo stop', Icon: Binoculars },
   { value: 'wellness-break', label: 'Wellness break', Icon: Sparkles },
   { value: 'active-adventure', label: 'Active adventure', Icon: Bike },
   { value: 'boat-ride', label: 'Boat ride', Icon: Sailboat },
@@ -70,8 +75,15 @@ const ITINERARY_MOMENT_OPTIONS: MomentOption[] = [
   { value: 'dinner', label: 'Dinner', Icon: UtensilsCrossed },
   { value: 'cocktails', label: 'Cocktails', Icon: Martini },
   { value: 'drinks', label: 'Drinks', Icon: Wine },
-  { value: 'nightlife', label: 'Nightlife', Icon: Music2 }
+  { value: 'nightlife', label: 'Nightlife', Icon: Music2 },
+  { value: 'nightlife', label: 'Live music', Icon: Music2 }
 ]
+
+const MOMENT_GROUPS = [
+  { label: 'Everyday moments', options: MOMENT_OPTIONS.filter((option) => EVERYDAY_ITINERARY_MOMENTS.has(option.value) && !option.specialist) },
+  { label: 'Specialist moments', options: MOMENT_OPTIONS.filter((option) => !EVERYDAY_ITINERARY_MOMENTS.has(option.value) || option.specialist) },
+]
+const ITINERARY_MOMENT_OPTIONS = MOMENT_GROUPS.flatMap((group) => group.options)
 
 function MomentBadgePicker({
   selected,
@@ -93,7 +105,7 @@ function MomentBadgePicker({
 
     const selectedIndex = selected
       ? ITINERARY_MOMENT_OPTIONS.findIndex(
-          (option) => option.value === selected.value
+          (option) => option === selected
         ) + 1
       : 0
     optionRefs.current[selectedIndex]?.focus()
@@ -225,10 +237,14 @@ function MomentBadgePicker({
 
           {ITINERARY_MOMENT_OPTIONS.map((option, optionIndex) => {
             const Icon = option.Icon
-            const active = option.value === selected?.value
+            const active = option === selected
             const index = optionIndex + 1
             return (
-              <li key={option.value} role="presentation">
+              <Fragment key={`${option.value}:${option.label}`}>
+                {MOMENT_GROUPS.filter((group) => group.options[0] === option).map((group) => (
+                  <li key={group.label} role="presentation"><strong>{group.label}</strong></li>
+                ))}
+              <li role="presentation">
                 <button
                   ref={(element) => {
                     optionRefs.current[index] = element
@@ -252,6 +268,7 @@ function MomentBadgePicker({
                   {active ? <Check size={16} aria-hidden /> : null}
                 </button>
               </li>
+              </Fragment>
             )
           })}
         </ul>
@@ -269,9 +286,10 @@ export function ItineraryMomentFields({
     updater: (current: ItineraryItemBlock) => ItineraryItemBlock
   ) => void
 }) {
+  // Labelled presets share a publishing type; prefer the exact preset on reload.
   const selected = ITINERARY_MOMENT_OPTIONS.find(
-    (option) => option.value === item.moment
-  )
+    (option) => option.value === item.moment && option.label === item.momentLabel
+  ) ?? ITINERARY_MOMENT_OPTIONS.find((option) => option.value === item.moment)
   const chooseMoment = (next: MomentOption | undefined) => {
     onChange((current) => ({
       ...current,
@@ -306,14 +324,17 @@ export function ItineraryMomentFields({
       ) : null}
 
       <details className="stl-moment-library">
-        <summary>Browse {ITINERARY_MOMENT_OPTIONS.length} moment icons</summary>
-        <div className="stl-moment-library__grid">
-          {ITINERARY_MOMENT_OPTIONS.map((option) => {
+        <summary>Browse {ITINERARY_MOMENT_OPTIONS.length} moment badges</summary>
+        {MOMENT_GROUPS.map((group) => (
+          <div key={group.label}>
+          <h4>{group.label}</h4>
+          <div className="stl-moment-library__grid">
+          {group.options.map((option) => {
             const Icon = option.Icon
-            const active = option.value === item.moment
+            const active = option === selected
             return (
               <button
-                key={option.value}
+                key={`${option.value}:${option.label}`}
                 type="button"
                 className={
                   active
@@ -330,6 +351,8 @@ export function ItineraryMomentFields({
             )
           })}
         </div>
+        </div>
+        ))}
       </details>
     </div>
   )

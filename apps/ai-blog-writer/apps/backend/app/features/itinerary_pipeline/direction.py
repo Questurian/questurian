@@ -1,0 +1,339 @@
+"""Turning an agreed conversation into the short summary a selection runs from.
+
+A consensus is a paragraph. It is what the operator agreed to and it is the
+right thing to agree to -- but a paragraph cannot be checked against the slot
+list, cannot be hashed into an export, and cannot be diffed when the day
+changes. So a second, dedicated call reads the conversation and writes the
+agreement down as a `DaySummary`.
+
+It is short on purpose (ADR 0045). The first version wrote requirements,
+failure conditions and a research checklist, and a suggestion the operator
+merely accepted came out as a rule the research then spent its searches on.
+Here the operator's own musts are `requirements`, and everything else --
+including an accepted suggestion -- is a preference the selection may adjust.
+
+That split is checked in code, not only asked for. Each requirement names
+where it came from: the setup, or a question the operator answered in their
+own words. A requirement that names an accepted suggestion, a question that
+does not exist, or a setup with no musts in it is kept -- as a preference.
+The saved Lima agreement is why: all five of its answers were accepted
+suggestions, and the extraction still wrote step-free seating and a
+non-seafood main as musts for a reader whose needs were never given.
+
+Two rules keep it honest:
+
+**The candidate is shown before it is accepted.** The operator accepts the
+object they were shown, by revision number.
+
+**A failed extraction leaves the conversation alone.** The retry is another
+extraction, not another interview.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+from ..prompt2blog.contracts_v4 import GrillState
+from ..prompt2blog.support import _safe_dict, _safe_str, _safe_str_list
+from .contracts import (
+    AgreementTurn,
+    DaySnapshotModel,
+    DaySummary,
+    SlotSummary,
+    TripSnapshotModel,
+)
+
+logger = logging.getLogger(__name__)
+
+DIRECTION_JOB = "itinerary.day_direction"
+
+DIRECTION_MAX_TOKENS = 4_096
+
+
+def _strings(description: str, maximum: int) -> dict[str, Any]:
+    return {
+        "type": "array",
+        "description": description,
+        "maxItems": maximum,
+        "items": {"type": "string"},
+    }
+
+
+def _musts(description: str, maximum: int, sources: list[str]) -> dict[str, Any]:
+    return {
+        "type": "array",
+        "description": description,
+        "maxItems": maximum,
+        "items": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"},
+                "from": {"type": "string", "enum": sources},
+            },
+            "required": ["text", "from"],
+        },
+    }
+
+
+def summary_schema(state: GrillState) -> dict[str, Any]:
+    """The answer shape, with the question numbers this conversation has."""
+    sources = ["setup", *(f"Q{index}" for index in range(1, len(state.turns) + 1))]
+    return {
+        "type": "object",
+        "properties": {
+            "angle": {
+                "type": "string",
+                "description": "What this day is for, in at most 25 words.",
+            },
+            "trip_fit": {
+                "type": "string",
+                "description": "How it differs from the other days, in at most 25 words. Empty if one day.",
+            },
+            "area": {
+                "type": "string",
+                "description": "Where the day happens and roughly how it moves, in at most 25 words.",
+            },
+            "requirements": _musts(
+                "Firm musts for the whole day, each with its source. Usually none.",
+                6,
+                sources,
+            ),
+            "preferences": _strings(
+                "At most six short wishes for the whole day that the selection may adjust.",
+                6,
+            ),
+            "avoid": _strings("What the day should stay away from, if agreed.", 6),
+            "slots": {
+                "type": "array",
+                "description": "One entry per approved stop, in the approved order.",
+                "maxItems": 40,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "slot_id": {"type": "string"},
+                        "role": {"type": "string", "description": "A short phrase."},
+                        "requirements": _musts("Firm musts for this stop only.", 4, sources),
+                        "preferences": _strings("At most two short wishes for this stop.", 2),
+                    },
+                    "required": ["slot_id", "role", "requirements", "preferences"],
+                },
+            },
+        },
+        "required": ["angle", "trip_fit", "area", "requirements", "preferences", "avoid", "slots"],
+    }
+
+
+def build_prompt(state: GrillState, brief: str, day: DaySnapshotModel) -> str:
+    slot_lines = "\n".join(
+        f"  - {slot.id} — {slot.label or slot.kind} ({slot.kind}"
+        + (", optional" if slot.optional else "")
+        + ")"
+        for slot in day.slots
+    )
+    blocks = []
+    for index, turn in enumerate(state.turns, start=1):
+        origin = (
+            "They accepted the suggestion unchanged: the wording is the interviewer's."
+            if turn.accepted_as_drafted
+            else "They wrote this answer themselves."
+        )
+        blocks.append(
+            f"Q{index}. {turn.question.ask}\n"
+            f"Suggested: {turn.question.recommendation}\n"
+            f"Answer to Q{index}: {turn.answer}\n{origin}\n"
+        )
+    transcript = "\n".join(blocks) or "Nothing was asked."
+
+    return f"""Write down, briefly, what an editor agreed about one day of a trip. You are
+not deciding anything and not adding anything.
+
+THE DAY AND ITS CONTEXT:
+{brief}
+
+THE APPROVED STOPS. `slots` has exactly these ids, once each, in this order:
+{slot_lines}
+
+THE CONVERSATION:
+{transcript}
+
+WHAT THEY AGREED:
+{state.consensus}
+
+Rules:
+
+1. SHORT. One sentence each for angle, trip_fit and area. A stop's role is a
+   short phrase. Leave a list empty when nothing was agreed for it. Do not
+   restate the setup, the stop list or the window.
+
+2. REQUIREMENT OR PREFERENCE. A requirement is a must the operator wrote in
+   their OWN answer (give that question as `from`), or a must the setup states
+   in must include, avoid, or filled-in dietary or access needs (`from`:
+   "setup"). An answer marked as an accepted suggestion is never the source of
+   a requirement, even when its wording says "must": write it as a
+   preference. Never turn a preference into a number or an absolute:
+   "walkable" stays "walkable".
+
+3. NO FACTS AND NO INVENTED NEEDS. No venue names, hours, distances or prices.
+   When the setup leaves dietary or access needs blank, write nothing about
+   diets, allergies, stairs, step-free access or bathrooms anywhere -- not as a
+   requirement, not as a preference -- even if an accepted suggestion
+   mentions them.
+
+4. NO RESEARCH INSTRUCTIONS. No checklists, no failure conditions, no
+   fallbacks ("carry an alternate"), no "verify that". The selection step
+   already checks what affects a choice.
+
+5. SAY EACH THING ONCE. A rule for one stop goes on that stop, not also on the
+   day.
+"""
+
+
+def _turn_trace(state: GrillState) -> list[AgreementTurn]:
+    """The decision trail, taken from the transcript rather than from the model.
+
+    `answer_origin` is the engine's own bookkeeping and nothing downstream may
+    be allowed to soften it.
+    """
+    return [
+        AgreementTurn(
+            decision=turn.question.ask[:600],
+            recommendation=turn.question.recommendation[:4000],
+            answer=turn.answer[:4000],
+            answer_origin=(
+                "accepted_recommendation" if turn.accepted_as_drafted else "operator"
+            ),
+        )
+        for turn in state.turns
+    ]
+
+
+class DirectionExtractionFailed(RuntimeError):
+    """The extraction did not produce something the day can be run from."""
+
+
+def _clipped(items: list[str], limit: int, length: int = 300) -> list[str]:
+    return [item[:length] for item in items[:limit]]
+
+
+def _setup_has_musts(trip: TripSnapshotModel | None, day: DaySnapshotModel) -> bool:
+    if trip is None:
+        return False
+    preferences = trip.shared_preferences or {}
+    stated = any(
+        str(preferences.get(key) or "").strip()
+        for key in ("mustInclude", "avoid", "dietaryNeeds", "accessNeeds")
+    )
+    return stated or bool(day.setup_notes.strip())
+
+
+def firm_or_not(
+    items: Any, state: GrillState, *, setup_musts: bool
+) -> tuple[list[str], list[str]]:
+    """Requirements whose source holds up, and the rest as preferences.
+
+    The source is checked against the transcript the engine kept, which the
+    extraction cannot rewrite.
+    """
+    firm: list[str] = []
+    soft: list[str] = []
+    if not isinstance(items, list):
+        return firm, soft
+    for item in items:
+        row = _safe_dict(item) if not isinstance(item, str) else {"text": item, "from": ""}
+        text = _safe_str(row.get("text"))
+        if not text:
+            continue
+        source = _safe_str(row.get("from")).upper()
+        keep = False
+        if source == "SETUP":
+            keep = setup_musts
+        elif source.startswith("Q") and source[1:].isdigit():
+            index = int(source[1:])
+            if 1 <= index <= len(state.turns):
+                keep = not state.turns[index - 1].accepted_as_drafted
+        (firm if keep else soft).append(text[:300])
+    return firm, soft
+
+
+def summary_from(
+    payload: Any,
+    state: GrillState,
+    day: DaySnapshotModel,
+    trip: TripSnapshotModel | None = None,
+) -> DaySummary:
+    """Read the reply into the contract, checking it against the real slots.
+
+    A slot id the layout does not have, or a second entry for one it does, is
+    dropped; a missing stop is filled from its own layout purpose, which is at
+    least true.
+    """
+    data = _safe_dict(payload)
+    if not data:
+        raise DirectionExtractionFailed("The extraction returned nothing usable.")
+    angle = _safe_str(data.get("angle"))
+    if not angle:
+        raise DirectionExtractionFailed("The extraction did not say what the day is for.")
+
+    setup_musts = _setup_has_musts(trip, day)
+    by_id = {slot.id: slot for slot in day.slots}
+    written: dict[str, SlotSummary] = {}
+    raw_slots = data.get("slots")
+    if isinstance(raw_slots, list):
+        for entry in raw_slots:
+            row = _safe_dict(entry)
+            slot_id = _safe_str(row.get("slot_id"))
+            if slot_id not in by_id or slot_id in written:
+                logger.warning("Summary extraction named slot %r, which is not on this day", slot_id)
+                continue
+            firm, soft = firm_or_not(row.get("requirements"), state, setup_musts=setup_musts)
+            written[slot_id] = SlotSummary(
+                slot_id=slot_id,
+                role=_safe_str(row.get("role"))[:300],
+                requirements=firm[:8],
+                preferences=_clipped([*soft, *_safe_str_list(row.get("preferences"))], 8),
+            )
+
+    firm, soft = firm_or_not(data.get("requirements"), state, setup_musts=setup_musts)
+    return DaySummary(
+        day_id=day.id,
+        angle=angle[:600],
+        trip_fit=_safe_str(data.get("trip_fit"))[:600],
+        area=_safe_str(data.get("area"))[:600],
+        requirements=firm[:12],
+        preferences=_clipped([*soft, *_safe_str_list(data.get("preferences"))], 12),
+        avoid=_clipped(_safe_str_list(data.get("avoid")), 12),
+        slots=[
+            written.get(slot.id, SlotSummary(slot_id=slot.id, role=(slot.purpose or slot.label)[:300]))
+            for slot in day.slots
+        ],
+        agreement_trace=_turn_trace(state),
+    )
+
+
+def extract(
+    *,
+    state: GrillState,
+    brief: str,
+    day: DaySnapshotModel,
+    llm,
+    trip: TripSnapshotModel | None = None,
+) -> DaySummary:
+    """One structured extraction over the whole agreement."""
+    if state.status != "agreed":
+        raise ValueError("This day's interview has not agreed anything yet.")
+    parsed, raw = llm.invoke_json(
+        job_id=DIRECTION_JOB,
+        prompt=build_prompt(state, brief, day),
+        model_name=None,
+        schema=summary_schema(state),
+        max_tokens=DIRECTION_MAX_TOKENS,
+        # Writing down what was already decided. Nothing here should vary run
+        # to run.
+        temperature=0.0,
+    )
+    try:
+        return summary_from(parsed, state, day, trip)
+    except DirectionExtractionFailed:
+        logger.warning("Summary extraction was unusable: %s", (raw or "")[:500])
+        raise
