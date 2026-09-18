@@ -48,16 +48,39 @@ PROMPT_POLICY_REVISION = "itinerary-selection-policy-2026-09-16"
 
 # What the day interview has to settle before it may agree. Four, not eight:
 # the interview decides what the day is for, not how research should work.
-# A GrillState keeps the keys it started with, so an interview begun under the
-# older eight-marker list finishes under it.
+# The descriptions are what the model reads, so they are in plain words.
 ITINERARY_MARKERS: tuple[tuple[str, str], ...] = (
-    ("angle", "what the day is for, and how it differs from the other days"),
+    ("angle", "what the travellers mainly want from this day, and how it differs from the other days"),
     ("area", "where the day happens and roughly how it moves"),
-    ("stops", "what each stop is for, where that is not already obvious"),
-    ("limits", "the operator's firm requirements, kept apart from preferences"),
+    ("stops", "what a stop is for, where the setup does not already make it obvious"),
+    ("limits", "which wishes are musts, kept apart from preferences"),
 )
 
 ITINERARY_MARKER_KEYS: tuple[str, ...] = tuple(key for key, _ in ITINERARY_MARKERS)
+
+# The eight topics an interview started before ADR 0045 carries, and which of
+# the four current topics an answered one can settle. A current topic counts as
+# settled only when EVERY legacy topic listed for it was asked and answered:
+# `purpose` alone says what a day promises, not how it differs from the other
+# days, so it cannot settle `angle` without `continuity`. `anchors`, `rhythm`
+# and `unknowns` settle nothing; their answers stay in the transcript, where
+# the interview reads them. See `grill.on_current_topics`.
+LEGACY_ITINERARY_MARKER_KEYS: tuple[str, ...] = (
+    "purpose",
+    "geography",
+    "anchors",
+    "slot_intent",
+    "rhythm",
+    "continuity",
+    "change_policy",
+    "unknowns",
+)
+LEGACY_TOPICS_SETTLING: dict[str, tuple[str, ...]] = {
+    "angle": ("purpose", "continuity"),
+    "area": ("geography",),
+    "stops": ("slot_intent",),
+    "limits": ("change_policy",),
+}
 
 
 class ItineraryModel(BaseModel):

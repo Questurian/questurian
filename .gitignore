@@ -66,7 +66,7 @@ claude.md
 # from here would be a duplicate -- and left visible they break more than git
 # hygiene: nx globs them, finds every project defined twice, and refuses to
 # build the graph at all, which takes the whole dev server down with it.
-.claude/worktrees/
+**/.claude/worktrees/
 
 # Generated cross-tool skill adapters. Canonical, reviewed skills live in
 # .agents; Claude's checked-in links point back to that single source.

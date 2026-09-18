@@ -1,3 +1,4 @@
+import { SHOW_ITINERARY_AI } from '../constants/editor-features'
 import { BuilderSidebar as SharedBuilderSidebar } from '../../../../shared/builder/components/BuilderSidebar'
 import type { EditorAssistModelName } from '../../../staging/api'
 import type { ListicleItineraryDraft } from '../../types'
@@ -51,7 +52,7 @@ export function BuilderSidebar({
       editorModelName={editorModelName}
       onEditorModelChange={onEditorModelChange}
       isSaving={isSaving}
-      renderAutoWriteButton={() => (
+      renderAutoWriteButton={() => SHOW_ITINERARY_AI ? (
         <button
           type="button"
           className="stl-btn stl-btn-secondary"
@@ -60,7 +61,7 @@ export function BuilderSidebar({
         >
           {isAutoWritingEmptyFields ? 'Writing Empty Fields...' : 'Auto Write Empty Fields'}
         </button>
-      )}
+      ) : null}
       saveLocalDraftLabel="Save Local Draft (Browser)"
       revertToPayloadLabel={isPublishedPayload ? 'Revert to Last Published' : 'Revert to Payload Draft'}
       onSaveLocalDraft={onSaveLocalDraft}

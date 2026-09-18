@@ -77,6 +77,27 @@ is regenerated on its own. Answers in the retired formats are refused by name.
 The v1/v2 request builders, the adapter and their schemas are deleted rather
 than kept behind a switch: nothing should be generated from them again.
 
+*Amended 2026-09-17: plain questions, and old interviews move on.* The
+interview's prompt asked a "travel editor" for a day's "angle" and a 20 to 60
+word suggestion, and got a Lima food question contrasting "a ground-level tour
+of how Lima eats" with "one ambitious dinner", answered by a paragraph that
+added a coffee ritual, a market, a regional dish and a destination dinner. It
+now asks what the travellers want to do, see, eat, spend or avoid; the
+suggestion is one short sentence (about 10 to 25 words) that answers only the
+question asked; and the operator is never asked to look anything up. No stage,
+model or schema changed.
+
+An interview begun on the eight older topics is moved onto the four when the
+operator answers or reopens it, and saved with that action; viewing it changes
+nothing. Every question, suggestion, answer, id and `asks_about` is kept as
+said. A current topic counts as settled only when every old topic it needs was
+asked and answered (`angle` needs `purpose` and `continuity`; `area`
+`geography`; `stops` `slot_intent`; `limits` `change_policy`); `anchors`,
+`rhythm` and `unknowns` settle nothing, and what the old interview claimed
+without asking is not carried. The next turn reads the whole conversation and
+may mark more covered. Renaming the old topics instead would have let
+`purpose` alone settle `angle`, and the engine would then refuse to ask it.
+
 ## Consequences
 
 - The Lima day's request is 8,223 characters including the hotel (target

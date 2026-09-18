@@ -90,25 +90,13 @@ function ToggleChevron({ open }: { open: boolean }) {
   )
 }
 
+/**
+ * The Itinerary Pipeline has no card here on purpose. That pipeline is not in
+ * use any more; the Listicle Itineraries builder below took its place, which is
+ * why the builder now leads Article Generation. The route and the feature code
+ * are still in the repository, so /itinerary-pipeline still opens if typed.
+ */
 const LANDING_CARDS: LandingCardConfig[] = [
-  {
-    id: 'itinerary-pipeline',
-    title: 'Itinerary Pipeline',
-    description: 'Enter the trip, shape each day, approve every layout.',
-    to: '/itinerary-pipeline',
-    section: 'article-generation',
-    priority: 6,
-    accentClass: 'landing-card--listicle-pipeline',
-    actionLabel: 'Open',
-    icon: (
-      <path
-        d="M4 6h16M4 12h16M4 18h10"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    ),
-  },
   {
     id: 'prompt2blog',
     title: 'Prompt → Articles',
@@ -172,8 +160,8 @@ const LANDING_CARDS: LandingCardConfig[] = [
     title: 'Listicle Itineraries',
     description: 'Build and stage timeline-based itineraries with block-level scheduling and Payload sync.',
     to: '/listicle-itineraries',
-    section: 'structured-publishing',
-    priority: 2,
+    section: 'article-generation',
+    priority: 0,
     accentClass: 'landing-card--itineraries',
     actionLabel: 'Open Builder',
     icon: (

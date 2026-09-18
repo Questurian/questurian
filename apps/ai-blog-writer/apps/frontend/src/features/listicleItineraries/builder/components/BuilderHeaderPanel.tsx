@@ -1,3 +1,4 @@
+import { SHOW_ITINERARY_AI } from '../constants/editor-features'
 import { useState } from 'react'
 import { BuilderHeaderPanel as SharedBuilderHeaderPanel } from '../../../../shared/builder/components/BuilderHeaderPanel'
 import { FieldInfoHint } from '../../../../shared/builder/components/FieldInfoHint'
@@ -34,7 +35,6 @@ export function BuilderHeaderPanel({
   introComposeDisabledReason,
   hasIntroComposeReport = false,
   onViewIntroComposeReport,
-  isLocked,
   isSynced = false,
   onContinueStep2,
   onUpdateStep2,
@@ -50,7 +50,8 @@ export function BuilderHeaderPanel({
         locationRef={locationRef}
         mediaAssets={mediaAssets}
         updateHeader={updateHeader}
-        isLocked={isLocked}
+        isLocked={false}
+        showWorkflowActions={false}
         isSynced={isSynced}
         onContinueStep2={onContinueStep2}
         onUpdateStep2={onUpdateStep2}
@@ -67,7 +68,7 @@ export function BuilderHeaderPanel({
             Create composite
           </button>
         )}
-        renderIntroAiActions={() => (
+        renderIntroAiActions={() => SHOW_ITINERARY_AI ? (
           <>
             <FieldInfoHint text={'Writes the intro from your AI plan overview, the picks, and each “Why this pick” — plus the title, location, and list tone.'} />
             <button
@@ -93,7 +94,7 @@ export function BuilderHeaderPanel({
               </button>
             ) : null}
           </>
-        )}
+        ) : null}
       />
       {(
         <CompositeImageModal

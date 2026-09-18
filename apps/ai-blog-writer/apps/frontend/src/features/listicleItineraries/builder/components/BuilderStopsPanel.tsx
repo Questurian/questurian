@@ -1,3 +1,4 @@
+import { SHOW_ITINERARY_AI } from '../constants/editor-features'
 import { useEffect, useMemo, useState } from 'react'
 import type {
   InstagramPostOption,
@@ -260,14 +261,14 @@ export function BuilderStopsPanel({
         </div>
       </div>
 
-      {draft.planOverview?.trim() ? (
+      {SHOW_ITINERARY_AI && draft.planOverview?.trim() ? (
         <div className="stl-plan-overview" role="note">
           <span className="stl-plan-overview-label">ⓘ AI plan overview</span>
           <p className="stl-plan-overview-text">{draft.planOverview}</p>
         </div>
       ) : null}
 
-      <div
+      {SHOW_ITINERARY_AI && <div
         className="stl-blurb-compose-bar"
         role="group"
         aria-label="AI stop blurbs"
@@ -319,7 +320,7 @@ export function BuilderStopsPanel({
             </button>
           ) : null}
         </div>
-      </div>
+      </div>}
 
       <fieldset className="stl-panel-fieldset" disabled={!isSynced && isLocked}>
         {isLoadingRelated ? (

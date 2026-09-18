@@ -20,6 +20,11 @@ carried on the state. It is a thousand lines of trip, layout and other-day
 summary, it is re-derived from the workspace on every turn, and storing a copy
 of it inside the interview would mean a resumed interview describing a trip
 that had since been edited.
+
+An interview begun on the older eight topics is moved onto the current four
+when the operator acts on it -- answers or reopens -- and saved with that
+action. Viewing it changes nothing, so an agreed interview and whatever was
+built from it stay exactly as they were until somebody reopens it.
 """
 
 from __future__ import annotations
@@ -29,11 +34,12 @@ import logging
 from ..prompt2blog.contracts_v4 import GrillState
 from ..prompt2blog.grill_v4 import (
     GrillDependencies,
+    advance_grill,
     answer_grill,
     reopen_grill,
     start_grill,
 )
-from .contracts import ITINERARY_MARKER_KEYS
+from .contracts import ITINERARY_MARKER_KEYS, LEGACY_TOPICS_SETTLING
 from .grill_prompt import build_itinerary_turn_prompt
 
 logger = logging.getLogger(__name__)
@@ -82,9 +88,62 @@ def start(*, run_id: str, seed: str, brief: str, llm) -> GrillState:
     )
 
 
+def on_current_topics(
+    state: GrillState, *, pending_answered: bool = False
+) -> GrillState:
+    """The same interview, judged against the current four topics.
+
+    Only the bookkeeping moves. Every question, suggestion, answer, question id
+    and `asks_about` stays as it was said, which is what the summary's source
+    check reads (ADR 0045).
+
+    That is also why this cannot just rename `marker_keys`. The engine counts a
+    topic as settled when an answered question named it, and old questions name
+    old topics. Those names are simply not on the new list, so they count for
+    nothing by themselves; what they settle is decided here, once, and written
+    into `markers_covered`, where the engine keeps it.
+
+    Conservative on purpose (`LEGACY_TOPICS_SETTLING`): a current topic is
+    carried only when every old topic it needs was asked and answered. What the
+    old interview claimed without asking is not carried either -- the next turn
+    reads the setup and the whole conversation and may claim it again, which is
+    the same judgement made against the question now being asked.
+
+    `pending_answered` counts the question on screen as answered, for the call
+    that is about to record the operator's answer to it.
+    """
+    if tuple(state.marker_keys) == ITINERARY_MARKER_KEYS:
+        return state
+    asked = [turn.question for turn in state.turns]
+    if pending_answered and state.pending is not None:
+        asked.append(state.pending)
+    answered = {question.asks_about for question in asked if question.asks_about}
+    carried = [
+        key
+        for key in ITINERARY_MARKER_KEYS
+        if all(topic in answered for topic in LEGACY_TOPICS_SETTLING.get(key, ("",)))
+    ]
+    return state.model_copy(
+        update={"marker_keys": ITINERARY_MARKER_KEYS, "markers_covered": carried}
+    )
+
+
 def answer(state: GrillState, text: str, *, brief: str, llm) -> GrillState:
-    return answer_grill(state, text, dependencies(llm, brief))
+    return answer_grill(
+        on_current_topics(state, pending_answered=True),
+        text,
+        dependencies(llm, brief),
+    )
 
 
 def reopen(state: GrillState, *, brief: str, llm) -> GrillState:
-    return reopen_grill(state, dependencies(llm, brief))
+    if tuple(state.marker_keys) == ITINERARY_MARKER_KEYS:
+        return reopen_grill(state, dependencies(llm, brief))
+    # The engine's reopen empties the covered list and lets answered questions
+    # restore it. Old questions restore nothing on the new list, so the same
+    # rule is applied through the mapping instead: what was answered stays
+    # settled, the agreement does not.
+    reopened = on_current_topics(state).model_copy(
+        update={"status": "asking", "consensus": "", "pending": None}
+    )
+    return advance_grill(reopened, dependencies(llm, brief))

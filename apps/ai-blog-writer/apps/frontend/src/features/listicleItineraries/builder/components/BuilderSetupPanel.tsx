@@ -1,3 +1,5 @@
+import { SHOW_SHARED_NEIGHBORHOODS } from '../constants/editor-features'
+import { SHOW_ITINERARY_AI } from '../constants/editor-features'
 import { useState } from 'react'
 import { resizeItineraryDays, type ListicleItineraryDraft } from '../../types'
 import {
@@ -60,7 +62,7 @@ export function BuilderSetupPanel({
     locations,
     draft.location,
   )
-  const showNeighborhoodPicker = isCityLocation(selectedPrimaryLocation)
+  const showNeighborhoodPicker = SHOW_SHARED_NEIGHBORHOODS && isCityLocation(selectedPrimaryLocation)
   const canUseAutobuildBrief = Boolean(draft.title.trim() && draft.location)
   const autobuildBriefDisabledReason = !draft.title.trim()
     ? 'Add a title before writing or using the AI Autobuild brief.'
@@ -126,7 +128,7 @@ export function BuilderSetupPanel({
         onOpenLayoutManager={onOpenLayoutManager}
       />
 
-      {onGenerateItinerary ? (
+      {SHOW_ITINERARY_AI && onGenerateItinerary ? (
         <AutobuildBriefField
           draft={draft}
           isSetupLocked={isSetupLocked}
@@ -142,7 +144,7 @@ export function BuilderSetupPanel({
         />
       ) : null}
 
-      {onComposeTravelerBrief ? (
+      {SHOW_ITINERARY_AI && onComposeTravelerBrief ? (
         <TravelerProfileModal
           isOpen={isTravelerProfileModalOpen}
           profile={draft.travelerProfile}

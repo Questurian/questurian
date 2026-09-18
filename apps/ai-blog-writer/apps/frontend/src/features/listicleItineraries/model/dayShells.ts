@@ -1,3 +1,5 @@
+import type { ItineraryMoment } from './moments'
+
 export type DayShellId = string
 
 export type ShellSlotDaypart =
@@ -23,6 +25,7 @@ export type DayShellSlot = {
   preferredCollections: ShellSlotCollection[]
   intentTags: string[]
   avoidTags?: string[]
+  moment?: ItineraryMoment
 }
 
 export type DayShellTemplate = {

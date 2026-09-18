@@ -70,7 +70,7 @@ export function DayShellSelector({
           <h3 className="stl-section-heading">
             <span className="stl-field-label-with-hint">
               Day shell
-              <FieldInfoHint text="Choose the shape of the day before AI generation. The shell controls stop count, order, meal slots, activity slots, and nightlife slots." />
+              <FieldInfoHint text="Choose the shape of each day. Continuing setup creates an empty stop for every template slot." />
             </span>
           </h3>
         </div>

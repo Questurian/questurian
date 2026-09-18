@@ -1,3 +1,4 @@
+import { SHOW_ITINERARY_AI } from '../constants/editor-features'
 import type { ReactNode } from 'react'
 import {
   LIST_TONE_OPTIONS,
@@ -74,7 +75,7 @@ export function ItineraryBasicsFields({
               disabled={isSetupLocked}
               onChange={(event) => updateDraft({ title: event.target.value })}
             />
-            <span className="stl-title-ai-trigger-wrap">
+            {SHOW_ITINERARY_AI && <span className="stl-title-ai-trigger-wrap">
               <ItineraryTitlePipelineButton
                 locationLabel={
                   selectedPrimaryLocation
@@ -85,7 +86,7 @@ export function ItineraryBasicsFields({
                 onApply={(title) => updateDraft({ title })}
                 disabledReason={aiTitleDisabledReason}
               />
-            </span>
+            </span>}
           </div>
         </label>
 
@@ -127,7 +128,7 @@ export function ItineraryBasicsFields({
         </label>
 
         <label className="stl-field">
-          <span>Slug *</span>
+          <span>Slug (required to sync)</span>
           <div className="stl-seo-input-wrap">
             <input
               className="stl-seo-input-with-ai"
@@ -155,7 +156,7 @@ export function ItineraryBasicsFields({
           </div>
         </label>
 
-        <div className="stl-field">
+        {SHOW_ITINERARY_AI && <div className="stl-field">
           <label className="stl-field-label-row">
             <span className="stl-field-label-with-hint">
               List Tone *
@@ -177,7 +178,7 @@ export function ItineraryBasicsFields({
               </option>
             ))}
           </select>
-        </div>
+        </div>}
         {children}
       </div>
     </>

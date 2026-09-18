@@ -325,7 +325,7 @@ describe('BuilderStopsPanel', () => {
       name: 'Moment badge options'
     })
     const options = within(listbox).getAllByRole('option')
-    expect(options).toHaveLength(30)
+    expect(options).toHaveLength(34)
     expect(
       options.every((option) =>
         option.querySelector('.stl-moment-picker__icon > svg')
@@ -401,12 +401,11 @@ describe('BuilderStopsPanel', () => {
 
     expect(onStopBlurbAiAutoWrite).not.toHaveBeenCalled()
 
-    fireEvent.click(
-      screen.getByRole('button', { name: /regenerate|auto write/i })
-    )
-
-    expect(onStopBlurbAiAutoWrite).toHaveBeenCalledTimes(1)
-    expect(onStopBlurbAiAutoWrite).toHaveBeenCalledWith('tour-stop-1')
+    expect(screen.queryByRole('button', { name: /regenerate|auto write|Write Day|Write all days|Refine with AI/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'AI stop blurbs' })).not.toBeInTheDocument()
+    fireEvent.change(screen.getByRole('textbox', { name: /blurb for stop 1/i }), { target: { value: 'My manual blurb' } })
+    expect(screen.getByRole('textbox', { name: /blurb for stop 1/i })).toHaveValue('My manual blurb')
+    expect(onStopBlurbAiAutoWrite).not.toHaveBeenCalled()
   })
 
   it('updates manual tour-agency price, duration, and starting-point fields', async () => {

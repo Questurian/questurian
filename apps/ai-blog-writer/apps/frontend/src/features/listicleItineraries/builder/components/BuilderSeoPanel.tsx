@@ -1,3 +1,4 @@
+import { SHOW_ITINERARY_AI } from '../constants/editor-features'
 import type { Dispatch, SetStateAction } from 'react'
 import { SeoEditorPanel } from '../../../../shared/seo/components/SeoEditorPanel'
 import type { ListicleItineraryDraft } from '../../types'
@@ -28,6 +29,7 @@ export function BuilderSeoPanel({
 }: BuilderSeoPanelProps) {
   return (
     <SeoEditorPanel
+      showAiActions={SHOW_ITINERARY_AI}
       seoSection={draft.seoSection}
       setSeoSection={(next) => {
         setDraft((current) => {

@@ -26,7 +26,8 @@ const MARKER_LABELS: Record<string, string> = {
   area: 'where it happens',
   stops: 'what the stops are for',
   limits: 'what is firm and what may bend',
-  // An interview started before the shorter list keeps its own topics.
+  // An interview started before the shorter list shows its own topics until
+  // it is answered or reopened, which moves it onto the four above.
   purpose: 'what the day promises',
   geography: 'where it happens',
   anchors: 'what drives it',

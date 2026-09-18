@@ -843,3 +843,142 @@ def test_the_workspace_shows_the_whole_trip(client):
         "name": "Place for day1-coffee",
         "status": "selected",
     }
+
+
+# ------------------------------------------ an interview on the old topics --
+
+
+def _seed_old_interview(workspace_id, *, agreed: bool):
+    """Write an eight-topic interview straight into the store, as the saved
+    Lima days were written before ADR 0045."""
+    from app.features.itinerary_pipeline import service, store
+    from app.features.prompt2blog.contracts_v4 import (
+        GrillQuestion,
+        GrillState,
+        GrillTurn,
+    )
+
+    old = (
+        "purpose", "geography", "anchors", "slot_intent",
+        "rhythm", "continuity", "change_policy", "unknowns",
+    )
+
+    def question(index, topic):
+        return GrillQuestion(
+            question_id=f"q{index}",
+            topic="next",
+            ask=f"Old question about {topic}?",
+            recommendation=f"Old suggestion {index}.",
+            asks_about=topic,
+        )
+
+    turns = [
+        GrillTurn(question=question(1, "purpose"), answer="Old suggestion 1."),
+        GrillTurn(question=question(2, "geography"), answer="Miraflores, on foot."),
+    ]
+    state = GrillState(
+        run_id="old1",
+        seed="Day 1",
+        marker_keys=old,
+        turns=turns,
+        status="agreed" if agreed else "asking",
+        consensus="The old agreement." if agreed else "",
+        pending=None if agreed else question(3, "continuity"),
+        markers_covered=list(old) if agreed else ["purpose", "geography"],
+    )
+    setup, _, _ = store.load_workspace(workspace_id)
+    store.save_grill(
+        workspace_id, "day-1", state, service.conversation_key(workspace_id, setup, "day-1")
+    )
+    return state
+
+
+def _stored_row(workspace_id):
+    from app.core.database import get_db_connection
+
+    with get_db_connection() as conn:
+        row = conn.execute(
+            "SELECT grill_state, revision FROM itinerary_day_work "
+            "WHERE workspace_id = ? AND day_id = 'day-1'",
+            (workspace_id,),
+        ).fetchone()
+    return row["grill_state"], row["revision"]
+
+
+def test_viewing_an_old_agreement_changes_nothing(client):
+    workspace_id = create(client)
+    _seed_old_interview(workspace_id, agreed=True)
+    before = _stored_row(workspace_id)
+    view = day(client, workspace_id)
+    day(client, workspace_id)
+    client.get(f"{BASE}/workspaces/{workspace_id}")
+    assert _stored_row(workspace_id) == before
+    assert view["grill"]["status"] == "agreed"
+    assert view["grill"]["markers_missing"] == []
+    assert view["grill"]["consensus"] == "The old agreement."
+    assert not view["grill_context_changed"]
+    # And a summary can still be written from it without reopening anything.
+    prepared = client.post(
+        f"{BASE}/workspaces/{workspace_id}/days/day-1/direction/prepare",
+        json={"attempt_key": key()},
+    )
+    assert prepared.status_code == 200, prepared.text
+    assert json.loads(_stored_row(workspace_id)[0])["status"] == "agreed"
+
+
+def test_answering_an_old_pending_question_is_saved_on_the_four_topics(client):
+    workspace_id = create(client)
+    _seed_old_interview(workspace_id, agreed=False)
+    response = client.post(
+        f"{BASE}/workspaces/{workspace_id}/days/day-1/grill/answer",
+        json={"attempt_key": key(), "answer": "Day two has the museums."},
+    )
+    assert response.status_code == 200, response.text
+
+    stored = json.loads(_stored_row(workspace_id)[0])
+    assert stored["marker_keys"] == list(ITINERARY_MARKER_KEYS)
+    # purpose + continuity settle angle; geography settles area.
+    assert set(stored["markers_covered"]) >= {"angle", "area"}
+    assert [turn["question"]["question_id"] for turn in stored["turns"]] == [
+        "q1", "q2", "q3",
+    ]
+    assert [turn["question"]["asks_about"] for turn in stored["turns"]] == [
+        "purpose", "geography", "continuity",
+    ]
+    assert stored["turns"][2]["answer"] == "Day two has the museums."
+
+    view = day(client, workspace_id)
+    assert [turn["accepted_as_drafted"] for turn in view["grill"]["turns"]] == [
+        True, False, False,
+    ]
+    assert set(view["grill"]["markers_missing"]) <= {"stops", "limits"}
+    assert view["grill"]["status"] == "asking"
+
+
+def test_reopening_an_old_agreement_is_saved_on_the_four_topics(client):
+    workspace_id = create(client)
+    old = _seed_old_interview(workspace_id, agreed=True)
+    response = client.post(
+        f"{BASE}/workspaces/{workspace_id}/days/day-1/grill/reopen",
+        json={"attempt_key": key()},
+    )
+    assert response.status_code == 200, response.text
+    view = day(client, workspace_id)
+    assert view["grill"]["status"] == "asking"
+    assert view["grill"]["consensus"] == ""
+    assert [turn["answer"] for turn in view["grill"]["turns"]] == [
+        turn.answer for turn in old.turns
+    ]
+    stored = json.loads(_stored_row(workspace_id)[0])
+    assert stored["marker_keys"] == list(ITINERARY_MARKER_KEYS)
+    # purpose was answered without continuity, so angle is still open.
+    assert "angle" not in stored["markers_covered"]
+
+    # And it can be carried to a new agreement on the four topics.
+    while view["grill"]["status"] == "asking":
+        view = client.post(
+            f"{BASE}/workspaces/{workspace_id}/days/day-1/grill/answer",
+            json={"attempt_key": key(), "answer": "Yes."},
+        ).json()
+    assert view["grill"]["markers_missing"] == []
+    assert len(view["grill"]["turns"]) <= 2 + len(ITINERARY_MARKER_KEYS)

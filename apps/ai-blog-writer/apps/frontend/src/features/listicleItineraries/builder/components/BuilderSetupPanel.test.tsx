@@ -41,6 +41,7 @@ function renderSetupPanel(draftOverrides: Partial<ListicleItineraryDraft> = {}) 
       onSaveSetup={vi.fn()}
       onCancelUpdateSetup={vi.fn()}
       updateDraft={vi.fn()}
+      onGenerateSlugWithAi={vi.fn()}
       onGenerateItinerary={vi.fn()}
       onComposeTravelerBrief={vi.fn()}
     />,
@@ -48,27 +49,21 @@ function renderSetupPanel(draftOverrides: Partial<ListicleItineraryDraft> = {}) 
 }
 
 describe('BuilderSetupPanel', () => {
-  it('blocks AI Autobuild brief controls until title and location exist', () => {
-    renderSetupPanel()
-
-    expect(screen.getByText('Add a title before writing or using the AI Autobuild brief.')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/Describe the experience/i)).toBeDisabled()
-    expect(screen.getByRole('button', { name: /Traveler Profile/i })).toBeDisabled()
-    expect(screen.getByRole('button', { name: /Generate itinerary with AI/i })).toBeDisabled()
-    expect(screen.getByRole('checkbox', { name: /Include lodging/i })).toBeDisabled()
-  })
-
-  it('allows AI Autobuild brief controls after title and location exist', () => {
-    renderSetupPanel({
-      title: 'Best Cusco Weekend Itinerary',
-      location: 'peru|cusco',
-      generationBrief: 'Luxury food, ruins, and rooftop drinks.',
-    })
-
-    expect(screen.queryByText(/before writing or using the AI Autobuild brief/i)).not.toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/Describe the experience/i)).not.toBeDisabled()
-    expect(screen.getByRole('button', { name: /Traveler Profile/i })).not.toBeDisabled()
-    expect(screen.getByRole('button', { name: /Generate itinerary with AI/i })).not.toBeDisabled()
-    expect(screen.getByRole('checkbox', { name: /Include lodging/i })).not.toBeDisabled()
+  it('keeps manual setup and slug AI while hiding writing controls', () => {
+    renderSetupPanel({ title: 'Cusco weekend', location: 'peru|cusco' })
+    for (const name of ['Title', 'Location', 'Itinerary Length', 'Slug', 'Day 1 template']) {
+      expect(screen.getByLabelText(new RegExp(name))).toBeInTheDocument()
+    }
+    expect(screen.getByRole('option', { name: 'Hands-On Local Day — 9 stops' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Gardens & Slow Living — 8 stops' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'City Photo Walk — 10 stops' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Markets & Live Music — 9 stops' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Rich Standard Day — 11 stops' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Work & Wander Day — 8 stops' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'AI' })).toBeEnabled()
+    expect(screen.queryByText(/Description \(AI/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Generate itinerary|Traveler Profile/ })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/List tone/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Shared neighborhoods/i)).not.toBeInTheDocument()
   })
 })

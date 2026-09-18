@@ -3,10 +3,20 @@
 The loop is shared; this file is the only thing that makes the interview about
 a day. The rules below are each a failure that happened.
 
+**It asks what the travellers want, in ordinary words.** The first version
+framed the job as a "travel editor" settling a day's "angle" and asked for a
+20 to 60 word suggestion. It got what it asked for: a Lima food day (workspace
+22b3740952de, 2026-09-17) opened by contrasting "a ground-level tour of how
+Lima eats" with "a climb toward one ambitious dinner", and its suggested answer
+added a coffee ritual, a market, a regional dish and a destination dinner. The
+operator wanted "an introduction to Peruvian food, a traditional breakfast and
+a good lunch". So the suggestion is one short sentence that answers only the
+question asked, and the examples below are food and not food on purpose.
+
 **It decides what the day is for, not how research works.** Its summary is
-the day's angle, how it differs from the other days, and the operator's firm
-limits -- short enough to scan (ADR 0045). Checklists and failure conditions
-belong to nobody: the selection already checks what affects a choice.
+what the day is for, how it differs from the other days, and the operator's
+musts -- short enough to scan (ADR 0045). Choosing and checking places belongs
+to the selection step, so the operator is never asked to look anything up.
 
 **It cannot look anything up.** So it must never write a venue fact into a
 recommendation. "Lunch at a cevicheria near the market" is a preference and is
@@ -28,6 +38,10 @@ bathrooms and cooked non-seafood mains for a reader nobody had described.
 minutes", and "evergreen" is not "every venue open seven days". A hard number
 belongs in the direction only when the operator wrote it or accepted it, and
 "one transfer" means one ride, not a ban on walking between stops.
+
+Only the current four topics are described. An interview begun on the older
+eight is moved onto these four before it takes its next turn
+(`grill.on_current_topics`), so no prompt is ever built for the old list.
 """
 
 from __future__ import annotations
@@ -36,22 +50,9 @@ from ..prompt2blog.contracts_v4 import GrillState
 from ..prompt2blog.grill_v4 import _marker_status, _transcript
 from .contracts import ITINERARY_MARKERS
 
-# The topics an interview started before ADR 0045 still has to settle. A
-# GrillState keeps its own keys, so its prompt must describe those keys.
-_EARLIER_MARKERS = {
-    "purpose": "the day's promise and what it contributes to this trip",
-    "geography": "the area, the progression and how far a transfer may go",
-    "anchors": "which experience drives the day, or that there is no anchor",
-    "slot_intent": "what every slot is for, and what it must and must not be",
-    "rhythm": "effort, meal balance, rest and what is optional",
-    "continuity": "what other days cover, and which overlaps are deliberate",
-    "change_policy": "what must stay, and what may be proposed instead",
-    "unknowns": "what would make this day wrong",
-}
-
 
 def marker_rows(state: GrillState) -> tuple[tuple[str, str, str], ...]:
-    described = {**_EARLIER_MARKERS, **dict(ITINERARY_MARKERS)}
+    described = dict(ITINERARY_MARKERS)
     return tuple(
         (key, key, described.get(key, key.replace("_", " "))) for key in state.marker_keys
     )
@@ -59,25 +60,18 @@ def marker_rows(state: GrillState) -> tuple[tuple[str, str, str], ...]:
 
 def build_itinerary_turn_prompt(state: GrillState, brief: str) -> str:
     asked = len(state.turns)
-    return f"""You are helping a travel editor decide what ONE day of a trip is FOR,
-before anybody chooses a single place. They are a writer planning a day for
-readers. Do not use editorial jargon.
-
-You are not choosing places and not writing anything. You are settling what a
-separate selection step will work from: the day's angle, how it differs from
-the other days, where it happens, what a stop is for where that is not
-obvious, and which of the operator's wishes are firm.
+    return f"""You are helping someone plan ONE day of a trip by asking what the
+travellers want from it. Nobody has chosen a place yet: a later step picks the
+places and checks them. Talk like a friend helping plan a trip, in plain
+everyday words, with no planning or editorial jargon.
 
 THE DAY, AND EVERYTHING AROUND IT:
 {brief}
 
-YOU CANNOT LOOK ANYTHING UP. Never state a fact about a real place: no venue
-names, hours, prices or distances. Opinions about SHAPE are what they came for.
-
 THE CONVERSATION SO FAR:
 {_transcript(state)}
 
-WHAT IS STILL OPEN:
+TOPICS TO SETTLE:
 {_marker_status(state, marker_rows(state))}
 
 Decide the single most useful next move.
@@ -88,37 +82,61 @@ Output shape (mechanical): every reply carries `ask`, `recommendation`,
 `done` true, fill `consensus`, and leave the others empty. `markers_covered` is
 always the full list you can now fill. Never set `lookup`.
 
-- Ask about ONE decision, the one that most changes the day.
+THE QUESTION
+- Ask about the ONE open thing that most changes which places get picked: what
+  the travellers want to do, see, eat, spend or avoid. One question, one
+  decision, short enough to read at a glance.
+- Ask only what they can answer from their own wishes. Never ask them to find
+  out, check or compare anything; what is open, close or good is the later
+  step's job.
+- DO NOT ASK WHAT IS ALREADY SETTLED. City, day count, times, stops, stays and
+  notes are above, and earlier answers count, including answers given under an
+  older list of topics. Mark a topic covered when the setup or the conversation
+  plainly settles it; covering most of them on the first turn is good.
 
-- `recommendation` is your best answer to your own question and goes straight
-  into their answer box. State the answer; no "you", no "I", no question mark.
-  Keep it to what the decision needs, in 20 to 60 words. Anything they accept
-  is a preference the selection may adjust, not a rule.
+THE SUGGESTED ANSWER (`recommendation`)
+It goes straight into their answer box, so write it as their answer: no "you",
+no "I", no question mark. One short plain sentence, usually 10 to 25 words;
+longer only when the question really needs it. Answer ONLY the question asked:
+do not add other wishes, extra stops or a plan for the rest of the day. A
+concrete example is good when it is a wish, like "a classic ceviche lunch".
+Anything they accept is a preference the later step may adjust, not a rule.
 
-- DO NOT ASK WHAT THE SETUP ALREADY SAYS. City, day count, window, stops,
-  stays and notes are above. Cover a topic straight from the setup when it is
-  plainly settled; covering most of them on the first turn is good.
+  Asked: What should eating look like on this day?
+  Good: An easy introduction to Peruvian food: a traditional breakfast and a really good lunch.
+  Bad: A ground-level eating education that climbs from the coffee ritual to a destination dinner.
 
+  Asked: How much of the day goes to museums?
+  Good: One big history museum in the morning, then time outdoors.
+  Bad: A layered encounter with the city's past, moving from ancient roots to colonial grandeur.
+
+  Asked: How late should the night go?
+  Good: A relaxed evening: dinner and one bar, back by midnight.
+
+YOU CANNOT LOOK ANYTHING UP. Never state a fact about a real place: no venue
+names, opening hours, prices, availability or distances.
+
+KEEP WHAT IS ALREADY DECIDED
 - THE LAYOUT IS APPROVED. "Easy" means effort, never fewer stops. Propose a
   stop change only as an explicit question.
-
 - BLANK MEANS UNKNOWN. Empty dietary or access needs are neither "none" nor
   "every possible need". Do not ask about them unless they would change who
   the day is for.
-
-- FIRM LIMITS COME FROM THEM. Ask which wishes are musts only when it matters;
-  never harden a preference into a number or an absolute yourself.
-
-- If an answer contradicts the setup or an earlier answer, set `pushback`.
-
+- MUSTS COME FROM THEM. Ask which wishes are musts only when it matters; never
+  turn a wish into a number or an absolute yourself.
+- If an answer contradicts the setup or an earlier answer, set `pushback` and
+  make the question resolve it.
 - Set `asks_about` to the open topic your question settles. Never ask about the
   same topic twice.
 
-- Set `done` true only when every topic is covered. The consensus plays the
-  agreement back in plain English, addressed to them, in at most six short
-  lines: the angle and how it differs from the other days; the area; any stop
-  whose role is not obvious; their firm limits, and what is only a preference.
-  No checklists and no research instructions.
+WHEN TO STOP
+Set `done` true only when every topic is covered, and as soon as it is: once
+every topic reads COVERED, agree now instead of asking a follow-up.
+The consensus plays the agreement back in plain words, addressed to them, in
+at most six short lines: what the day is for and how it differs from the
+other days; the area; any stop whose purpose is not obvious; what is a must
+and what is only a preference.
+No checklists and no research instructions.
 
 {asked} questions asked so far.
 """

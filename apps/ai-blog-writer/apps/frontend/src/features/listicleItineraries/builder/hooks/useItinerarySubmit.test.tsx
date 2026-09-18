@@ -111,6 +111,21 @@ function buildDraft(): ListicleItineraryDraft {
 }
 
 describe('useItinerarySubmit', () => {
+  it('still requires a slug when syncing to Payload', async () => {
+    createItineraryMock.mockClear()
+    const draft = buildDraft()
+    draft.payloadSlug = ''
+    const onError = vi.fn()
+    const { result } = renderHook(() => useItinerarySubmit({
+      draft, setDraft: vi.fn(), selectedLocationRefId: 1, relatedByBlockType,
+      mediaAssets: [], instagramPosts: [], setSearchParams: vi.fn(),
+      onError, setResult: vi.fn(),
+    }))
+    await act(async () => result.current.submit('draft'))
+    expect(onError).toHaveBeenLastCalledWith('Slug is required')
+    expect(createItineraryMock).not.toHaveBeenCalled()
+  })
+
   it('submits normalized manual tour-agency payload fields without a Step 2 lock', async () => {
     createItineraryMock.mockResolvedValue({
       id: 99,
