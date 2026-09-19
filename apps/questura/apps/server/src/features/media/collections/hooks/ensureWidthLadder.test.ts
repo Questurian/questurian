@@ -24,6 +24,10 @@ const makeIo = (files: Record<string, Buffer>) => {
     write: async (name, buffer) => {
       written[name] = buffer
     },
+    remove: async (name) => {
+      delete written[name]
+      delete files[name]
+    },
   }
   return { io, written }
 }

@@ -60,6 +60,7 @@ export type LadderIo = {
   exists: (filename: string) => Promise<boolean>
   read: (filename: string) => Promise<Buffer>
   write: (filename: string, buffer: Buffer) => Promise<void>
+  remove: (filename: string) => Promise<void>
 }
 
 export const bunnyLadderIo: LadderIo = {
@@ -87,6 +88,16 @@ export const bunnyLadderIo: LadderIo = {
     })
     if (!response.ok) {
       throw new Error(`Could not write ${filename} to Bunny (${response.status})`)
+    }
+  },
+  remove: async (filename) => {
+    const response = await fetch(bunnyStorageUrl(filename), {
+      method: 'DELETE',
+      headers: { AccessKey: bunnyKey() },
+    })
+    // A rung that is already gone is the state we wanted.
+    if (!response.ok && response.status !== 404) {
+      throw new Error(`Could not delete ${filename} from Bunny (${response.status})`)
     }
   },
 }
