@@ -169,16 +169,12 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  opacity: 1;
   background: linear-gradient(90deg, #d1d7da 0%, #edf0f1 45%, #c9d0d3 100%);
   background-size: 240% 100%;
-  animation: city-skeleton-shimmer 1.35s ease-in-out infinite;
-  transition: opacity 0.24s ease;
-}
-
-.city-article-card[data-image-loaded='true'] .city-article-image-shell::before {
-  opacity: 0;
-  animation: none;
+  /* The photo paints over this when it arrives; nothing tells CSS that it
+     has, so the shimmer runs a fixed number of times and then rests on the
+     static gradient rather than animating forever behind every loaded image. */
+  animation: city-skeleton-shimmer 1.35s ease-in-out 8;
 }
 
 /* Author profile photo: same shimmer treatment, tinted for the beige header */
@@ -199,36 +195,8 @@
   animation: none;
 }
 
-.city-article-content {
-  opacity: 1;
-  transition: opacity 0.24s ease;
-}
-
-.city-article-text-skeleton {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.18s ease;
-}
-
-.city-article-card[data-content-ready='false'] .city-article-content {
-  opacity: 0;
-}
-
-.city-article-card[data-content-ready='false'] .city-article-text-skeleton {
-  opacity: 1;
-}
-
-.city-skeleton-line {
-  display: block;
-  border-radius: 2px;
-  background: linear-gradient(90deg, #d1d7da 0%, #edf0f1 45%, #c9d0d3 100%);
-  background-size: 240% 100%;
-  animation: city-skeleton-shimmer 1.35s ease-in-out infinite;
-}
-
 /* Dark-surface variant (e.g. hero article block on a black background). */
-.city-article-card--dark .city-article-image-shell::before,
-.city-article-card--dark .city-skeleton-line {
+.city-article-card--dark .city-article-image-shell::before {
   background: linear-gradient(90deg, #1c1c1c 0%, #313131 45%, #1a1a1a 100%);
   background-size: 240% 100%;
 }
