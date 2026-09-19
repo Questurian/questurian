@@ -15,6 +15,7 @@ const squareFile = async (): Promise<Buffer> =>
 const makeIo = (files: Record<string, Buffer>) => {
   const written: Record<string, Buffer> = {}
   const io: LadderIo = {
+    list: async () => [...Object.keys(files), ...Object.keys(written)],
     exists: async (name) => name in files || name in written,
     read: async (name) => {
       const file = files[name] ?? written[name]

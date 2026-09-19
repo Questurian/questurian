@@ -7,6 +7,7 @@ import { WIDTH_LADDER, ladderFilename } from '@/features/media/pipeline/width-la
 const makeIo = () => {
   const removed: string[] = []
   const io = {
+    list: async () => [],
     exists: async () => true,
     read: async () => Buffer.from('x'),
     write: async () => undefined,

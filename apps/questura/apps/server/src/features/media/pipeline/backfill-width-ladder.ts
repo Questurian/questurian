@@ -3,7 +3,7 @@ import type { Payload } from 'payload'
 
 import { MEDIA_VARIANT_KEYS, type MediaVariantKey } from '@/features/media/constants'
 import { VARIANT_SPECS, WEBP_QUALITY } from './variant-specs'
-import { WIDTH_LADDER, ladderFilename } from './width-ladder'
+import { WIDTH_LADDER, isLadderFilename, ladderFilename } from './width-ladder'
 
 /**
  * Backfill for issue #563: give every already-published variant its small
@@ -57,13 +57,33 @@ const bunnyKey = (): string => {
 }
 
 export type LadderIo = {
+  /** Every filename in the media zone. */
+  list: () => Promise<string[]>
   exists: (filename: string) => Promise<boolean>
   read: (filename: string) => Promise<Buffer>
   write: (filename: string, buffer: Buffer) => Promise<void>
   remove: (filename: string) => Promise<void>
 }
 
+const BUNNY_STORAGE_LIST_URL = () => {
+  const zoneName = process.env.BUNNY_STORAGE_ZONE_NAME
+  if (!zoneName) throw new Error('BUNNY_STORAGE_ZONE_NAME is not set')
+  return `https://ny.storage.bunnycdn.com/${zoneName}/media/`
+}
+
 export const bunnyLadderIo: LadderIo = {
+  list: async () => {
+    const response = await fetch(BUNNY_STORAGE_LIST_URL(), {
+      headers: { AccessKey: bunnyKey(), Accept: 'application/json' },
+    })
+    if (!response.ok) {
+      throw new Error(`Could not list the media zone (${response.status})`)
+    }
+    const entries = (await response.json()) as Array<{ ObjectName?: string; IsDirectory?: boolean }>
+    return entries
+      .filter((entry) => !entry.IsDirectory && typeof entry.ObjectName === 'string')
+      .map((entry) => entry.ObjectName as string)
+  },
   exists: async (filename) => {
     const response = await fetch(bunnyStorageUrl(filename), {
       method: 'HEAD',
@@ -106,6 +126,18 @@ const isVariantKey = (value: unknown): value is MediaVariantKey =>
   typeof value === 'string' && MEDIA_VARIANT_KEYS.includes(value as MediaVariantKey)
 
 /**
+ * Read the shape off the filename, the same way the reader-facing client does.
+ * Agreeing on this one rule is what keeps the two sides in step: the job
+ * ladders exactly the files the client will go on to ask about.
+ */
+export const variantFromFilename = (filename: string): MediaVariantKey | null => {
+  if (isLadderFilename(filename)) return null
+  const match = /_([a-z_]+)\.[A-Za-z0-9]+$/.exec(filename)
+  const variant = match?.[1]
+  return isVariantKey(variant) ? variant : null
+}
+
+/**
  * Rungs are resized from the published variant file rather than re-cropped from
  * the original source. A rung must be the *same picture* as the file it stands
  * in for: re-cropping would re-run focal-point maths that may since have moved,
@@ -139,6 +171,13 @@ export const ladderFromVariantFile = async (
 export const backfillAssetLadder = async (
   asset: { id: number; filename: string; variant: MediaVariantKey },
   io: LadderIo,
+  /**
+   * Every filename already known to exist. A caller that has just listed the
+   * zone can answer "is this rung there?" from memory; without it each rung
+   * costs a HEAD, which is five network round trips per photo before any work
+   * begins -- the difference between minutes and days across six thousand.
+   */
+  knownFiles?: ReadonlySet<string>,
 ): Promise<LadderBackfillResult> => {
   const result: LadderBackfillResult = {
     assetId: asset.id,
@@ -151,7 +190,9 @@ export const backfillAssetLadder = async (
 
   const missing: number[] = []
   for (const width of WIDTH_LADDER) {
-    if (await io.exists(ladderFilename(asset.filename, width))) {
+    const rung = ladderFilename(asset.filename, width)
+    const present = knownFiles ? knownFiles.has(rung) : await io.exists(rung)
+    if (present) {
       result.alreadyPresent.push(width)
     } else {
       missing.push(width)
@@ -260,6 +301,98 @@ export const backfillWidthLadder = async ({
     hasNextPage = Boolean(more)
     page += 1
   }
+
+  return summary
+}
+
+
+/**
+ * Backfill driven by the storage zone rather than by MediaAsset rows.
+ *
+ * This is the one to reach for. The client asks for a rung because it
+ * recognized a *filename*, not because a database row told it to, so the set of
+ * files that needs rungs is exactly the set of variant files on Bunny — which
+ * is what this reads. A row-driven pass can only ever cover what its database
+ * happens to know about, and there is more than one database in this project's
+ * history.
+ *
+ * It also means the job needs no database connection at all, which is what lets
+ * it run from a laptop that cannot reach the live one.
+ */
+export const backfillZoneLadder = async ({
+  io = bunnyLadderIo,
+  dryRun = false,
+  /**
+   * Each photo is one download, five resizes and five uploads, and almost all
+   * of that is waiting on a round trip to the storage region. Run in parallel
+   * or the wall-clock time is measured in days.
+   */
+  concurrency = 12,
+  onProgress,
+}: {
+  io?: LadderIo
+  dryRun?: boolean
+  concurrency?: number
+  onProgress?: (result: LadderBackfillResult) => void
+} = {}): Promise<LadderBackfillSummary> => {
+  const summary: LadderBackfillSummary = {
+    assetsVisited: 0,
+    assetsSkipped: 0,
+    rungsWritten: 0,
+    rungsAlreadyPresent: 0,
+    results: [],
+    failures: [],
+  }
+
+  const effectiveIo: LadderIo = dryRun ? { ...io, write: async () => undefined } : io
+  const filenames = await io.list()
+  const present = new Set(filenames)
+
+  const queue: Array<{ filename: string; variant: MediaVariantKey }> = []
+  for (const filename of filenames) {
+    const variant = variantFromFilename(filename)
+    // Sources, legacy uploads and the rungs themselves all land here. None of
+    // them has a shape to resize against, and the client will not ask for them.
+    if (!variant) {
+      summary.assetsSkipped += 1
+      continue
+    }
+    queue.push({ filename, variant })
+  }
+
+  let next = 0
+  const worker = async () => {
+    while (next < queue.length) {
+      const { filename, variant } = queue[next++]
+      try {
+        const result = await backfillAssetLadder(
+          { id: 0, filename, variant },
+          effectiveIo,
+          present,
+        )
+        summary.assetsVisited += 1
+        summary.rungsWritten += result.written.length
+        summary.rungsAlreadyPresent += result.alreadyPresent.length
+        summary.results.push(result)
+        for (const failure of result.failed) {
+          summary.failures.push({
+            assetId: 0,
+            filename,
+            reason: `w${failure.width}: ${failure.reason}`,
+          })
+        }
+        onProgress?.(result)
+      } catch (error) {
+        summary.failures.push({
+          assetId: 0,
+          filename,
+          reason: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.max(1, concurrency) }, worker))
 
   return summary
 }

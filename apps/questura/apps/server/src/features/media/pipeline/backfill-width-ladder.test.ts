@@ -4,7 +4,9 @@ import sharp from 'sharp'
 import {
   backfillAssetLadder,
   backfillWidthLadder,
+  backfillZoneLadder,
   ladderFromVariantFile,
+  variantFromFilename,
   type LadderIo,
 } from './backfill-width-ladder'
 import { VARIANT_SPECS } from './variant-specs'
@@ -25,6 +27,7 @@ const makeVariantFile = async (variant: keyof typeof VARIANT_SPECS): Promise<Buf
 const makeIo = (files: Record<string, Buffer>) => {
   const written: Record<string, Buffer> = {}
   const io: LadderIo = {
+    list: async () => [...Object.keys(files), ...Object.keys(written)],
     exists: async (filename) => filename in files || filename in written,
     read: async (filename) => {
       const file = files[filename] ?? written[filename]
@@ -205,6 +208,109 @@ describe('backfillWidthLadder', () => {
       expect(payload.find).toHaveBeenCalledWith(
         expect.objectContaining({ collection: 'media-assets', overrideAccess: true }),
       )
+    },
+    IMAGE_WORK_TIMEOUT_MS,
+  )
+})
+
+describe('variantFromFilename', () => {
+  it('reads the shape the same way the client does', () => {
+    // Both sides agreeing on this one rule is what makes the job cover exactly
+    // the files the client will go on to ask about.
+    expect(variantFromFilename('lima-bar-12_square.webp')).toBe('square')
+    expect(variantFromFilename('christ-the-redeemer_1775875880053_thumbnail.webp')).toBe('thumbnail')
+    expect(variantFromFilename('a_open_graph.webp')).toBe('open_graph')
+  })
+
+  it('declines anything without a shape to resize against', () => {
+    expect(variantFromFilename('source-0-61-1021.webp')).toBeNull()
+    expect(variantFromFilename('legacy_banner.webp')).toBeNull()
+    expect(variantFromFilename('lima-bar-12_square_w384.webp')).toBeNull()
+  })
+})
+
+describe('backfillZoneLadder', () => {
+  it(
+    'ladders every variant the zone holds and steps over everything else',
+    async () => {
+      // Driven by the storage zone rather than by rows: the client asks for a
+      // rung because it recognized a filename, so the zone is the set that
+      // matters, and no database is consulted at all.
+      const { io, written } = makeIo({
+        'lima_square.webp': await makeVariantFile('square'),
+        'lima_wide.webp': await makeVariantFile('wide'),
+        'source-1069.webp': Buffer.from('x'),
+        'lima_square_w128.webp': Buffer.from('x'),
+      })
+
+      const summary = await backfillZoneLadder({ io })
+
+      expect(summary.assetsVisited).toBe(2)
+      // The source upload and the rung that already existed.
+      expect(summary.assetsSkipped).toBe(2)
+      // The square already had its 128, so it needed four not five.
+      expect(summary.rungsWritten).toBe(WIDTH_LADDER.length * 2 - 1)
+      expect(Object.keys(written)).toContain(ladderFilename('lima_wide.webp', 960))
+    },
+    IMAGE_WORK_TIMEOUT_MS,
+  )
+
+  it(
+    'writes nothing on a dry run',
+    async () => {
+      const { io, written } = makeIo({ 'lima_square.webp': await makeVariantFile('square') })
+      const summary = await backfillZoneLadder({ io, dryRun: true })
+      expect(summary.rungsWritten).toBe(WIDTH_LADDER.length)
+      expect(Object.keys(written)).toEqual([])
+    },
+    IMAGE_WORK_TIMEOUT_MS,
+  )
+})
+
+describe('the zone pass at scale', () => {
+  it('answers "does this rung exist" from the listing, not the network', async () => {
+    // Five HEADs per photo is five round trips before any work starts. Across
+    // six thousand photos that alone was the difference between minutes and
+    // days, and the listing already holds the answer.
+    const { io } = makeIo({
+      'lima_square.webp': Buffer.from('x'),
+      ...Object.fromEntries(
+        WIDTH_LADDER.map((w) => [ladderFilename('lima_square.webp', w), Buffer.from('x')]),
+      ),
+    })
+    const exists = vi.spyOn(io, 'exists')
+
+    const summary = await backfillZoneLadder({ io })
+
+    expect(exists).not.toHaveBeenCalled()
+    expect(summary.rungsAlreadyPresent).toBe(WIDTH_LADDER.length)
+    expect(summary.rungsWritten).toBe(0)
+  })
+
+  it(
+    'works through the queue in parallel without dropping or repeating a file',
+    async () => {
+      const files: Record<string, Buffer> = {}
+      const square = await makeVariantFile('square')
+      for (let i = 0; i < 25; i += 1) files[`photo-${i}_square.webp`] = square
+      const { io, written } = makeIo(files)
+
+      let inFlight = 0
+      let peak = 0
+      const realRead = io.read
+      io.read = async (name) => {
+        inFlight += 1
+        peak = Math.max(peak, inFlight)
+        await new Promise((resolve) => setTimeout(resolve, 5))
+        inFlight -= 1
+        return realRead(name)
+      }
+
+      const summary = await backfillZoneLadder({ io, concurrency: 8 })
+
+      expect(peak).toBeGreaterThan(1)
+      expect(summary.assetsVisited).toBe(25)
+      expect(Object.keys(written)).toHaveLength(25 * WIDTH_LADDER.length)
     },
     IMAGE_WORK_TIMEOUT_MS,
   )
