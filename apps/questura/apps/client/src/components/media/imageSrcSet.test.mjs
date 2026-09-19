@@ -41,6 +41,38 @@ test('a 40px thumbnail can reach a 128px file', () => {
   assert.equal(buildSrcSet(PROXY).split(', ')[0].endsWith('_w128.webp 128w'), true)
 })
 
+test('a deduplicated filename is still the shape it says it is', () => {
+  // Payload appends `-2` when the name is taken. Two thirds of the media zone
+  // looks like this, and the file is the same shape at the same size, so
+  // skipping them would leave most of the site downloading at full size.
+  const base = 'https://api.questurian.com/api/media-assets/file/hotel-b_1777233326269_thumbnail-2'
+  const srcSet = buildSrcSet(`${base}.webp`)
+  assert.match(srcSet, /_thumbnail-2_w128\.webp 128w/)
+  assert.equal(srcSet.endsWith(`${base}.webp 1200w`), true)
+})
+
+test('a rung is named .webp even when the variant is not', () => {
+  // The generator encodes every rung as WebP, and Bunny types a response from
+  // the file extension rather than the Content-Type it was uploaded with -- so
+  // a WebP body under a `.jpeg` name is served as image/jpeg.
+  const base = 'https://questurian-cdn.b-cdn.net/media/scooter-tour_editorial'
+  const srcSet = buildSrcSet(`${base}.jpeg`)
+  assert.match(srcSet, /_editorial_w128\.webp 128w/)
+  assert.doesNotMatch(srcSet.split(', ').slice(0, -1).join(', '), /\.jpeg/)
+  // The full-size rung is the original file, untouched.
+  assert.equal(srcSet.endsWith(`${base}.jpeg 1600w`), true)
+})
+
+test('a genuinely compound name still falls through', () => {
+  // `_wide-thumbnail` is a thumbnail OF a wide crop, not a deduplicated
+  // thumbnail, and nothing generated rungs for it.
+  assert.equal(buildSrcSet(`${CDN.replace('_wide', '_wide-thumbnail')}`), undefined)
+  assert.equal(
+    buildSrcSet('https://questurian-cdn.b-cdn.net/media/a_wide-1-thumbnail.webp'),
+    undefined,
+  )
+})
+
 test('an unrecognized URL gets nothing rather than a guess', () => {
   // No small siblings were ever generated for these, and a srcSet entry that
   // 404s is a broken image, not a fallback.

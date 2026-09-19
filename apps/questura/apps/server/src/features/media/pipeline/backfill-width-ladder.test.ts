@@ -222,6 +222,18 @@ describe('variantFromFilename', () => {
     expect(variantFromFilename('a_open_graph.webp')).toBe('open_graph')
   })
 
+  it('accepts a deduplicated filename as the shape it names', () => {
+    // Two thirds of the media zone is named this way.
+    expect(variantFromFilename('hotel-b_1777233326269_thumbnail-2.webp')).toBe('thumbnail')
+    expect(variantFromFilename('airport_1775163337363_square-1.webp')).toBe('square')
+  })
+
+  it('declines a genuinely compound name', () => {
+    // A thumbnail OF a wide crop, not a deduplicated thumbnail.
+    expect(variantFromFilename('gaijin_1770086924310_wide-thumbnail.webp')).toBeNull()
+    expect(variantFromFilename('ch-ch_1770091514657_wide-1-thumbnail.webp')).toBeNull()
+  })
+
   it('declines anything without a shape to resize against', () => {
     expect(variantFromFilename('source-0-61-1021.webp')).toBeNull()
     expect(variantFromFilename('legacy_banner.webp')).toBeNull()

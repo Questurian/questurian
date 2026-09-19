@@ -132,7 +132,9 @@ const isVariantKey = (value: unknown): value is MediaVariantKey =>
  */
 export const variantFromFilename = (filename: string): MediaVariantKey | null => {
   if (isLadderFilename(filename)) return null
-  const match = /_([a-z_]+)\.[A-Za-z0-9]+$/.exec(filename)
+  // `..._thumbnail-2.webp` is Payload deduplicating a taken filename: the same
+  // shape at the same size, and two thirds of the zone is named that way.
+  const match = /_([a-z_]+)(?:-\d+)?\.[A-Za-z0-9]+$/.exec(filename)
   const variant = match?.[1]
   return isVariantKey(variant) ? variant : null
 }

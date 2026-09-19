@@ -40,7 +40,6 @@ export const VARIANT_WIDTHS: Record<string, number> = {
 type ParsedVariantUrl = {
   /** Everything before the extension, including the `_variant` suffix. */
   stem: string
-  extension: string
   /** Query string and fragment, preserved so signed URLs survive. */
   suffix: string
   variantWidth: number
@@ -53,18 +52,27 @@ const parseVariantUrl = (src: string): ParsedVariantUrl | null => {
   const path = suffixAt === -1 ? src : src.slice(0, suffixAt)
   const suffix = suffixAt === -1 ? '' : src.slice(suffixAt)
 
-  const match = /^(.*_([a-z_]+))(\.[A-Za-z0-9]+)$/.exec(path)
+  // The `-2` in `..._thumbnail-2.webp` is Payload deduplicating a filename that
+  // was already taken. It is the same shape at the same size -- two thirds of
+  // the media zone is named this way -- so it has to be recognized, while
+  // genuinely compound names like `_wide-thumbnail` still fall through.
+  const match = /^(.*_([a-z_]+)(?:-\d+)?)(\.[A-Za-z0-9]+)$/.exec(path)
   if (!match) return null
 
-  const [, stem, variant, extension] = match
+  const [, stem, variant] = match
   const variantWidth = VARIANT_WIDTHS[variant]
   if (!variantWidth) return null
 
-  return { stem, extension, suffix, variantWidth }
+  return { stem, suffix, variantWidth }
 }
 
+/**
+ * Always `.webp`, even when the variant is a .jpeg or .png: the generator
+ * encodes every rung as WebP, and Bunny types its responses from the file
+ * extension rather than from the Content-Type it was given.
+ */
 const rungUrl = (parsed: ParsedVariantUrl, width: number): string =>
-  `${parsed.stem}_w${width}${parsed.extension}${parsed.suffix}`
+  `${parsed.stem}_w${width}.webp${parsed.suffix}`
 
 /**
  * `undefined` means "offer the browser nothing to choose from": the URL is not

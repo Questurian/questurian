@@ -35,11 +35,22 @@ describe('the ladder rule', () => {
     expect(Math.min(...WIDTH_LADDER)).toBeLessThanOrEqual(128)
   })
 
-  it('names a rung beside its variant, keeping the extension last', () => {
+  it('names a rung beside its variant, always as webp', () => {
     expect(ladderFilename('lima-bar-12_square.webp', 384)).toBe('lima-bar-12_square_w384.webp')
-    expect(ladderFilename('no-extension', 128)).toBe('no-extension_w128')
+    expect(ladderFilename('no-extension', 128)).toBe('no-extension_w128.webp')
     expect(ladderFilename('dotted.name.here_wide.webp', 960)).toBe(
       'dotted.name.here_wide_w960.webp',
+    )
+  })
+
+  it('renames a non-webp variant rung to webp', () => {
+    // Bunny types a response from the extension and ignores the Content-Type
+    // given on upload, so a WebP body under `.jpeg` is served as image/jpeg.
+    expect(ladderFilename('scooter-tour_editorial.jpeg', 128)).toBe(
+      'scooter-tour_editorial_w128.webp',
+    )
+    expect(ladderFilename('exquisito-peru_thumbnail.png', 960)).toBe(
+      'exquisito-peru_thumbnail_w960.webp',
     )
   })
 

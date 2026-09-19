@@ -30,10 +30,17 @@ export const SMALLEST_VARIANT_WIDTH = Math.min(
   ...Object.values(VARIANT_SPECS).map((spec) => spec.width),
 )
 
+/**
+ * Rungs are always WebP, whatever the variant they came from, so the name says
+ * `.webp` even when the original is a .jpeg or .png. That is not cosmetic:
+ * Bunny types a response from the file extension and ignores the Content-Type
+ * given on upload, so a WebP body under a `.jpeg` name is served as
+ * `content-type: image/jpeg`.
+ */
 export const ladderFilename = (filename: string, width: number): string => {
   const extensionAt = filename.lastIndexOf('.')
-  if (extensionAt <= 0) return `${filename}_w${width}`
-  return `${filename.slice(0, extensionAt)}_w${width}${filename.slice(extensionAt)}`
+  const base = extensionAt <= 0 ? filename : filename.slice(0, extensionAt)
+  return `${base}_w${width}.webp`
 }
 
 /** True for a name this module produced, so a ladder file never grows a ladder of its own. */
