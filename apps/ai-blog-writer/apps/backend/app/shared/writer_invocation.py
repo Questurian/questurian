@@ -160,6 +160,7 @@ def invoke_research_writer(
     *,
     prompt: str,
     model_name: str,
+    system_prompt: Optional[str] = None,
 ) -> dict:
     """A research-and-writing call, on the one transport that can research.
 
@@ -182,7 +183,11 @@ def invoke_research_writer(
         )
     cli_writer = _cli_writer()
     try:
-        return cli_writer.invoke_research_text(prompt=prompt, model_name=model_name)
+        return cli_writer.invoke_research_text(
+            prompt=prompt,
+            model_name=model_name,
+            system_prompt=system_prompt,
+        )
     except cli_writer.ClaudeCliWriterError as exc:
         raise WriterModelError(f"Research writer call failed: {exc}") from exc
 

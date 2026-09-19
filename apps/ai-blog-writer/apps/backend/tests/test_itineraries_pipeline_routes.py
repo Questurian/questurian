@@ -146,3 +146,77 @@ def test_generate_401s_with_no_credential_at_all(monkeypatch):
 
     assert response.status_code == 401
     assert "session" in response.json()["detail"]
+
+
+def test_suggest_fills_returns_html_and_names_its_job(monkeypatch):
+    captured = {}
+
+    def fake_research(job_id, **kwargs):
+        captured["job_id"] = job_id
+        captured["system_prompt"] = kwargs.get("system_prompt")
+        captured["model"] = kwargs.get("model")
+        return {
+            "text": "<html><body><h1>Day 1</h1></body></html>",
+            "modelName": "claude-opus-5-high",
+            "costUsd": 0.42,
+            "elapsedSeconds": 91.3,
+        }
+
+    monkeypatch.setattr(itineraries_pipeline_routes, "research_text", fake_research)
+
+    client = _build_client()
+    response = client.post(
+        "/itineraries-pipeline/suggest-fills",
+        json={"prompt": "Fill these in. " * 4},
+    )
+
+    assert captured["job_id"] == "itinerary.fill_ideas"
+    # The route pins no model; the gateway decides.
+    assert captured["model"] is None
+    # Not the shared research writer's article prompt: this assignment is a
+    # recommendation, and the reply has to be bare HTML.
+    assert "HTML document" in captured["system_prompt"]
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["html"] == "<html><body><h1>Day 1</h1></body></html>"
+    assert payload["model_used"] == "claude-opus-5-high"
+    assert payload["cost_usd"] == 0.42
+    assert payload["elapsed_seconds"] == 91.3
+
+
+def test_suggest_fills_strips_a_markdown_fence(monkeypatch):
+    """An iframe renders ```html as visible text, so the fence never reaches it."""
+
+    def fake_research(job_id, **kwargs):
+        return {
+            "text": "```html\n<p>Try Isolina</p>\n```",
+            "modelName": "claude-opus-5-high",
+        }
+
+    monkeypatch.setattr(itineraries_pipeline_routes, "research_text", fake_research)
+
+    client = _build_client()
+    response = client.post(
+        "/itineraries-pipeline/suggest-fills",
+        json={"prompt": "Fill these in. " * 4},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["html"] == "<p>Try Isolina</p>"
+
+
+def test_suggest_fills_reports_a_transport_failure_rather_than_swallowing_it(monkeypatch):
+    def fake_research(job_id, **kwargs):
+        raise RuntimeError("Claude subscription CLI is switched off")
+
+    monkeypatch.setattr(itineraries_pipeline_routes, "research_text", fake_research)
+
+    client = _build_client()
+    response = client.post(
+        "/itineraries-pipeline/suggest-fills",
+        json={"prompt": "Fill these in. " * 4},
+    )
+
+    assert response.status_code == 502
+    assert "switched off" in response.json()["detail"]

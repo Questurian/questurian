@@ -269,6 +269,14 @@
       "defaultModel": "gemini-2.5-flash-lite"
     },
     {
+      "id": "itinerary.fill_ideas",
+      "app": "ai-blog-writer",
+      "call": "research",
+      "summary": "Read a half-built itinerary and suggest, as HTML, what could go in its empty slots. Inspiration the operator reads and then picks from by hand; it is never applied to the draft. On the research transport because a recommendation is only worth reading if the places are real, and that is the one path that can open a page.",
+      "site": "features/itineraries_pipeline/routes.py",
+      "defaultModel": "claude-opus-5-high"
+    },
+    {
       "id": "itinerary.title",
       "app": "ai-blog-writer",
       "call": "text",

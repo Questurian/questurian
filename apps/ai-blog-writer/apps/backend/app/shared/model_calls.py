@@ -97,6 +97,7 @@ def research_text(
     prompt: str,
     model: Optional[str] = None,
     endpoint: str = "research_text",
+    system_prompt: Optional[str] = None,
 ) -> dict[str, Any]:
     """A research-and-writing call, reported under its job.
 
@@ -108,6 +109,9 @@ def research_text(
     inside one job, not one. The usage that comes back is the whole
     assignment's -- searches, fetches and writing together -- because that is
     what the transport reports and splitting it would be a guess.
+
+    `system_prompt` is for a job whose assignment is not an article; the
+    transport's default says it is one. See `invoke_research_text`.
     """
     resolved = resolve(job_id, model)
     with observe_job_call(
@@ -116,7 +120,11 @@ def research_text(
         model=resolved,
         endpoint=endpoint,
     ) as observed:
-        reply = invoke_research_writer(prompt=prompt, model_name=resolved)
+        reply = invoke_research_writer(
+            prompt=prompt,
+            model_name=resolved,
+            system_prompt=system_prompt,
+        )
         served = reply.get("modelName")
         if isinstance(served, str) and served:
             observed.set_model(served)

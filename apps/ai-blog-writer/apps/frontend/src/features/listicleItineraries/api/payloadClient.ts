@@ -1,5 +1,25 @@
+import { offlineDevSessionActive } from '../../auth/dev-session'
+
 const PAYLOAD_API_URL =
   import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'
+
+/**
+ * Payload's 403 body is the same sentence whoever you are, which is useless
+ * when the reason is that you are nobody. The offline dev login fakes an admin
+ * in this app's own UI without ever obtaining Payload's `payload-token` cookie,
+ * so every read here arrives anonymous and the collection refuses it -- the
+ * screen then says "not allowed" to someone the app is showing as an admin.
+ * Say which of the two it is, because the cure is different for each.
+ */
+function explainForbidden(message: string): string {
+  if (!offlineDevSessionActive()) return message
+  return (
+    `${message} You are signed in with the offline dev login ` +
+    '(VITE_DEV_OFFLINE_LOGIN), which is not a real Payload session, so Payload ' +
+    'sees this request as signed out. Unset that flag and sign in to Payload ' +
+    'for real to read and write documents.'
+  )
+}
 
 function formatFieldError(entry: Record<string, unknown>): string {
   const msg = typeof entry.message === 'string' ? entry.message.trim() : ''
@@ -70,7 +90,12 @@ export async function payloadRequest<T>(
 
   if (!response.ok) {
     const errBody = await response.json().catch(() => null)
-    throw new Error(formatPayloadHttpError(errBody, response.status))
+    const message = formatPayloadHttpError(errBody, response.status)
+    throw new Error(
+      response.status === 401 || response.status === 403
+        ? explainForbidden(message)
+        : message,
+    )
   }
 
   return response.json()

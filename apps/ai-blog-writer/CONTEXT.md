@@ -292,6 +292,18 @@ Rule: a venue is never repeated across the whole itinerary; when the candidate p
 Related terms: Day Shell, Shell Slot, Slot Fill, Generation Brief, Fit Score, Daypart, Lodging Anchor, Selection Reason, Plan Overview, List Tone.
 Do not confuse with: the blurb writer (separate, downstream; consumes Selection Reason as input).
 
+### Fill-In Ideas
+
+Definition: one Claude call **per itinerary day**, from the Lodging & stops panel, that reads the half-built draft — title, place, trip length, traveler profile, Generation Brief, the day's base lodging, and that day's slots with their labels and dayparts — and answers with an HTML document suggesting two or three real places per empty slot, reasoning about distance, travel time and opening hours across that one day.
+Decision scope: none. Nothing it returns is applied to the draft, stored on it, or parsed beyond stripping a Markdown fence. The operator reads it, keeps what they like, and fills the slots by hand.
+Rule: one day per call, and the days run in order. A seven-day trip asked in a single call spreads one model's care over forty slots and answers all of them shallowly; asking a day out of order would hand it nothing about what the earlier days used. Each call is therefore told every place already committed to a slot anywhere in the trip, plus the full text of what the earlier days' calls suggested — which is why Day N is locked until Day N-1 has run.
+Rule: Day 1 must have lodging before any day can be asked. A day is a route and a route starts at the hotel; without one every distance the model reasons about is measured from nowhere. Only Day 1 is required to have it — a later day that carries its own lodging is a **transfer day**, and it becomes the base from that day on; a day with none inherits the last one set before it.
+Rule: the prompt deliberately does NOT carry the pickable Payload pool. "What could go here" and "which of our records fits here" are different questions, and this feature asks the first one.
+Storage: the *fact* that a day ran lives on the draft (`fillIdeaRuns`) because it gates the next day; the HTML documents live in IndexedDB, because seven of them is a quarter of a megabyte and the draft is one localStorage value that every save rewrites.
+Related terms: Shell Slot, Generation Brief, Traveler Profile, Day Shell, Transfer Day.
+Do not confuse with: **Itinerary Autobuild**, which answers the second question — it fills slots with real Payload records and writes them into the draft.
+Code references: `apps/frontend/src/features/listicleItineraries/builder/services/fill-ideas.prompt.ts`, `fill-ideas.gate.ts`, `fill-ideas.store.ts`, `apps/backend/app/features/itineraries_pipeline/routes.py` (`/suggest-fills`).
+
 ### Day Shell
 
 Definition: an operator-selected template defining the ordered shape of one itinerary day: stop count, required slot categories, rough time-of-day buckets, and meal/activity/nightlife requirements. Multi-day itineraries choose a Day Shell per day, with the UI allowed to apply one default shell across all days.

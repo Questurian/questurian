@@ -55,6 +55,17 @@ type BuilderStopsPanelProps = {
   isComposingDayBlurbs: boolean
   hasDayBlurbReport: boolean
   onViewDayBlurbReport: () => void
+  /** Ask the AI what could go in this day's empty slots; inspiration only, never applied. */
+  onRequestFillIdeas: () => void
+  /** Re-open the stored document for a day that already ran. */
+  onViewFillIdeas: () => void
+  isRequestingFillIdeas: boolean
+  /** How many slots on the active day still have no place in them. */
+  emptyFillSlotCount: number
+  /** Why this day cannot be asked yet, or undefined when it can. */
+  fillIdeasDisabledReason?: string
+  /** True once this day's ideas exist, so the button re-reads instead of re-paying. */
+  hasFillIdeasForDay: boolean
   isLocked: boolean
   isSynced?: boolean
   onContinueStep3: () => void
@@ -86,6 +97,12 @@ export function BuilderStopsPanel({
   isComposingDayBlurbs,
   hasDayBlurbReport,
   onViewDayBlurbReport,
+  onRequestFillIdeas,
+  onViewFillIdeas,
+  isRequestingFillIdeas,
+  emptyFillSlotCount,
+  fillIdeasDisabledReason,
+  hasFillIdeasForDay,
   isLocked,
   isSynced = false,
   onContinueStep3,
@@ -258,6 +275,54 @@ export function BuilderStopsPanel({
               ) : null}
             </>
           ) : null}
+        </div>
+      </div>
+
+      <div
+        className="stl-fill-ideas-bar"
+        role="group"
+        aria-label="Fill-in ideas"
+      >
+        <div className="stl-fill-ideas-bar__copy">
+          <span className="stl-fill-ideas-bar__title">
+            Ideas for Day {activeDayIndex + 1}
+          </span>
+          <span className="stl-fill-ideas-bar__hint">
+            {fillIdeasDisabledReason
+              ? fillIdeasDisabledReason
+              : emptyFillSlotCount > 0
+                ? `Asks what could go in this day's ${emptyFillSlotCount} empty slot${emptyFillSlotCount === 1 ? '' : 's'}, avoiding everywhere the earlier days used. Nothing is written into the draft.`
+                : 'Every slot on this day already has a place in it.'}
+          </span>
+        </div>
+        <div className="stl-inline-actions">
+          {hasFillIdeasForDay ? (
+            <button
+              type="button"
+              className="stl-btn stl-btn-secondary"
+              onClick={onViewFillIdeas}
+              disabled={isRequestingFillIdeas}
+            >
+              {`Read Day ${activeDayIndex + 1} ideas`}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="stl-btn"
+            onClick={onRequestFillIdeas}
+            disabled={
+              isRequestingFillIdeas
+              || emptyFillSlotCount < 1
+              || Boolean(fillIdeasDisabledReason)
+            }
+            title={fillIdeasDisabledReason}
+          >
+            {isRequestingFillIdeas
+              ? 'Thinking…'
+              : hasFillIdeasForDay
+                ? 'Ask again'
+                : `Get Day ${activeDayIndex + 1} ideas`}
+          </button>
         </div>
       </div>
 

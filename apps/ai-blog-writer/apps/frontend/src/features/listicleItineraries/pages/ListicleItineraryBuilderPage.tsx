@@ -15,6 +15,7 @@ import { useBuilderProgress } from '../builder/hooks/useBuilderProgress'
 import { useDayShellLibrary } from '../builder/hooks/useDayShellLibrary'
 import { useItineraryBuilderAiActions } from '../builder/hooks/useItineraryBuilderAiActions'
 import { useItineraryDraftSyncState } from '../builder/hooks/useItineraryDraftSyncState'
+import { useItineraryFillIdeas } from '../builder/hooks/useItineraryFillIdeas'
 import { useItinerarySubmit } from '../builder/hooks/useItinerarySubmit'
 import { useRelatedItems } from '../builder/hooks/useRelatedItems'
 import { getItineraryAutoWriteTargetIds } from '../builder/services/ai-autowrite.service'
@@ -37,6 +38,9 @@ import { InspectIntroComposeRunModal } from '../builder/components/InspectIntroC
 import { InspectDayBlurbComposeRunModal } from '../builder/components/InspectDayBlurbComposeRunModal'
 import { DayShellLibraryModal } from '../builder/components/DayShellLibraryModal'
 import { StopBlurbComposeChoiceModal } from '../builder/components/StopBlurbComposeChoiceModal'
+import { ItineraryFillIdeasModal } from '../builder/components/ItineraryFillIdeasModal'
+import { countEmptyFillSlotsForDay } from '../builder/services/fill-ideas.prompt'
+import { getFillIdeasDayGate, hasFillIdeasRun } from '../builder/services/fill-ideas.gate'
 import '../styles.css'
 const schemaPublisherConfig = getItinerarySchemaPublisherConfig()
 export default function ListicleItineraryBuilderPage() {
@@ -185,6 +189,27 @@ export default function ListicleItineraryBuilderPage() {
     setResult,
   })
 
+  const fillIdeas = useItineraryFillIdeas({
+    draft,
+    setDraft,
+    relatedByBlockType,
+    locations,
+    activeDayIndex,
+  })
+  const emptyFillSlotCount = useMemo(
+    () =>
+      draft ? countEmptyFillSlotsForDay(draft, activeDayIndex, relatedByBlockType) : 0,
+    [activeDayIndex, draft, relatedByBlockType],
+  )
+  const fillIdeasGate = useMemo(
+    () =>
+      draft
+        ? getFillIdeasDayGate(draft, activeDayIndex, relatedByBlockType)
+        : ({ canRun: false, reason: 'Loading…' } as const),
+    [activeDayIndex, draft, relatedByBlockType],
+  )
+  const hasFillIdeasForDay = Boolean(draft && hasFillIdeasRun(draft, activeDayIndex))
+
   if (isLoading || !draft) return (
     <div className="stl-page">
       {!isLoading && error
@@ -320,6 +345,12 @@ export default function ListicleItineraryBuilderPage() {
                 isComposingDayBlurbs={aiActions.isComposingDayBlurbs}
                 hasDayBlurbReport={Boolean(aiActions.dayBlurbReport)}
                 onViewDayBlurbReport={() => aiActions.setIsDayBlurbReportOpen(true)}
+                onRequestFillIdeas={() => void fillIdeas.requestFillIdeas()}
+                onViewFillIdeas={fillIdeas.openFillIdeas}
+                isRequestingFillIdeas={fillIdeas.isRequestingFillIdeas}
+                emptyFillSlotCount={emptyFillSlotCount}
+                fillIdeasDisabledReason={fillIdeasGate.reason}
+                hasFillIdeasForDay={hasFillIdeasForDay}
                 isLocked={isStep3LockedView}
                 isSynced={isSynced}
                 onContinueStep3={actions.handleContinueStep3}
@@ -332,6 +363,16 @@ export default function ListicleItineraryBuilderPage() {
                 isOpen={aiActions.isDayBlurbReportOpen}
                 onClose={() => aiActions.setIsDayBlurbReportOpen(false)}
                 report={aiActions.dayBlurbReport}
+              />
+
+              <ItineraryFillIdeasModal
+                isOpen={fillIdeas.isFillIdeasOpen}
+                onClose={fillIdeas.closeFillIdeas}
+                isLoading={fillIdeas.isRequestingFillIdeas}
+                error={fillIdeas.fillIdeasError}
+                ideas={fillIdeas.fillIdeas}
+                prompt={fillIdeas.fillIdeasPrompt}
+                dayIndex={fillIdeas.fillIdeasDayIndex}
               />
 
               <StopBlurbComposeChoiceModal

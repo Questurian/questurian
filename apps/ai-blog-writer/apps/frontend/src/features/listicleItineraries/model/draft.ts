@@ -59,6 +59,19 @@ export type ItineraryItemBlock = {
   shellSlotDaypart?: ShellSlotDaypart
 }
 
+/**
+ * One completed Fill-In Ideas run, kept so the day-by-day chain survives a
+ * reload. Deliberately tiny: the HTML document itself lives in IndexedDB
+ * (`fill-ideas.store.ts`), because seven days of it would put a quarter of a
+ * megabyte per draft into the same localStorage value every save writes, and a
+ * quota error there takes the whole draft down with it.
+ */
+export type ItineraryFillIdeasRun = {
+  dayId: string
+  ranAt: string
+  modelUsed: string
+}
+
 export type ItineraryDaySlice = {
   id: string
   whereStaying: ItineraryItemBlock[]
@@ -87,6 +100,8 @@ export type ListicleItineraryDraft = PayloadSyncStateFields & {
   planOverview?: string
   /** Itinerary Autobuild: selected Day Shell per local day; ABW-only planning state. */
   dayShellSelections?: DayShellSelection[]
+  /** Which days have had Fill-In Ideas run; gates the next day's button. ABW-only. */
+  fillIdeaRuns?: ItineraryFillIdeasRun[]
   /** Operator-created Day Shell layouts; ABW-only local planning state. */
   customDayShells?: DayShellTemplate[]
   title: string

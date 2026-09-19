@@ -260,6 +260,11 @@ function Harness({
       mediaAssets={[]}
       instagramPosts={[]}
       isLoadingRelated={false}
+      onRequestFillIdeas={() => {}}
+      onViewFillIdeas={() => {}}
+      isRequestingFillIdeas={false}
+      emptyFillSlotCount={0}
+      hasFillIdeasForDay={false}
       relatedByBlockType={relatedItems}
       onAddWhereStaying={() => {}}
       onAddItem={onAddItem}

@@ -821,6 +821,7 @@ def invoke_research_text(
     prompt: str,
     model_name: Optional[str] = None,
     timeout_seconds: float = RESEARCH_TIMEOUT_SECONDS,
+    system_prompt: Optional[str] = None,
 ) -> dict[str, Any]:
     """One research-and-writing assignment. Returns the reply and what it cost.
 
@@ -832,6 +833,12 @@ def invoke_research_text(
     trips internally -- searches, fetches, then the writing -- and `turns` in the
     returned metadata is how many. The app must not promise otherwise, which is
     why that number is reported rather than hidden.
+
+    `system_prompt` is for a caller whose assignment is not an article.
+    `RESEARCH_SYSTEM_PROMPT` says "you are writing one article" and asks for a
+    research note at the end, which a caller that wants a recommendation would
+    have to argue its way out of in the prompt. Passing one here is cheaper and
+    more honest than fighting the default. Omitting it keeps the article prompt.
     """
     started = time.monotonic()
     payload, alias = _invoke(
@@ -840,7 +847,7 @@ def invoke_research_text(
         None,
         allowed_tools=RESEARCH_TOOLS,
         denied_tools=RESEARCH_DENIED_TOOLS,
-        system_prompt=RESEARCH_SYSTEM_PROMPT,
+        system_prompt=system_prompt or RESEARCH_SYSTEM_PROMPT,
         timeout_seconds=timeout_seconds,
     )
     elapsed = time.monotonic() - started

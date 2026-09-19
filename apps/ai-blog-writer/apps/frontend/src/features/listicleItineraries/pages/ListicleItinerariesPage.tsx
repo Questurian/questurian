@@ -119,15 +119,14 @@ export default function ListicleItinerariesPage() {
     setLocalDrafts(listDrafts())
   }
 
-  const pageContent = isLoading ? (
-    <section className="stl-panel">
-      <p className="stl-placeholder">Loading itineraries...</p>
-    </section>
-  ) : error ? (
-    <section className="stl-panel">
-      <p className="stl-error">{error}</p>
-    </section>
-  ) : (
+  /**
+   * A failed Payload read used to replace the whole page with its error, which
+   * also took the local drafts down with it -- work that lives in this browser
+   * and needs nothing from the server to be listed. The two panels fail apart
+   * now: drafts always render, and the Payload error stays inside the panel it
+   * actually belongs to.
+   */
+  const pageContent = (
     <>
       <section className="stl-panel">
         <div className="stl-panel-header">
@@ -194,10 +193,20 @@ export default function ListicleItinerariesPage() {
 
       <section className="stl-panel">
         <div className="stl-panel-header">
-          <h2>Payload Documents ({rows.length})</h2>
+          <h2>Payload Documents{error || isLoading ? '' : ` (${rows.length})`}</h2>
         </div>
 
-        {rows.length === 0 ? (
+        {isLoading ? (
+          <p className="stl-placeholder">Loading itineraries...</p>
+        ) : error ? (
+          <div className="stl-empty">
+            <p className="stl-error">{error}</p>
+            <p>
+              Saved itineraries live in Payload, so this list stays empty until the
+              read succeeds. Local drafts above are unaffected.
+            </p>
+          </div>
+        ) : rows.length === 0 ? (
           <div className="stl-empty">
             <p>No listicle-itineraries found.</p>
             <p>Create one to start building this format in the app.</p>

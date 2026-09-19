@@ -439,6 +439,19 @@ function normalizeStoredDraft(
     planOverview:
       typeof value.planOverview === 'string' ? value.planOverview : undefined,
     customDayShells: normalizeCustomDayShells(value.customDayShells),
+    fillIdeaRuns: Array.isArray(value.fillIdeaRuns)
+      ? value.fillIdeaRuns
+          .filter(
+            (entry): entry is Record<string, unknown> =>
+              isRecord(entry) && typeof entry.dayId === 'string' && Boolean(entry.dayId)
+          )
+          .map((entry) => ({
+            dayId: entry.dayId as string,
+            ranAt: typeof entry.ranAt === 'string' ? entry.ranAt : nowIso,
+            modelUsed:
+              typeof entry.modelUsed === 'string' ? entry.modelUsed : 'unknown'
+          }))
+      : [],
     title: typeof value.title === 'string' ? value.title : '',
     location: typeof value.location === 'string' ? value.location : '',
     locationRef:
@@ -581,6 +594,7 @@ export function createEmptyDraft(): ListicleItineraryDraft {
     listTone: DEFAULT_LIST_TONE,
     includeLodging: true,
     customDayShells: [],
+    fillIdeaRuns: [],
     title: '',
     location: '',
     locationRef: null,
