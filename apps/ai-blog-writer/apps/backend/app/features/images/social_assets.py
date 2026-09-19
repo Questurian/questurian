@@ -58,7 +58,11 @@ async def _download_media_asset_file(
     url = f'{payload_client.api_url}/api/media-assets/file/{encoded_filename}'
     headers = {'Authorization': f'JWT {jwt_token}'}
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        # follow_redirects: since issue #566 this path is a 301 to the Bunny
+        # pull zone (Payload no longer streams the file itself). httpx does not
+        # follow redirects by default, and a 301 is not >= 400, so without this
+        # the download would "succeed" with an empty body.
+        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
             response = await client.get(url, headers=headers)
     except httpx.ConnectError as exc:
         raise PayloadUploadError(

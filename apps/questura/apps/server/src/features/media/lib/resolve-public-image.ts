@@ -1,4 +1,5 @@
 import { MEDIA_VARIANT_KEYS, type MediaVariantKey } from '@/features/media/constants'
+import { MEDIA_ASSETS_PREFIX, buildPublicMediaUrl } from './bunny-public-url'
 
 export type MediaPlacement =
   | 'card'
@@ -23,6 +24,7 @@ export type PublicImage = {
 type MediaAssetLike = {
   url?: unknown
   filename?: unknown
+  prefix?: unknown
   bunny_original_url?: unknown
   alt_text?: unknown
   width?: unknown
@@ -96,7 +98,47 @@ const backendOriginForPublicUrls = (): string | null => {
   }
 }
 
+/**
+ * `/api/media-assets/file/{filename}` was Payload's static handler: it fetched
+ * the file from Bunny and re-sent it through this process. Nothing serves that
+ * route any more, and the stored `url` column is full of it -- 15,522 rows
+ * relative, 1,486 absolute against `localhost:4000`. The afterRead hook
+ * overwrites both on every read, so those values should never reach a reader;
+ * this rewrite is the second lock on that door, for view models fed from
+ * anywhere other than a live Payload read.
+ *
+ * `null` when the URL is not a media-file URL, or when storage is
+ * unconfigured and there is nowhere better to point it.
+ */
+const PAYLOAD_MEDIA_FILE_PATH = '/api/media-assets/file/'
+
+const cdnUrlForPayloadFileUrl = (value: string): string | null => {
+  let path = value
+  try {
+    path = new URL(value).pathname
+  } catch {
+    // Relative URL: the whole string is the path.
+  }
+
+  if (!path.startsWith(PAYLOAD_MEDIA_FILE_PATH)) return null
+
+  const encoded = path.slice(PAYLOAD_MEDIA_FILE_PATH.length)
+  if (!encoded) return null
+
+  let filename = encoded
+  try {
+    filename = decodeURIComponent(encoded)
+  } catch {
+    // Keep the raw segment if it is not valid percent-encoding.
+  }
+
+  return buildPublicMediaUrl(filename)
+}
+
 const normalizePublicAssetUrl = (value: string): string => {
+  const cdnUrl = cdnUrlForPayloadFileUrl(value)
+  if (cdnUrl) return cdnUrl
+
   const publicBackendOrigin = backendOriginForPublicUrls()
 
   try {
@@ -116,13 +158,25 @@ const normalizePublicAssetUrl = (value: string): string => {
   return value
 }
 
+/**
+ * The degraded path: `url` is empty but a filename survives.
+ *
+ * It used to build `/api/media-assets/file/{filename}`, which Payload served
+ * by streaming the file out of Bunny through this process. That route no
+ * longer serves files (`disablePayloadAccessControl`), so the fallback has to
+ * point where the bytes actually are -- the same address the storage adapter
+ * writes into `url` on every read, from the same function.
+ *
+ * In practice the afterRead hook fills `url` whenever `filename` exists, so
+ * this runs only when something unexpected happened. That is exactly why it
+ * must not degrade into a broken image.
+ */
 const assetUrlFromFilename = (asset: MediaAssetLike): string | null => {
   const filename = textOrNull(asset.filename)
   if (!filename) return null
 
-  return normalizePublicAssetUrl(
-    `/api/media-assets/file/${encodeURIComponent(filename)}`,
-  )
+  const prefix = textOrNull(asset.prefix) ?? MEDIA_ASSETS_PREFIX
+  return buildPublicMediaUrl(filename, prefix)
 }
 
 const assetUrl = (asset: MediaAssetLike, status: PublicImageStatus): string | null => {

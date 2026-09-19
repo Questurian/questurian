@@ -13,6 +13,7 @@ import { Authors } from './features/authors/collections/Authors'
 import { ServiceAccounts } from './features/auth/collections/ServiceAccounts'
 import { EmailLogs } from './features/emails/collections/EmailLogs'
 import { MediaAsset } from './features/media/collections/MediaAsset'
+import { MEDIA_ASSETS_PREFIX } from './features/media/lib/bunny-public-url'
 import { MediaSet } from './features/media/collections/MediaSet'
 import { Articles } from './features/articles/articles/collections/Articles'
 import { Locations } from './features/location/collections'
@@ -95,7 +96,24 @@ export default buildConfig({
     bunnyStorage({
       collections: {
         'media-assets': {
-          prefix: 'media',
+          prefix: MEDIA_ASSETS_PREFIX,
+          /*
+           * Hand readers the file's address on the pull zone instead of
+           * Payload's own `/api/media-assets/file/{filename}`, which fetched
+           * every photo out of Bunny and re-sent it through this process.
+           *
+           * Two things follow from the flag, both in
+           * @payloadcms/plugin-cloud-storage: the `url` field's afterRead hook
+           * starts calling `adapter.generateURL(...)`, so every read returns a
+           * CDN URL whatever the stored column says; and `adapter.staticHandler`
+           * is no longer registered, so that route stops serving files. The
+           * redirect at app/api/media-assets/file/[filename] covers cached HTML
+           * that still asks for it.
+           *
+           * Nothing is lost by bypassing Payload's access control here:
+           * `mediaAssetAccess.read` already opens with `if (!req.user) return true`.
+           */
+          disablePayloadAccessControl: true,
         },
       },
       storage: {
