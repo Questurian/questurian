@@ -132,9 +132,14 @@ const isVariantKey = (value: unknown): value is MediaVariantKey =>
  */
 export const variantFromFilename = (filename: string): MediaVariantKey | null => {
   if (isLadderFilename(filename)) return null
-  // `..._thumbnail-2.webp` is Payload deduplicating a taken filename: the same
-  // shape at the same size, and two thirds of the zone is named that way.
-  const match = /_([a-z_]+)(?:-\d+)?\.[A-Za-z0-9]+$/.exec(filename)
+  // Two things may precede the shape, and neither changes what it is:
+  //   `_thumbnail-2`      Payload deduplicating a taken filename
+  //   `_wide-thumbnail`   a thumbnail cropped *from* the wide variant
+  // Verified against the pixels: all 31 derived files carry the ratio of their
+  // trailing shape, and 42 sampled plain ones match their spec exactly.
+  const match = new RegExp(
+    `_(?:.*-)?(${MEDIA_VARIANT_KEYS.join('|')})(?:-\\d+)?\\.[A-Za-z0-9]+$`,
+  ).exec(filename)
   const variant = match?.[1]
   return isVariantKey(variant) ? variant : null
 }

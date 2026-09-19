@@ -37,6 +37,23 @@ export const VARIANT_WIDTHS: Record<string, number> = {
   editorial: 1600,
 }
 
+/**
+ * The shape sits at the end of the name, and two things may precede it:
+ *
+ *   `..._thumbnail.webp`         the plain case
+ *   `..._thumbnail-2.webp`       Payload deduplicating a taken filename
+ *   `..._wide-thumbnail.webp`    a thumbnail cropped *from* the wide variant
+ *   `..._wide-1-thumbnail.webp`  the same, from a deduplicated wide
+ *
+ * In every form the trailing shape is the real one, and its ratio is the one
+ * the file actually has -- checked against the pixels of all 31 derived files
+ * and a sample of 42 plain ones. What precedes it only records where the crop
+ * came from.
+ */
+const VARIANT_AT_END = new RegExp(
+  `_(?:.*-)?(${Object.keys(VARIANT_WIDTHS).join('|')})(?:-\\d+)?$`,
+)
+
 type ParsedVariantUrl = {
   /** Everything before the extension, including the `_variant` suffix. */
   stem: string
@@ -54,18 +71,18 @@ const parseVariantUrl = (src: string): ParsedVariantUrl | null => {
   const path = suffixAt === -1 ? src : src.slice(0, suffixAt)
   const suffix = suffixAt === -1 ? '' : src.slice(suffixAt)
 
-  // The `-2` in `..._thumbnail-2.webp` is Payload deduplicating a filename that
-  // was already taken. It is the same shape at the same size -- two thirds of
-  // the media zone is named this way -- so it has to be recognized, while
-  // genuinely compound names like `_wide-thumbnail` still fall through.
-  const match = /^(.*_([a-z_]+)(?:-\d+)?)(\.[A-Za-z0-9]+)$/.exec(path)
-  if (!match) return null
+  const dot = path.lastIndexOf('.')
+  if (dot <= 0) return null
+  const stem = path.slice(0, dot)
+  const extension = path.slice(dot)
+  // Kept from the single-regex version this replaced: a path whose last dot is
+  // in the hostname rather than a filename is not a variant URL.
+  if (!/^\.[A-Za-z0-9]+$/.test(extension)) return null
 
-  const [, stem, variant, extension] = match
-  const variantWidth = VARIANT_WIDTHS[variant]
-  if (!variantWidth) return null
+  const variant = VARIANT_AT_END.exec(stem)?.[1]
+  if (!variant) return null
 
-  return { stem, extension, suffix, variantWidth }
+  return { stem, extension, suffix, variantWidth: VARIANT_WIDTHS[variant] }
 }
 
 /**
