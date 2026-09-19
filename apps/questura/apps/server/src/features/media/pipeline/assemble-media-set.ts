@@ -8,6 +8,7 @@ import {
   type FocalPoint,
   type VariantOverride,
 } from './from-source'
+import { ladderFilename } from './width-ladder'
 
 const SOURCE_MIME = 'image/webp'
 const SOURCE_EXTENSION = 'webp'
@@ -175,6 +176,14 @@ export const assembleMediaSetFromSource = async ({
     })
 
     await uploadGeneratedVariantToBunny(variantFilename, generated.buffer)
+
+    // The ladder rungs are files, not records. Nothing selects them by query —
+    // the client derives their names from the variant URL it already has — so a
+    // MediaAsset row per rung would be six times the rows to buy nothing, and
+    // would put five extra writes in the path of every upload.
+    for (const rung of generated.ladder) {
+      await uploadGeneratedVariantToBunny(ladderFilename(variantFilename, rung.width), rung.buffer)
+    }
 
     variantAssetIds[generated.variant] = toNumericId((variantAsset as { id: unknown }).id)
   }
