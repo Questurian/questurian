@@ -1,7 +1,9 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { findAttractionDoc } from './lib/repository'
 import { searchThingsToDoAttractionCandidates } from './operations/search'
+
+const CDN_HOST = 'questurian-cdn.b-cdn.net'
 
 const attraction = {
   id: 9,
@@ -21,6 +23,23 @@ const attraction = {
 }
 
 describe('Things to Do attraction image population', () => {
+  /*
+   * The fixture gives a filename and no `url`, so these assertions run through
+   * the resolver's degraded path. Since issue #566 that path builds a CDN URL
+   * rather than an `/api/media-assets/file/` one, which nothing serves.
+   */
+  let previousHostname: string | undefined
+
+  beforeEach(() => {
+    previousHostname = process.env.BUNNY_STORAGE_HOSTNAME
+    process.env.BUNNY_STORAGE_HOSTNAME = CDN_HOST
+  })
+
+  afterEach(() => {
+    if (previousHostname === undefined) delete process.env.BUNNY_STORAGE_HOSTNAME
+    else process.env.BUNNY_STORAGE_HOSTNAME = previousHostname
+  })
+
   it('searches deeply enough to populate gallery Media Set assets', async () => {
     const find = vi.fn(async () => ({
       docs: [attraction],
@@ -36,7 +55,7 @@ describe('Things to Do attraction image population', () => {
     )
 
     expect(find).toHaveBeenCalledWith(expect.objectContaining({ depth: 2 }))
-    expect(response.docs[0]?.imageUrl).toContain('/api/media-assets/file/larco_thumbnail.webp')
+    expect(response.docs[0]?.imageUrl).toBe(`https://${CDN_HOST}/media/larco_thumbnail.webp`)
   })
 
   it('reads deeply enough for saved-reference validation', async () => {
@@ -48,6 +67,6 @@ describe('Things to Do attraction image population', () => {
     )
 
     expect(findByID).toHaveBeenCalledWith(expect.objectContaining({ depth: 2 }))
-    expect(candidate?.imageUrl).toContain('/api/media-assets/file/larco_thumbnail.webp')
+    expect(candidate?.imageUrl).toBe(`https://${CDN_HOST}/media/larco_thumbnail.webp`)
   })
 })

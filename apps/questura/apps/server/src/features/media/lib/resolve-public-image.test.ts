@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import {
   isMediaSetReadyForPlacement,
@@ -6,7 +6,26 @@ import {
   resolveMediaSetForPlacement,
 } from './resolve-public-image'
 
+const CDN_HOST = 'questurian-cdn.b-cdn.net'
+
 describe('resolve-public-image', () => {
+  /*
+   * Storage is configured in every environment that serves a reader, so the
+   * suite configures it too. Without it the resolver has nowhere to point a
+   * media file URL and falls back to the backend origin -- which is a real
+   * branch, exercised in its own test below, but not the normal one.
+   */
+  let previousHostname: string | undefined
+
+  beforeEach(() => {
+    previousHostname = process.env.BUNNY_STORAGE_HOSTNAME
+    process.env.BUNNY_STORAGE_HOSTNAME = CDN_HOST
+  })
+
+  afterEach(() => {
+    if (previousHostname === undefined) delete process.env.BUNNY_STORAGE_HOSTNAME
+    else process.env.BUNNY_STORAGE_HOSTNAME = previousHostname
+  })
   it('resolves required placement variant with asset alt and dimensions', () => {
     const image = resolveMediaSetForPlacement(
       {
@@ -34,7 +53,56 @@ describe('resolve-public-image', () => {
     })
   })
 
-  it('anchors relative Payload asset URLs to the configured backend origin', () => {
+  /*
+   * 15,522 rows still hold a relative `/api/media-assets/file/...` in `url`,
+   * and 1,486 hold an absolute one against `localhost:4000`. Payload's
+   * afterRead hook overwrites both with a CDN URL on every read, so these
+   * values should never reach a reader -- but view models are also built from
+   * fixtures and caches, and that route no longer serves files. Rewrite, do
+   * not anchor.
+   */
+  it('rewrites a relative Payload media file URL to the CDN', () => {
+    const image = resolveMediaSetForPlacement(
+      {
+        variants: {
+          thumbnail: {
+            url: '/api/media-assets/file/lima.webp',
+          },
+        },
+      },
+      'card',
+    )
+
+    expect(image.url).toBe(`https://${CDN_HOST}/media/lima.webp`)
+  })
+
+  it('rewrites an absolute Payload media file URL to the CDN', () => {
+    const image = resolveMediaSetForPlacement(
+      {
+        variants: {
+          thumbnail: {
+            url: 'http://localhost:4000/api/media-assets/file/lima%20cover.webp',
+          },
+        },
+      },
+      'card',
+    )
+
+    expect(image.url).toBe(`https://${CDN_HOST}/media/lima%20cover.webp`)
+  })
+
+  it('passes a CDN URL through untouched', () => {
+    const url = `https://${CDN_HOST}/media/lima-bar-12_wide.webp`
+
+    const image = resolveMediaSetForPlacement(
+      { variants: { thumbnail: { url } } },
+      'card',
+    )
+
+    expect(image.url).toBe(url)
+  })
+
+  it('still anchors non-media relative URLs to the backend origin', () => {
     const originalBackendUrl = process.env.BACKEND_URL_LOCAL
     process.env.BACKEND_URL_LOCAL = 'http://localhost:4000'
 
@@ -43,44 +111,95 @@ describe('resolve-public-image', () => {
         {
           variants: {
             thumbnail: {
-              url: '/api/media-assets/file/lima.webp',
+              url: '/images/editorial/lima.webp',
             },
           },
         },
         'card',
       )
 
-      expect(image.url).toBe('http://localhost:4000/api/media-assets/file/lima.webp')
+      expect(image.url).toBe('http://localhost:4000/images/editorial/lima.webp')
     } finally {
       process.env.BACKEND_URL_LOCAL = originalBackendUrl
     }
   })
 
-  it('uses Payload filename when a migrated asset has no stored URL', () => {
-    const originalBackendUrl = process.env.BACKEND_URL_LOCAL
-    process.env.BACKEND_URL_LOCAL = 'http://localhost:4000'
+  /*
+   * The degraded path (landmine 2 in issue #566). It runs only when `url` came
+   * back empty, which is exactly when a dead URL would be hardest to notice --
+   * so it has to land on the CDN, not on the route that no longer serves.
+   */
+  it('falls back to a CDN URL, not an /api/ path, when a row has no stored URL', () => {
+    const image = resolveMediaSetForPlacement(
+      {
+        variants: {
+          thumbnail: {
+            filename: 'lima cover_thumbnail.webp',
+            width: 600,
+            height: 400,
+          },
+        },
+      },
+      'card',
+    )
 
-    try {
-      const image = resolveMediaSetForPlacement(
+    expect(image).toMatchObject({
+      url: `https://${CDN_HOST}/media/lima%20cover_thumbnail.webp`,
+      status: 'ready',
+      variant: 'thumbnail',
+    })
+  })
+
+  it('honours a row prefix that is not the default', () => {
+    const image = resolveMediaSetForPlacement(
+      {
+        variants: {
+          thumbnail: { filename: 'x_thumbnail.webp', prefix: 'archive' },
+        },
+      },
+      'card',
+    )
+
+    expect(image.url).toBe(`https://${CDN_HOST}/archive/x_thumbnail.webp`)
+  })
+
+  /**
+   * The regression gate for issue #566. `/api/media-assets/file/` is Payload's
+   * static handler, and `disablePayloadAccessControl` unregisters it -- any
+   * resolver output still carrying that path is a broken image.
+   */
+  it('never emits an /api/media-assets/file/ URL, by any route through the resolver', () => {
+    const urls = [
+      resolveMediaSetForPlacement(
+        { variants: { thumbnail: { url: '/api/media-assets/file/a.webp' } } },
+        'card',
+      ).url,
+      resolveMediaSetForPlacement(
         {
           variants: {
-            thumbnail: {
-              filename: 'lima cover_thumbnail.webp',
-              width: 600,
-              height: 400,
-            },
+            thumbnail: { url: 'http://localhost:4000/api/media-assets/file/b.webp' },
           },
         },
         'card',
-      )
+      ).url,
+      resolveMediaSetForPlacement(
+        { variants: { thumbnail: { filename: 'c_thumbnail.webp' } } },
+        'card',
+      ).url,
+      resolveLegacyAssetForPlacement(
+        { filename: 'd_open_graph.webp', variant: 'open_graph' },
+        'article-header',
+      ).url,
+      resolveLegacyAssetForPlacement(
+        { bunny_original_url: '/api/media-assets/file/e.webp', variant: 'open_graph' },
+        'article-header',
+      ).url,
+    ]
 
-      expect(image).toMatchObject({
-        url: 'http://localhost:4000/api/media-assets/file/lima%20cover_thumbnail.webp',
-        status: 'ready',
-        variant: 'thumbnail',
-      })
-    } finally {
-      process.env.BACKEND_URL_LOCAL = originalBackendUrl
+    for (const url of urls) {
+      expect(url).not.toBeNull()
+      expect(url).not.toContain('/api/media-assets/file/')
+      expect(url).toContain(CDN_HOST)
     }
   })
 

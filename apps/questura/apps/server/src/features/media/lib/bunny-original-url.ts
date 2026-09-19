@@ -1,3 +1,5 @@
+import { buildPublicMediaUrl } from './bunny-public-url'
+
 const OG_IMAGE_WIDTH = 1200
 const OG_IMAGE_HEIGHT = 630
 
@@ -10,39 +12,19 @@ const toNumber = (value: unknown): number | null => {
   return null
 }
 
-const normalizeHostname = (hostname: string): string =>
-  hostname.replace(/^https?:\/\//, '').replace(/\/+$/, '')
-
-const normalizePathPart = (value: string): string => value.replace(/^\/+/, '').replace(/\/+$/, '')
-
-const buildBunnyStorageUrl = (
-  hostname: string,
-  prefix: string | null | undefined,
-  filename: string,
-): string | null => {
-  const normalizedHost = normalizeHostname(hostname)
-  if (!normalizedHost) return null
-
-  const pathParts = [
-    ...(prefix ? [normalizePathPart(prefix)] : []),
-    normalizePathPart(filename),
-  ].filter(Boolean)
-
-  if (pathParts.length === 0) return null
-
-  const encodedPath = encodeURI(pathParts.join('/'))
-  return `https://${normalizedHost}/${encodedPath}`
-}
-
+/**
+ * `bunny_original_url` is the older of the two fields that hold a file's public
+ * address, kept only for OG-sized assets. It now builds that address with the
+ * same function the resolver and the regenerator use, so the two fields hold
+ * the same string for the same file instead of two spellings of it.
+ */
 export const getExpectedBunnyOriginalUrl = (doc: Record<string, unknown>): string | null => {
   const width = toNumber(doc.width)
   const height = toNumber(doc.height)
   const filename = typeof doc.filename === 'string' ? doc.filename : null
   const prefix = typeof doc.prefix === 'string' ? doc.prefix : null
-  const hostname = process.env.BUNNY_STORAGE_HOSTNAME
 
   if (width !== OG_IMAGE_WIDTH || height !== OG_IMAGE_HEIGHT) return null
-  if (!filename || !hostname) return null
 
-  return buildBunnyStorageUrl(hostname, prefix, filename)
+  return buildPublicMediaUrl(filename, prefix)
 }
