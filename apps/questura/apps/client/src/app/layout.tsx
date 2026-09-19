@@ -7,6 +7,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
+import { IMAGE_CDN_ORIGIN } from "@/lib/media/imageCdnOrigin";
 
 /*
  * Only the families every route renders belong here: next/font preloads a
@@ -38,6 +39,10 @@ export default async function RootLayout({
 }>) {
   return (
     <html lang={DEFAULT_LOCALE} style={{ colorScheme: 'light' }}>
+      {/* Every photo on the site is served from the image CDN, so a cold visit
+          otherwise pays DNS + TLS against a second origin before the first
+          image byte moves. Next hoists a plain <link> in JSX into <head>. */}
+      {IMAGE_CDN_ORIGIN ? <link rel="preconnect" href={IMAGE_CDN_ORIGIN} /> : null}
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${editorialSerif.variable} antialiased`}
       >

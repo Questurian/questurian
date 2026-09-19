@@ -2,6 +2,7 @@ import type { Payload, PayloadRequest } from 'payload'
 
 import { BUNNY_ORIGINAL_URL_SYNC_CONTEXT_KEY } from '@/features/media/collections/hooks/syncBunnyOriginalUrl'
 import { MEDIA_VARIANT_KEYS, type MediaVariantKey } from '@/features/media/constants'
+import { MEDIA_ASSETS_PREFIX, buildPublicMediaUrl } from '@/features/media/lib/bunny-public-url'
 import { APP_URLS } from '@/shared/config'
 import { generateVariantsFromSource, normalizeFocalPoint } from './from-source'
 import { ladderFilename } from './width-ladder'
@@ -28,7 +29,7 @@ const uploadGeneratedVariantToBunny = async (filename: string, buffer: Buffer) =
   if (!apiKey || !zoneName) return
 
   const response = await fetch(
-    `https://ny.storage.bunnycdn.com/${zoneName}/media/${encodeURIComponent(filename)}`,
+    `https://ny.storage.bunnycdn.com/${zoneName}/${MEDIA_ASSETS_PREFIX}/${encodeURIComponent(filename)}`,
     {
       method: 'PUT',
       headers: {
@@ -61,8 +62,9 @@ const sanitizeStem = (filename: string): string => {
 
 export const resolveFetchableSourceUrl = (sourceUrl: string): string => {
   const mediaFilePath = '/api/media-assets/file/'
-  if (sourceUrl.startsWith(mediaFilePath) && process.env.BUNNY_STORAGE_HOSTNAME) {
-    return `https://${process.env.BUNNY_STORAGE_HOSTNAME}/media/${encodeURIComponent(sourceUrl.slice(mediaFilePath.length))}`
+  if (sourceUrl.startsWith(mediaFilePath)) {
+    const cdnUrl = buildPublicMediaUrl(decodeURIComponent(sourceUrl.slice(mediaFilePath.length)))
+    if (cdnUrl) return cdnUrl
   }
 
   try {

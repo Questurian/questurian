@@ -145,9 +145,15 @@ describe('resolveArticleFeaturedImage', () => {
     expect(disabled.url).toBeNull()
   })
 
-  it('rewrites historical localhost media URLs to the configured public backend origin', () => {
-    const originalBackendUrl = process.env.BACKEND_URL_LOCAL
-    process.env.BACKEND_URL_LOCAL = 'https://cms.questurian.com'
+  /*
+   * These historical values are everywhere in the `url` column -- 1,486 rows
+   * hold an absolute `localhost:4000` address. They used to be re-anchored to
+   * whatever backend was serving; since issue #566 nothing serves
+   * `/api/media-assets/file/` at all, so they are rewritten to the CDN.
+   */
+  it('rewrites historical localhost media URLs to the image CDN', () => {
+    const originalHostname = process.env.BUNNY_STORAGE_HOSTNAME
+    process.env.BUNNY_STORAGE_HOSTNAME = 'questurian-cdn.b-cdn.net'
 
     try {
       const image = resolveArticleFeaturedImage(
@@ -165,9 +171,10 @@ describe('resolveArticleFeaturedImage', () => {
         { placement: 'card' },
       )
 
-      expect(image.url).toBe('https://cms.questurian.com/api/media-assets/file/stale.webp')
+      expect(image.url).toBe('https://questurian-cdn.b-cdn.net/media/stale.webp')
     } finally {
-      process.env.BACKEND_URL_LOCAL = originalBackendUrl
+      if (originalHostname === undefined) delete process.env.BUNNY_STORAGE_HOSTNAME
+      else process.env.BUNNY_STORAGE_HOSTNAME = originalHostname
     }
   })
 })

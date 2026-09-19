@@ -60,6 +60,11 @@ Next.js frontend with authentication, Google OAuth, and membership system using 
 
    # Backend URL for OAuth callbacks (typically same as NEXT_PUBLIC_BACKEND_URL)
    NEXT_PUBLIC_APP_URL=http://localhost:4000
+
+   # Image CDN origin (the Bunny pull zone). Photos are served from here, not
+   # from the backend; this value is used only for the <link rel="preconnect">
+   # in the root layout. Must match the server's BUNNY_STORAGE_HOSTNAME.
+   NEXT_PUBLIC_IMAGE_CDN_ORIGIN=https://questurian-cdn.b-cdn.net
    ```
 
 4. **Start the development server**
@@ -77,6 +82,7 @@ Next.js frontend with authentication, Google OAuth, and membership system using 
 | `NEXT_PUBLIC_FRONTEND_URL` | Frontend URL for redirects and CORS | `http://localhost:3000` |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable API key (get from Stripe dashboard) | `pk_test_...` |
 | `NEXT_PUBLIC_APP_URL` | Backend URL for OAuth callbacks (typically same as NEXT_PUBLIC_BACKEND_URL) | `http://localhost:4000` |
+| `NEXT_PUBLIC_IMAGE_CDN_ORIGIN` | Image CDN origin, for the root layout's preconnect. Must match the server's `BUNNY_STORAGE_HOSTNAME`. Unset = no preconnect, never a broken image. | `https://questurian-cdn.b-cdn.net` |
 
 ### Available Scripts
 

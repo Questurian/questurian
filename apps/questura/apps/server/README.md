@@ -187,8 +187,11 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 RESEND_API_KEY=re_...
 
 # Bunny.net CDN
+# HOSTNAME is the *pull zone*, not the storage API: with
+# `disablePayloadAccessControl` on, it is the host every reader-facing image
+# URL is built from. The client's NEXT_PUBLIC_IMAGE_CDN_ORIGIN must match it.
 BUNNY_STORAGE_API_KEY=<your_api_key>
-BUNNY_STORAGE_HOSTNAME=ny.storage.bunnycdn.com
+BUNNY_STORAGE_HOSTNAME=questurian-cdn.b-cdn.net
 BUNNY_STORAGE_ZONE_NAME=questurian
 
 # Frontend
