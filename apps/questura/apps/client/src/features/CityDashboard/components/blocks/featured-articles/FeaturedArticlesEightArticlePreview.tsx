@@ -10,6 +10,8 @@ import type {
 } from '../../../types'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
+import { PublicImage, PublicSource } from '@/components/media/PublicImage'
+import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
 
 const PREVIEW_ARTICLE_COUNT = 3
 
@@ -84,10 +86,13 @@ function FeaturedArticlePreviewCard({
 }: FeaturedArticlePreviewCardProps): JSX.Element {
   const mobileImageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const desktopImageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
-  const hasImage = mobileImageUrl !== null || desktopImageUrl !== null
-  const { imageRef, isContentReady, isImageLoaded, setImageStatus } = useArticleImageStatus(
-    mobileImageUrl ?? desktopImageUrl,
-  )
+  // `<picture>` resolves to the <img> when no <source> matches, so the mobile
+  // crop is the one that has to exist. Aliasing the check lets TypeScript carry
+  // the narrowing into the JSX below.
+  const fallbackImageUrl = mobileImageUrl ?? desktopImageUrl
+  const hasImage = fallbackImageUrl !== null
+  const { imageRef, isContentReady, isImageLoaded, setImageStatus } = 
+    useArticleImageStatus(fallbackImageUrl)
 
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? 'Meta description not set'
@@ -107,11 +112,11 @@ function FeaturedArticlePreviewCard({
         {hasImage ? (
           <picture className="block h-full w-full">
             {desktopImageUrl ? (
-              <source media="(min-width: 768px)" srcSet={desktopImageUrl} />
+              <PublicSource media="(min-width: 768px)" src={desktopImageUrl} sizes={BLOCK_IMAGE_SIZES.hero} />
             ) : null}
-            <img
-              ref={imageRef}
-              src={mobileImageUrl ?? desktopImageUrl ?? undefined}
+            <PublicImage
+              imgRef={imageRef}
+              src={fallbackImageUrl}
               alt=""
               className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
               decoding="async"
@@ -119,6 +124,7 @@ function FeaturedArticlePreviewCard({
               loading={isPriority ? 'eager' : 'lazy'}
               onError={() => setImageStatus('failed')}
               onLoad={() => setImageStatus('loaded')}
+              sizes={BLOCK_IMAGE_SIZES.hero}
             />
           </picture>
         ) : null}
@@ -225,9 +231,8 @@ function CompactArticlePreviewCard({
 
       <div className="city-article-image-shell city-compact-article-image">
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imageRef}
+          <PublicImage
+            imgRef={imageRef}
             src={imageUrl}
             alt=""
             className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -236,6 +241,7 @@ function CompactArticlePreviewCard({
             loading="lazy"
             onError={() => setImageStatus('failed')}
             onLoad={() => setImageStatus('loaded')}
+            sizes={BLOCK_IMAGE_SIZES.sideThumbnail}
           />
         ) : null}
         <NavigableImageTarget href={article.articlePath} label={`Read ${article.title}`} />

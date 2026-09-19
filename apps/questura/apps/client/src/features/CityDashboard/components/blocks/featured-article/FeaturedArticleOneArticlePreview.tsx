@@ -11,6 +11,8 @@ import type {
 import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
+import { PublicImage } from '@/components/media/PublicImage'
+import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
 
 function getAuthorLabel(article: FeaturedArticleTeaser): string {
   return article.author?.name || 'Questurian'
@@ -52,9 +54,8 @@ function ArticleImage({
   status: ArticleImageStatus
 }): JSX.Element {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      ref={status.imageRef}
+    <PublicImage
+      imgRef={status.imageRef}
       src={src}
       alt=""
       className={`${className} relative z-10 transition-opacity duration-500 ${status.isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -63,6 +64,7 @@ function ArticleImage({
       decoding="async"
       onError={() => status.setImageStatus('failed')}
       onLoad={() => status.setImageStatus('loaded')}
+      sizes={BLOCK_IMAGE_SIZES.hero}
     />
   )
 }
@@ -90,8 +92,14 @@ function CreatorAvatar({
   const ring = (
     <span className="block size-16 overflow-hidden rounded-full bg-[#1a1a1a] ring-2 ring-white/20 768:size-[4.5rem] 1024:size-20">
       {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={avatarUrl} alt={avatarAlt} className="h-full w-full object-cover" />
+        <PublicImage
+          src={avatarUrl}
+          alt={avatarAlt}
+          className="h-full w-full object-cover"
+          /* Carried no `loading` before, which meant eager. */
+          loading="eager"
+          sizes={BLOCK_IMAGE_SIZES.avatar}
+        />
       ) : (
         <span className="flex h-full w-full items-center justify-center text-[#6a635c]" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="currentColor" className="size-[55%]">

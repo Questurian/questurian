@@ -12,6 +12,8 @@ import { BLOCK_GUTTER_CLASS, BlockSection, CAROUSEL_CARD_WIDTH_CLASS } from '../
 import { useSnapCarousel } from '../useSnapCarousel'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
+import { PublicImage } from '@/components/media/PublicImage'
+import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
 
 function getArticleTypeLabel(article: FeaturedArticleTeaser): string {
   return article.articleType ?? article.category?.name ?? 'Article'
@@ -60,9 +62,8 @@ function CarouselArticleCard({ article, isPriority, isLast }: CarouselArticleCar
     <>
       <div className="relative aspect-[3/2] overflow-hidden bg-[#d7dcde]">
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imageRef}
+          <PublicImage
+            imgRef={imageRef}
             src={imageUrl}
             alt=""
             className={`h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -71,6 +72,7 @@ function CarouselArticleCard({ article, isPriority, isLast }: CarouselArticleCar
             loading={isPriority ? 'eager' : 'lazy'}
             onError={() => setImageStatus('failed')}
             onLoad={() => setImageStatus('loaded')}
+            sizes={BLOCK_IMAGE_SIZES.carouselCard}
           />
         ) : null}
         <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />

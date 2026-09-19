@@ -7,6 +7,8 @@ import type {
   HomepageBlockLayoutProps,
 } from "../../../types";
 import { BlockSection } from "../BlockSection";
+import { PublicImage } from "@/components/media/PublicImage";
+import { BLOCK_IMAGE_SIZES } from "../blockImageSizes";
 
 export function NewsletterSignupPreview({
   block,
@@ -33,10 +35,13 @@ export function NewsletterSignupPreview({
       <div className="relative overflow-hidden bg-[#16226B]">
         {/* Duotone background stays inside the shared page-width boundary. */}
         <div className="absolute inset-0" aria-hidden="true">
-          <img
+          <PublicImage
             src="/images/newsletter/lima-pier.jpg"
+            /* Carried no `loading` before, which meant eager. */
+            loading="eager"
             alt=""
             className="h-full w-full object-cover grayscale contrast-125"
+            sizes={BLOCK_IMAGE_SIZES.fullBleed}
           />
           <div className="absolute inset-0 bg-[#16226B] mix-blend-screen" />
           <div className="absolute inset-0 bg-accent/90 mix-blend-multiply" />

@@ -11,6 +11,8 @@ import type {
 import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
+import { PublicImage, PublicSource } from '@/components/media/PublicImage'
+import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -82,10 +84,13 @@ type HeroArticleCardProps = {
 function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
   const mobileImageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const desktopImageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
-  const hasImage = mobileImageUrl !== null || desktopImageUrl !== null
-  const { imageRef, isContentReady, isImageLoaded, setImageStatus } = useArticleImageStatus(
-    mobileImageUrl ?? desktopImageUrl,
-  )
+  // `<picture>` resolves to the <img> when no <source> matches, so the mobile
+  // crop is the one that has to exist. Aliasing the check lets TypeScript carry
+  // the narrowing into the JSX below.
+  const fallbackImageUrl = mobileImageUrl ?? desktopImageUrl
+  const hasImage = fallbackImageUrl !== null
+  const { imageRef, isContentReady, isImageLoaded, setImageStatus } = 
+    useArticleImageStatus(fallbackImageUrl)
 
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? 'Meta description not set'
@@ -102,11 +107,11 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
         {hasImage ? (
           <picture className="block h-full w-full">
             {desktopImageUrl ? (
-              <source media="(min-width: 1024px)" srcSet={desktopImageUrl} />
+              <PublicSource media="(min-width: 1024px)" src={desktopImageUrl} sizes={BLOCK_IMAGE_SIZES.hero} />
             ) : null}
-            <img
-              ref={imageRef}
-              src={mobileImageUrl ?? desktopImageUrl ?? undefined}
+            <PublicImage
+              imgRef={imageRef}
+              src={fallbackImageUrl}
               alt=""
               className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
               decoding="async"
@@ -114,6 +119,7 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
               loading="eager"
               onError={() => setImageStatus('failed')}
               onLoad={() => setImageStatus('loaded')}
+              sizes={BLOCK_IMAGE_SIZES.hero}
             />
           </picture>
         ) : null}
@@ -191,9 +197,8 @@ function StackedWideCard({ article, variant = 'stack' }: StackedWideCardProps): 
     >
       <div className="city-article-image-shell city-three-stack-image">
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imageRef}
+          <PublicImage
+            imgRef={imageRef}
             src={imageUrl}
             alt=""
             className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -202,6 +207,7 @@ function StackedWideCard({ article, variant = 'stack' }: StackedWideCardProps): 
             loading="lazy"
             onError={() => setImageStatus('failed')}
             onLoad={() => setImageStatus('loaded')}
+            sizes={BLOCK_IMAGE_SIZES.halfColumn}
           />
         ) : null}
         <NavigableImageTarget href={article.articlePath} label={`Read ${article.title}`} />
@@ -234,10 +240,13 @@ type CenterFeatureCardProps = {
 function CenterFeatureCard({ article }: CenterFeatureCardProps): JSX.Element {
   const mobileImageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const desktopImageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
-  const hasImage = mobileImageUrl !== null || desktopImageUrl !== null
-  const { imageRef, isContentReady, isImageLoaded, setImageStatus } = useArticleImageStatus(
-    mobileImageUrl ?? desktopImageUrl,
-  )
+  // `<picture>` resolves to the <img> when no <source> matches, so the mobile
+  // crop is the one that has to exist. Aliasing the check lets TypeScript carry
+  // the narrowing into the JSX below.
+  const fallbackImageUrl = mobileImageUrl ?? desktopImageUrl
+  const hasImage = fallbackImageUrl !== null
+  const { imageRef, isContentReady, isImageLoaded, setImageStatus } = 
+    useArticleImageStatus(fallbackImageUrl)
 
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? 'Meta description not set'
@@ -253,11 +262,11 @@ function CenterFeatureCard({ article }: CenterFeatureCardProps): JSX.Element {
         {hasImage ? (
           <picture className="block h-full w-full">
             {desktopImageUrl ? (
-              <source media="(min-width: 1024px)" srcSet={desktopImageUrl} />
+              <PublicSource media="(min-width: 1024px)" src={desktopImageUrl} sizes={BLOCK_IMAGE_SIZES.centreFeature} />
             ) : null}
-            <img
-              ref={imageRef}
-              src={mobileImageUrl ?? desktopImageUrl ?? undefined}
+            <PublicImage
+              imgRef={imageRef}
+              src={fallbackImageUrl}
               alt=""
               className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
               decoding="async"
@@ -265,6 +274,7 @@ function CenterFeatureCard({ article }: CenterFeatureCardProps): JSX.Element {
               loading="eager"
               onError={() => setImageStatus('failed')}
               onLoad={() => setImageStatus('loaded')}
+              sizes={BLOCK_IMAGE_SIZES.centreFeature}
             />
           </picture>
         ) : null}

@@ -11,6 +11,8 @@ import type {
 import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
+import { PublicImage } from '@/components/media/PublicImage'
+import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -88,9 +90,8 @@ function MagazineHeroCard({ article }: MagazineHeroCardProps): JSX.Element {
     >
       <div className="city-article-image-shell city-five-hero-image relative aspect-square overflow-hidden bg-[#d7dcde]">
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imageRef}
+          <PublicImage
+            imgRef={imageRef}
             src={imageUrl}
             alt=""
             className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -99,6 +100,7 @@ function MagazineHeroCard({ article }: MagazineHeroCardProps): JSX.Element {
             loading="eager"
             onError={() => setImageStatus('failed')}
             onLoad={() => setImageStatus('loaded')}
+            sizes={BLOCK_IMAGE_SIZES.hero}
           />
         ) : null}
         <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
@@ -178,9 +180,8 @@ function SidebarMediaCard({ article }: SidebarMediaCardProps): JSX.Element {
     >
       <div className="city-article-image-shell city-five-side-thumb">
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imageRef}
+          <PublicImage
+            imgRef={imageRef}
             src={imageUrl}
             alt=""
             className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -189,6 +190,7 @@ function SidebarMediaCard({ article }: SidebarMediaCardProps): JSX.Element {
             loading="lazy"
             onError={() => setImageStatus('failed')}
             onLoad={() => setImageStatus('loaded')}
+            sizes={BLOCK_IMAGE_SIZES.quarterColumn}
           />
         ) : null}
         <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />

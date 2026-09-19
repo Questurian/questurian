@@ -11,6 +11,8 @@ import type {
 import { BlockSection } from '../BlockSection'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
+import { PublicImage } from '@/components/media/PublicImage'
+import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
 
 function getArticleTypeLabel(article: FeaturedArticleTeaser): string {
   return article.articleType ?? article.category?.name ?? 'Article'
@@ -59,9 +61,8 @@ function ThreeArticleCard({
     >
       <div className="city-article-image-shell relative aspect-[1.92/1] overflow-hidden bg-[#d7dcde]">
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imageRef}
+          <PublicImage
+            imgRef={imageRef}
             src={imageUrl}
             alt=""
             className={`relative z-10 h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none group-hover:scale-[1.015] ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -70,6 +71,7 @@ function ThreeArticleCard({
             loading={index === 0 ? 'eager' : 'lazy'}
             onError={() => setImageStatus('failed')}
             onLoad={() => setImageStatus('loaded')}
+            sizes={BLOCK_IMAGE_SIZES.thirdColumn}
           />
         ) : null}
         <NavigableImageTarget
@@ -158,9 +160,8 @@ function GridArticleCard({
         className={`city-article-image-shell relative ${useSquareImage ? 'aspect-square' : 'aspect-[16/10]'} overflow-hidden bg-[#d7dcde]`}
       >
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imageRef}
+          <PublicImage
+            imgRef={imageRef}
             src={imageUrl}
             alt=""
             className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -169,6 +170,7 @@ function GridArticleCard({
             loading={isPriority ? 'eager' : 'lazy'}
             onError={() => setImageStatus('failed')}
             onLoad={() => setImageStatus('loaded')}
+            sizes={BLOCK_IMAGE_SIZES.quarterColumn}
           />
         ) : null}
         <NavigableImageTarget

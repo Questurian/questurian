@@ -7,6 +7,8 @@ import type {
   HomepageBlockLayoutProps,
 } from "../../../types";
 import { BlockSection } from "../BlockSection";
+import { PublicImage, PublicSource } from "@/components/media/PublicImage";
+import { BLOCK_IMAGE_SIZES } from "../blockImageSizes";
 
 function Linked({
   href,
@@ -79,14 +81,15 @@ function AuthorPortrait({
           >
             <picture className="block h-full w-full">
               {!shaped && image?.url ? (
-                <source media="(min-width: 768px)" srcSet={image.url} />
+                <PublicSource media="(min-width: 768px)" src={image.url} sizes={BLOCK_IMAGE_SIZES.portrait} />
               ) : null}
-              <img
+              <PublicImage
                 src={(shaped ? image : wide)?.url ?? image?.url ?? ""}
                 alt={(shaped ? image : wide)?.alt ?? image?.alt ?? ""}
                 loading="lazy"
                 decoding="async"
                 className="h-full w-full object-cover"
+                sizes={BLOCK_IMAGE_SIZES.portrait}
               />
             </picture>
           </span>
@@ -113,13 +116,13 @@ function ArticleImage({
       href={article.articlePath}
       className="block h-full w-full overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <PublicImage
         src={image.url}
         alt={image.alt ?? ""}
         loading="lazy"
         decoding="async"
         className="h-full w-full object-cover"
+        sizes={BLOCK_IMAGE_SIZES.sideThumbnail}
       />
     </Linked>
   );

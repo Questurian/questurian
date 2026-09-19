@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState, type JSX } from "react";
+import { PublicImage } from "@/components/media/PublicImage";
 
 const AVATAR_SIZE = {
   page: "size-[88px] sm:size-[104px] lg:size-[112px]",
   article: "size-[72px] 480:size-[80px] sm:size-[88px]",
+} as const;
+
+/** The same widths as AVATAR_SIZE, restated for the browser's rung picker. */
+const AVATAR_IMAGE_SIZES = {
+  page: "(min-width: 1024px) 112px, (min-width: 640px) 104px, 88px",
+  article: "(min-width: 640px) 88px, (min-width: 480px) 80px, 72px",
 } as const;
 
 function AvatarPlaceholder({ size }: { size: keyof typeof AVATAR_SIZE }): JSX.Element {
@@ -70,9 +77,8 @@ export function AuthorAvatar({
       className={`author-avatar-shell relative shrink-0 overflow-hidden bg-paper ${AVATAR_SIZE[size]}`}
       data-image-loaded={status === "loaded" ? "true" : "false"}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        ref={imageRef}
+      <PublicImage
+        imgRef={imageRef}
         src={avatar.url}
         alt={avatar.alt ?? `${name} profile photo`}
         className={`relative z-10 h-full w-full object-cover transition-opacity duration-500 ${status === "loaded" ? "opacity-100" : "opacity-0"}`}
@@ -80,6 +86,7 @@ export function AuthorAvatar({
         decoding="async"
         onLoad={() => setStatus("loaded")}
         onError={() => setStatus("failed")}
+        sizes={AVATAR_IMAGE_SIZES[size]}
       />
     </div>
   );
