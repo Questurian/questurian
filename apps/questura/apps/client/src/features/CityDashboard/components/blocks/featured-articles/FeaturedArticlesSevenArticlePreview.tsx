@@ -112,7 +112,7 @@ function FeaturedArticlePreviewCard({
         {hasImage ? (
           <picture className="block h-full w-full">
             {desktopImageUrl ? (
-              <PublicSource media="(min-width: 768px)" src={desktopImageUrl} sizes={BLOCK_IMAGE_SIZES.hero} />
+              <PublicSource media="(min-width: 768px)" src={desktopImageUrl} sizes={BLOCK_IMAGE_SIZES.featuredLeftCard} />
             ) : null}
             <PublicImage
               imgRef={imageRef}
@@ -124,7 +124,7 @@ function FeaturedArticlePreviewCard({
               loading={isPriority ? 'eager' : 'lazy'}
               onError={() => setImageStatus('failed')}
               onLoad={() => setImageStatus('loaded')}
-              sizes={BLOCK_IMAGE_SIZES.hero}
+              sizes={BLOCK_IMAGE_SIZES.featuredLeftCard}
             />
           </picture>
         ) : null}

@@ -100,14 +100,14 @@ export function EditorialFeaturePreview({ block }: HomepageBlockLayoutProps<Edit
             <Linked href={featureHref}
               className="group/image block h-full outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent">
               <picture className="block h-full w-full">
-                {portrait?.url ? <PublicSource media="(min-width: 768px)" src={portrait.url} sizes={BLOCK_IMAGE_SIZES.quarterColumn} /> : null}
+                {portrait?.url ? <PublicSource media="(min-width: 768px)" src={portrait.url} sizes={BLOCK_IMAGE_SIZES.featureImage} /> : null}
                 <PublicImage
                   src={fallbackImage.url}
                   alt={fallbackImage.alt ?? ''}
                   className="h-full w-full object-cover transition-opacity duration-200 group-hover/image:opacity-85"
                   /* Carried no `loading` before, which meant eager. */
                   loading="eager"
-                  sizes={BLOCK_IMAGE_SIZES.quarterColumn}
+                  sizes={BLOCK_IMAGE_SIZES.featureImage}
                 />
               </picture>
             </Linked>

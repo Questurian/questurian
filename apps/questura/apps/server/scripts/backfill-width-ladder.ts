@@ -35,9 +35,15 @@ async function fromDatabase(dryRun: boolean, onProgress: Parameters<typeof backf
 async function main() {
   const dryRun = process.argv.includes('--dry-run')
   const fromDb = process.argv.includes('--from-db')
+  // Nearly all the time is spent waiting on the storage region rather than
+  // resizing, so this is the dial that matters. Raise it on a fast link.
+  const concurrency = Number(
+    /--concurrency=(\d+)/.exec(process.argv.join(' '))?.[1] ?? 12,
+  )
 
   console.log(dryRun ? 'DRY RUN - nothing will be written' : 'Writing rungs to Bunny')
   console.log(fromDb ? 'Source: MediaAsset rows' : 'Source: the Bunny media zone')
+  if (!fromDb) console.log(`Running ${concurrency} at a time`)
 
   const onProgress = (result: {
     filename: string
@@ -52,7 +58,7 @@ async function main() {
 
   const summary = fromDb
     ? await fromDatabase(dryRun, onProgress)
-    : await backfillZoneLadder({ dryRun, onProgress })
+    : await backfillZoneLadder({ dryRun, concurrency, onProgress })
 
   console.log(
     [
