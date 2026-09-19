@@ -23,6 +23,8 @@ import { useEffect, useRef, useState, type JSX } from 'react'
 import type { PlaceCardHighlight } from '../../types'
 import { CAROUSEL_CARD_WIDTH_CLASS } from './BlockSection'
 import { NavigableImageTarget } from './NavigableImageTarget'
+import { PublicImage } from '@/components/media/PublicImage'
+import { BLOCK_IMAGE_SIZES } from './blockImageSizes'
 
 const PRICE_LEVEL_MAP: Record<string, string> = {
   '1': '$',
@@ -125,9 +127,8 @@ export function PlaceCarouselCard({
     >
       <div className="city-article-image-shell relative aspect-[3/2] overflow-hidden bg-[#d7dcde]">
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imgRef}
+          <PublicImage
+            imgRef={imgRef}
             src={imageUrl}
             alt={title}
             className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -135,6 +136,7 @@ export function PlaceCarouselCard({
             loading={isPriority ? 'eager' : 'lazy'}
             onError={() => setImageStatus('failed')}
             onLoad={() => setImageStatus('loaded')}
+            sizes={BLOCK_IMAGE_SIZES.carouselCard}
           />
         ) : null}
         <NavigableImageTarget

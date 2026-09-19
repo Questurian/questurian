@@ -1,4 +1,6 @@
+export { ensureWidthLadder } from './ensureWidthLadder'
 export { mediaAssetHooks } from './mediaAssetHooks'
 export { ensureMediaSetVariant, syncMediaSetVariant } from './mediaSetVariant'
+export { removeWidthLadder } from './removeWidthLadder'
 export { setUploadedBy } from './setUploadedBy'
 export { syncBunnyOriginalUrl } from './syncBunnyOriginalUrl'

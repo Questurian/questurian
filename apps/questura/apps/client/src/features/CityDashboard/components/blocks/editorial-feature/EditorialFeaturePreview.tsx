@@ -6,6 +6,8 @@ import type {
   HomepageBlockLayoutProps,
 } from '../../../types'
 import { BlockSection } from '../BlockSection'
+import { PublicImage, PublicSource } from '@/components/media/PublicImage'
+import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
 
 function Linked({ href, className, children }: {
   href: string | null
@@ -25,9 +27,10 @@ function ArticleImage({ article, square }: { article: FeaturedArticleTeaser; squ
     : article.imageWide?.alt ?? article.image?.alt ?? article.imageSquare?.alt ?? ''
 
   const image = (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt ?? ''} loading="lazy" decoding="async"
-      className="h-full w-full object-cover transition-opacity duration-200 group-hover/image:opacity-85" />
+    <PublicImage src={src} alt={alt ?? ''} loading="lazy" decoding="async"
+      className="h-full w-full object-cover transition-opacity duration-200 group-hover/image:opacity-85"
+      sizes={BLOCK_IMAGE_SIZES.sideThumbnail}
+    />
   )
   return article.articlePath ? (
     <Link href={article.articlePath}
@@ -82,6 +85,9 @@ export function EditorialFeaturePreview({ block }: HomepageBlockLayoutProps<Edit
   const featureHref = block.linkedLocation?.href ?? null
   const portrait = block.featureImagePortrait ?? block.featureImageWide
   const wide = block.featureImageWide ?? block.featureImagePortrait
+  // The <img> fallback inside <picture> needs a src that exists. `wide ??
+  // portrait` would keep a `wide` entry whose url is missing and render none.
+  const fallbackImage = wide?.url ? wide : portrait
 
   return (
     <BlockSection
@@ -90,14 +96,19 @@ export function EditorialFeaturePreview({ block }: HomepageBlockLayoutProps<Edit
     >
       <div className="grid gap-8 768:grid-cols-[minmax(230px,0.82fr)_1.18fr] 768:items-stretch 1024:grid-cols-[minmax(260px,0.9fr)_minmax(280px,0.9fr)_minmax(330px,1.1fr)] 1024:gap-10">
         <div className="aspect-[16/10] overflow-hidden bg-paper 768:aspect-[4/5]">
-          {wide?.url || portrait?.url ? (
+          {fallbackImage?.url ? (
             <Linked href={featureHref}
               className="group/image block h-full outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent">
               <picture className="block h-full w-full">
-                {portrait?.url ? <source media="(min-width: 768px)" srcSet={portrait.url} /> : null}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={(wide ?? portrait)?.url} alt={(wide ?? portrait)?.alt ?? ''}
-                  className="h-full w-full object-cover transition-opacity duration-200 group-hover/image:opacity-85" />
+                {portrait?.url ? <PublicSource media="(min-width: 768px)" src={portrait.url} sizes={BLOCK_IMAGE_SIZES.featureImage} /> : null}
+                <PublicImage
+                  src={fallbackImage.url}
+                  alt={fallbackImage.alt ?? ''}
+                  className="h-full w-full object-cover transition-opacity duration-200 group-hover/image:opacity-85"
+                  /* Carried no `loading` before, which meant eager. */
+                  loading="eager"
+                  sizes={BLOCK_IMAGE_SIZES.featureImage}
+                />
               </picture>
             </Linked>
           ) : null}

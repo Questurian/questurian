@@ -10,6 +10,8 @@ import type {
 } from '../../../types'
 import { BlockSection, BLOCK_GUTTER_CLASS } from '../BlockSection'
 import { NavigableImageTarget } from '../NavigableImageTarget'
+import { PublicImage } from '@/components/media/PublicImage'
+import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
 
 function MapPinIcon(): JSX.Element {
   return (
@@ -61,15 +63,15 @@ function MapCarouselCard({
 
       <div className="relative aspect-square overflow-hidden bg-[#d7dcde]">
         {item.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imgRef}
+          <PublicImage
+            imgRef={imgRef}
             src={item.imageUrl}
             alt={item.title}
             className={`h-full w-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
             fetchPriority={isPriority ? 'high' : 'auto'}
             loading={isPriority ? 'eager' : 'lazy'}
             onLoad={() => setImgLoaded(true)}
+            sizes={BLOCK_IMAGE_SIZES.mapCard}
           />
         ) : null}
         <NavigableImageTarget href={item.articlePath} label={`Open ${item.title}`} />
@@ -106,15 +108,15 @@ function MapGridCard({
     <div className="city-four-side-card" style={{ background: '#fafaf8' }}>
       <div className="city-four-side-image relative">
         {imgSrc ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imgRef}
+          <PublicImage
+            imgRef={imgRef}
             src={imgSrc}
             alt={item.title}
             className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
             fetchPriority={isPriority ? 'high' : 'auto'}
             loading={isPriority ? 'eager' : 'lazy'}
             onLoad={() => setImgLoaded(true)}
+            sizes={BLOCK_IMAGE_SIZES.quarterColumn}
           />
         ) : null}
         <NavigableImageTarget href={item.articlePath} label={`Open ${item.title}`} />

@@ -11,6 +11,8 @@ import type {
 import { BlockSection } from '../BlockSection'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
+import { PublicImage } from '@/components/media/PublicImage'
+import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -81,9 +83,8 @@ function ArticleRow({ article, isPriority }: ArticleRowProps): JSX.Element {
       {/* ── Image ────────────────────────────────────────── */}
       <div className="relative h-[120px] w-[120px] shrink-0 overflow-hidden bg-[#d7dcde] 768:h-[150px] 768:w-[150px] 1024:h-[180px] 1024:w-[180px]">
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imageRef}
+          <PublicImage
+            imgRef={imageRef}
             src={imageUrl}
             alt=""
             className={joinClassNames(
@@ -95,6 +96,7 @@ function ArticleRow({ article, isPriority }: ArticleRowProps): JSX.Element {
             loading={isPriority ? 'eager' : 'lazy'}
             onError={() => setImageStatus('failed')}
             onLoad={() => setImageStatus('loaded')}
+            sizes={BLOCK_IMAGE_SIZES.listThumbnail}
           />
         ) : null}
         <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />

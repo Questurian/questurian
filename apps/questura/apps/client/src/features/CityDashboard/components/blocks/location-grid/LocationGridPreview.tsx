@@ -3,6 +3,8 @@ import Link from 'next/link'
 
 import type { LocationGridBlock, LocationGridItem, HomepageBlockLayoutProps } from '../../../types'
 import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
+import { PublicImage } from '@/components/media/PublicImage'
+import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
 
 const MEDIA_ASPECT_CLASSES: Record<string, string> = {
   rectangle: 'h-28 768:h-36',
@@ -30,13 +32,13 @@ function LocationCard({
   const content = (
     <>
       {item.coverImageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <PublicImage
           src={item.coverImageUrl}
           alt={item.coverImageAlt ?? item.title}
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover/guide:scale-[1.025]"
           fetchPriority={isPriority ? 'high' : 'auto'}
           loading={isPriority ? 'eager' : 'lazy'}
+          sizes={BLOCK_IMAGE_SIZES.quarterColumn}
         />
       ) : null}
       <div

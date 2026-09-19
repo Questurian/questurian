@@ -2,6 +2,7 @@ import sharp from 'sharp'
 
 import { MEDIA_VARIANT_KEYS, type MediaVariantKey } from '@/features/media/constants'
 import { VARIANT_SPECS, WEBP_QUALITY, type VariantSpec } from './variant-specs'
+import { WIDTH_LADDER } from './width-ladder'
 
 export type FocalPoint = { x: number; y: number }
 
@@ -19,6 +20,18 @@ export type GeneratedVariant = {
   width: number
   height: number
   format: 'webp'
+  /**
+   * Smaller copies of this same crop, for resolution switching (issue #563).
+   * Same pixels, same aspect ratio — only the output size differs, so a page
+   * can hand the browser a rung near what it will actually draw.
+   */
+  ladder: GeneratedLadderRung[]
+}
+
+export type GeneratedLadderRung = {
+  buffer: Buffer
+  width: number
+  height: number
 }
 
 const DEFAULT_FOCAL_POINT: FocalPoint = { x: 0.5, y: 0.5 }
@@ -110,16 +123,32 @@ export const generateVariantsFromSource = async ({
         }
       : computeFocalCrop(sourceWidth, sourceHeight, spec, focal)
 
-    const buffer = await sharp(sourceBuffer)
-      .extract({
-        left: crop.left,
-        top: crop.top,
-        width: crop.width,
-        height: crop.height,
-      })
-      .resize(spec.width, spec.height, { fit: 'fill' })
-      .webp({ quality: WEBP_QUALITY })
-      .toBuffer()
+    // One decode of the source per variant, reused for the full-size crop and
+    // every rung below it. Re-reading `sourceBuffer` for each width would decode
+    // the original six times over for no benefit.
+    const cropped = sharp(sourceBuffer).extract({
+      left: crop.left,
+      top: crop.top,
+      width: crop.width,
+      height: crop.height,
+    })
+
+    const toWidth = async (width: number, height: number): Promise<Buffer> =>
+      cropped
+        .clone()
+        .resize(width, height, { fit: 'fill' })
+        .webp({ quality: WEBP_QUALITY })
+        .toBuffer()
+
+    const buffer = await toWidth(spec.width, spec.height)
+
+    const ladder: GeneratedLadderRung[] = []
+    for (const width of WIDTH_LADDER) {
+      // Height follows the variant's own ratio so a rung is the same picture,
+      // just smaller. Rounding down would drift the ratio on tall crops.
+      const height = Math.round((width * spec.height) / spec.width)
+      ladder.push({ buffer: await toWidth(width, height), width, height })
+    }
 
     generated.push({
       variant,
@@ -127,6 +156,7 @@ export const generateVariantsFromSource = async ({
       width: spec.width,
       height: spec.height,
       format: 'webp',
+      ladder,
     })
   }
 

@@ -4,6 +4,7 @@ import { BUNNY_ORIGINAL_URL_SYNC_CONTEXT_KEY } from '@/features/media/collection
 import { MEDIA_VARIANT_KEYS, type MediaVariantKey } from '@/features/media/constants'
 import { APP_URLS } from '@/shared/config'
 import { generateVariantsFromSource, normalizeFocalPoint } from './from-source'
+import { ladderFilename } from './width-ladder'
 
 export type RegenerateInput = {
   payload: Payload
@@ -194,6 +195,13 @@ export const regenerateVariantsForMediaSet = async ({
     })
 
     await uploadGeneratedVariantToBunny(variantFilename, generated.buffer)
+
+    // A regenerated variant lands under a new filename, so it needs its own
+    // rungs. Without these the reader-facing client would derive names for
+    // files that were never written (issue #563).
+    for (const rung of generated.ladder) {
+      await uploadGeneratedVariantToBunny(ladderFilename(variantFilename, rung.width), rung.buffer)
+    }
 
     variantAssetIds[generated.variant] = toNumericId((variantAsset as { id: unknown }).id)
   }

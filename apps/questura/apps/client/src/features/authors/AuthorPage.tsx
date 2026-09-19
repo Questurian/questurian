@@ -7,6 +7,7 @@ import type {
 import { AuthorSocialIcons } from "@/features/authors/components/AuthorSocialLinks";
 import { AuthorAvatar } from "@/features/authors/components/AuthorAvatar";
 import { EditorialLabelRule } from "@/features/articles/components/EditorialRule";
+import { PublicImage } from "@/components/media/PublicImage";
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -42,13 +43,15 @@ function ArticleThumbnail({
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <PublicImage
       src={thumbnail.url}
       alt={thumbnail.alt ?? ""}
       className="aspect-[16/10] w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025] motion-reduce:transition-none"
       loading="lazy"
       decoding="async"
+      /* Article cards run two across at md and three at lg, inside the page's
+         own max width. */
+      sizes="(min-width: 1024px) 380px, (min-width: 768px) 50vw, 100vw"
     />
   );
 }

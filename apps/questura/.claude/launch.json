@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "questura-server",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "apps/server", "dev"],
+      "port": 4000
+    },
+    {
+      "name": "questura-client",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "apps/client", "dev"],
+      "port": 3000
+    }
+  ]
+}
