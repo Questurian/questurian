@@ -14,6 +14,15 @@ lima-bar-12_square_w640.webp
 lima-bar-12_square_w960.webp
 ```
 
+Two naming details that are easy to get wrong:
+
+- `hotel-b_1777233326269_thumbnail-2.webp` is a thumbnail. The `-2` is Payload
+  deduplicating a filename that was already taken, and **two thirds of the zone
+  is named this way** — 9,969 files against 5,399 canonical ones.
+- Rungs are always `.webp`, even from a `.jpeg` or `.png` variant. Bunny types a
+  response from the file extension and ignores the Content-Type it was uploaded
+  with, so a WebP body under a `.jpeg` name is served as `image/jpeg`.
+
 The reader-facing client works those names out from the variant URL rather than
 asking an API which ones exist. That is what lets the browser be offered a
 choice without any change to the payload or the MediaAsset schema.
@@ -52,7 +61,12 @@ cd apps/questura/apps/server && npx tsx scripts/backfill-width-ladder.ts
 ```
 
 It needs `BUNNY_STORAGE_API_KEY` and `BUNNY_STORAGE_ZONE_NAME`, which the
-server's env already carries.
+server's env already carries. It does **not** need a database, which matters:
+a laptop's `DATABASE_URI` usually points at a local scratch copy, and a
+row-driven pass against that would quietly miss most of the real media.
+
+Expect roughly an hour for a first run over an untouched zone. Measured on
+2026-09-19: 30,250 rungs in about 50 minutes at twelve at a time.
 
 Expect a line per photo it touches and a summary at the end. It exits non-zero
 if any rung failed.
