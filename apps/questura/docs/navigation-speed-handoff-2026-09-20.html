@@ -1,0 +1,236 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Questura navigation speed — implementation handoff</title><style>
+:root{--bg:#F5F0E8;--paper:#EFE9DE;--ink:#1A1A1A;--muted:#625d55;--accent:#3B5BDB;--line:#d4cdbf;--good:#2b6a4a;--warn:#8a5a1f}
+*{box-sizing:border-box}
+html{scroll-padding-top:22px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:var(--accent);text-underline-offset:4px}
+main{max-width:1100px;margin:auto;padding:48px 32px 90px}
+.eyebrow{color:var(--accent);font:700 12px/1.5 ui-monospace,monospace;letter-spacing:.11em;text-transform:uppercase}
+h1,h2{font-family:Georgia,serif;letter-spacing:-.035em;line-height:1.12}
+h1{font-size:clamp(38px,5.5vw,64px);max-width:930px;margin:18px 0 22px}
+h2{font-size:32px;margin:12px 0 16px}
+h3{font-size:18px;line-height:1.35;margin:28px 0 8px}
+p{margin:12px 0}
+.lede{font-size:21px;max-width:880px;color:var(--muted)}
+.meta{color:var(--muted);font-size:13px}
+aside,.banner{background:var(--paper);border-left:3px solid var(--accent);padding:18px 22px;margin:24px 0}
+.banner.stop{border-left-color:var(--warn)}
+.toc{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;margin:28px 0}
+.toc a{font-size:14px;padding:8px 0;border-bottom:1px solid var(--line);text-decoration:none}
+.toc a:hover{text-decoration:underline}
+section{border-top:1px solid var(--line);padding-top:34px;margin-top:42px}
+ul,ol{padding-left:23px}
+li{margin:9px 0}
+code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px}
+code{overflow-wrap:anywhere;background:var(--paper);padding:1px 5px}
+pre{background:var(--paper);padding:14px 16px;overflow:auto;line-height:1.55;border-left:3px solid var(--line)}
+pre code{background:none;padding:0}
+.table-wrap{overflow:auto;margin:18px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:9px 14px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:700 12px/1.5 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+td.num{font-family:ui-monospace,monospace;white-space:nowrap}
+.good{color:var(--good);font-weight:700}
+.bad{color:var(--warn);font-weight:700}
+.task{background:var(--paper);padding:2px 22px 18px;margin:22px 0;border-left:3px solid var(--accent)}
+.task h3{margin-top:20px}
+.tag{display:inline-block;font:700 11px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;padding:5px 8px;background:var(--accent);color:#fff;margin-right:8px}
+.tag.low{background:var(--muted)}
+.tag.skip{background:var(--warn)}
+footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+@media(max-width:720px){main{padding:32px 16px 60px}.toc{grid-template-columns:1fr}}
+</style></head><body><main>
+
+<p class="eyebrow">Implementation handoff · 2026-09-20</p>
+<h1>The click freeze is a local-development artifact. Do not fix it with loaders.</h1>
+<p class="lede">A click on localhost can sit frozen for four seconds. The same click against a production build of the same commit takes 30 milliseconds. This document records what was measured, what is genuinely worth changing, and — importantly — what must not be built.</p>
+<p class="meta">Written after PRs #599–#602. All measurements taken on the Mac, 2026-09-20, against <code>main</code> at <code>99a4fb2e</code>, backend on <code>localhost:4000</code> with the local Postgres.</p>
+
+<div class="banner stop">
+<strong>Read this before writing any code.</strong> The owner explicitly rejected full-screen loading skeletons, and he is right to. Section 4 explains why adding <code>loading.tsx</code> across the public routes would make the site feel worse, not better. Two tasks in section 5 are worth doing; one of them is the only one with a real SEO argument.
+</div>
+
+<div class="toc">
+  <a href="#symptom">1 · The symptom, as reported</a>
+  <a href="#numbers">2 · What was measured</a>
+  <a href="#why">3 · Why dev and production differ</a>
+  <a href="#noloaders">4 · Why loaders are the wrong fix</a>
+  <a href="#tasks">5 · The work worth doing</a>
+  <a href="#verify">6 · How to verify (exact recipe)</a>
+  <a href="#traps">7 · Traps</a>
+  <a href="#notdone">8 · What this does not cover</a>
+</div>
+
+<section id="symptom">
+<h2>1 · The symptom, as reported</h2>
+<p>Clicking a link on <code>localhost:3000</code> leaves the old page on screen, apparently frozen, for a noticeable beat — sometimes several seconds — and then the new page appears all at once. There is no spinner, no skeleton, no visual acknowledgement that the click registered. It is worst on a page type the session has not opened before.</p>
+<p>The owner's two questions were: <em>is this only local?</em> and <em>could it hurt SEO by making Google's crawler wait?</em> The answers are <strong>yes, almost entirely local</strong> and <strong>a little, on one route family only</strong>.</p>
+</section>
+
+<section id="numbers">
+<h2>2 · What was measured</h2>
+
+<h3>Client-side navigation: time between the click and the URL changing</h3>
+<p>Measured in the browser with a 8 ms poll on <code>location.pathname</code> after dispatching a real click on a <code>next/link</code> anchor. This is the interval during which the screen shows nothing new — the interval the owner experiences as "frozen".</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Scenario</th><th>Route</th><th>Frozen for</th></tr></thead>
+<tbody>
+<tr><td><code>next dev</code>, first ever click into this route pattern</td><td>/authors/[slug]</td><td class="num bad">4,247 ms</td></tr>
+<tr><td><code>next dev</code>, identical click a minute later</td><td>/authors/[slug]</td><td class="num">103 ms</td></tr>
+<tr><td>Production build, URL never rendered, link sat in view ~2.5 s first</td><td>/authors/carlos-lima</td><td class="num good">30 ms</td></tr>
+<tr><td>Production build, URL never rendered, clicked the instant it scrolled into view</td><td>/peru/lima/guides/lima-peru-travel-guide…</td><td class="num">828 ms</td></tr>
+<tr><td>Production build, same URL once cached</td><td>/peru/lima/guides/lima-peru-travel-guide…</td><td class="num good">58 ms</td></tr>
+</tbody>
+</table></div>
+
+<h3>Server-side: what a crawler or a first visitor waits for</h3>
+<p>Plain <code>curl</code> against a production build served with <code>next start</code>. "Cold" means the first request ever made to that URL; "cached" is any request after.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>URL</th><th>Cold</th><th>Cached</th></tr></thead>
+<tbody>
+<tr><td>/peru/lima <span class="meta">(city homepage — the heavy one)</span></td><td class="num bad">902 ms</td><td class="num good">5 ms</td></tr>
+<tr><td>/peru/lima/itineraries/barranco-lima-food-one-day</td><td class="num">187 ms</td><td class="num good">5 ms</td></tr>
+<tr><td>/peru/lima/maps/best-restaurants-in-san-isidro-right-now</td><td class="num">137 ms</td><td class="num good">6 ms</td></tr>
+<tr><td>/authors/alan-malpartida</td><td class="num">171 ms</td><td class="num good">3 ms</td></tr>
+</tbody>
+</table></div>
+
+<aside>
+<strong>Machine caveat.</strong> During these runs the Mac had 21 GB free of 460 GB (96% full) and was swapping heavily (8.6 GB of 10 GB in use, 57 M pageins). Every number above is therefore pessimistic. Do not treat them as hardware-neutral.
+</aside>
+</section>
+
+<section id="why">
+<h2>3 · Why dev and production differ so much</h2>
+<p>Two mechanisms stack on <code>localhost</code>, and neither survives a deploy.</p>
+<ol>
+<li><strong>On-demand compilation.</strong> <code>next dev</code> builds a route's code the first time that route is requested — once per route <em>pattern</em>, not per URL. Measured directly with <code>RSC: 1</code> requests: cold 0.3–4.2 s, warm 40–120 ms. Restarting <code>pnpm dev</code> resets every route to cold, which is why it feels worst right after a restart.</li>
+<li><strong>Link prefetching is off in development.</strong> This is documented Next behaviour rather than something isolated here, but the production numbers are consistent with it: a link that had been sitting in the viewport resolved in 30 ms, while the same kind of link clicked the instant it scrolled into view took 828 ms. In production, <code>next/link</code> warms the destination before the click; in dev it does not.</li>
+</ol>
+<p>The codebase is already set up to benefit from this. 42 files import <code>next/link</code>, there are <strong>no raw internal <code>&lt;a href="/…"&gt;</code> anchors</strong>, and prefetch is disabled in exactly one place (<code>features/Payments/components/PricingDisplay.tsx:87</code>, deliberately). Nothing needs changing here.</p>
+</section>
+
+<section id="noloaders">
+<h2>4 · Why <code>loading.tsx</code> everywhere is the wrong fix</h2>
+<p>An earlier draft of this advice suggested adding <code>loading.tsx</code> to the public routes so a click paints immediately. <strong>The production measurements do not support that, and it should not be built.</strong></p>
+<ul>
+<li>The interval a loader would fill is <strong>30–58 ms</strong> in production. A skeleton that appears and disappears inside 50 ms reads as a flash of noise, not as responsiveness. The owner's objection — that it would add a visible jitter to something already instant — is the correct read.</li>
+<li>The only case where a loader would be on screen long enough to be useful is the <strong>828 ms cold-URL click</strong>, and that case has a better fix (task A below) that removes the wait entirely rather than decorating it.</li>
+<li>One <code>loading.tsx</code> already exists, at <code>(public)/[country]/[city]/itineraries/[slug]/loading.tsx</code>, added 2026-07-20. Leave it. Do not use it as a precedent to add more.</li>
+</ul>
+<p class="meta">If a future measurement on real hosting shows navigations consistently above ~300 ms, revisit this — but measure first, on the real platform, and prefer making the page fast over covering the wait.</p>
+</section>
+
+<section id="tasks">
+<h2>5 · The work worth doing</h2>
+
+<div class="task">
+<p><span class="tag">Task A</span><strong>Pre-build the public URLs with <code>generateStaticParams</code></strong></p>
+<p><strong>Why.</strong> Every public route is marked <code>○ (Static)</code> in the build output, but <strong>not one of the 19 page files calls <code>generateStaticParams</code></strong>. So no concrete URL exists at deploy time. Each URL is rendered live on its first request and only then cached. That first request is frequently Google's crawler rather than a person, and on the city homepage it costs 902 ms of server render against the Payload backend.</p>
+<p><strong>This is the SEO answer the owner asked for.</strong> The crawler is not erroring — the pages return 200 — but it is paying a live render on first contact with every URL, and the city pages are the slowest and the most important.</p>
+<p><strong>Scope is small.</strong> Local content counts: 18 published articles, 3 single-type listicles, 3 listicle itineraries, 5 authors, 31 locations across 5 cities. Pre-building all of it is cheap. Check the live database before sizing — these are local numbers.</p>
+<h3>What to do</h3>
+<ul>
+<li>Add <code>generateStaticParams</code> to the dynamic public pages, starting with the highest-value ones: <code>[country]/[city]/page.tsx</code>, <code>[country]/[city]/[category]/[slug]/page.tsx</code>, <code>[country]/[city]/maps/[slug]/page.tsx</code>, <code>[country]/[city]/itineraries/[slug]/page.tsx</code>, <code>authors/[slug]/page.tsx</code>, <code>articles/[slug]/page.tsx</code>.</li>
+<li>Source the params from the same public endpoints the pages already use, not from a new query path.</li>
+<li><strong>Leave <code>dynamicParams</code> at its default (true).</strong> A slug published after the last deploy must still resolve — rendered on demand, then cached — rather than 404.</li>
+<li>Decide, and write down, what happens when the backend is unreachable at build time. A build that silently yields zero params is indistinguishable from today's behaviour; a build that fails loudly is probably better. Do not let a backend blip ship an empty sitemap.</li>
+</ul>
+<h3>Acceptance</h3>
+<ul>
+<li>The build output lists concrete URLs for those routes, not just the pattern.</li>
+<li>First-ever <code>curl</code> to a pre-built city page is in the same range as a cached one (single-digit to low-tens of ms), not 900 ms.</li>
+<li>A slug that exists in the database but was created after the build still renders, does not 404.</li>
+<li>Build wall-clock recorded before and after.</li>
+</ul>
+</div>
+
+<div class="task">
+<p><span class="tag">Task B</span><strong>Finish the city page's backend cost — issue <a href="https://github.com/Questurian/questurian/issues/596">#596</a></strong></p>
+<p><strong>Why.</strong> The 902 ms cold city page is the slowest server render on the site, and it is slow because of the endpoint behind it. PR <a href="https://github.com/Questurian/questurian/pull/601">#601</a> took it from 428 follow-up queries to 350 by giving every block repository a shared <code>populate</code> map. The remaining half needs a different tool.</p>
+<p><strong>The specific remaining cause.</strong> <code>hotel-grid</code>, <code>tour-grid</code> and <code>things-to-do-attractions</code> call <code>findByID</code> at <code>depth: 2</code> with <strong>no top-level <code>select</code> at all</strong>, so every relationship on an accommodation, tour or attraction is still fetched — <code>createdBy</code>, <code>locationRef</code>, <code>sharedNeighborhoods</code>, tags, the Instagram gallery. <code>populate</code> cannot help: it narrows what a populated document brings back, but Payload still issues the query. Only a <code>select</code> on the root read removes it.</p>
+<h3>What to do</h3>
+<ul>
+<li>One repository at a time. Add a top-level <code>select</code> covering exactly what that block's normalizer reads. The normalizers are in <code>&lt;block&gt;/lib/candidate.ts</code> and <code>reference-grid/candidate.ts</code>.</li>
+<li>Diff the full endpoint body after each one. <strong>Byte-identical is the bar</strong>, same as #601.</li>
+<li>Extend <code>homepage-featured-content/populate.test.ts</code> to cover the new selects. It already runs the real normalizers over recording proxies and fails when one reads a field that is not fetched; the same technique applies to a root <code>select</code>.</li>
+</ul>
+<aside><strong>Known limitation, stated in the issue thread.</strong> No city in the local database has attractions-block content, so a <code>select</code> on <code>things-to-do-attractions</code> cannot be diffed byte-identically here. Either seed content first, verify against the live database, or ship the two that can be proven and say plainly that the third was not.</aside>
+</div>
+
+<div class="task">
+<p><span class="tag skip">Do not do</span><strong>Adding <code>loading.tsx</code> across the public routes</strong></p>
+<p>See section 4. The interval it would cover is 30–58 ms in production. The owner has rejected it. Do not revive it as a "quick win".</p>
+</div>
+
+<div class="task">
+<p><span class="tag low">Housekeeping</span><strong>Free disk space on the Mac</strong></p>
+<p>Not a code task, and not one an agent should act on. 21 GB free of 460 GB with 8.6 GB of swap in use is making every local build and every local measurement slower than the code deserves. Worth telling the owner again; worth nobody deleting anything on his behalf.</p>
+</div>
+</section>
+
+<section id="verify">
+<h2>6 · How to verify (exact recipe)</h2>
+<p>Local timings are only meaningful against a production build. <code>next dev</code> will mislead you by an order of magnitude.</p>
+
+<h3>Build and serve without disturbing the running dev servers</h3>
+<pre><code># apps/questura/apps/client
+# 1. Temporarily add to next.config.ts, inside nextConfig:
+#      distDir: process.env.NEXT_DIST_DIR || ".next",
+
+NEXT_DIST_DIR=.next-prod NEXT_PUBLIC_BACKEND_URL=http://localhost:4000 npx next build
+NEXT_DIST_DIR=.next-prod NEXT_PUBLIC_BACKEND_URL=http://localhost:4000 npx next start -p 3200
+
+# 2. Afterwards, ALWAYS:
+#      git checkout HEAD -- next.config.ts tsconfig.json   # the build rewrites tsconfig include
+#      rm -rf .next-prod
+#      pkill -f "next start -p 3200"</code></pre>
+
+<h3>Measure a click the way a person experiences it</h3>
+<p>In the browser, on the page you are navigating <em>from</em>:</p>
+<pre><code>const href = '/authors/carlos-lima'
+const a = [...document.querySelectorAll('a')].find(x =&gt; x.getAttribute('href') === href)
+a.scrollIntoView(); await new Promise(r =&gt; setTimeout(r, 2500))   // let prefetch happen
+const t0 = performance.now(); let at = null
+const poll = setInterval(() =&gt; { if (at === null &amp;&amp; location.pathname === href) at = performance.now() }, 8)
+a.click()
+await new Promise(r =&gt; setTimeout(r, 8000)); clearInterval(poll)
+Math.round(at - t0)   // ms the screen showed nothing new</code></pre>
+
+<h3>Count the queries behind a page</h3>
+<pre><code># Per-table DB reads, no code changes needed:
+psql -c "select pg_stat_reset()" "postgres://$(whoami)@localhost:5432/google-login"
+curl -s -o /dev/null http://localhost:4000/api/public/location-homepages/peru/lima
+psql -At -F'|' -c "select relname, coalesce(seq_scan,0)+coalesce(idx_scan,0) as scans
+  from pg_stat_user_tables where coalesce(seq_scan,0)+coalesce(idx_scan,0) &gt; 0
+  order by scans desc" "postgres://$(whoami)@localhost:5432/google-login"</code></pre>
+<p>For Payload-level counts, wrap <code>payload.find</code> / <code>payload.findByID</code> on the singleton inside the route and restore on a <code>setTimeout</code> of <strong>several seconds</strong> — a <code>0</code> timeout fires before the request finishes and you will count one query instead of hundreds.</p>
+</section>
+
+<section id="traps">
+<h2>7 · Traps</h2>
+<ul>
+<li><strong><code>:3000</code> may not be <code>pnpm dev</code>.</strong> It has been observed running <code>next start</code> against a stale build, launched by a different tool. Hashed chunk filenames (<code>8945-a8f0….js</code>) give it away. Check <code>ps -o command=</code> before debugging why an edit "did not apply".</li>
+<li><strong>A hidden browser pane freezes <code>requestAnimationFrame</code> and CSS transitions.</strong> <code>getComputedStyle</code> then returns a transition's start value forever, so an opacity check reads <code>1</code> when the rule says <code>0</code>. Inject <code>transition: none !important</code> before reading, or front the pane.</li>
+<li><strong>Do not touch the caching already set in <code>(public)/layout.tsx</code></strong> (<code>dynamic = "force-static"</code>, <code>revalidate = 3600</code>). It is correct. Task A adds params; it does not change the caching model.</li>
+<li><strong>Announce any port you occupy, and free it when done.</strong> A previous agent session left a <code>proxy.mjs</code> on <code>:4015</code> running for seventeen hours and an orphaned backend held <code>:4000</code> overnight, which silently stopped the owner's own <code>pnpm dev</code> from starting its backend. This cost real time and real trust.</li>
+<li><strong>The city endpoint's <code>locationKey</code> is not dead.</strong> Issue #596 claims it is always <code>null</code>; it is not. <code>location</code> is a <em>text</em> field on all three featured collections — <code>locationRef</code> is the relationship, and it is not in <code>homepageFeaturedSelect</code>. Do not delete the field.</li>
+</ul>
+</section>
+
+<section id="notdone">
+<h2>8 · What this does not cover</h2>
+<ul>
+<li><strong>No measurement on real hosting.</strong> Everything here is a production <em>build</em> served from the same Mac. A serverless platform adds cold starts and network latency that nothing local can predict. The production platform is still undecided; re-measure after the cutover.</li>
+<li><strong>No throttled or mobile measurement.</strong> All numbers are loopback on a desktop. A phone on mobile data will see longer intervals, which is the one scenario where the section 4 conclusion could change.</li>
+<li><strong>No Core Web Vitals.</strong> LCP, INP and CLS were not captured in this pass.</li>
+<li><strong>Crawler behaviour was inferred, not observed.</strong> No Search Console data was read. The SEO argument in task A rests on the cold-render timings above, not on evidence that Google is currently being slowed.</li>
+<li><strong>Only Lima has meaningful content locally.</strong> Medellin and Mexico City return empty homepages (188 and 191 bytes). Any before/after body comparison is effectively a Lima-only test.</li>
+</ul>
+</section>
+
+<footer>
+<p>Prepared for a fresh working session. Related: PRs <a href="https://github.com/Questurian/questurian/pull/599">#599</a>, <a href="https://github.com/Questurian/questurian/pull/600">#600</a>, <a href="https://github.com/Questurian/questurian/pull/601">#601</a>, <a href="https://github.com/Questurian/questurian/pull/602">#602</a> · open issue <a href="https://github.com/Questurian/questurian/issues/596">#596</a> · earlier pass <code>docs/performance-handoff-2026-09-20.html</code>.</p>
+</footer>
+
+</main></body></html>
