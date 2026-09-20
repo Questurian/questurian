@@ -13,6 +13,7 @@ import json
 
 from app.features.itinerary_pipeline import research
 from app.features.itinerary_pipeline.selection_contract import SELECTION_CONTRACT_VERSION
+from model_gateway import model_for
 
 import pytest
 
@@ -183,8 +184,17 @@ def test_it_runs_on_the_job_s_model_not_a_named_one(client):
     seen: list[dict] = []
     _run(client, workspace_id, {"structured_output": _answer(view)}, seen=seen)
     # Whatever the registry says; the point is that a call site did not choose.
+    #
+    # Asked as "is it the registry's answer" and not "is it a claude-* name".
+    # The job asks for claude-sonnet-5-high, but a claude-* name is substituted
+    # to Google whenever neither Claude path is switched on, and the switch is
+    # `CLAUDE_SUBSCRIPTION_MODELS_ENABLED` in a local .env. A name-shaped
+    # assertion therefore passes on a machine that has the subscription and
+    # fails in CI, which has none — it asks about the environment rather than
+    # about this call site. `model_for` is what `shared.model_calls.resolve`
+    # reaches for, so this is the same answer the call site had to take.
     assert seen[0]["model_name"]
-    assert seen[0]["model_name"].startswith("claude-")
+    assert seen[0]["model_name"] == model_for(research.RESEARCH_JOB)
 
 
 # -------------------------------------------------------- what comes back --
