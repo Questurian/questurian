@@ -60,7 +60,7 @@ export async function GET(
       )
     }
 
-    const scope = await resolveLocationGridScope(payload, homepage.location)
+    const scope = await resolveLocationGridScope(payload, homepage.location, location)
     const resolved = await resolvePageBlocks(payload, publishedBlocks, scope)
     return NextResponse.json(
       formatPublicLocationHomepageDoc(resolved, { country, city }, {

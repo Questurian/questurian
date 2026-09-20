@@ -7,6 +7,7 @@ import type {
   LocationGridSelectionOptions,
 } from '../types'
 
+import { readWithBoundedConcurrency } from '../../reference-grid/bounded-reads'
 import { LOCATION_GRID_MIN_SLOTS } from '../constants'
 import { findLocationGridDoc } from '../lib/repository'
 import {
@@ -56,7 +57,13 @@ export async function getLocationGridSelectionFromItems(
   const items: LocationGridCandidate[] = []
   const invalidItems: LocationGridInvalidItem[] = []
 
-  for (const slot of parsedSlots) {
+  // Read first, decide after. The decision loop is unchanged, so slot order,
+  // invalid reasons and completeness cannot move.
+  const candidates = await readWithBoundedConcurrency(parsedSlots, (slot) =>
+    slot.ref ? findLocationGridDoc(payload, slot.ref) : Promise.resolve(null),
+  )
+
+  for (const [index, slot] of parsedSlots.entries()) {
     if (!slot.ref) {
       invalidItems.push({
         slot: slot.slot,
@@ -65,7 +72,7 @@ export async function getLocationGridSelectionFromItems(
       continue
     }
 
-    const candidate = await findLocationGridDoc(payload, slot.ref)
+    const candidate = candidates[index]
 
     if (!candidate) {
       invalidItems.push({
@@ -88,12 +95,22 @@ export async function getLocationGridSelectionFromItems(
 
     items.push({
       ...candidate,
-      href: await resolvePublishedHomepageHref(payload, candidate),
+      // Filled in below, once every accepted card is known: each href costs its
+      // own homepage lookup and they have no reason to queue behind each other.
+      href: null,
       slot: slot.slot,
       kicker: kickers[slot.slot - 1] ?? candidate.kicker,
       description: descriptions[slot.slot - 1] ?? null,
     })
   }
+
+  const hrefs = await readWithBoundedConcurrency(items, (item) =>
+    resolvePublishedHomepageHref(payload, item),
+  )
+  hrefs.forEach((href, index) => {
+    const item = items[index]
+    if (item) item.href = href
+  })
 
   return {
     items,
