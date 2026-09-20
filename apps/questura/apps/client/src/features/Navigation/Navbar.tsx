@@ -2,7 +2,7 @@
 
 import DesktopNavbar from "./Desktop/DesktopNavbar";
 import MobileNavbar from "./Mobile/MobileNavbar";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 // Virtual scroll pixels that the navbar "consumes" before the page moves.
 // Wheel input is partitioned: first ABSORB_PX go entirely to the animation,
@@ -14,18 +14,18 @@ const ABSORB_PX = 120;
 const LERP = 0.09;
 
 export default function Navbar() {
-  const [hasMounted, setHasMounted] = useState(false);
   const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    setHasMounted(true);
-
     let rafId = 0;
     let virtualY = 0;      // accumulated wheel intent (not real scrollY)
     let currentVal = 0;    // lerp-smoothed value written to CSS
     let targetVal = 0;     // instant target from wheel input
 
-    // Continuous lerp loop — runs every frame regardless of scroll events.
+    // Lerp loop. It runs only while the rendered value is still chasing the
+    // target; once it has snapped to an endpoint there is nothing left to
+    // write, so it stops instead of burning a frame forever. `wake` restarts
+    // it whenever new input moves the target.
     const tick = () => {
       currentVal += (targetVal - currentVal) * LERP;
       if (targetVal === 1 && currentVal > 0.995) currentVal = 1;
@@ -40,14 +40,26 @@ export default function Navbar() {
         "--navbar-border-alpha",
         String(borderAlpha)
       );
+
+      if (currentVal === targetVal) {
+        rafId = 0;
+        return;
+      }
       rafId = requestAnimationFrame(tick);
     };
-    rafId = requestAnimationFrame(tick);
+
+    // Idempotent: a loop that is already running is left alone.
+    const wake = () => {
+      if (rafId === 0) rafId = requestAnimationFrame(tick);
+    };
+
+    wake();
 
     const handleWheel = (e: WheelEvent) => {
       const prev = virtualY;
       virtualY = Math.max(0, virtualY + e.deltaY);
       targetVal = Math.min(1, virtualY / ABSORB_PX);
+      wake();
 
       // While the navbar hasn't fully collapsed yet, absorb scroll into the
       // animation. Only the delta that exceeds the absorption budget reaches
@@ -68,6 +80,7 @@ export default function Navbar() {
       if (window.scrollY === 0) {
         virtualY = 0;
         targetVal = 0;
+        wake();
       }
     };
 
@@ -83,7 +96,6 @@ export default function Navbar() {
   // Keep --navbar-height in sync with the real nav height at every animation frame
   // so that consumers (e.g. the maps page sticky panel) can track it smoothly.
   useEffect(() => {
-    if (!hasMounted) return;
     const el = navRef.current;
     if (!el) return;
 
@@ -99,13 +111,7 @@ export default function Navbar() {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [hasMounted]);
-
-  if (!hasMounted) {
-    return (
-      <nav className="sticky top-0 z-40 h-[55px] w-full animate-pulse bg-[#ece9e3] 1024:h-24" />
-    );
-  }
+  }, []);
 
   return (
     <nav ref={navRef} className="sticky top-0 z-40">

@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import type { JSX } from 'react'
 
@@ -13,6 +11,7 @@ import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
 import { PublicImage, PublicSource } from '@/components/media/PublicImage'
 import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
+import { heroImagePriority, type ImagePriority } from '../heroImagePriority'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -58,10 +57,11 @@ function ArticleTitleLink({ article }: { article: FeaturedArticleTeaser }): JSX.
 
 type HeroArticleCardProps = {
   article: FeaturedArticleTeaser
+  imagePriority: ImagePriority
 }
 
 // Slot 1 in the hero-left layout: large image over copy, mirrors the four-slot hero.
-function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
+function HeroArticleCard({ article, imagePriority }: HeroArticleCardProps): JSX.Element {
   const mobileImageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const desktopImageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
   // `<picture>` resolves to the <img> when no <source> matches, so the mobile
@@ -88,8 +88,7 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
               alt=""
               className="relative z-10 h-full w-full object-cover"
               decoding="async"
-              fetchPriority="high"
-              loading="eager"
+              {...imagePriority}
               sizes={BLOCK_IMAGE_SIZES.hero}
             />
           </picture>
@@ -187,10 +186,11 @@ function StackedWideCard({ article, variant = 'stack' }: StackedWideCardProps): 
 
 type CenterFeatureCardProps = {
   article: FeaturedArticleTeaser
+  imagePriority: ImagePriority
 }
 
 // Slot 2 in the featured-center layout: tall center feature.
-function CenterFeatureCard({ article }: CenterFeatureCardProps): JSX.Element {
+function CenterFeatureCard({ article, imagePriority }: CenterFeatureCardProps): JSX.Element {
   const mobileImageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const desktopImageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
   // `<picture>` resolves to the <img> when no <source> matches, so the mobile
@@ -216,8 +216,7 @@ function CenterFeatureCard({ article }: CenterFeatureCardProps): JSX.Element {
               alt=""
               className="relative z-10 h-full w-full object-cover"
               decoding="async"
-              fetchPriority="high"
-              loading="eager"
+              {...imagePriority}
               sizes={BLOCK_IMAGE_SIZES.centreFeature}
             />
           </picture>
@@ -249,8 +248,11 @@ function CenterFeatureCard({ article }: CenterFeatureCardProps): JSX.Element {
 
 export function FeaturedArticlesThreeArticlePreview({
   block,
+  blockIndex,
 }: HomepageBlockLayoutProps<FeaturedArticlesBlock>): JSX.Element | null {
   if (block.items.length === 0) return null
+
+  const imagePriority = heroImagePriority(blockIndex)
 
   const layout = block.slot3Layout === 'featured-center' ? 'featured-center' : 'hero-left'
   const articles = block.items.slice(0, 3)
@@ -276,7 +278,11 @@ export function FeaturedArticlesThreeArticlePreview({
         <div className="city-featured-three-fc-layout">
           {articles.map((article, index) =>
             index === 1 ? (
-              <CenterFeatureCard key={getArticleKey(article, index)} article={article} />
+              <CenterFeatureCard
+                key={getArticleKey(article, index)}
+                article={article}
+                imagePriority={imagePriority}
+              />
             ) : (
               <StackedWideCard
                 key={getArticleKey(article, index)}
@@ -289,7 +295,11 @@ export function FeaturedArticlesThreeArticlePreview({
       ) : (
         <div className="city-featured-three-layout">
           <div className="city-featured-three-hero">
-            <HeroArticleCard key={getArticleKey(articles[0], 0)} article={articles[0]} />
+            <HeroArticleCard
+              key={getArticleKey(articles[0], 0)}
+              article={articles[0]}
+              imagePriority={imagePriority}
+            />
           </div>
 
           <div className="city-featured-three-stack">

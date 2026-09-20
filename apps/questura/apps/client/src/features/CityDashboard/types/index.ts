@@ -319,6 +319,13 @@ export type HomepageBlockLayoutProps<
 > = {
   block: TBlock;
   location: CityHomepageLocation | null;
+  /**
+   * Where this block sits in the page's block list, counting from 0.
+   * A layout cannot tell on its own whether it is the first thing on the
+   * page or the ninth, so image loading priority is derived from this and
+   * never hardcoded. See `heroImagePriority`.
+   */
+  blockIndex: number;
 };
 
 export type HomepageBlockLayoutDefinition = {

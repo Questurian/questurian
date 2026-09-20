@@ -14,6 +14,7 @@ import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
 import { PublicImage } from '@/components/media/PublicImage'
 import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
+import { isPriorityImage } from '../heroImagePriority'
 
 function getArticleTypeLabel(article: FeaturedArticleTeaser): string {
   return article.articleType ?? article.category?.name ?? 'Article'
@@ -107,6 +108,7 @@ function CarouselArticleCard({ article, isPriority, isLast }: CarouselArticleCar
 
 export function FeaturedArticleCarouselPreview({
   block,
+  blockIndex,
 }: HomepageBlockLayoutProps<CityHomepageArticleBlock>): JSX.Element | null {
   const items = block.items ?? []
 
@@ -188,7 +190,7 @@ export function FeaturedArticleCarouselPreview({
             <CarouselArticleCard
               key={getArticleKey(article, index)}
               article={article}
-              isPriority={index === 0}
+              isPriority={isPriorityImage(blockIndex, index)}
               isLast={index === items.length - 1}
             />
           ))}

@@ -5,6 +5,7 @@ import type { LocationGridBlock, LocationGridItem, HomepageBlockLayoutProps } fr
 import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
 import { PublicImage } from '@/components/media/PublicImage'
 import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
+import { isPriorityImage } from '../heroImagePriority'
 
 const MEDIA_ASPECT_CLASSES: Record<string, string> = {
   rectangle: 'h-28 768:h-36',
@@ -87,6 +88,7 @@ function LocationCard({
 
 export function LocationGridPreview({
   block,
+  blockIndex,
 }: HomepageBlockLayoutProps<LocationGridBlock>): JSX.Element | null {
   const items = block.selection?.items ?? []
   if (items.length === 0) return null
@@ -118,7 +120,7 @@ export function LocationGridPreview({
             <LocationCard
               key={item.id}
               item={item}
-              isPriority={index === 0}
+              isPriority={isPriorityImage(blockIndex, index)}
               aspectClass={aspectClass}
             />
           ))}

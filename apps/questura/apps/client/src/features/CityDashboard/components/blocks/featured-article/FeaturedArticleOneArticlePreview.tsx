@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import type { JSX } from 'react'
 
@@ -13,6 +11,7 @@ import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
 import { PublicImage } from '@/components/media/PublicImage'
 import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
+import { heroImagePriority, type ImagePriority } from '../heroImagePriority'
 
 function getAuthorLabel(article: FeaturedArticleTeaser): string {
   return article.author?.name || 'Questurian'
@@ -24,7 +23,7 @@ function ArticleImage({
   className,
 }: {
   src: string
-  priority: boolean
+  priority: ImagePriority
   className: string
 }): JSX.Element {
   return (
@@ -32,8 +31,8 @@ function ArticleImage({
       src={src}
       alt=""
       className={`${className} relative z-10`}
-      fetchPriority={priority ? 'high' : 'auto'}
-      loading={priority ? 'eager' : 'lazy'}
+      fetchPriority={priority.fetchPriority}
+      loading={priority.loading}
       decoding="async"
       sizes={BLOCK_IMAGE_SIZES.hero}
     />
@@ -43,9 +42,11 @@ function ArticleImage({
 function CreatorAvatar({
   article,
   authorLabel,
+  imagePriority,
 }: {
   article: FeaturedArticleTeaser
   authorLabel: string
+  imagePriority: ImagePriority
 }): JSX.Element {
   const avatarUrl = article.author?.avatar?.url ?? null
   const avatarAlt = article.author?.avatar?.alt ?? `${authorLabel} profile photo`
@@ -57,8 +58,7 @@ function CreatorAvatar({
           src={avatarUrl}
           alt={avatarAlt}
           className="h-full w-full object-cover"
-          /* Carried no `loading` before, which meant eager. */
-          loading="eager"
+          {...imagePriority}
           sizes={BLOCK_IMAGE_SIZES.avatar}
         />
       ) : (
@@ -88,11 +88,13 @@ function CreatorAvatar({
 
 export function FeaturedArticleOneArticlePreview({
   block,
+  blockIndex,
   showAuthorAvatar = false,
 }: HomepageBlockLayoutProps<CityHomepageArticleBlock> & {
   showAuthorAvatar?: boolean
 }): JSX.Element | null {
   const article = block.items[0] ?? null
+  const imagePriority = heroImagePriority(blockIndex)
 
   const desktopImageUrl = article ? (article.imageUrl ?? article.imageUrlSquare ?? null) : null
   const mobileImageUrl = article ? (article.imageUrlSquare ?? article.imageUrl ?? null) : null
@@ -111,7 +113,7 @@ export function FeaturedArticleOneArticlePreview({
     <>
       {mobileImageUrl ? (
         <div className="city-article-image-shell relative w-full aspect-[3/2] overflow-hidden bg-[#1a1a1a]">
-          <ArticleImage src={mobileImageUrl} priority className="h-full w-full object-cover" />
+          <ArticleImage src={mobileImageUrl} priority={imagePriority} className="h-full w-full object-cover" />
           <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
         </div>
       ) : (
@@ -124,7 +126,11 @@ export function FeaturedArticleOneArticlePreview({
               {creatorKicker}
             </p>
           ) : null}
-          {showAuthorAvatar ? <CreatorAvatar article={article} authorLabel={authorLabel} /> : null}
+          {showAuthorAvatar ? <CreatorAvatar
+              article={article}
+              authorLabel={authorLabel}
+              imagePriority={imagePriority}
+            /> : null}
           <h2 className="font-editorial font-semibold text-[2.1rem] leading-[1.0] text-white">
             {articlePath ? <Link href={articlePath}>{article.title}</Link> : article.title}
           </h2>
@@ -156,7 +162,11 @@ export function FeaturedArticleOneArticlePreview({
               {creatorKicker}
             </p>
           ) : null}
-          {showAuthorAvatar ? <CreatorAvatar article={article} authorLabel={authorLabel} /> : null}
+          {showAuthorAvatar ? <CreatorAvatar
+              article={article}
+              authorLabel={authorLabel}
+              imagePriority={imagePriority}
+            /> : null}
           <h2 className="font-editorial font-semibold leading-[1.15] text-white text-[1.35rem] 1024:text-[1.6rem] 1280:text-[1.85rem]">
             {articlePath ? <Link href={articlePath}>{article.title}</Link> : article.title}
           </h2>
@@ -173,7 +183,7 @@ export function FeaturedArticleOneArticlePreview({
       <div className="768:w-1/2 768:py-10 768:pr-8 1024:py-14 1024:pr-12 1280:py-16 1280:pr-16 flex items-center">
         <div className="city-article-image-shell relative ml-auto w-[96%] aspect-[3/2] overflow-hidden bg-[#1a1a1a]">
           {desktopImageUrl ? (
-            <ArticleImage src={desktopImageUrl} priority className="h-full w-full object-cover" />
+            <ArticleImage src={desktopImageUrl} priority={imagePriority} className="h-full w-full object-cover" />
           ) : null}
           <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
         </div>

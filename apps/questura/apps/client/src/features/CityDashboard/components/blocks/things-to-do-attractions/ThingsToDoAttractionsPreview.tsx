@@ -5,10 +5,12 @@ import type { JSX } from 'react'
 import type { ThingsToDoAttractionsBlock, HomepageBlockLayoutProps } from '../../../types'
 import { BLOCK_GUTTER_CLASS, BlockSection } from '../BlockSection'
 import { PlaceCarouselCard } from '../PlaceCarouselCard'
+import { isPriorityImage } from '../heroImagePriority'
 import { useSnapCarousel } from '../useSnapCarousel'
 
 export function ThingsToDoAttractionsPreview({
   block,
+  blockIndex,
 }: HomepageBlockLayoutProps<ThingsToDoAttractionsBlock>): JSX.Element | null {
   const items = block.selection?.items ?? []
 
@@ -101,7 +103,7 @@ export function ThingsToDoAttractionsPreview({
               key={item.id}
               title={item.title}
               imageUrl={item.imageUrl}
-              isPriority={index === 0}
+              isPriority={isPriorityImage(blockIndex, index)}
               isLast={index === items.length - 1}
               priceLevel={item.priceLevel}
               location={item.location}

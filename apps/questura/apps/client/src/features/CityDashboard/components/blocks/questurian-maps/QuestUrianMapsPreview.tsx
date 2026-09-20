@@ -12,6 +12,7 @@ import { BlockSection, BLOCK_GUTTER_CLASS } from '../BlockSection'
 import { NavigableImageTarget } from '../NavigableImageTarget'
 import { PublicImage } from '@/components/media/PublicImage'
 import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
+import { isPriorityImage } from '../heroImagePriority'
 
 function MapPinIcon(): JSX.Element {
   return (
@@ -133,6 +134,7 @@ function MapGridCard({
 
 export function QuestUrianMapsPreview({
   block,
+  blockIndex,
 }: HomepageBlockLayoutProps<CityHomepageArticleBlock>): JSX.Element | null {
   const items = block.items ?? []
 
@@ -177,7 +179,7 @@ export function QuestUrianMapsPreview({
             <MapCarouselCard
               key={`${item.title}-${index}`}
               item={item}
-              isPriority={index === 0}
+              isPriority={isPriorityImage(blockIndex, index)}
               isLast={index === items.length - 1}
             />
           ))}
@@ -193,7 +195,7 @@ export function QuestUrianMapsPreview({
               key={`r1-${item.title}-${index}`}
               className={index > 0 ? 'border-l border-[rgba(95,89,82,0.18)]' : ''}
             >
-              <MapGridCard item={item} isPriority={index === 0} />
+              <MapGridCard item={item} isPriority={isPriorityImage(blockIndex, index)} />
             </div>
           ))}
         </div>
@@ -205,7 +207,7 @@ export function QuestUrianMapsPreview({
                 key={`r2-${item.title}-${index}`}
                 className={index > 0 ? 'border-l border-[rgba(95,89,82,0.18)]' : ''}
               >
-                <MapGridCard item={item} isPriority={false} />
+                <MapGridCard item={item} isPriority={isPriorityImage(blockIndex, index)} />
               </div>
             ))}
           </div>

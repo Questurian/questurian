@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import type { JSX } from 'react'
 
@@ -13,6 +11,7 @@ import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
 import { PublicImage } from '@/components/media/PublicImage'
 import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
+import { heroImagePriority, type ImagePriority } from '../heroImagePriority'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -48,10 +47,11 @@ function getBlockSectionHeading(items: FeaturedArticleTeaser[]): string | null {
 
 type MagazineHeroCardProps = {
   article: FeaturedArticleTeaser
+  imagePriority: ImagePriority
 }
 
 /** Slot 1: magazine hero — square image over serif title, dek, byline. */
-function MagazineHeroCard({ article }: MagazineHeroCardProps): JSX.Element {
+function MagazineHeroCard({ article, imagePriority }: MagazineHeroCardProps): JSX.Element {
   const imageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
 
   const articleTypeLabel = getArticleTypeLabel(article)
@@ -69,8 +69,7 @@ function MagazineHeroCard({ article }: MagazineHeroCardProps): JSX.Element {
             alt=""
             className="relative z-10 h-full w-full object-cover"
             decoding="async"
-            fetchPriority="high"
-            loading="eager"
+            {...imagePriority}
             sizes={BLOCK_IMAGE_SIZES.hero}
           />
         ) : null}
@@ -213,7 +212,10 @@ function SidebarTextRow({ article }: SidebarTextRowProps): JSX.Element {
 
 export function FeaturedArticlesFiveArticlePreview({
   block,
+  blockIndex,
 }: HomepageBlockLayoutProps<FeaturedArticlesBlock>): JSX.Element | null {
+  const imagePriority = heroImagePriority(blockIndex)
+
   if (block.items.length === 0) return null
 
   const heroArticle = block.items[0]
@@ -240,7 +242,11 @@ export function FeaturedArticlesFiveArticlePreview({
       <div className="city-featured-five-layout">
         <div className="city-featured-five-hero">
           {heroArticle ? (
-            <MagazineHeroCard key={getArticleKey(heroArticle, 0)} article={heroArticle} />
+            <MagazineHeroCard
+              key={getArticleKey(heroArticle, 0)}
+              article={heroArticle}
+              imagePriority={imagePriority}
+            />
           ) : null}
         </div>
 
