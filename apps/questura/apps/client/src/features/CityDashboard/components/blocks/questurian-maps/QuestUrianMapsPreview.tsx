@@ -189,7 +189,10 @@ export function QuestUrianMapsPreview({
                 key={`r2-${item.title}-${index}`}
                 className={index > 0 ? 'border-l border-[rgba(95,89,82,0.18)]' : ''}
               >
-                <MapGridCard item={item} isPriority={isPriorityImage(blockIndex, index)} />
+                {/* Second row, so the item's position is its index plus the
+                    first row. Passing the row-relative index gave row two's
+                    opening cards the same standing as row one's. */}
+                <MapGridCard item={item} isPriority={isPriorityImage(blockIndex, row1.length + index)} />
               </div>
             ))}
           </div>
