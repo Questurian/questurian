@@ -32,9 +32,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CountryHubPage({ params }: Props) {
   const { country } = await params
+  // 'public-page' keeps this list on the same hour-long revalidate as
+  // fetchCountryCities. The fetcher's default is search's five minutes, and
+  // because Next takes the shortest revalidate in a render, that default was
+  // capping this whole route at five minutes too.
   const [data, content] = await Promise.all([
     fetchCountryCities(country),
-    fetchLocationContent(country, 1, undefined, CONTENT_PAGE_SIZE),
+    fetchLocationContent(country, 1, undefined, CONTENT_PAGE_SIZE, 'public-page'),
   ])
 
   if (!data && !content) {

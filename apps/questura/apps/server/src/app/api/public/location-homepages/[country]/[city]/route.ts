@@ -69,7 +69,9 @@ export async function GET(
       locationGridScope,
     )
 
-    return NextResponse.json(formatPublicLocationHomepageDoc(resolvedBlocks, { country, city }))
+    return NextResponse.json(
+      formatPublicLocationHomepageDoc(resolvedBlocks, { country, city }, location),
+    )
   } catch (error) {
     return NextResponse.json(
       { message: getErrorMessage(error, 'Failed to load location homepage.') },

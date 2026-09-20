@@ -14,6 +14,7 @@ import {
   serializeIndexItem,
   type IndexItem,
 } from '@/features/articles/public/indexItem'
+import { publicLocationLabel } from '@/shared/location/server/publicLocationLabel'
 
 const MAX_PAGE_SIZE = 50
 const DEFAULT_PAGE_SIZE = 20
@@ -121,13 +122,7 @@ export async function GET(req: NextRequest) {
     const totalPages = Math.max(1, Math.ceil(totalDocs / pageSize))
     const items = merged.slice((page - 1) * pageSize, page * pageSize)
 
-    const countryName = location.countryName || location.country
-    const label =
-      location.level === 'country'
-        ? countryName
-        : location.level === 'city'
-          ? `${location.cityName || location.city}, ${countryName}`
-          : `${location.neighborhoodName || location.neighborhood}, ${location.cityName || location.city}, ${countryName}`
+    const label = publicLocationLabel(location)
 
     return NextResponse.json({
       location: {

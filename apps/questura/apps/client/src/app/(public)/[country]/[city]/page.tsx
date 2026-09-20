@@ -20,18 +20,39 @@ function formatRouteLabel(value: string): string {
     .join(' ');
 }
 
+/**
+ * The flat content list, fetched only when there is no homepage row to render.
+ *
+ * It used to sit in a `Promise.all` next to `fetchCityHomepage` on every view,
+ * which meant a curated city page fetched fifty articles it never displayed —
+ * and, worse, inherited that fetch's 300s revalidate. Next takes the shortest
+ * revalidate in a render, so the whole route rebuilt every five minutes
+ * instead of every hour. Both fetches now agree on an hour, and this one only
+ * happens on the path that reads it.
+ */
+function fetchFallbackContent(country: string, city: string) {
+  return fetchLocationContent(
+    `${country}|${city}`,
+    1,
+    undefined,
+    CONTENT_PAGE_SIZE,
+    'public-page',
+  );
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { country, city } = await params;
 
-  const [data, content] = await Promise.all([
-    fetchCityHomepage(country, city),
-    fetchLocationContent(`${country}|${city}`, 1, undefined, CONTENT_PAGE_SIZE),
-  ]);
+  // The homepage endpoint carries the location's display name, so a curated
+  // city needs no second call to learn what it is called.
+  const data = await fetchCityHomepage(country, city);
+  const content = data ? null : await fetchFallbackContent(country, city);
 
   if (!data && !content) return {};
 
   const fallbackLabel = `${formatRouteLabel(city)}, ${formatRouteLabel(country)}`;
-  const locationLabel = content?.location.label ?? fallbackLabel;
+  const locationLabel =
+    data?.location?.label ?? content?.location.label ?? fallbackLabel;
 
   return {
     title: `${locationLabel} — Questurian`,
@@ -46,16 +67,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CityPage({ params }: Props) {
   const { country, city } = await params;
 
-  const [data, content] = await Promise.all([
-    fetchCityHomepage(country, city),
-    fetchLocationContent(`${country}|${city}`, 1, undefined, CONTENT_PAGE_SIZE),
-  ]);
+  const data = await fetchCityHomepage(country, city);
 
-  if (!data && !content) {
-    notFound();
-  }
+  if (!data) {
+    const content = await fetchFallbackContent(country, city);
+    if (!content) {
+      notFound();
+    }
 
-  if (!data && content) {
     return (
       <section className="min-h-[70vh] bg-background px-5 py-16 text-foreground 768:px-10 1024:px-16">
         <div className="mx-auto max-w-3xl">
@@ -76,13 +95,17 @@ export default async function CityPage({ params }: Props) {
     );
   }
 
-  if (!data) {
-    notFound();
-  }
-
   return (
     <>
-      <CityHomepagePayloadDebugLogger data={data} />
+      {/* Dev-only, and gated here rather than inside the component: a client
+          component's props are serialized into the HTML whether or not its
+          body does anything, so an internal NODE_ENV check still shipped the
+          entire homepage payload — 56 kB, a fifth of the page — to every
+          reader. This branch is statically false in a production build, so
+          the element and its prop are never rendered. */}
+      {process.env.NODE_ENV === 'development' ? (
+        <CityHomepagePayloadDebugLogger data={data} />
+      ) : null}
       <CityHomepageContent pageBlocks={data.pageBlocks} />
       <CityDashboardPage citySlug={city} countrySlug={country} />
     </>

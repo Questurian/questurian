@@ -62,17 +62,13 @@ export async function GET(
 
     const scope = await resolveLocationGridScope(payload, homepage.location)
     const resolved = await resolvePageBlocks(payload, publishedBlocks, scope)
-    return NextResponse.json({
-      ...formatPublicLocationHomepageDoc(resolved, { country, city }),
-      location: {
-        id: location.id,
+    return NextResponse.json(
+      formatPublicLocationHomepageDoc(resolved, { country, city }, {
+        ...location,
         locationKey: location.locationKey ?? locationKey,
         level: location.level ?? 'neighborhood',
-        countryName: location.countryName ?? null,
-        cityName: location.cityName ?? null,
-        neighborhoodName: location.neighborhoodName ?? null,
-      },
-    })
+      }),
+    )
   } catch (error) {
     return NextResponse.json({ message: message(error) }, { status: 500 })
   }
