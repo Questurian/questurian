@@ -1,4 +1,4 @@
-import { offlineDevSessionActive } from '../../auth/dev-session'
+import { offlineDevSessionActive } from '../../auth'
 
 const PAYLOAD_API_URL =
   import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'
