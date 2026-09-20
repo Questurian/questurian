@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import type { HomepageTourCandidate, HomepageTourItemRef, TourDocLike } from '../types'
 
+import { HOMEPAGE_BLOCK_POPULATE } from '../../populate'
 import { normalizeTourCandidate } from './candidate'
 
 export async function findTourDoc(
@@ -14,6 +15,7 @@ export async function findTourDoc(
       id: ref.id,
       depth: 2,
       overrideAccess: true,
+      populate: HOMEPAGE_BLOCK_POPULATE,
     })
     return normalizeTourCandidate(doc as TourDocLike)
   } catch {

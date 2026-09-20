@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import type { AccommodationDocLike, HomepageHotelCandidate, HomepageHotelItemRef } from '../types'
 
+import { HOMEPAGE_BLOCK_POPULATE } from '../../populate'
 import { normalizeHotelCandidate } from './candidate'
 
 export async function findHotelDoc(
@@ -14,6 +15,7 @@ export async function findHotelDoc(
       id: ref.id,
       depth: 2,
       overrideAccess: true,
+      populate: HOMEPAGE_BLOCK_POPULATE,
     })
     return normalizeHotelCandidate(doc as AccommodationDocLike)
   } catch {
