@@ -52,8 +52,6 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  opacity: 1;
-  transition: opacity 0.24s ease;
 }
 
 .city-three-stack-type {
@@ -85,15 +83,6 @@
   line-height: 1;
   text-transform: uppercase;
   color: #5e5752;
-}
-
-.city-three-stack-card[data-content-ready='false'] .city-three-stack-copy {
-  opacity: 0;
-}
-
-.city-three-stack-card[data-image-loaded='true'] .city-article-image-shell::before {
-  opacity: 0;
-  animation: none;
 }
 
 /* Featured-center variants */

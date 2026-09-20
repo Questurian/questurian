@@ -52,8 +52,6 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  opacity: 1;
-  transition: opacity 0.24s ease;
 }
 
 /* Text-only sidebar rows */
@@ -113,15 +111,6 @@
   line-height: 1;
   text-transform: uppercase;
   color: #5e5752;
-}
-
-.city-five-side-media[data-content-ready='false'] .city-five-side-copy {
-  opacity: 0;
-}
-
-.city-five-side-media[data-image-loaded='true'] .city-article-image-shell::before {
-  opacity: 0;
-  animation: none;
 }
 
 /* ── ≥1024px: magazine grid — hero LEFT (1.62fr), sidebar RIGHT (1fr) ── */

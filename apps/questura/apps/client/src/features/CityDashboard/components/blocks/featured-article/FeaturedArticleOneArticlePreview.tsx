@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState, type JSX } from 'react'
+import type { JSX } from 'react'
 
 import type {
   CityHomepageArticleBlock,
@@ -18,64 +18,25 @@ function getAuthorLabel(article: FeaturedArticleTeaser): string {
   return article.author?.name || 'Questurian'
 }
 
-function useArticleImageStatus(imageUrl: string | null) {
-  const imageRef = useRef<HTMLImageElement | null>(null)
-  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'failed'>(
-    imageUrl ? 'loading' : 'failed',
-  )
-  const isImageLoaded = !imageUrl || imageStatus === 'loaded'
-  const isContentReady = !imageUrl || imageStatus !== 'loading'
-
-  // Reconcile images that finished loading before hydration attached onLoad,
-  // otherwise the image can stay stuck at opacity-0 after an SSR render.
-  useEffect(() => {
-    setImageStatus(imageUrl ? 'loading' : 'failed')
-    const image = imageRef.current
-    if (!imageUrl || !image) return
-    if (image.complete && image.naturalWidth > 0) {
-      setImageStatus('loaded')
-    }
-  }, [imageUrl])
-
-  return { imageRef, isContentReady, isImageLoaded, setImageStatus }
-}
-
-type ArticleImageStatus = ReturnType<typeof useArticleImageStatus>
-
 function ArticleImage({
   src,
   priority,
   className,
-  status,
 }: {
   src: string
   priority: boolean
   className: string
-  status: ArticleImageStatus
 }): JSX.Element {
   return (
     <PublicImage
-      imgRef={status.imageRef}
       src={src}
       alt=""
-      className={`${className} relative z-10 transition-opacity duration-500 ${status.isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+      className={`${className} relative z-10`}
       fetchPriority={priority ? 'high' : 'auto'}
       loading={priority ? 'eager' : 'lazy'}
       decoding="async"
-      onError={() => status.setImageStatus('failed')}
-      onLoad={() => status.setImageStatus('loaded')}
       sizes={BLOCK_IMAGE_SIZES.hero}
     />
-  )
-}
-
-function TextSkeleton({ className }: { className: string }): JSX.Element {
-  return (
-    <div aria-hidden="true" className={`city-article-text-skeleton absolute inset-0 flex flex-col ${className}`}>
-      <span className="city-skeleton-line h-4 w-full" />
-      <span className="city-skeleton-line mt-2.5 h-4 w-full" />
-      <span className="city-skeleton-line mt-2.5 h-4 w-2/3" />
-    </div>
   )
 }
 
@@ -135,9 +96,6 @@ export function FeaturedArticleOneArticlePreview({
 
   const desktopImageUrl = article ? (article.imageUrl ?? article.imageUrlSquare ?? null) : null
   const mobileImageUrl = article ? (article.imageUrlSquare ?? article.imageUrl ?? null) : null
-  const mobileImage = useArticleImageStatus(mobileImageUrl)
-  const desktopImage = useArticleImageStatus(desktopImageUrl)
-
   if (!article) return null
 
   const authorLabel = getAuthorLabel(article)
@@ -153,7 +111,7 @@ export function FeaturedArticleOneArticlePreview({
     <>
       {mobileImageUrl ? (
         <div className="city-article-image-shell relative w-full aspect-[3/2] overflow-hidden bg-[#1a1a1a]">
-          <ArticleImage src={mobileImageUrl} priority className="h-full w-full object-cover" status={mobileImage} />
+          <ArticleImage src={mobileImageUrl} priority className="h-full w-full object-cover" />
           <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
         </div>
       ) : (
@@ -179,7 +137,6 @@ export function FeaturedArticleOneArticlePreview({
             BY <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
           </p>
         </div>
-        <TextSkeleton className="justify-start px-6 py-9" />
       </div>
     </>
   )
@@ -212,12 +169,11 @@ export function FeaturedArticleOneArticlePreview({
             BY <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
           </p>
         </div>
-        <TextSkeleton className="justify-center px-6 py-8 1024:px-10 1280:px-12" />
       </div>
       <div className="768:w-1/2 768:py-10 768:pr-8 1024:py-14 1024:pr-12 1280:py-16 1280:pr-16 flex items-center">
         <div className="city-article-image-shell relative ml-auto w-[96%] aspect-[3/2] overflow-hidden bg-[#1a1a1a]">
           {desktopImageUrl ? (
-            <ArticleImage src={desktopImageUrl} priority className="h-full w-full object-cover" status={desktopImage} />
+            <ArticleImage src={desktopImageUrl} priority className="h-full w-full object-cover" />
           ) : null}
           <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
         </div>
@@ -241,19 +197,11 @@ export function FeaturedArticleOneArticlePreview({
       ) : null}
 
       {/* ── Mobile ─────────────────────────────────────────────── */}
-      <div
-        className="city-article-card city-article-card--dark 768:hidden"
-        data-content-ready={mobileImage.isContentReady ? 'true' : 'false'}
-        data-image-loaded={mobileImage.isImageLoaded ? 'true' : 'false'}
-      >
-        {mobileContent}
-      </div>
+      <div className="city-article-card city-article-card--dark 768:hidden">{mobileContent}</div>
 
       {/* ── Desktop ────────────────────────────────────────────── */}
       <div
         className={`city-article-card city-article-card--dark hidden 768:flex 768:items-center ${BLOCK_MAX_WIDTH_CLASS} ${BLOCK_GUTTER_CLASS}`}
-        data-content-ready={desktopImage.isContentReady ? 'true' : 'false'}
-        data-image-loaded={desktopImage.isImageLoaded ? 'true' : 'false'}
       >
         {desktopContent}
       </div>

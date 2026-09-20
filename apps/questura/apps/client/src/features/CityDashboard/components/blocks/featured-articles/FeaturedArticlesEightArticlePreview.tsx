@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState, type JSX } from 'react'
+import type { JSX } from 'react'
 
 import type {
   FeaturedArticleTeaser,
@@ -48,31 +48,6 @@ function getSmallMobileTitleClass(title: string): string {
   return 'text-[1.38rem] leading-[1.02]'
 }
 
-function useArticleImageStatus(imageUrl: string | null) {
-  const imageRef = useRef<HTMLImageElement | null>(null)
-  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'failed'>(
-    imageUrl ? 'loading' : 'failed',
-  )
-  const isImageLoaded = !imageUrl || imageStatus === 'loaded'
-  const isContentReady = !imageUrl || imageStatus !== 'loading'
-
-  useEffect(() => {
-    const image = imageRef.current
-
-    setImageStatus(imageUrl ? 'loading' : 'failed')
-
-    if (!imageUrl || !image) {
-      return
-    }
-
-    if (image.complete && image.naturalWidth > 0) {
-      setImageStatus('loaded')
-    }
-  }, [imageUrl])
-
-  return { imageRef, isContentReady, isImageLoaded, setImageStatus }
-}
-
 type FeaturedArticlePreviewCardProps = {
   article: FeaturedArticleTeaser
   isPriority: boolean
@@ -91,8 +66,6 @@ function FeaturedArticlePreviewCard({
   // the narrowing into the JSX below.
   const fallbackImageUrl = mobileImageUrl ?? desktopImageUrl
   const hasImage = fallbackImageUrl !== null
-  const { imageRef, isContentReady, isImageLoaded, setImageStatus } = 
-    useArticleImageStatus(fallbackImageUrl)
 
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? 'Meta description not set'
@@ -105,8 +78,6 @@ function FeaturedArticlePreviewCard({
         'city-article-card grid gap-3 px-[var(--block-gutter)] py-4',
         placement ? `city-article-card--${placement}` : null,
       )}
-      data-content-ready={isContentReady ? 'true' : 'false'}
-      data-image-loaded={isImageLoaded ? 'true' : 'false'}
     >
       <div className="city-article-image-shell relative aspect-square overflow-hidden bg-[#d7dcde] 768:aspect-[1200/630]">
         {hasImage ? (
@@ -115,15 +86,12 @@ function FeaturedArticlePreviewCard({
               <PublicSource media="(min-width: 768px)" src={desktopImageUrl} sizes={BLOCK_IMAGE_SIZES.featuredLeftCard} />
             ) : null}
             <PublicImage
-              imgRef={imageRef}
               src={fallbackImageUrl}
               alt=""
-              className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className="relative z-10 h-full w-full object-cover"
               decoding="async"
               fetchPriority={isPriority ? 'high' : 'auto'}
               loading={isPriority ? 'eager' : 'lazy'}
-              onError={() => setImageStatus('failed')}
-              onLoad={() => setImageStatus('loaded')}
               sizes={BLOCK_IMAGE_SIZES.featuredLeftCard}
             />
           </picture>
@@ -131,50 +99,39 @@ function FeaturedArticlePreviewCard({
         <NavigableImageTarget href={article.articlePath} label={`Read ${article.title}`} />
       </div>
 
-      <div className="relative">
-        <div className="city-article-content flex w-full flex-col justify-start py-0">
-          <p className="font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase leading-3 tracking-[0.08em] text-[#1e3599] 768:text-[0.74rem] 768:leading-4 768:tracking-[0.1em]">
-            {articleTypeLabel}
-          </p>
+      <div className="city-article-content flex w-full flex-col justify-start py-0">
+        <p className="font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase leading-3 tracking-[0.08em] text-[#1e3599] 768:text-[0.74rem] 768:leading-4 768:tracking-[0.1em]">
+          {articleTypeLabel}
+        </p>
 
-          <h2
-            className={`mt-2.5 max-w-2xl font-editorial font-semibold text-[#1a1a1a] 768:max-w-none 768:text-[2.1rem] 768:leading-[1] ${smallMobileTitleClass}`}
-          >
-            {article.articlePath ? (
-              <Link href={article.articlePath} className="hover:underline">
-                {article.title}
-              </Link>
-            ) : (
-              article.title
-            )}
-          </h2>
-
-          <p
-            data-article-dek
-            className="mt-3 max-w-xl overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] 768:max-w-none 768:text-[1.04rem] 768:leading-[1.5] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] 768:[-webkit-line-clamp:3]"
-          >
-            {article.articlePath ? <Link href={article.articlePath}>{excerpt}</Link> : excerpt}
-          </p>
-
-          <p className="mt-3.5 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952] 768:mt-4 768:text-[0.72rem] 768:tracking-[0.1em]">
-            <AuthorLink
-              authorSlug={article.author?.slug}
-              authorId={article.author?.id}
-              className="hover:underline"
-            >
-              {authorLabel}
-            </AuthorLink>
-          </p>
-        </div>
-
-        <div
-          aria-hidden="true"
-          className="city-article-text-skeleton absolute inset-0 flex flex-col justify-start py-0"
+        <h2
+          className={`mt-2.5 max-w-2xl font-editorial font-semibold text-[#1a1a1a] 768:max-w-none 768:text-[2.1rem] 768:leading-[1] ${smallMobileTitleClass}`}
         >
-          <span className="city-skeleton-line h-4 w-full" />
-          <span className="city-skeleton-line mt-2.5 h-4 w-full" />
-          <span className="city-skeleton-line mt-2.5 h-4 w-2/3" />
-        </div>
+          {article.articlePath ? (
+            <Link href={article.articlePath} className="hover:underline">
+              {article.title}
+            </Link>
+          ) : (
+            article.title
+          )}
+        </h2>
+
+        <p
+          data-article-dek
+          className="mt-3 max-w-xl overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] 768:max-w-none 768:text-[1.04rem] 768:leading-[1.5] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] 768:[-webkit-line-clamp:3]"
+        >
+          {article.articlePath ? <Link href={article.articlePath}>{excerpt}</Link> : excerpt}
+        </p>
+
+        <p className="mt-3.5 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952] 768:mt-4 768:text-[0.72rem] 768:tracking-[0.1em]">
+          <AuthorLink
+            authorSlug={article.author?.slug}
+            authorId={article.author?.id}
+            className="hover:underline"
+          >
+            {authorLabel}
+          </AuthorLink>
+        </p>
       </div>
     </section>
   )
@@ -190,8 +147,6 @@ function CompactArticlePreviewCard({
   placement,
 }: CompactArticlePreviewCardProps): JSX.Element {
   const imageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
-  const { imageRef, isContentReady, isImageLoaded, setImageStatus } =
-    useArticleImageStatus(imageUrl)
   const excerpt = article.excerpt ?? 'Meta description not set'
   const authorLabel = getAuthorLabel(article)
 
@@ -201,8 +156,6 @@ function CompactArticlePreviewCard({
         'city-compact-article-card px-[var(--block-gutter)] py-4',
         placement ? `city-compact-article-card--${placement}` : null,
       )}
-      data-content-ready={isContentReady ? 'true' : 'false'}
-      data-image-loaded={isImageLoaded ? 'true' : 'false'}
     >
       <div className="city-compact-article-copy">
         <h2 className="city-compact-article-title">
@@ -232,25 +185,16 @@ function CompactArticlePreviewCard({
       <div className="city-article-image-shell city-compact-article-image">
         {imageUrl ? (
           <PublicImage
-            imgRef={imageRef}
             src={imageUrl}
             alt=""
-            className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className="relative z-10 h-full w-full object-cover"
             decoding="async"
             fetchPriority="auto"
             loading="lazy"
-            onError={() => setImageStatus('failed')}
-            onLoad={() => setImageStatus('loaded')}
             sizes={BLOCK_IMAGE_SIZES.sideThumbnail}
           />
         ) : null}
         <NavigableImageTarget href={article.articlePath} label={`Read ${article.title}`} />
-      </div>
-
-      <div aria-hidden="true" className="city-compact-article-skeleton">
-        <span className="city-skeleton-line h-3 w-full" />
-        <span className="city-skeleton-line mt-2 h-3 w-full" />
-        <span className="city-skeleton-line mt-2 h-3 w-2/3" />
       </div>
     </section>
   )

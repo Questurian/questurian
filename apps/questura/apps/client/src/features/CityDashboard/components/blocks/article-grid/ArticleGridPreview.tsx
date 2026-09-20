@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState, type JSX } from 'react'
+import type { JSX } from 'react'
 
 import type {
   ArticleGridBlock,
@@ -38,39 +38,18 @@ function ThreeArticleCard({
 }): JSX.Element {
   const imageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
   const articlePath = article.articlePath ?? null
-  const imageRef = useRef<HTMLImageElement | null>(null)
-  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'failed'>(
-    imageUrl ? 'loading' : 'failed',
-  )
-
-  useEffect(() => {
-    setImageStatus(imageUrl ? 'loading' : 'failed')
-    const image = imageRef.current
-    if (!imageUrl || !image) return
-    if (image.complete && image.naturalWidth > 0) {
-      setImageStatus('loaded')
-    }
-  }, [imageUrl])
-
-  const isImageLoaded = !imageUrl || imageStatus === 'loaded'
 
   return (
-    <article
-      className="city-article-card group flex min-w-0 flex-col"
-      data-image-loaded={isImageLoaded ? 'true' : 'false'}
-    >
+    <article className="city-article-card group flex min-w-0 flex-col">
       <div className="city-article-image-shell relative aspect-[1.92/1] overflow-hidden bg-[#d7dcde]">
         {imageUrl ? (
           <PublicImage
-            imgRef={imageRef}
             src={imageUrl}
             alt=""
-            className={`relative z-10 h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none group-hover:scale-[1.015] ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className="relative z-10 h-full w-full object-cover transition-transform duration-300 ease-out motion-reduce:transition-none group-hover:scale-[1.015]"
             decoding="async"
             fetchPriority={index === 0 ? 'high' : 'auto'}
             loading={index === 0 ? 'eager' : 'lazy'}
-            onError={() => setImageStatus('failed')}
-            onLoad={() => setImageStatus('loaded')}
             sizes={BLOCK_IMAGE_SIZES.thirdColumn}
           />
         ) : null}
@@ -130,25 +109,6 @@ function GridArticleCard({
   const imageUrl = useSquareImage
     ? (article.imageUrlSquare ?? article.imageUrl ?? null)
     : (article.imageUrl ?? article.imageUrlSquare ?? null)
-  const imageRef = useRef<HTMLImageElement | null>(null)
-  const [imageStatus, setImageStatus] = useState<
-    'loading' | 'loaded' | 'failed'
-  >(imageUrl ? 'loading' : 'failed')
-
-  // The image is server-rendered at opacity-0 and faded in via onLoad. If it
-  // finishes loading (e.g. from cache) before hydration attaches the handler,
-  // the load event is missed and the card stays blank. Reconcile on mount.
-  useEffect(() => {
-    setImageStatus(imageUrl ? 'loading' : 'failed')
-    const image = imageRef.current
-    if (!imageUrl || !image) return
-    if (image.complete && image.naturalWidth > 0) {
-      setImageStatus('loaded')
-    }
-  }, [imageUrl])
-
-  const isImageLoaded = !imageUrl || imageStatus === 'loaded'
-  const isContentReady = !imageUrl || imageStatus !== 'loading'
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? null
   const authorLabel = getAuthorLabel(article)
@@ -161,15 +121,12 @@ function GridArticleCard({
       >
         {imageUrl ? (
           <PublicImage
-            imgRef={imageRef}
             src={imageUrl}
             alt=""
-            className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className="relative z-10 h-full w-full object-cover"
             decoding="async"
             fetchPriority={isPriority ? 'high' : 'auto'}
             loading={isPriority ? 'eager' : 'lazy'}
-            onError={() => setImageStatus('failed')}
-            onLoad={() => setImageStatus('loaded')}
             sizes={BLOCK_IMAGE_SIZES.quarterColumn}
           />
         ) : null}
@@ -179,63 +136,48 @@ function GridArticleCard({
         />
       </div>
 
-      <div className="relative flex flex-col flex-1">
-        <div className="city-article-content pt-4 flex flex-col flex-1">
-          <p className="font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase leading-none tracking-[0.12em] text-[#1e3599] 768:text-[0.67rem]">
-            {articleTypeLabel}
-          </p>
+      <div className="city-article-content flex flex-1 flex-col pt-4">
+        <p className="font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase leading-none tracking-[0.12em] text-[#1e3599] 768:text-[0.67rem]">
+          {articleTypeLabel}
+        </p>
 
-          <h3 className="mt-2 font-editorial text-[1.35rem] font-semibold leading-[1.1] text-[#1a1a1a]">
+        <h3 className="mt-2 font-editorial text-[1.35rem] font-semibold leading-[1.1] text-[#1a1a1a]">
+          {articlePath ? (
+            <Link href={articlePath}>{article.title}</Link>
+          ) : (
+            article.title
+          )}
+        </h3>
+
+        {excerpt ? (
+          <p
+            data-article-dek
+            className="mt-2 overflow-hidden font-editorial text-[0.88rem] font-normal leading-[1.5] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]"
+          >
             {articlePath ? (
-              <Link href={articlePath}>{article.title}</Link>
+              <Link href={articlePath}>{excerpt}</Link>
             ) : (
-              article.title
+              excerpt
             )}
-          </h3>
-
-          {excerpt ? (
-            <p
-              data-article-dek
-              className="mt-2 overflow-hidden font-editorial text-[0.88rem] font-normal leading-[1.5] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]"
-            >
-              {articlePath ? (
-                <Link href={articlePath}>{excerpt}</Link>
-              ) : (
-                excerpt
-              )}
-            </p>
-          ) : null}
-
-          <p className="mt-auto pt-3 font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952] 768:text-[0.65rem]">
-            By{' '}
-            <AuthorLink
-              authorSlug={article.author?.slug}
-              authorId={article.author?.id}
-              className="hover:underline"
-            >
-              {authorLabel}
-            </AuthorLink>
           </p>
-        </div>
+        ) : null}
 
-        <div
-          aria-hidden="true"
-          className="city-article-text-skeleton absolute inset-0 flex flex-col justify-start pt-4"
-        >
-          <span className="city-skeleton-line h-4 w-full" />
-          <span className="city-skeleton-line mt-2.5 h-4 w-full" />
-          <span className="city-skeleton-line mt-2.5 h-4 w-2/3" />
-        </div>
+        <p className="mt-auto pt-3 font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952] 768:text-[0.65rem]">
+          By{' '}
+          <AuthorLink
+            authorSlug={article.author?.slug}
+            authorId={article.author?.id}
+            className="hover:underline"
+          >
+            {authorLabel}
+          </AuthorLink>
+        </p>
       </div>
     </>
   )
 
   return (
-    <article
-      className="city-article-card flex flex-col"
-      data-content-ready={isContentReady ? 'true' : 'false'}
-      data-image-loaded={isImageLoaded ? 'true' : 'false'}
-    >
+    <article className="city-article-card flex flex-col">
       {inner}
     </article>
   )

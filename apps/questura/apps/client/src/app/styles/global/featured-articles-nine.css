@@ -177,10 +177,6 @@
     height: 88px;
     transform: translateY(-50%);
   }
-
-  .city-featured-nine-right .city-compact-article-skeleton {
-    inset: 18px 106px auto 0;
-  }
 }
 
 /* ── ≥1280px ── */
@@ -213,10 +209,6 @@
   .city-featured-nine-right .city-compact-article-image {
     width: 100px;
     height: 100px;
-  }
-
-  .city-featured-nine-right .city-compact-article-skeleton {
-    inset: 20px 120px auto 0;
   }
 
   .city-article-card--nine-hero h2 {

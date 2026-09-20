@@ -56,8 +56,6 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  opacity: 1;
-  transition: opacity 0.24s ease;
 }
 
 .city-four-side-type {
@@ -102,15 +100,6 @@
   line-height: 1;
   text-transform: uppercase;
   color: #5e5752;
-}
-
-.city-four-side-card[data-content-ready='false'] .city-four-side-copy {
-  opacity: 0;
-}
-
-.city-four-side-card[data-image-loaded='true'] .city-article-image-shell::before {
-  opacity: 0;
-  animation: none;
 }
 
 /* ── <380px tweaks ── */
