@@ -1,7 +1,5 @@
-'use client'
-
 import Link from 'next/link'
-import { useEffect, useRef, useState, type JSX } from 'react'
+import type { JSX } from 'react'
 
 import type {
   CityHomepageArticleBlock,
@@ -13,10 +11,7 @@ import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
 import { PublicImage } from '@/components/media/PublicImage'
 import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
-
-function joinClassNames(...classes: Array<string | false | null | undefined>): string {
-  return classes.filter(Boolean).join(' ')
-}
+import { heroImagePriority, type ImagePriority } from '../heroImagePriority'
 
 function getArticleTypeLabel(article: FeaturedArticleTeaser): string {
   return article.articleType ?? article.category?.name ?? 'Article'
@@ -32,26 +27,11 @@ function getArticleKey(article: FeaturedArticleTeaser, index: number): string {
 
 type ArticleRowProps = {
   article: FeaturedArticleTeaser
-  isPriority: boolean
+  imagePriority: ImagePriority
 }
 
-function ArticleRow({ article, isPriority }: ArticleRowProps): JSX.Element {
+function ArticleRow({ article, imagePriority }: ArticleRowProps): JSX.Element {
   const imageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
-  const imageRef = useRef<HTMLImageElement | null>(null)
-  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'failed'>(
-    imageUrl ? 'loading' : 'failed',
-  )
-
-  useEffect(() => {
-    setImageStatus(imageUrl ? 'loading' : 'failed')
-    const image = imageRef.current
-    if (!imageUrl || !image) return
-    if (image.complete && image.naturalWidth > 0) {
-      setImageStatus('loaded')
-    }
-  }, [imageUrl])
-
-  const isImageLoaded = imageStatus === 'loaded'
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? null
   const authorLabel = getAuthorLabel(article)
@@ -84,18 +64,11 @@ function ArticleRow({ article, isPriority }: ArticleRowProps): JSX.Element {
       <div className="relative h-[120px] w-[120px] shrink-0 overflow-hidden bg-[#d7dcde] 768:h-[150px] 768:w-[150px] 1024:h-[180px] 1024:w-[180px]">
         {imageUrl ? (
           <PublicImage
-            imgRef={imageRef}
             src={imageUrl}
             alt=""
-            className={joinClassNames(
-              'h-full w-full object-cover transition-opacity duration-300',
-              isImageLoaded ? 'opacity-100' : 'opacity-0',
-            )}
+            className="h-full w-full object-cover"
             decoding="async"
-            fetchPriority={isPriority ? 'high' : 'auto'}
-            loading={isPriority ? 'eager' : 'lazy'}
-            onError={() => setImageStatus('failed')}
-            onLoad={() => setImageStatus('loaded')}
+            {...imagePriority}
             sizes={BLOCK_IMAGE_SIZES.listThumbnail}
           />
         ) : null}
@@ -111,8 +84,13 @@ function ArticleRow({ article, isPriority }: ArticleRowProps): JSX.Element {
 
 export function ArticleListPreview({
   block,
+  blockIndex,
 }: HomepageBlockLayoutProps<CityHomepageArticleBlock>): JSX.Element | null {
   if (block.items.length === 0) return null
+
+  // The first block on the page is the screen the reader lands on; a list
+  // five blocks down can wait for the browser to ask.
+  const heroPriority = heroImagePriority(blockIndex)
 
   const sectionHeading = block.sectionHeading?.trim() || null
   const sectionSubheading = block.sectionSubheading?.trim() || null
@@ -137,7 +115,7 @@ export function ArticleListPreview({
             <ArticleRow
               key={getArticleKey(article, index)}
               article={article}
-              isPriority={index === 0}
+              imagePriority={heroPriority}
             />
           ))}
         </div>

@@ -9,10 +9,14 @@ import type {
 import { BlockSection } from "../BlockSection";
 import { PublicImage } from "@/components/media/PublicImage";
 import { BLOCK_IMAGE_SIZES } from "../blockImageSizes";
+import { heroImagePriority } from "../heroImagePriority";
 
 export function NewsletterSignupPreview({
   block,
+  blockIndex,
 }: HomepageBlockLayoutProps<NewsletterSignupBlock>): JSX.Element {
+  const imagePriority = heroImagePriority(blockIndex);
+
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -37,8 +41,7 @@ export function NewsletterSignupPreview({
         <div className="absolute inset-0" aria-hidden="true">
           <PublicImage
             src="/images/newsletter/lima-pier.jpg"
-            /* Carried no `loading` before, which meant eager. */
-            loading="eager"
+            {...imagePriority}
             alt=""
             className="h-full w-full object-cover grayscale contrast-125"
             sizes={BLOCK_IMAGE_SIZES.fullBleed}

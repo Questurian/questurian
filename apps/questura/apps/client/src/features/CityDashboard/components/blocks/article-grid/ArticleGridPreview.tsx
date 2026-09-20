@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import type { JSX } from 'react'
 
@@ -13,6 +11,7 @@ import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
 import { PublicImage } from '@/components/media/PublicImage'
 import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
+import { isPriorityImage } from '../heroImagePriority'
 
 function getArticleTypeLabel(article: FeaturedArticleTeaser): string {
   return article.articleType ?? article.category?.name ?? 'Article'
@@ -31,10 +30,10 @@ function getArticleKey(article: FeaturedArticleTeaser, index: number): string {
 
 function ThreeArticleCard({
   article,
-  index,
+  isPriority,
 }: {
   article: FeaturedArticleTeaser
-  index: number
+  isPriority: boolean
 }): JSX.Element {
   const imageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
   const articlePath = article.articlePath ?? null
@@ -48,8 +47,8 @@ function ThreeArticleCard({
             alt=""
             className="relative z-10 h-full w-full object-cover transition-transform duration-300 ease-out motion-reduce:transition-none group-hover:scale-[1.015]"
             decoding="async"
-            fetchPriority={index === 0 ? 'high' : 'auto'}
-            loading={index === 0 ? 'eager' : 'lazy'}
+            fetchPriority={isPriority ? 'high' : 'auto'}
+            loading={isPriority ? 'eager' : 'lazy'}
             sizes={BLOCK_IMAGE_SIZES.thirdColumn}
           />
         ) : null}
@@ -185,6 +184,7 @@ function GridArticleCard({
 
 export function ArticleGridPreview({
   block,
+  blockIndex,
 }: HomepageBlockLayoutProps<ArticleGridBlock>): JSX.Element | null {
   const items = block.items ?? []
 
@@ -204,7 +204,7 @@ export function ArticleGridPreview({
             <ThreeArticleCard
               key={getArticleKey(article, index)}
               article={article}
-              index={index}
+              isPriority={isPriorityImage(blockIndex, index)}
             />
           ))}
         </div>
@@ -242,7 +242,7 @@ export function ArticleGridPreview({
           <GridArticleCard
             key={getArticleKey(article, index)}
             article={article}
-            isPriority={index === 0}
+            isPriority={isPriorityImage(blockIndex, index)}
             useSquareImage={usesSquareCards}
           />
         ))}

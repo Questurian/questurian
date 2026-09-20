@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import type { JSX } from 'react'
 
@@ -13,6 +11,7 @@ import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
 import { PublicImage, PublicSource } from '@/components/media/PublicImage'
 import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
+import { heroImagePriority, type ImagePriority } from '../heroImagePriority'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -113,7 +112,11 @@ function WideCard({ article }: SlotCardProps): JSX.Element {
 }
 
 /** Slot 3: center hero — 3/2 image, large title, excerpt, byline. */
-function CenterHeroCard({ article }: SlotCardProps): JSX.Element {
+type CenterHeroCardProps = SlotCardProps & {
+  imagePriority: ImagePriority
+}
+
+function CenterHeroCard({ article, imagePriority }: CenterHeroCardProps): JSX.Element {
   const mobileImageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const desktopImageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
   // `<picture>` resolves to the <img> when no <source> matches, so the mobile
@@ -140,8 +143,7 @@ function CenterHeroCard({ article }: SlotCardProps): JSX.Element {
               alt=""
               className="relative z-10 h-full w-full object-cover"
               decoding="async"
-              fetchPriority="high"
-              loading="eager"
+              {...imagePriority}
               sizes={BLOCK_IMAGE_SIZES.centreFeature}
             />
           </picture>
@@ -296,7 +298,10 @@ function CompactListCard({ article }: SlotCardProps): JSX.Element {
 
 export function FeaturedArticlesNineArticlePreview({
   block,
+  blockIndex,
 }: HomepageBlockLayoutProps<FeaturedArticlesBlock>): JSX.Element | null {
+  const imagePriority = heroImagePriority(blockIndex)
+
   if (block.items.length === 0) return null
 
   const wideArticles = block.items.slice(0, 2)
@@ -330,7 +335,11 @@ export function FeaturedArticlesNineArticlePreview({
 
         <div className="city-featured-nine-center">
           {heroArticle ? (
-            <CenterHeroCard key={getArticleKey(heroArticle, 2)} article={heroArticle} />
+            <CenterHeroCard
+              key={getArticleKey(heroArticle, 2)}
+              article={heroArticle}
+              imagePriority={imagePriority}
+            />
           ) : null}
           {horizArticle ? (
             <HorizontalCard key={getArticleKey(horizArticle, 3)} article={horizArticle} />

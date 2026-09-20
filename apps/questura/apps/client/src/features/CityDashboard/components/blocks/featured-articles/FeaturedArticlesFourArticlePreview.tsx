@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import type { JSX } from 'react'
 
@@ -13,6 +11,7 @@ import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
 import { PublicImage, PublicSource } from '@/components/media/PublicImage'
 import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
+import { heroImagePriority, type ImagePriority } from '../heroImagePriority'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -48,9 +47,10 @@ function getBlockSectionHeading(items: FeaturedArticleTeaser[]): string | null {
 
 type HeroArticleCardProps = {
   article: FeaturedArticleTeaser
+  imagePriority: ImagePriority
 }
 
-function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
+function HeroArticleCard({ article, imagePriority }: HeroArticleCardProps): JSX.Element {
   const mobileImageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const desktopImageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
   // `<picture>` resolves to the <img> when no <source> matches, so the mobile
@@ -79,8 +79,7 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
               alt=""
               className="relative z-10 h-full w-full object-cover"
               decoding="async"
-              fetchPriority="high"
-              loading="eager"
+              {...imagePriority}
               sizes={BLOCK_IMAGE_SIZES.hero}
             />
           </picture>
@@ -188,7 +187,10 @@ function SideListArticleCard({ article }: SideListArticleCardProps): JSX.Element
 
 export function FeaturedArticlesFourArticlePreview({
   block,
+  blockIndex,
 }: HomepageBlockLayoutProps<FeaturedArticlesBlock>): JSX.Element | null {
+  const imagePriority = heroImagePriority(blockIndex)
+
   if (block.items.length === 0) return null
 
   const heroArticle = block.items[0]
@@ -214,7 +216,11 @@ export function FeaturedArticlesFourArticlePreview({
       <div className="city-featured-four-layout">
         <div className="city-featured-four-hero">
           {heroArticle ? (
-            <HeroArticleCard key={getArticleKey(heroArticle, 0)} article={heroArticle} />
+            <HeroArticleCard
+              key={getArticleKey(heroArticle, 0)}
+              article={heroArticle}
+              imagePriority={imagePriority}
+            />
           ) : null}
         </div>
 

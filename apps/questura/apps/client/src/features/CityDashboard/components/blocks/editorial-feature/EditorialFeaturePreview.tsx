@@ -8,6 +8,7 @@ import type {
 import { BlockSection } from '../BlockSection'
 import { PublicImage, PublicSource } from '@/components/media/PublicImage'
 import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
+import { heroImagePriority } from '../heroImagePriority'
 
 function Linked({ href, className, children }: {
   href: string | null
@@ -81,7 +82,11 @@ function RelatedArticle({ article, count, index }: {
   )
 }
 
-export function EditorialFeaturePreview({ block }: HomepageBlockLayoutProps<EditorialFeatureBlock>) {
+export function EditorialFeaturePreview({
+  block,
+  blockIndex,
+}: HomepageBlockLayoutProps<EditorialFeatureBlock>) {
+  const imagePriority = heroImagePriority(blockIndex)
   const featureHref = block.linkedLocation?.href ?? null
   const portrait = block.featureImagePortrait ?? block.featureImageWide
   const wide = block.featureImageWide ?? block.featureImagePortrait
@@ -105,8 +110,7 @@ export function EditorialFeaturePreview({ block }: HomepageBlockLayoutProps<Edit
                   src={fallbackImage.url}
                   alt={fallbackImage.alt ?? ''}
                   className="h-full w-full object-cover transition-opacity duration-200 group-hover/image:opacity-85"
-                  /* Carried no `loading` before, which meant eager. */
-                  loading="eager"
+                  {...imagePriority}
                   sizes={BLOCK_IMAGE_SIZES.featureImage}
                 />
               </picture>

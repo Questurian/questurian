@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import type { JSX } from 'react'
 
@@ -12,6 +10,7 @@ import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { NavigableImageTarget } from '../NavigableImageTarget'
 import { PublicImage, PublicSource } from '@/components/media/PublicImage'
 import { BLOCK_IMAGE_SIZES } from '../blockImageSizes'
+import { isPriorityImage } from '../heroImagePriority'
 
 const PREVIEW_ARTICLE_COUNT = 3
 
@@ -140,11 +139,13 @@ function FeaturedArticlePreviewCard({
 type CompactArticlePreviewCardProps = {
   article: FeaturedArticleTeaser
   placement?: CompactArticlePlacement
+  isPriority: boolean
 }
 
 function CompactArticlePreviewCard({
   article,
   placement,
+  isPriority,
 }: CompactArticlePreviewCardProps): JSX.Element {
   const imageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const excerpt = article.excerpt ?? 'Meta description not set'
@@ -189,8 +190,8 @@ function CompactArticlePreviewCard({
             alt=""
             className="relative z-10 h-full w-full object-cover"
             decoding="async"
-            fetchPriority="auto"
-            loading="lazy"
+            fetchPriority={isPriority ? 'high' : 'auto'}
+            loading={isPriority ? 'eager' : 'lazy'}
             sizes={BLOCK_IMAGE_SIZES.sideThumbnail}
           />
         ) : null}
@@ -217,6 +218,7 @@ function RecommendedDivider(): JSX.Element {
 
 export function FeaturedArticlesSevenArticlePreview({
   block,
+  blockIndex,
 }: HomepageBlockLayoutProps<FeaturedArticlesBlock>): JSX.Element | null {
   const previewArticles = block.items.slice(0, PREVIEW_ARTICLE_COUNT)
   const compactArticles = block.items.slice(PREVIEW_ARTICLE_COUNT)
@@ -234,7 +236,7 @@ export function FeaturedArticlesSevenArticlePreview({
         {centerArticle ? (
           <FeaturedArticlePreviewCard
             article={centerArticle}
-            isPriority
+            isPriority={isPriorityImage(blockIndex, 0)}
             key={getArticleKey(centerArticle, 0)}
             placement="center"
           />
@@ -248,7 +250,7 @@ export function FeaturedArticlesSevenArticlePreview({
           return (
             <FeaturedArticlePreviewCard
               article={article}
-              isPriority={false}
+              isPriority={isPriorityImage(blockIndex, articleIndex)}
               key={getArticleKey(article, articleIndex)}
               placement="left"
             />
@@ -264,6 +266,7 @@ export function FeaturedArticlesSevenArticlePreview({
           return (
             <CompactArticlePreviewCard
               article={article}
+              isPriority={isPriorityImage(blockIndex, articleIndex)}
               key={getArticleKey(article, articleIndex)}
               placement="right"
             />

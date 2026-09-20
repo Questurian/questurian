@@ -23,7 +23,12 @@ export function CityHomepageContent({ location = null, pageBlocks }: CityHomepag
 
       const { Component } = layout
 
-      return createElement(Component, { key: getBlockKey(block, index), block, location })
+      return createElement(Component, {
+        key: getBlockKey(block, index),
+        block,
+        location,
+        blockIndex: index,
+      })
     })
     .filter(Boolean)
 

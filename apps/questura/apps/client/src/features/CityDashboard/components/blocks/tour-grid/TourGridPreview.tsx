@@ -5,9 +5,13 @@ import type { JSX } from 'react'
 import type { TourGridBlock, HomepageBlockLayoutProps } from '../../../types'
 import { BLOCK_GUTTER_CLASS, BlockSection } from '../BlockSection'
 import { PlaceCarouselCard } from '../PlaceCarouselCard'
+import { isPriorityImage } from '../heroImagePriority'
 import { useSnapCarousel } from '../useSnapCarousel'
 
-export function TourGridPreview({ block }: HomepageBlockLayoutProps<TourGridBlock>): JSX.Element | null {
+export function TourGridPreview({
+  block,
+  blockIndex,
+}: HomepageBlockLayoutProps<TourGridBlock>): JSX.Element | null {
   const items = block.selection?.items ?? []
 
   const { scrollRef, pageCount, activePage, scrollToPage, scrollByPage } = useSnapCarousel(items.length)
@@ -89,7 +93,7 @@ export function TourGridPreview({ block }: HomepageBlockLayoutProps<TourGridBloc
               key={item.id}
               title={item.title}
               imageUrl={item.imageUrl}
-              isPriority={index === 0}
+              isPriority={isPriorityImage(blockIndex, index)}
               isLast={index === items.length - 1}
               priceLevel={item.priceLevel}
               location={item.location}
