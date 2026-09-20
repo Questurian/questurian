@@ -5,8 +5,19 @@ import { ArrowUpRight } from 'lucide-react'
 import { fetchCountryCities } from '@/features/CountryHub/lib/fetchCountryCities'
 import { LocationContentList } from '@/features/search/components/LocationContentList'
 import { fetchLocationContent } from '@/features/search/lib/fetchSearch'
+import { countryParams } from '@/lib/routing/publicRouteParams'
+import { publicUrlIndex } from '@/lib/routing/publicStaticParams'
 
 const CONTENT_PAGE_SIZE = 50
+
+// Pre-rendered at build time so a first visitor — often the crawler — is
+// served a cached page instead of paying a live render. dynamicParams stays at
+// its default, so a country published after the last deploy still renders on
+// demand. See src/lib/routing/publicStaticParams.ts.
+export async function generateStaticParams() {
+  const { pages } = await publicUrlIndex()
+  return countryParams(pages)
+}
 
 type Props = {
   params: Promise<{ country: string }>

@@ -7,6 +7,17 @@ import {
   guardCountrySegment,
 } from '@/lib/routing/guardReservedSegment'
 import { buildArticleMetadataByPath } from '@/features/articles/lib/buildArticleMetadata'
+import { cityScopeArticleParams } from '@/lib/routing/publicRouteParams'
+import { publicUrlIndex } from '@/lib/routing/publicStaticParams'
+
+// Pre-rendered at build time so a first visitor — often the crawler — is
+// served a cached page instead of paying a live render. dynamicParams stays at
+// its default, so a article published after the last deploy still renders on
+// demand. See src/lib/routing/publicStaticParams.ts.
+export async function generateStaticParams() {
+  const { pages } = await publicUrlIndex()
+  return cityScopeArticleParams(pages)
+}
 
 type Props = {
   params: Promise<{ country: string; city: string; category: string; slug: string }>
