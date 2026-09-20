@@ -40,6 +40,8 @@ export const VARIANT_WIDTHS: Record<string, number> = {
 type ParsedVariantUrl = {
   /** Everything before the extension, including the `_variant` suffix. */
   stem: string
+  /** The variant file's own extension, with the dot. */
+  extension: string
   /** Query string and fragment, preserved so signed URLs survive. */
   suffix: string
   variantWidth: number
@@ -59,11 +61,11 @@ const parseVariantUrl = (src: string): ParsedVariantUrl | null => {
   const match = /^(.*_([a-z_]+)(?:-\d+)?)(\.[A-Za-z0-9]+)$/.exec(path)
   if (!match) return null
 
-  const [, stem, variant] = match
+  const [, stem, variant, extension] = match
   const variantWidth = VARIANT_WIDTHS[variant]
   if (!variantWidth) return null
 
-  return { stem, suffix, variantWidth }
+  return { stem, extension, suffix, variantWidth }
 }
 
 /**
@@ -88,6 +90,16 @@ export const buildSrcSet = (src: string): string | undefined => {
     (width) => `${rungUrl(parsed, width)} ${width}w`,
   )
   if (rungs.length === 0) return undefined
+
+  // A handful of variants were uploaded straight to `media-assets` without
+  // going through the pipeline, so they are still PNG or JPEG. Their rungs are
+  // WebP either way, but offering the variant itself as the top rung puts a
+  // 1.8MB PNG back on the page: `sizes` x devicePixelRatio passes 960 at
+  // DPR >= 2.35, and the browser then takes the top rung as instructed. Topping
+  // out at 960 costs a 3x reader some sharpness on those few photos and saves
+  // everyone else from the original. `src` stays as it was, for the browsers
+  // that do not read `srcSet` at all.
+  if (parsed.extension.toLowerCase() !== '.webp') return rungs.join(', ')
 
   return [...rungs, `${src} ${parsed.variantWidth}w`].join(', ')
 }
