@@ -1,6 +1,6 @@
 'use client'
 
-import type { CSSProperties, JSX } from 'react'
+import { useEffect, type CSSProperties, type JSX } from 'react'
 import {
   LISTICLE_MAP_PILL_CLEARANCE,
   ListicleMapSheet,
@@ -12,6 +12,7 @@ import type { ListicleFooterLinks } from '@/features/articles/lib/fetchListicleF
 import type { RelatedMapsArticleTeaser } from '@/features/articles/lib/fetchRelatedMapsArticles'
 import { useIsDesktopMap } from '@/features/articles/lib/useIsDesktopMap'
 import { useDevStore } from '@/lib/stores/devStore'
+import { claimNavbarScrollAbsorb } from '@/features/Navigation/lib/navbarScrollAbsorb'
 
 interface ListicleArticleLayoutProps {
   children: JSX.Element
@@ -37,6 +38,9 @@ export function ListicleArticleLayout({
   city,
 }: ListicleArticleLayoutProps): JSX.Element {
   const { mapsEnabled } = useDevStore()
+  // The map layouts keep the navbar's wheel absorption; every other page
+  // collapses the header from the real scroll position instead (#589).
+  useEffect(() => claimNavbarScrollAbsorb(), [])
   const isDesktopMap = useIsDesktopMap()
   // Below 1024 the map lives in a bottom sheet instead of a side column. The
   // two never coexist: a CSS-hidden column would still mount MapPanel, and

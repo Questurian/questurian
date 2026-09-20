@@ -2,11 +2,14 @@
 
 import DesktopNavbar from "./Desktop/DesktopNavbar";
 import MobileNavbar from "./Mobile/MobileNavbar";
-import { useEffect, useRef } from "react";
+import { subscribeNavbarScrollAbsorb } from "./lib/navbarScrollAbsorb";
+import { useEffect, useRef, useState } from "react";
 
-// Virtual scroll pixels that the navbar "consumes" before the page moves.
-// Wheel input is partitioned: first ABSORB_PX go entirely to the animation,
-// then the remainder flows to actual page scroll at full speed.
+// Scroll distance over which the navbar goes from expanded to collapsed.
+// In the default mode this is read off the real scroll position, so the page
+// moves at full speed from the very first input (#589). On the map layouts —
+// and only there — the same budget is instead absorbed from wheel input, so
+// the header finishes collapsing before the sticky map column starts moving.
 const ABSORB_PX = 120;
 
 // Lerp factor: how fast the rendered value chases the target each frame.
@@ -15,12 +18,19 @@ const LERP = 0.09;
 
 export default function Navbar() {
   const navRef = useRef<HTMLElement>(null);
+  const [absorbWheel, setAbsorbWheel] = useState(false);
+
+  // Map layouts claim wheel absorption while they are mounted.
+  useEffect(() => subscribeNavbarScrollAbsorb(setAbsorbWheel), []);
 
   useEffect(() => {
+    const collapseFromScroll = () =>
+      Math.min(1, Math.max(0, window.scrollY / ABSORB_PX));
+
     let rafId = 0;
-    let virtualY = 0;      // accumulated wheel intent (not real scrollY)
-    let currentVal = 0;    // lerp-smoothed value written to CSS
-    let targetVal = 0;     // instant target from wheel input
+    let virtualY = window.scrollY; // accumulated wheel intent (absorb mode only)
+    let targetVal = collapseFromScroll(); // where the collapse should end up
+    let currentVal = targetVal; // lerp-smoothed value written to CSS
 
     // Lerp loop. It runs only while the rendered value is still chasing the
     // target; once it has snapped to an endpoint there is nothing left to
@@ -76,7 +86,7 @@ export default function Navbar() {
     };
 
     // Keyboard / programmatic scrolls still need to sync targetVal.
-    const handleScroll = () => {
+    const handleAbsorbScroll = () => {
       if (window.scrollY === 0) {
         virtualY = 0;
         targetVal = 0;
@@ -84,14 +94,26 @@ export default function Navbar() {
       }
     };
 
-    window.addEventListener("wheel", handleWheel, { passive: false });
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    // Default mode: observe, never consume. Every input — wheel, trackpad,
+    // touch, PageDown, Space, Home/End, scrollTo — arrives here the same way.
+    const handleNativeScroll = () => {
+      const next = collapseFromScroll();
+      if (next === targetVal) return;
+      targetVal = next;
+      wake();
+    };
+
+    const onScroll = absorbWheel ? handleAbsorbScroll : handleNativeScroll;
+    if (absorbWheel) {
+      window.addEventListener("wheel", handleWheel, { passive: false });
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      window.removeEventListener("wheel", handleWheel);
-      window.removeEventListener("scroll", handleScroll);
+      if (absorbWheel) window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("scroll", onScroll);
       cancelAnimationFrame(rafId);
     };
-  }, []);
+  }, [absorbWheel]);
 
   // Keep --navbar-height in sync with the real nav height at every animation frame
   // so that consumers (e.g. the maps page sticky panel) can track it smoothly.
