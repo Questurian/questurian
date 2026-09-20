@@ -20,8 +20,11 @@ export function ShimmerImage({
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [imageState, setImageState] = useState<ImageState>('loading')
 
-  // Cached images can finish before hydration attaches onLoad. Reconcile
-  // after every src change so the shimmer never remains over a ready image.
+  // The image is opaque from the first paint and sits above the shimmer, so
+  // this state never decides whether it is visible (#594). It only stops the
+  // shimmer animation and styles a failure. Cached images can finish before
+  // hydration attaches onLoad, so reconcile after every src change too —
+  // otherwise the shimmer would keep animating under a ready image.
   useEffect(() => {
     setImageState('loading')
     const image = wrapperRef.current?.querySelector('img')
