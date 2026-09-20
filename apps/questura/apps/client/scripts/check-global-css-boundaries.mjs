@@ -1,56 +1,100 @@
 #!/usr/bin/env node
 
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const clientRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const entrypointPath = resolve(clientRoot, 'src/app/globals.css')
-const moduleImports = [
-  './styles/global/foundations.css',
-  './styles/global/article-prose-and-media.css',
-  './styles/global/membership.css',
-  './styles/global/editorial-effects.css',
-  './styles/global/featured-articles-shared-and-seven.css',
-  './styles/global/featured-articles-four.css',
-  './styles/global/featured-articles-five.css',
-  './styles/global/featured-articles-nine.css',
-  './styles/global/featured-articles-three.css',
-  './styles/global/responsive-accessibility.css',
+/*
+ * Two stylesheet entrypoints, each with a fixed import list and order.
+ *
+ * `globals.css` is what every route loads, so anything added to it is paid for
+ * by /join, /search, the account pages and the auth pages as well. City,
+ * article, itinerary and listicle styling belongs in `public-routes.css`,
+ * which only the public route group loads.
+ */
+const ENTRYPOINTS = [
+  {
+    path: 'src/app/globals.css',
+    imports: [
+      'tailwindcss',
+      './styles/global/foundations.css',
+      './styles/global/membership.css',
+    ],
+  },
+  {
+    path: 'src/app/styles/public-routes.css',
+    imports: [
+      './global/article-prose-and-media.css',
+      './global/editorial-effects.css',
+      './global/featured-articles-shared-and-seven.css',
+      './global/featured-articles-four.css',
+      './global/featured-articles-five.css',
+      './global/featured-articles-nine.css',
+      './global/featured-articles-three.css',
+      './global/responsive-accessibility.css',
+    ],
+  },
 ]
-const expectedImports = ['tailwindcss', ...moduleImports]
 
-const entrypoint = await readFile(entrypointPath, 'utf8')
-const actualImports = [...entrypoint.matchAll(/@import\s+["']([^"']+)["'];/g)].map(
-  ([, importPath]) => importPath,
-)
+// Every module has to be reachable from exactly one entrypoint. A file that
+// falls out of both lists is dead; a file in both is served twice.
+const seen = new Set()
 
-if (JSON.stringify(actualImports) !== JSON.stringify(expectedImports)) {
+for (const entrypoint of ENTRYPOINTS) {
+  const entrypointPath = resolve(clientRoot, entrypoint.path)
+  const source = await readFile(entrypointPath, 'utf8')
+  const actualImports = [...source.matchAll(/@import\s+["']([^"']+)["'];/g)].map(
+    ([, importPath]) => importPath,
+  )
+
+  if (JSON.stringify(actualImports) !== JSON.stringify(entrypoint.imports)) {
+    throw new Error(
+      `${entrypoint.path} imports must preserve the cascade order.\nExpected: ${entrypoint.imports.join(', ')}\nActual: ${actualImports.join(', ')}`,
+    )
+  }
+
+  const rules = source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/@import\s+["'][^"']+["'];/g, '')
+    .trim()
+
+  if (rules) {
+    throw new Error(`${entrypoint.path} must remain an import-only cascade entrypoint`)
+  }
+
+  for (const importPath of entrypoint.imports) {
+    if (importPath === 'tailwindcss') continue
+
+    const modulePath = resolve(dirname(entrypointPath), importPath)
+
+    if (seen.has(modulePath)) {
+      throw new Error(`${importPath} is imported by more than one entrypoint`)
+    }
+    seen.add(modulePath)
+
+    const moduleCss = await readFile(modulePath, 'utf8')
+
+    if (!moduleCss.trim()) {
+      throw new Error(`${importPath} must not be empty`)
+    }
+
+    if (/@import\b/.test(moduleCss)) {
+      throw new Error(`${importPath} must not add nested imports`)
+    }
+  }
+}
+
+// A module nobody imports is styling nothing. The count is the guard: adding a
+// stylesheet without wiring it into an entrypoint fails here instead of
+// silently doing nothing.
+const modulesDir = resolve(clientRoot, 'src/app/styles/global')
+const moduleFiles = (await readdir(modulesDir)).filter((name) => name.endsWith('.css'))
+
+if (moduleFiles.length !== seen.size) {
   throw new Error(
-    `globals.css imports must preserve the global cascade order.\nExpected: ${expectedImports.join(', ')}\nActual: ${actualImports.join(', ')}`,
+    `src/app/styles/global holds ${moduleFiles.length} stylesheets but the entrypoints import ${seen.size}. Every module must be imported by exactly one entrypoint.`,
   )
 }
 
-const entrypointRules = entrypoint
-  .replace(/\/\*[\s\S]*?\*\//g, '')
-  .replace(/@import\s+["'][^"']+["'];/g, '')
-  .trim()
-
-if (entrypointRules) {
-  throw new Error('globals.css must remain an import-only cascade entrypoint')
-}
-
-for (const importPath of moduleImports) {
-  const modulePath = resolve(dirname(entrypointPath), importPath)
-  const moduleCss = await readFile(modulePath, 'utf8')
-
-  if (!moduleCss.trim()) {
-    throw new Error(`${importPath} must not be empty`)
-  }
-
-  if (/@import\b/.test(moduleCss)) {
-    throw new Error(`${importPath} must not add nested imports`)
-  }
-}
-
-console.log('Global CSS boundaries and cascade order are valid.')
+console.log('Global CSS entrypoints, cascade order and module coverage are valid.')

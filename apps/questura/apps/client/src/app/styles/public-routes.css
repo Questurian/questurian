@@ -1,0 +1,25 @@
+/*
+ * Stylesheet entrypoint for the public route group.
+ *
+ * These modules style city homepages, articles, itineraries and listicles.
+ * They used to sit in `globals.css`, which the root layout loads, so /join,
+ * /search, the account pages and the auth pages all downloaded them too. A
+ * selector-coverage pass over /join found that not one of their rules matched
+ * a single element on that page -- 47,637 bytes, 7,433 gzipped, of stylesheet
+ * for a page that cannot use any of it.
+ *
+ * Keep these imports in source order: `responsive-accessibility.css` last,
+ * because its reduced-motion rules override the card effects above it.
+ *
+ * `foundations.css` and `membership.css` deliberately stay in `globals.css`.
+ * Foundations is the shared cascade every route needs, and membership carries
+ * the tour booking-ring styles that listicles use as well as /join.
+ */
+@import "./global/article-prose-and-media.css";
+@import "./global/editorial-effects.css";
+@import "./global/featured-articles-shared-and-seven.css";
+@import "./global/featured-articles-four.css";
+@import "./global/featured-articles-five.css";
+@import "./global/featured-articles-nine.css";
+@import "./global/featured-articles-three.css";
+@import "./global/responsive-accessibility.css";

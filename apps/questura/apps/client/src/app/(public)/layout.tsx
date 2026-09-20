@@ -1,3 +1,5 @@
+import "../styles/public-routes.css";
+
 import { PublicChrome } from "@/components/layout/PublicChrome";
 import { SiteFonts } from "@/components/layout/SiteFonts";
 
