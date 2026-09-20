@@ -3,6 +3,7 @@ import type { Payload } from 'payload'
 import type { LocationDocLike, LocationGridCandidate, LocationGridItemRef } from '../types'
 
 import { locationGridSelect } from '../constants'
+import { HOMEPAGE_BLOCK_POPULATE } from '../../populate'
 import { normalizeLocationGridCandidate } from './candidate'
 
 export async function findLocationGridDoc(
@@ -16,6 +17,7 @@ export async function findLocationGridDoc(
       depth: 2,
       overrideAccess: true,
       select: locationGridSelect,
+      populate: HOMEPAGE_BLOCK_POPULATE,
     })
 
     return normalizeLocationGridCandidate(doc as LocationDocLike)

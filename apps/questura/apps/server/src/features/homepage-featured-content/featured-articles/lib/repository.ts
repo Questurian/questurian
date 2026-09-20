@@ -6,6 +6,7 @@ import type {
   PayloadDocLike,
 } from '../types'
 
+import { HOMEPAGE_BLOCK_POPULATE } from '../../populate'
 import { normalizeHomepageFeaturedCandidate } from './candidate'
 
 export const homepageFeaturedSelect = {
@@ -36,6 +37,7 @@ export async function findHomepageFeaturedDoc(
       depth: 3,
       overrideAccess: true,
       select: homepageFeaturedSelect,
+      populate: HOMEPAGE_BLOCK_POPULATE,
     })
 
     return normalizeHomepageFeaturedCandidate(ref.relationTo, doc as PayloadDocLike)
