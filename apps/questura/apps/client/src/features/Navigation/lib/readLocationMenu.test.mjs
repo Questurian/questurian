@@ -32,7 +32,15 @@ test('a backend that never answers cannot hold the shell past the deadline', asy
     'https://api.example.com',
     (_url, options) =>
       new Promise((_resolve, reject) => {
-        options.signal.addEventListener('abort', () => reject(options.signal.reason))
+        // A backend that accepts the request and then answers far too late.
+        // This timer is deliberately ref'd: AbortSignal.timeout's own timer is
+        // not, so without something holding the loop open node would drain and
+        // cancel the test before the deadline it is meant to prove.
+        const tooLate = setTimeout(() => reject(new Error('the deadline never fired')), 5000)
+        options.signal.addEventListener('abort', () => {
+          clearTimeout(tooLate)
+          reject(options.signal.reason)
+        })
       }),
     80,
   )
