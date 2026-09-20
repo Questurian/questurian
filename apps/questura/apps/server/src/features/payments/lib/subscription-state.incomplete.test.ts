@@ -46,6 +46,29 @@ function firstWithStatus(status: string): Stripe.Subscription {
   return found
 }
 
+/**
+ * The fixture is a recording, and a recording ages. Its subscription covers
+ * 19 Aug -> 19 Sep 2026, so on 19 Sep the assertions below that compared it
+ * against the real clock started failing on every run, permanently.
+ *
+ * Those comparisons are not testing the clock. They state the precondition
+ * that gives the rest of this file its meaning: a real, future, plausible
+ * period end sitting on a subscription that has collected nothing. So the
+ * test takes its "now" from inside the recording rather than from the wall.
+ *
+ * Derived, not hardcoded: re-capturing the fixture carries this with it and
+ * needs no edit here. Re-capturing is not the fix for a failure at this line,
+ * though — it buys one month and then fails again.
+ *
+ * The code under test barely reads a clock at all. `resolvePaidThrough`
+ * derives entirely from the subscription's own fields, and the one place that
+ * does read one, `resolveDunningGrace`, takes it from `DeriveContext.now`.
+ */
+const AS_OF = (() => {
+  const period = periodOf(firstWithStatus('incomplete'))
+  return new Date(Math.floor((period.start + period.end) / 2) * 1000)
+})()
+
 describe('the incomplete waiting state, from captured payloads', () => {
   // Guards the fixture itself. A capture that silently returned only
   // `subscription.created` would leave every assertion below passing against a
@@ -88,13 +111,13 @@ describe('the incomplete waiting state, from captured payloads', () => {
 
     // The trap: a real, future, plausible-looking timestamp sitting on an unpaid
     // subscription. Reading it would grant a month of access for nothing.
-    expect(item.end).toBeGreaterThan(Math.floor(Date.now() / 1000))
+    expect(item.end).toBeGreaterThan(Math.floor(AS_OF.getTime() / 1000))
 
-    const state = deriveSubscriptionState(waiting)
+    const state = deriveSubscriptionState(waiting, { now: AS_OF })
 
     expect(state.paidThroughAt).not.toBe(new Date(item.end * 1000).toISOString())
     // And what it does hand out buys no time at all.
-    expect(new Date(state.paidThroughAt!).getTime()).toBeLessThanOrEqual(Date.now())
+    expect(new Date(state.paidThroughAt!).getTime()).toBeLessThanOrEqual(AS_OF.getTime())
   })
 
   // Grace exists to recover a payment that once worked. A subscription that has
@@ -103,7 +126,10 @@ describe('the incomplete waiting state, from captured payloads', () => {
   it('opens no dunning grace for a subscription that never collected', () => {
     const waiting = firstWithStatus('incomplete')
 
-    const state = deriveSubscriptionState(waiting, { graceDays: DUNNING_GRACE_DAYS })
+    const state = deriveSubscriptionState(waiting, {
+      graceDays: DUNNING_GRACE_DAYS,
+      now: AS_OF,
+    })
 
     expect(state.dunningGraceUntil).toBeNull()
   })
@@ -135,10 +161,14 @@ describe('the incomplete waiting state, from captured payloads', () => {
 
     expect(periodOf(waiting).end).toBe(periodOf(settled).end)
 
-    const waitingThrough = new Date(deriveSubscriptionState(waiting).paidThroughAt!).getTime()
-    const settledThrough = new Date(deriveSubscriptionState(settled).paidThroughAt!).getTime()
+    const waitingThrough = new Date(
+      deriveSubscriptionState(waiting, { now: AS_OF }).paidThroughAt!
+    ).getTime()
+    const settledThrough = new Date(
+      deriveSubscriptionState(settled, { now: AS_OF }).paidThroughAt!
+    ).getTime()
 
-    expect(waitingThrough).toBeLessThanOrEqual(Date.now())
-    expect(settledThrough).toBeGreaterThan(Date.now())
+    expect(waitingThrough).toBeLessThanOrEqual(AS_OF.getTime())
+    expect(settledThrough).toBeGreaterThan(AS_OF.getTime())
   })
 })
