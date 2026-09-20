@@ -528,10 +528,15 @@
   transition: opacity 240ms ease;
 }
 
+/* Opaque from the first paint, and stacked above the shimmer. A decoded image
+   — cached, or simply faster than the bundle — covers the shimmer with no
+   JavaScript at all, so article headers are visible before hydration (#594).
+   `data-image-state` is only needed to stop the animation and to style a
+   failure, never to reveal the image. */
 .shimmer-image > img {
   position: relative;
   z-index: 1;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 300ms ease;
 }
 
@@ -540,8 +545,10 @@
   animation: none;
 }
 
-.shimmer-image[data-image-state='loaded'] > img {
-  opacity: 1;
+/* A broken image keeps its flat fallback instead of showing the browser's
+   broken-image glyph. This is the one state that still needs hydration. */
+.shimmer-image[data-image-state='failed'] > img {
+  opacity: 0;
 }
 
 .shimmer-image[data-image-state='failed']::before {
