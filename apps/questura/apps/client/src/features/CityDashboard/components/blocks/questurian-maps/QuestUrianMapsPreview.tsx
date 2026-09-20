@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState, type JSX } from 'react'
+import { useRef, useState, type JSX } from 'react'
 
 import type {
   CityHomepageArticleBlock,
@@ -42,17 +42,10 @@ function MapCarouselCard({
   isPriority: boolean
   isLast: boolean
 }): JSX.Element {
-  const imgRef = useRef<HTMLImageElement | null>(null)
-  const [imgLoaded, setImgLoaded] = useState(false)
-
-  // Reconcile images that finished loading before hydration attached onLoad,
-  // otherwise the card can stay stuck at opacity-0 after an SSR render.
-  useEffect(() => {
-    const image = imgRef.current
-    if (image && image.complete && image.naturalWidth > 0) {
-      setImgLoaded(true)
-    }
-  }, [item.imageUrl])
+  // Success needs no state: the image paints from the server HTML the moment
+  // it decodes. Only a broken URL needs JavaScript, and only to fall back to
+  // the grey tile behind it.
+  const [hasFailed, setHasFailed] = useState(false)
 
   return (
     <article
@@ -65,13 +58,12 @@ function MapCarouselCard({
       <div className="relative aspect-square overflow-hidden bg-[#d7dcde]">
         {item.imageUrl ? (
           <PublicImage
-            imgRef={imgRef}
             src={item.imageUrl}
             alt={item.title}
-            className={`h-full w-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`h-full w-full object-cover${hasFailed ? ' opacity-0' : ''}`}
             fetchPriority={isPriority ? 'high' : 'auto'}
             loading={isPriority ? 'eager' : 'lazy'}
-            onLoad={() => setImgLoaded(true)}
+            onError={() => setHasFailed(true)}
             sizes={BLOCK_IMAGE_SIZES.mapCard}
           />
         ) : null}
@@ -92,31 +84,21 @@ function MapGridCard({
   item: FeaturedArticleTeaser
   isPriority: boolean
 }): JSX.Element {
-  const imgRef = useRef<HTMLImageElement | null>(null)
-  const [imgLoaded, setImgLoaded] = useState(false)
   const imgSrc = item.imageUrlSquare ?? item.imageUrl
-
-  // Reconcile images that finished loading before hydration attached onLoad,
-  // otherwise the card can stay stuck at opacity-0 after an SSR render.
-  useEffect(() => {
-    const image = imgRef.current
-    if (image && image.complete && image.naturalWidth > 0) {
-      setImgLoaded(true)
-    }
-  }, [imgSrc])
+  // See MapCarouselCard: the success path is native, the failure path is not.
+  const [hasFailed, setHasFailed] = useState(false)
 
   return (
     <div className="city-four-side-card" style={{ background: '#fafaf8' }}>
       <div className="city-four-side-image relative">
         {imgSrc ? (
           <PublicImage
-            imgRef={imgRef}
             src={imgSrc}
             alt={item.title}
-            className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`relative z-10 h-full w-full object-cover${hasFailed ? ' opacity-0' : ''}`}
             fetchPriority={isPriority ? 'high' : 'auto'}
             loading={isPriority ? 'eager' : 'lazy'}
-            onLoad={() => setImgLoaded(true)}
+            onError={() => setHasFailed(true)}
             sizes={BLOCK_IMAGE_SIZES.quarterColumn}
           />
         ) : null}

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState, type JSX } from 'react'
+import { useState, type JSX } from 'react'
 
 import type {
   CityHomepageArticleBlock,
@@ -36,24 +36,10 @@ type CarouselArticleCardProps = {
 
 function CarouselArticleCard({ article, isPriority, isLast }: CarouselArticleCardProps): JSX.Element {
   const imageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
-  const imageRef = useRef<HTMLImageElement | null>(null)
-  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'failed'>(
-    imageUrl ? 'loading' : 'failed',
-  )
-
-  // The image is server-rendered at opacity-0 and faded in via onLoad. If it
-  // finishes loading (e.g. from cache) before hydration attaches the handler,
-  // the load event is missed and the card stays blank. Reconcile on mount.
-  useEffect(() => {
-    setImageStatus(imageUrl ? 'loading' : 'failed')
-    const image = imageRef.current
-    if (!imageUrl || !image) return
-    if (image.complete && image.naturalWidth > 0) {
-      setImageStatus('loaded')
-    }
-  }, [imageUrl])
-
-  const isImageLoaded = imageStatus === 'loaded'
+  // Success needs no state: the image paints from the server HTML the moment
+  // it decodes. Only a broken URL needs JavaScript, and only to fall back to
+  // the grey tile behind it.
+  const [hasFailed, setHasFailed] = useState(false)
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? null
   const authorLabel = getAuthorLabel(article)
@@ -64,15 +50,13 @@ function CarouselArticleCard({ article, isPriority, isLast }: CarouselArticleCar
       <div className="relative aspect-[3/2] overflow-hidden bg-[#d7dcde]">
         {imageUrl ? (
           <PublicImage
-            imgRef={imageRef}
             src={imageUrl}
             alt=""
-            className={`h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`h-full w-full object-cover${hasFailed ? ' opacity-0' : ''}`}
             decoding="async"
             fetchPriority={isPriority ? 'high' : 'auto'}
             loading={isPriority ? 'eager' : 'lazy'}
-            onError={() => setImageStatus('failed')}
-            onLoad={() => setImageStatus('loaded')}
+            onError={() => setHasFailed(true)}
             sizes={BLOCK_IMAGE_SIZES.carouselCard}
           />
         ) : null}
