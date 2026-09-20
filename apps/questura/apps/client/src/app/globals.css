@@ -1,17 +1,14 @@
 /*
- * Deliberate global cascade entrypoint.
+ * Deliberate global cascade entrypoint: what every route needs, and nothing
+ * else.
  *
  * Keep these imports in source order: later modules rely on the foundations
- * and shared editorial effects declared before them.
+ * declared before them.
+ *
+ * City, article, itinerary and listicle styling lives in
+ * `styles/public-routes.css`, which the public route group loads. It was here
+ * once, and /join downloaded all of it without matching one of its selectors.
  */
 @import "tailwindcss";
 @import "./styles/global/foundations.css";
-@import "./styles/global/article-prose-and-media.css";
 @import "./styles/global/membership.css";
-@import "./styles/global/editorial-effects.css";
-@import "./styles/global/featured-articles-shared-and-seven.css";
-@import "./styles/global/featured-articles-four.css";
-@import "./styles/global/featured-articles-five.css";
-@import "./styles/global/featured-articles-nine.css";
-@import "./styles/global/featured-articles-three.css";
-@import "./styles/global/responsive-accessibility.css";
