@@ -58,9 +58,29 @@ test('a rung is named .webp even when the variant is not', () => {
   const base = 'https://questurian-cdn.b-cdn.net/media/scooter-tour_editorial'
   const srcSet = buildSrcSet(`${base}.jpeg`)
   assert.match(srcSet, /_editorial_w128\.webp 128w/)
-  assert.doesNotMatch(srcSet.split(', ').slice(0, -1).join(', '), /\.jpeg/)
-  // The full-size rung is the original file, untouched.
-  assert.equal(srcSet.endsWith(`${base}.jpeg 1600w`), true)
+  assert.doesNotMatch(srcSet, /\.jpeg/)
+})
+
+test('a non-WebP variant is not offered as the top rung', () => {
+  // 119 of the 5,186 variant files are still PNG or JPEG, because
+  // `media-assets` is an ordinary upload collection and two clients post
+  // straight to it. Naming the variant as the top rung put those originals
+  // back on the page: `sizes` x devicePixelRatio passes 960 at DPR >= 2.35,
+  // and /peru/lima then pulled 4.4 MB of PNG at 1280x900 @3x. The ladder tops
+  // out at 960 for these, so no browser can reach the original.
+  for (const original of [
+    'https://questurian-cdn.b-cdn.net/media/exquisito-peru_thumbnail.png',
+    'https://questurian-cdn.b-cdn.net/media/scooter-tour_editorial.jpeg',
+    'https://questurian-cdn.b-cdn.net/media/day-trip_thumbnail.jpg',
+  ]) {
+    const srcSet = buildSrcSet(original)
+    assert.doesNotMatch(srcSet, /\.(png|jpe?g)/i, `${original} is still reachable through srcSet`)
+    assert.equal(srcSet.endsWith('_w960.webp 960w'), true)
+  }
+
+  // A WebP variant keeps its top rung, so full quality stays reachable for
+  // everything the pipeline actually produced.
+  assert.equal(buildSrcSet(CDN).endsWith('_wide.webp 1920w'), true)
 })
 
 test('a genuinely compound name still falls through', () => {

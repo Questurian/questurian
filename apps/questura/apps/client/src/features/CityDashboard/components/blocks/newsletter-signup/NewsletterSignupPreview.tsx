@@ -37,10 +37,19 @@ export function NewsletterSignupPreview({
       aria-label="Newsletter signup"
     >
       <div className="relative overflow-hidden bg-[#16226B]">
-        {/* Duotone background stays inside the shared page-width boundary. */}
+        {/* Duotone background stays inside the shared page-width boundary.
+
+            The file is already greyscale, so the `grayscale` filter below is a
+            no-op on it -- it is baked in because the colour channels are thrown
+            away here anyway and dropping them costs 15% of the bytes. If that
+            filter ever goes, the photo does not come back in colour: re-export
+            it. It is a plain file in public/ rather than a media asset because
+            it is fixed page chrome, not editorial content, so it has no ladder
+            and no CDN; 1440px covers the widest the box ever draws (1352 CSS
+            px, see BlockSection). */}
         <div className="absolute inset-0" aria-hidden="true">
           <PublicImage
-            src="/images/newsletter/lima-pier.jpg"
+            src="/images/newsletter/lima-pier-greyscale.webp"
             {...imagePriority}
             alt=""
             className="h-full w-full object-cover grayscale contrast-125"
