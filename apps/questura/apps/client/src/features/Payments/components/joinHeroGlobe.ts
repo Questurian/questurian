@@ -25,11 +25,3 @@ export const GLOBE_SIZES =
 export const GLOBE_FALLBACK_SRC = '/images/join/questurian-globe-1650.webp';
 
 export const GLOBE_ELEMENT_ID = 'join-hero-globe';
-
-/*
- * Set on <html> once the globe has decoded; membership.css keys the hero
- * enter animations off it. It lives on the document element (not on the hero
- * section) because React renders the section's className and would fight a
- * class we added behind its back.
- */
-export const HERO_READY_ATTRIBUTE = 'data-join-hero-ready';

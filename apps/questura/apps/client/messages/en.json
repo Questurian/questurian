@@ -18,5 +18,9 @@
       "title": "Itineraries",
       "empty": "No itineraries published yet."
     }
+  },
+  "join": {
+    "localPreview": "Local preview — checkout disabled.",
+    "loadingPlans": "Loading membership options…"
   }
 }

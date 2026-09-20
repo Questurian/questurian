@@ -13,7 +13,7 @@ membership product. Monthly, yearly, and the cheap laptop test charge are
 
 | What | Amount | Where it lives |
 |---|---|---|
-| **Catalog** (what the site says) | **$12.99 / month**, **$79.99 / year** | `membership-catalog.ts` → `/api/payments/plans` → `/join`, `/purchase` |
+| **Catalog** (what the site says) | **$12.99 / month**, **$79.99 / year** | `membership-catalog.ts` → `/api/payments/plans` → server-rendered `/join`, client `/purchase` |
 | **Nav Subscribe button** | **`Join: $1.54/wk` / `Subscribe: under $1.55/wk`** | Hardcoded in `SubscribeButton.tsx`. Not a bug. Do not wire plans/Stripe into it. |
 | **Laptop test charge** (what Checkout takes now) | **$0.50 / month** | Host `STRIPE_PRICE_ID_MONTHLY` → Stripe Checkout |
 
@@ -106,3 +106,26 @@ apps/questura/scripts/stripe-live <stripe args>
 
 That wrapper pulls the laptop key over ssh and passes `--api-key`. Do not copy
 the secret onto the Mac.
+
+## Local join preview and rendering
+
+`/join` renders its static copy, globe, and plan cards on the server. When
+`NEXT_PUBLIC_FRONTEND_URL` explicitly names localhost, 127.0.0.1, or ::1, it
+renders both catalog plans synchronously with a local-preview label. The
+arrow controls have no href and are marked disabled. No payment API is called.
+These fixtures contain no Stripe price IDs and are never checkout inputs.
+
+On deployed origins, `/join` reads the existing validated plans endpoint on
+the server, cached for 60 seconds, with a three-second request timeout. A slow
+cold read can stream after the hero; a failure or empty response shows the
+unavailable state, never local fixtures. Availability changes may take a cache
+window to appear; checkout still independently validates the chosen plan.
+`/purchase` and backend checkout validation are unchanged.
+
+For a local production-mode comparison, override the older production env
+file at both build and start time:
+
+```bash
+NEXT_PUBLIC_BACKEND_URL=http://localhost:4000 NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000 pnpm --dir apps/client build
+NEXT_PUBLIC_BACKEND_URL=http://localhost:4000 NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000 pnpm --dir apps/client start --port 3000
+```

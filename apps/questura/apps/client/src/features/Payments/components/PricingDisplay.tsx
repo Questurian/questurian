@@ -1,15 +1,12 @@
-'use client';
-
 import Link from 'next/link';
-import JoinHeroVisual from './JoinHeroVisual';
+import messages from '../../../../messages/en.json';
 import {
   formatPerMonthEquivalent,
   formatPlanAmount,
   formatPlanInterval,
   getAnnualSaving,
-  useMembershipPlans,
   type MembershipPlan,
-} from '../hooks/useMembershipPlan';
+} from '../lib/planPresentation';
 
 const tickerItems = [
   'Neighborhood deep-dives',
@@ -48,13 +45,9 @@ const PLAN_DIFFERENCE_QUESTION = 'What’s the difference between the plans?';
 const PLAN_DIFFERENCE_ANSWER =
   'Nothing but the billing. Both plans unlock every article, itinerary, and expert we publish.';
 
-function PlanArrowLink({ href, label }: { href: string; label: string }) {
-  return (
-    <Link
-      href={href}
-      aria-label={label}
-      className="join-plan-arrow relative z-10 grid h-14 w-14 shrink-0 self-center place-items-center text-[#1A1A1A] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1A1A1A]"
-    >
+function PlanArrowLink({ href, label, disabled }: { href: string; label: string; disabled: boolean }) {
+  const className = "join-plan-arrow relative z-10 grid h-14 w-14 shrink-0 self-center place-items-center text-[#1A1A1A] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1A1A1A]";
+  const icon = (
       <svg
         viewBox="0 0 56 56"
         fill="none"
@@ -84,6 +77,15 @@ function PlanArrowLink({ href, label }: { href: string; label: string }) {
           strokeLinejoin="round"
         />
       </svg>
+  );
+
+  return disabled ? (
+    <span role="link" aria-disabled="true" aria-label={label} className={className}>
+      {icon}
+    </span>
+  ) : (
+    <Link href={href} prefetch={false} aria-label={label} className={className}>
+      {icon}
     </Link>
   );
 }
@@ -95,9 +97,11 @@ function PlanArrowLink({ href, label }: { href: string; label: string }) {
 function AnnualPlanCard({
   plan,
   monthly,
+  preview,
 }: {
   plan: MembershipPlan;
   monthly: MembershipPlan | null;
+  preview: boolean;
 }) {
   const saving = getAnnualSaving(plan, monthly);
   const perMonth = formatPerMonthEquivalent(plan);
@@ -107,7 +111,7 @@ function AnnualPlanCard({
       className="
         join-plan-card join-plan-card--annual
         relative flex flex-col overflow-hidden
-        bg-[#FAF7F2] text-[#1A1A1A]
+        bg-paper text-[#1A1A1A]
         shadow-[0_18px_44px_-36px_rgba(26,26,26,0.45)]
         768:order-last
       "
@@ -155,19 +159,19 @@ function AnnualPlanCard({
           itinerary we publish, for one yearly payment.
         </p>
 
-        <PlanArrowLink href="/purchase/yearly" label="Continue with Annual" />
+        <PlanArrowLink href="/purchase/yearly" label="Continue with Annual" disabled={preview} />
       </div>
     </div>
   );
 }
 
-function MonthlyPlanCard({ plan }: { plan: MembershipPlan }) {
+function MonthlyPlanCard({ plan, preview }: { plan: MembershipPlan; preview: boolean }) {
   return (
     <div
       className="
         join-plan-card
         relative flex flex-col
-        bg-[#FAF7F2] p-8
+        bg-paper p-8
         shadow-[0_18px_44px_-36px_rgba(26,26,26,0.45)]
         480:p-10
       "
@@ -189,13 +193,14 @@ function MonthlyPlanCard({ plan }: { plan: MembershipPlan }) {
         travel experts, billed month to month.
       </p>
 
-      <PlanArrowLink href="/purchase/monthly" label="Continue with Monthly" />
+      <PlanArrowLink href="/purchase/monthly" label="Continue with Monthly" disabled={preview} />
     </div>
   );
 }
 
-export default function PricingDisplay() {
-  const { monthly, yearly, isLoading } = useMembershipPlans();
+export default function PricingDisplay({ plans, preview = false }: { plans: MembershipPlan[]; preview?: boolean }) {
+  const monthly = plans.find((plan) => plan.id === 'monthly') ?? null;
+  const yearly = plans.find((plan) => plan.id === 'yearly') ?? null;
 
   const annualPerMonth = yearly ? formatPerMonthEquivalent(yearly) : null;
   const hasBothPlans = Boolean(monthly && yearly);
@@ -211,9 +216,6 @@ export default function PricingDisplay() {
 
   return (
     <div className="min-h-screen bg-[#F5F0E8]">
-      {/* ── Hero ── */}
-      <JoinHeroVisual />
-
       {/* ── Departures-board ticker ── */}
       <div
         className="join-ticker overflow-hidden border-y border-[#1A1A1A]/15 py-3"
@@ -257,14 +259,12 @@ export default function PricingDisplay() {
           </p>
         </div>
 
-        {isLoading ? (
-          <p
-            className="py-10 text-center text-[0.9rem] text-[#6f6a62]"
-            role="status"
-          >
-            Loading plans…
+        {preview ? (
+          <p className="mb-6 text-center text-sm text-foreground" role="status">
+            {messages.join.localPreview}
           </p>
-        ) : hasAnyPlan ? (
+        ) : null}
+        {hasAnyPlan ? (
           <div
             className={`grid grid-cols-1 items-stretch gap-6 768:gap-8 ${
               hasBothPlans
@@ -274,9 +274,9 @@ export default function PricingDisplay() {
           >
             {/* Annual — the member pass. Absent from Stripe means absent here. */}
             {yearly ? (
-              <AnnualPlanCard plan={yearly} monthly={monthly} />
+              <AnnualPlanCard plan={yearly} monthly={monthly} preview={preview} />
             ) : null}
-            {monthly ? <MonthlyPlanCard plan={monthly} /> : null}
+            {monthly ? <MonthlyPlanCard plan={monthly} preview={preview} /> : null}
           </div>
         ) : (
           <p className="py-10 text-center text-[0.9rem] text-[#6f6a62]">
