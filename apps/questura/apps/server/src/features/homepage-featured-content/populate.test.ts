@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest'
 import { normalizeHomepageFeaturedCandidate } from './featured-articles/lib/candidate'
 import { normalizeHotelCandidate } from './hotel-grid/lib/candidate'
 import { normalizeLocationGridCandidate } from './location-grid/lib/candidate'
-import { HOMEPAGE_BLOCK_POPULATE } from './populate'
+import {
+  ACCOMMODATION_ROOT_SELECT,
+  ATTRACTION_ROOT_SELECT,
+  HOMEPAGE_BLOCK_POPULATE,
+  TOUR_ROOT_SELECT,
+} from './populate'
 import { normalizeAttractionCandidate } from './things-to-do-attractions/lib/candidate'
 import { normalizeTourCandidate } from './tour-grid/lib/candidate'
 
@@ -90,6 +95,127 @@ function locationRef(reads: Reads): Record<string, unknown> {
     neighborhoodName: 'Barranco',
   })
 }
+
+/**
+ * The root `select` has the same silent coupling as the populate map: a field
+ * the normalizer reads but the select omits comes back `undefined`.
+ *
+ * `notFields` names reads that are not columns on the collection at all —
+ * `slug` on accommodations and attractions, which payload-types confirms do
+ * not have one. Those reads have always produced `null`; selecting them would
+ * ask Payload for a field that does not exist.
+ */
+function expectSelectCoversRootReads(
+  select: Record<string, unknown>,
+  doc: Record<string, unknown>,
+  normalize: (doc: never) => unknown,
+  notFields: string[] = [],
+): void {
+  const read = new Set<string>()
+  const recording = new Proxy(doc, {
+    get(target, property, receiver) {
+      if (typeof property === 'string') read.add(property)
+      return Reflect.get(target, property, receiver)
+    },
+  })
+
+  normalize(recording as never)
+
+  // Payload returns `id` whatever the select says.
+  const fetched = new Set(['id', ...Object.keys(select), ...notFields])
+  const missing = [...read].filter((field) => !fetched.has(field)).sort()
+  expect(missing).toEqual([])
+
+  // A select that asks for more than the normalizer reads is cost with no
+  // reader — the whole point of #596.
+  const unread = Object.keys(select)
+    .filter((field) => !read.has(field))
+    .sort()
+  expect(unread).toEqual([])
+}
+
+describe('homepage block root selects', () => {
+  it('fetches exactly the accommodation fields the hotel normalizer reads', () => {
+    expectSelectCoversRootReads(
+      ACCOMMODATION_ROOT_SELECT,
+      {
+        id: 10,
+        title: 'A hotel',
+        status: 'published',
+        updatedAt: '2026-09-01T00:00:00.000Z',
+        type: 'Hotel',
+        priceLevel: '$$',
+        location: 'peru|lima|barranco',
+        // Empty for the same reason: a resolvable `locationRef` short-circuits
+        // before the normalizer ever reads the legacy `location` key.
+        locationRef: { locationKey: '', neighborhoodName: '' },
+        // Every group value here is empty on purpose. The normalizer reads
+        // the group first and only falls through to the root field when it
+        // finds nothing, so a filled group hides those reads behind `||`
+        // and the test would call a needed field unread.
+        core: { type: '', price: '', district: '' },
+        theStay: { breakfastServed: true, wifi: true, kidFriendly: true },
+        theExperience: { vibe: ['Quiet'], pool: ['rooftop'], rooftopLounge: true, gym: '24/7', restaurant: true },
+        theDetails: { walkability: 'Very walkable', bookingUrl: 'https://example.com/book' },
+        gallery: [],
+      },
+      (doc) => normalizeHotelCandidate(doc),
+      ['slug'],
+    )
+  })
+
+  it('fetches exactly the tour fields the tour normalizer reads', () => {
+    expectSelectCoversRootReads(
+      TOUR_ROOT_SELECT,
+      {
+        id: 20,
+        title: 'A tour',
+        status: 'published',
+        updatedAt: '2026-09-01T00:00:00.000Z',
+        price: 'From $45',
+        bookingLink: 'https://www.viator.com/tour',
+        locationRef: { neighborhoodName: 'Barranco', cityName: 'Lima' },
+        img: null,
+      },
+      (doc) => normalizeTourCandidate(doc),
+    )
+  })
+
+  it('fetches exactly the attraction fields the attraction normalizer reads', () => {
+    expectSelectCoversRootReads(
+      ATTRACTION_ROOT_SELECT,
+      {
+        id: 30,
+        title: 'An attraction',
+        status: 'published',
+        updatedAt: '2026-09-01T00:00:00.000Z',
+        type: 'Museum',
+        priceLevel: 'Free',
+        location: 'peru|lima|barranco',
+        locationRef: { locationKey: 'peru|lima|barranco', cityName: 'Lima' },
+        attractionsDetails: {
+          // Empty, so the root `type` / `priceLevel` fallback is exercised.
+          core: { attractionType: '', pricing: '' },
+          visit: { bookingRequired: true, bookingUrl: 'https://example.com/tickets' },
+        },
+        gallery: [],
+      },
+      (doc) => normalizeAttractionCandidate(doc),
+      ['slug'],
+    )
+  })
+
+  it('keeps createdBy out of all three, which is what removes the users query', () => {
+    for (const select of [ACCOMMODATION_ROOT_SELECT, TOUR_ROOT_SELECT, ATTRACTION_ROOT_SELECT]) {
+      expect(select).not.toHaveProperty('createdBy')
+    }
+    // An attraction's `tours` and the Instagram galleries are the other
+    // relationships a selectless read was following.
+    expect(ATTRACTION_ROOT_SELECT).not.toHaveProperty('tours')
+    expect(ACCOMMODATION_ROOT_SELECT).not.toHaveProperty('instagramGallery')
+    expect(ATTRACTION_ROOT_SELECT).not.toHaveProperty('instagramGallery')
+  })
+})
 
 describe('homepage block populate map', () => {
   it('fetches every field the featured-article normalizer reads', () => {
