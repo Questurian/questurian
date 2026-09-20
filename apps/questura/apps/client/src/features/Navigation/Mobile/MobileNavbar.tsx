@@ -1,6 +1,6 @@
 "use client";
 
-import { Logo, MenuIcon, SignInButton, SubscribeButton, UserIcon } from "./components";
+import { AuthSlot, Logo, MenuIcon, SubscribeButton } from "./components";
 import Link from "next/link";
 import { useAuth } from "@/lib/user/hooks";
 import { useMembership } from "@/features/Payments/hooks/useMembership";
@@ -37,15 +37,13 @@ export default function MobileNavbar() {
               <SubscribeButton />
             </Link>
           ) : null}
-          {loading ? null : (
-            <>
-              {isAuthenticated ? (
-                <UserIcon buttonClassName="shrink-0" isMember={isActive} />
-              ) : (
-                <SignInButton className="!text-black h-8 inline-flex items-center leading-none text-[0.69rem]" />
-              )}
-            </>
-          )}
+          <AuthSlot
+            loading={loading}
+            isAuthenticated={isAuthenticated}
+            isMember={isActive}
+            signInClassName="!text-black h-8 inline-flex items-center leading-none text-[0.69rem]"
+            userIconClassName="shrink-0"
+          />
         </div>
       </div>
     </nav>
