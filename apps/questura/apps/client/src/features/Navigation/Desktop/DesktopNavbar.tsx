@@ -46,15 +46,14 @@ export default function DesktopNavbar() {
             <Logo />
           </Link>
           <div className="flex items-center justify-self-end gap-4">
-            {/* Auth unresolved: render nothing. No spinner -- the buttons either
-                appear or they do not; a permanently empty slot is our bug to fix. */}
+            {/* Public purchase link must not wait for the session request. */}
+            {(loading || shouldShowSubscribe) ? (
+              <Link href="/join" className="inline-flex items-center">
+                <SubscribeButton />
+              </Link>
+            ) : null}
             {loading ? null : (
               <>
-                {shouldShowSubscribe ? (
-                  <Link href="/join">
-                    <SubscribeButton />
-                  </Link>
-                ) : null}
                 {isAuthenticated ? (
                   <UserIcon isMember={isActive} />
                 ) : (

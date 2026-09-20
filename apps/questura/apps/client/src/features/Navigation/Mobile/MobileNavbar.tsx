@@ -31,15 +31,14 @@ export default function MobileNavbar() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2 max-[379.98px]:gap-2.5">
-          {/* Auth unresolved: render nothing. No spinner -- the buttons either
-              appear or they do not; a permanently empty slot is our bug to fix. */}
+          {/* Public purchase link must not wait for the session request. */}
+          {(loading || shouldShowSubscribe) ? (
+            <Link href="/join" className="flex h-8 items-center max-[379.98px]:h-auto">
+              <SubscribeButton />
+            </Link>
+          ) : null}
           {loading ? null : (
             <>
-              {shouldShowSubscribe ? (
-                <Link href="/join" className="flex h-8 items-center max-[379.98px]:h-auto">
-                  <SubscribeButton />
-                </Link>
-              ) : null}
               {isAuthenticated ? (
                 <UserIcon buttonClassName="shrink-0" isMember={isActive} />
               ) : (
