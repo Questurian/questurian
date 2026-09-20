@@ -5,6 +5,7 @@ import type { PayloadFindWhere } from '@/shared/utils/payload-types'
 
 import { HOMEPAGE_FEATURED_CONTENT_SLOTS } from '../constants'
 
+import { readWithBoundedConcurrency } from './bounded-reads'
 import type { NumericReferenceRef, ParsedNumericReferenceSlot } from './refs'
 
 export type NumericReferenceGridCandidate = {
@@ -107,12 +108,18 @@ export async function getNumericReferenceGridSelectionFromItems<
   const items: Array<TCandidate & { slot: number }> = []
   const invalidItems: NumericReferenceInvalidItem[] = []
 
-  for (const slot of parsedSlots) {
+  // Read first, decide after: the decision loop below is unchanged, so slot
+  // order, invalid reasons and completeness cannot move.
+  const candidates = await readWithBoundedConcurrency(parsedSlots, (slot) =>
+    slot.ref ? config.findDoc(payload, slot.ref) : Promise.resolve(null),
+  )
+
+  for (const [index, slot] of parsedSlots.entries()) {
     if (!slot.ref) {
       invalidItems.push({ slot: slot.slot, reason: slot.reason || 'invalid_reference' })
       continue
     }
-    const candidate = await config.findDoc(payload, slot.ref)
+    const candidate = candidates[index]
     if (!candidate) {
       invalidItems.push({ slot: slot.slot, id: slot.ref.id, reason: 'not_found' })
       continue

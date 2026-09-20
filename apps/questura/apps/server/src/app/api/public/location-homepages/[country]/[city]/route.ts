@@ -62,7 +62,7 @@ export async function GET(
     }
 
     const doc = homepageResult.docs[0] as LocationHomepageDoc
-    const locationGridScope = await resolveLocationGridScope(payload, doc.location)
+    const locationGridScope = await resolveLocationGridScope(payload, doc.location, location)
     const resolvedBlocks = await resolvePageBlocks(
       payload,
       getPublishedPageBlocks(doc),
