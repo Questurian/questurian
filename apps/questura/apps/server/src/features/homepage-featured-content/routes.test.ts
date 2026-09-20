@@ -32,12 +32,26 @@ describe('location homepage routes', () => {
     vi.clearAllMocks()
   })
 
-  it('returns only pageBlocks from the public location homepage endpoint', async () => {
+  // The public endpoint must expose the blocks and the location's public
+  // identity, and nothing else — no draft blocks, no isEnabled, no revision
+  // history. It returned the whole editorial document once; the shape below
+  // is the whitelist that replaced it.
+  it('returns only the public shape from the public location homepage endpoint', async () => {
     const payload = {
       find: vi.fn()
         .mockResolvedValueOnce({
           totalDocs: 1,
-          docs: [{ id: 10, locationKey: 'peru|lima', level: 'city' }],
+          docs: [
+            {
+              id: 10,
+              locationKey: 'peru|lima',
+              level: 'city',
+              country: 'peru',
+              city: 'lima',
+              countryName: 'Peru',
+              cityName: 'Lima',
+            },
+          ],
         })
         .mockResolvedValueOnce({
           totalDocs: 1,
@@ -60,7 +74,18 @@ describe('location homepage routes', () => {
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data).toEqual({ pageBlocks: [] })
+    expect(data).toEqual({
+      location: {
+        id: 10,
+        locationKey: 'peru|lima',
+        level: 'city',
+        countryName: 'Peru',
+        cityName: 'Lima',
+        neighborhoodName: null,
+        label: 'Lima, Peru',
+      },
+      pageBlocks: [],
+    })
     expect(payload.find).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({

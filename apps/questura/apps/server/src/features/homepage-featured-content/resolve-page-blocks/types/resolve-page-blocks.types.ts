@@ -1,7 +1,12 @@
 export type LocationDoc = {
   id: number
-  locationKey?: string
+  locationKey?: string | null
   level?: string
+  // The normalized URL segments. Kept alongside the display names because the
+  // public label falls back to them when an editor has not set a display name.
+  country?: string | null
+  city?: string | null
+  neighborhood?: string | null
   countryName?: string
   cityName?: string | null
   neighborhoodName?: string | null

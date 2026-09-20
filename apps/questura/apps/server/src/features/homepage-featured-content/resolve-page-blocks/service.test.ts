@@ -79,6 +79,7 @@ describe('formatPublicLocationHomepageDoc', () => {
     ] as never)
 
     expect(response).toEqual({
+      location: null,
       pageBlocks: [
         {
           blockType,
@@ -342,7 +343,7 @@ describe('formatPublicLocationHomepageDoc', () => {
       },
     ] as never)
 
-    expect(response).toEqual({ pageBlocks: [] })
+    expect(response).toEqual({ location: null, pageBlocks: [] })
   })
 
   it('formats editorial feature copy, images, articles, and only a usable location link', () => {
@@ -401,9 +402,68 @@ describe('formatPublicLocationHomepageDoc', () => {
     })
   })
 
-  it('returns only pageBlocks at the top level', () => {
+  // This endpoint used to hand back the whole editorial document — draft
+  // blocks, isEnabled, publishedRevision, who published it. The guard that
+  // replaced it said "only pageBlocks", which held until the city page needed
+  // the location's display name to build its <title> without a second,
+  // shorter-cached request. So the guard now names the public surface
+  // exactly, rather than approximating it with a count of one.
+  it('exposes exactly the public top-level surface', () => {
     const response = formatPublicLocationHomepageDoc([] as never)
 
-    expect(Object.keys(response)).toEqual(['pageBlocks'])
+    expect(Object.keys(response).sort()).toEqual(['location', 'pageBlocks'])
+  })
+
+  it('exposes exactly the public location fields, and none of the editorial ones', () => {
+    const response = formatPublicLocationHomepageDoc([] as never, undefined, {
+      id: 10,
+      locationKey: 'peru|lima',
+      level: 'city',
+      country: 'peru',
+      city: 'lima',
+      countryName: 'Peru',
+      cityName: 'Lima',
+      // Anything the admin document happens to carry must not ride along.
+      isEnabled: true,
+      draftPageBlocks: [{ id: 'draft-1' }],
+      publishedRevision: 4,
+    } as never)
+
+    expect(response.location).toEqual({
+      id: 10,
+      locationKey: 'peru|lima',
+      level: 'city',
+      countryName: 'Peru',
+      cityName: 'Lima',
+      neighborhoodName: null,
+      label: 'Lima, Peru',
+    })
+  })
+
+  // The <title> on every city page is this string. It comes from the display
+  // columns an editor types, never from the URL slug, or "Medellín" silently
+  // becomes "Medellin".
+  it('prefers the editable display names over the URL slugs', () => {
+    const response = formatPublicLocationHomepageDoc([] as never, undefined, {
+      id: 11,
+      level: 'city',
+      country: 'colombia',
+      city: 'medellin',
+      countryName: 'Colombia',
+      cityName: 'Medellín',
+    } as never)
+
+    expect(response.location?.label).toBe('Medellín, Colombia')
+  })
+
+  it('falls back to the slugs when a display name is missing', () => {
+    const response = formatPublicLocationHomepageDoc([] as never, undefined, {
+      id: 12,
+      level: 'city',
+      country: 'peru',
+      city: 'lima',
+    } as never)
+
+    expect(response.location?.label).toBe('lima, peru')
   })
 })

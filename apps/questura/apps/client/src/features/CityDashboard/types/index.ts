@@ -17,6 +17,12 @@ export type CityHomepageLocation = {
   countryName: string | null;
   cityName: string | null;
   neighborhoodName: string | null;
+  /**
+   * The reader-facing name, e.g. "Lima, Peru". Built by the server from the
+   * editable display-name columns, so it carries accents and casing the URL
+   * slug has thrown away. Never rebuild it from `params`.
+   */
+  label: string;
 };
 
 export type CityHomepageSelection<TItem = unknown> = {
