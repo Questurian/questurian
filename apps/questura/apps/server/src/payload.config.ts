@@ -36,6 +36,7 @@ import { VisitorProfiles } from './features/visitor-auth'
 import { Bookmarks } from './features/bookmarks'
 import { StripeWebhookEvents } from './features/payments/collections/StripeWebhookEvents'
 import { APP_CONFIG, APP_URLS } from './shared/config'
+import { poolTimeoutOptions, servingTimeouts } from './shared/database/timeouts'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
@@ -67,6 +68,12 @@ export default buildConfig({
       min: 2, // Minimum number of connections to keep open
       idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
       connectionTimeoutMillis: 10000, // Fail fast instead of hanging forever
+      // Bounds on what a connection may do once it has one: a query with no
+      // plan, a lock nobody releases, a transaction a handler left open.
+      // `connectionTimeoutMillis` covers none of those, and aborting the HTTP
+      // request does not stop the database. The migration scripts set
+      // PG_STATEMENT_TIMEOUT_MS=0 -- see shared/database/timeouts.ts.
+      ...poolTimeoutOptions(servingTimeouts()),
     },
   }),
   email: resendAdapter({

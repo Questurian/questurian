@@ -11,6 +11,7 @@ import {
 import { LOCATION_FEED_SQL } from '@/features/articles/public/location-feed/location-feed-sql'
 import { clampPageSize, resolvePagingWindow } from '@/features/articles/public/paging'
 import { publicLocationLabel } from '@/shared/location/server/publicLocationLabel'
+import { publicRead } from '@/shared/http/public-read'
 
 const MAX_PAGE_SIZE = 50
 const DEFAULT_PAGE_SIZE = 20
@@ -47,49 +48,52 @@ export async function GET(req: NextRequest) {
 
     const payload = await getPayload({ config })
 
-    const locationResult = await payload.find({
-      collection: 'locations',
-      where: { locationKey: { equals: key } },
-      limit: 1,
-      depth: 0,
-      overrideAccess: true,
-    })
-    const location = locationResult.docs[0]
-    if (!location) {
-      return NextResponse.json({ message: 'Unknown location.' }, { status: 404 })
-    }
+    return await publicRead({ req, scope: 'locationFeed', payload }, async () => {
+      const locationResult = await payload.find({
+        collection: 'locations',
+        where: { locationKey: { equals: key } },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+      const location = locationResult.docs[0]
+      if (!location) {
+        return NextResponse.json({ message: 'Unknown location.' }, { status: 404 })
+      }
 
-    const pool = (payload.db as { pool?: QueryablePool }).pool
-    if (!pool) throw new Error('Expected Payload db.pool to be available.')
+      const pool = (payload.db as { pool?: QueryablePool }).pool
+      if (!pool) throw new Error('Expected Payload db.pool to be available.')
 
-    // `key` is validated against LOCATION_KEY_PATTERN above, so it carries no
-    // LIKE wildcard; the prefix is still passed as a parameter, not inlined.
-    const result = await pool.query(LOCATION_FEED_SQL, [key, `${key}|%`, lang, pageSize, offset])
-    const firstRow = result.rows[0]
-    const refs = parseArticleRefs(firstRow?.rows)
-    const totalDocs = Number(firstRow?.total_count ?? 0)
-    const totalPages = Math.max(1, Math.ceil(totalDocs / pageSize))
+      // `key` is validated against LOCATION_KEY_PATTERN above, so it carries no
+      // LIKE wildcard; the prefix is still passed as a parameter, not inlined.
+      const result = await pool.query(LOCATION_FEED_SQL, [key, `${key}|%`, lang, pageSize, offset])
+      const firstRow = result.rows[0]
+      const refs = parseArticleRefs(firstRow?.rows)
+      const totalDocs = Number(firstRow?.total_count ?? 0)
+      const totalPages = Math.max(1, Math.ceil(totalDocs / pageSize))
 
-    const items = await hydrateArticleRefs(payload, refs)
+      const items = await hydrateArticleRefs(payload, refs)
 
-    const label = publicLocationLabel(location)
+      const label = publicLocationLabel(location)
 
-    return NextResponse.json({
-      location: {
-        locationKey: key,
-        level: location.level,
-        label,
-      },
-      page,
-      pageSize,
-      totalDocs,
-      totalPages,
-      hasNext: page < totalPages,
-      hasPrev: page > 1,
-      items,
+      return NextResponse.json({
+        location: {
+          locationKey: key,
+          level: location.level,
+          label,
+        },
+        page,
+        pageSize,
+        totalDocs,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+        items,
+      })
     })
   } catch (error) {
-    const message = error instanceof Error && error.message ? error.message : 'Failed to load content.'
+    const message =
+      error instanceof Error && error.message ? error.message : 'Failed to load content.'
     return NextResponse.json({ message }, { status: 500 })
   }
 }

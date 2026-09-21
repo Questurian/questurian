@@ -9,9 +9,24 @@ import {
   resolveLocationGridScope,
   resolvePageBlocksWithReadStats,
 } from '@/features/homepage-featured-content'
-import { readBudgetOverrideFromHeaders } from '@/features/homepage-featured-content/reference-grid/page-read-budget'
+import {
+  readBudgetOverrideFromHeaders,
+  type PageReadStats,
+} from '@/features/homepage-featured-content/reference-grid/page-read-budget'
 import { noteOnRequest } from '@/shared/observability/request-report'
-import { withPublicReadDiagnostics } from '@/shared/observability/public-read'
+import { publicRead } from '@/shared/http/public-read'
+import { coalesce } from '@/shared/http/coalesce'
+
+/**
+ * One page assembly's outcome, separated from the `NextResponse` that carries
+ * it: a Response body can be read once, so callers that join in-flight work
+ * have to each build their own response around one shared result.
+ */
+type PageResult = {
+  status: number
+  body: unknown
+  stats?: PageReadStats
+}
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
@@ -28,56 +43,74 @@ export async function GET(
     const locationKey = `${country}|${city}`
     const payload = await getPayload({ config })
 
-    return await withPublicReadDiagnostics(payload, req.headers, async () => {
-      // Step 1: resolve location by locationKey
-      const locationResult = await payload.find({
-        collection: 'locations',
-        where: { locationKey: { equals: locationKey } },
-        limit: 1,
-        depth: 0,
-        overrideAccess: true,
-      })
+    return await publicRead({ req, scope: 'locationHomepage', payload }, async () => {
+      // Assembling this page is the most expensive read in the app, and the
+      // moments it is asked for several times at once -- a cold cache after a
+      // publish, a crawler on several connections -- are the moments the
+      // server can least afford to do it several times. The A/B read-limit
+      // header opts out so a measurement is never confounded by a join.
+      const coalesceKey = `location-homepage:${locationKey}`
+      const skipCoalescing = Boolean(req.headers.get('x-questura-read-limit'))
 
-      if (locationResult.totalDocs === 0) {
-        return NextResponse.json({ message: 'Location not found.' }, { status: 404 })
-      }
+      const assemble = async (): Promise<PageResult> => {
+        // Step 1: resolve location by locationKey
+        const locationResult = await payload.find({
+          collection: 'locations',
+          where: { locationKey: { equals: locationKey } },
+          limit: 1,
+          depth: 0,
+          overrideAccess: true,
+        })
 
-      const location = locationResult.docs[0]
+        if (locationResult.totalDocs === 0) {
+          return { status: 404, body: { message: 'Location not found.' } }
+        }
 
-      // Step 2: find the enabled homepage for that location
-      const homepageResult = await payload.find({
-        collection: 'location-homepages',
-        where: {
-          and: [{ location: { equals: location.id } }, { isEnabled: { equals: true } }],
-        },
-        limit: 1,
-        depth: 0,
-        overrideAccess: true,
-      })
+        const location = locationResult.docs[0]
 
-      if (homepageResult.totalDocs === 0) {
-        return NextResponse.json(
-          { message: 'No enabled homepage for this location.' },
-          { status: 404 },
+        // Step 2: find the enabled homepage for that location
+        const homepageResult = await payload.find({
+          collection: 'location-homepages',
+          where: {
+            and: [{ location: { equals: location.id } }, { isEnabled: { equals: true } }],
+          },
+          limit: 1,
+          depth: 0,
+          overrideAccess: true,
+        })
+
+        if (homepageResult.totalDocs === 0) {
+          return { status: 404, body: { message: 'No enabled homepage for this location.' } }
+        }
+
+        const doc = homepageResult.docs[0] as LocationHomepageDoc
+        const locationGridScope = await resolveLocationGridScope(payload, doc.location, location)
+        const { blocks: resolvedBlocks, stats } = await resolvePageBlocksWithReadStats(
+          payload,
+          getPublishedPageBlocks(doc),
+          locationGridScope,
+          readBudgetOverrideFromHeaders(req.headers),
         )
+
+        return {
+          status: 200,
+          body: formatPublicLocationHomepageDoc(resolvedBlocks, { country, city }, location),
+          stats,
+        }
       }
 
-      const doc = homepageResult.docs[0] as LocationHomepageDoc
-      const locationGridScope = await resolveLocationGridScope(payload, doc.location, location)
-      const { blocks: resolvedBlocks, stats } = await resolvePageBlocksWithReadStats(
-        payload,
-        getPublishedPageBlocks(doc),
-        locationGridScope,
-        readBudgetOverrideFromHeaders(req.headers),
-      )
+      const { value, joined } = skipCoalescing
+        ? { value: await assemble(), joined: false }
+        : await coalesce(coalesceKey, assemble)
 
-      noteOnRequest('reads', stats.reads)
-      noteOnRequest('deduped', stats.deduped)
-      noteOnRequest('peak', `${stats.peakConcurrency}/${stats.limit}`)
+      if (value.stats) {
+        noteOnRequest('reads', value.stats.reads)
+        noteOnRequest('deduped', value.stats.deduped)
+        noteOnRequest('peak', `${value.stats.peakConcurrency}/${value.stats.limit}`)
+      }
+      noteOnRequest('coalesced', joined ? 'joined' : 'ran')
 
-      return NextResponse.json(
-        formatPublicLocationHomepageDoc(resolvedBlocks, { country, city }, location),
-      )
+      return NextResponse.json(value.body, { status: value.status })
     })
   } catch (error) {
     return NextResponse.json(

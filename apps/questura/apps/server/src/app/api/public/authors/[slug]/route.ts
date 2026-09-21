@@ -13,6 +13,7 @@ import {
   type QueryablePool,
 } from '@/features/articles/public/hydrate-refs'
 import { clampPageSize, resolvePagingWindow } from '@/features/articles/public/paging'
+import { publicRead } from '@/shared/http/public-read'
 
 const ARTICLE_TYPES: ArticleTypeKey[] = ['articles', 'maps', 'itineraries']
 
@@ -34,10 +35,7 @@ const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 // No auth required — public author profile data for SSR/SEO rendering.
 // Accepts the author slug (canonical) or a numeric id (legacy URLs; the
 // client 301s those to the slug URL using the `slug` field in the response).
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params
     const isNumericId = /^\d+$/.test(slug)
@@ -63,118 +61,121 @@ export async function GET(
 
     const payload = await getPayload({ config })
 
-    const bySlug = await payload.find({
-      collection: 'authors',
-      where: { slug: { equals: slug } },
-      limit: 1,
-      depth: 0,
-      overrideAccess: true,
-    })
-    let author: Author | null = bySlug.docs[0] ?? null
-
-    if (!author && isNumericId) {
-      // Legacy /authors/<id> URLs were minted from *user* ids, before ADR-0007
-      // moved authorship onto its own collection. Resolve them that way first
-      // so an old link keeps pointing at the same person; reading the number as
-      // an author id instead would silently serve a different author. The
-      // client 301s either form to the canonical slug.
-      const byLegacyUserId = await payload.find({
+    return await publicRead({ req, scope: 'authorPage', payload }, async () => {
+      const bySlug = await payload.find({
         collection: 'authors',
-        where: { user: { equals: Number(slug) } },
+        where: { slug: { equals: slug } },
         limit: 1,
         depth: 0,
         overrideAccess: true,
       })
-      author = byLegacyUserId.docs[0] ?? null
+      let author: Author | null = bySlug.docs[0] ?? null
 
-      if (!author) {
-        try {
-          author = await payload.findByID({
-            collection: 'authors',
-            id: Number(slug),
-            depth: 0,
-            overrideAccess: true,
-          })
-        } catch {
-          author = null
-        }
-      }
-    }
-
-    if (!author) {
-      return NextResponse.json({ message: 'Author not found.' }, { status: 404 })
-    }
-
-    // Byline implies visibility: an author without published work has no public
-    // page, so they are not enumerable through this route. This is unchanged by
-    // the split -- an author with no staff account is still visible if their
-    // work is published, which is the point of keeping the record.
-    const isVisible = await hasPublishedAuthorContent(payload, author.id, ARTICLE_TYPES)
-    if (!isVisible) {
-      return NextResponse.json({ message: 'Author not found.' }, { status: 404 })
-    }
-
-    const displayName = author.displayName || null
-    const bio = author.bio || null
-
-    // depth is 0, so the avatar relation is an id; resolve it to a CDN URL.
-    let avatar: { url: string; alt: string | null } | null = null
-    const avatarId = author.avatar
-    if (typeof avatarId === 'number') {
-      try {
-        const asset = await payload.findByID({
-          collection: 'media-assets',
-          id: avatarId,
+      if (!author && isNumericId) {
+        // Legacy /authors/<id> URLs were minted from *user* ids, before ADR-0007
+        // moved authorship onto its own collection. Resolve them that way first
+        // so an old link keeps pointing at the same person; reading the number as
+        // an author id instead would silently serve a different author. The
+        // client 301s either form to the canonical slug.
+        const byLegacyUserId = await payload.find({
+          collection: 'authors',
+          where: { user: { equals: Number(slug) } },
+          limit: 1,
           depth: 0,
           overrideAccess: true,
         })
-        const url = asset?.url || asset?.bunny_original_url || null
-        if (url) avatar = { url, alt: asset?.alt_text || null }
-      } catch {
-        avatar = null
+        author = byLegacyUserId.docs[0] ?? null
+
+        if (!author) {
+          try {
+            author = await payload.findByID({
+              collection: 'authors',
+              id: Number(slug),
+              depth: 0,
+              overrideAccess: true,
+            })
+          } catch {
+            author = null
+          }
+        }
       }
-    }
-    const socialLinks = {
-      instagram: author.socialLinks?.instagram || null,
-      twitter: author.socialLinks?.twitter || null,
-      facebook: author.socialLinks?.facebook || null,
-      linkedin: author.socialLinks?.linkedin || null,
-      reddit: author.socialLinks?.reddit || null,
-      youtube: author.socialLinks?.youtube || null,
-      patreon: author.socialLinks?.patreon || null,
-      website: author.socialLinks?.website || null,
-    }
 
-    const pool = (payload.db as { pool?: QueryablePool }).pool
-    if (!pool) throw new Error('Expected Payload db.pool to be available.')
+      if (!author) {
+        return NextResponse.json({ message: 'Author not found.' }, { status: 404 })
+      }
 
-    // Ordering across the three collections happens in SQL over ids; only the
-    // ids on this page are hydrated, with the card `select` the article
-    // indexes already use.
-    const feed = await pool.query(AUTHOR_FEED_SQL, [author.id, lang, pageSize, offset])
-    const feedRow = feed.rows[0]
-    const refs = parseArticleRefs(feedRow?.rows)
-    const totalDocs = Number(feedRow?.total_count ?? 0)
-    const totalPages = totalDocs === 0 ? 0 : Math.ceil(totalDocs / pageSize)
-    const articles = await hydrateArticleRefs(payload, refs)
+      // Byline implies visibility: an author without published work has no public
+      // page, so they are not enumerable through this route. This is unchanged by
+      // the split -- an author with no staff account is still visible if their
+      // work is published, which is the point of keeping the record.
+      const isVisible = await hasPublishedAuthorContent(payload, author.id, ARTICLE_TYPES)
+      if (!isVisible) {
+        return NextResponse.json({ message: 'Author not found.' }, { status: 404 })
+      }
 
-    return NextResponse.json({
-      id: author.id,
-      slug: author.slug ?? null,
-      displayName,
-      bio,
-      avatar,
-      socialLinks,
-      articles,
-      page,
-      pageSize,
-      totalDocs,
-      totalPages,
-      hasNext: page < totalPages,
-      hasPrev: page > 1,
+      const displayName = author.displayName || null
+      const bio = author.bio || null
+
+      // depth is 0, so the avatar relation is an id; resolve it to a CDN URL.
+      let avatar: { url: string; alt: string | null } | null = null
+      const avatarId = author.avatar
+      if (typeof avatarId === 'number') {
+        try {
+          const asset = await payload.findByID({
+            collection: 'media-assets',
+            id: avatarId,
+            depth: 0,
+            overrideAccess: true,
+          })
+          const url = asset?.url || asset?.bunny_original_url || null
+          if (url) avatar = { url, alt: asset?.alt_text || null }
+        } catch {
+          avatar = null
+        }
+      }
+      const socialLinks = {
+        instagram: author.socialLinks?.instagram || null,
+        twitter: author.socialLinks?.twitter || null,
+        facebook: author.socialLinks?.facebook || null,
+        linkedin: author.socialLinks?.linkedin || null,
+        reddit: author.socialLinks?.reddit || null,
+        youtube: author.socialLinks?.youtube || null,
+        patreon: author.socialLinks?.patreon || null,
+        website: author.socialLinks?.website || null,
+      }
+
+      const pool = (payload.db as { pool?: QueryablePool }).pool
+      if (!pool) throw new Error('Expected Payload db.pool to be available.')
+
+      // Ordering across the three collections happens in SQL over ids; only the
+      // ids on this page are hydrated, with the card `select` the article
+      // indexes already use.
+      const feed = await pool.query(AUTHOR_FEED_SQL, [author.id, lang, pageSize, offset])
+      const feedRow = feed.rows[0]
+      const refs = parseArticleRefs(feedRow?.rows)
+      const totalDocs = Number(feedRow?.total_count ?? 0)
+      const totalPages = totalDocs === 0 ? 0 : Math.ceil(totalDocs / pageSize)
+      const articles = await hydrateArticleRefs(payload, refs)
+
+      return NextResponse.json({
+        id: author.id,
+        slug: author.slug ?? null,
+        displayName,
+        bio,
+        avatar,
+        socialLinks,
+        articles,
+        page,
+        pageSize,
+        totalDocs,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      })
     })
   } catch (error) {
-    const message = error instanceof Error && error.message ? error.message : 'Failed to load author.'
+    const message =
+      error instanceof Error && error.message ? error.message : 'Failed to load author.'
     return NextResponse.json({ message }, { status: 500 })
   }
 }

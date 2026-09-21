@@ -17,6 +17,7 @@ import {
   INDEX_ITEM_SELECT,
   serializeIndexItem,
 } from '@/features/articles/public/indexItem'
+import { publicRead } from '@/shared/http/public-read'
 
 const MAX_PAGE_SIZE = 50
 const DEFAULT_PAGE_SIZE = 20
@@ -78,40 +79,43 @@ export async function GET(req: NextRequest) {
     const collection = TYPE_TO_COLLECTION[type]
     const payload = await getPayload({ config })
 
-    const whereClauses: Where[] = [
-      { status: { equals: 'published' } },
-      { language: { equals: lang } },
-    ]
-    const scopeWhere = buildScopeWhereCascade(scope)
-    if (scopeWhere) whereClauses.push(scopeWhere)
+    return await publicRead({ req, scope: 'articleIndex', payload }, async () => {
+      const whereClauses: Where[] = [
+        { status: { equals: 'published' } },
+        { language: { equals: lang } },
+      ]
+      const scopeWhere = buildScopeWhereCascade(scope)
+      if (scopeWhere) whereClauses.push(scopeWhere)
 
-    const result = await payload.find({
-      collection,
-      where: { and: whereClauses },
-      page,
-      limit: pageSize,
-      depth: INDEX_ITEM_DEPTH,
-      select: INDEX_ITEM_SELECT,
-      sort: '-publishedAt',
-      overrideAccess: true,
-    })
+      const result = await payload.find({
+        collection,
+        where: { and: whereClauses },
+        page,
+        limit: pageSize,
+        depth: INDEX_ITEM_DEPTH,
+        select: INDEX_ITEM_SELECT,
+        sort: '-publishedAt',
+        overrideAccess: true,
+      })
 
-    if (result.totalDocs === 0) return notFound()
-    if (page > result.totalPages) return notFound()
+      if (result.totalDocs === 0) return notFound()
+      if (page > result.totalPages) return notFound()
 
-    const items = result.docs.map((doc) => serializeIndexItem(doc, type))
+      const items = result.docs.map((doc) => serializeIndexItem(doc, type))
 
-    return NextResponse.json({
-      page,
-      pageSize,
-      totalDocs: result.totalDocs,
-      totalPages: result.totalPages,
-      hasNext: page < result.totalPages,
-      hasPrev: page > 1,
-      items,
+      return NextResponse.json({
+        page,
+        pageSize,
+        totalDocs: result.totalDocs,
+        totalPages: result.totalPages,
+        hasNext: page < result.totalPages,
+        hasPrev: page > 1,
+        items,
+      })
     })
   } catch (error) {
-    const message = error instanceof Error && error.message ? error.message : 'Failed to load index.'
+    const message =
+      error instanceof Error && error.message ? error.message : 'Failed to load index.'
     return NextResponse.json({ message }, { status: 500 })
   }
 }

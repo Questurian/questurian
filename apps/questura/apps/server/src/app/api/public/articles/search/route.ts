@@ -16,7 +16,7 @@ import { MAX_QUERY_LENGTH, normalizeQuery } from '@/features/articles/public/sea
 import { clampPageSize, resolvePagingWindow } from '@/features/articles/public/paging'
 import { hydrateHits, parseHits, type QueryablePool } from '@/features/articles/public/search/hits'
 import { noteOnRequest } from '@/shared/observability/request-report'
-import { withPublicReadDiagnostics } from '@/shared/observability/public-read'
+import { publicRead } from '@/shared/http/public-read'
 import { logger } from '@/shared/utils/logger'
 
 const MAX_PAGE_SIZE = 50
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
 
     const payload = await getPayload({ config })
 
-    return await withPublicReadDiagnostics(payload, req.headers, async () => {
+    return await publicRead({ req, scope: 'search', payload }, async () => {
       const pool = (payload.db as { pool?: QueryablePool & SearchIndexPool }).pool
       if (!pool) throw new Error('Expected Payload db.pool to be available.')
 
