@@ -83,13 +83,27 @@ test('a non-WebP variant is not offered as the top rung', () => {
   assert.equal(buildSrcSet(CDN).endsWith('_wide.webp 1920w'), true)
 })
 
-test('a genuinely compound name still falls through', () => {
-  // `_wide-thumbnail` is a thumbnail OF a wide crop, not a deduplicated
-  // thumbnail, and nothing generated rungs for it.
-  assert.equal(buildSrcSet(`${CDN.replace('_wide', '_wide-thumbnail')}`), undefined)
-  assert.equal(
-    buildSrcSet('https://questurian-cdn.b-cdn.net/media/a_wide-1-thumbnail.webp'),
-    undefined,
+test('a derived name is the shape it ends with', () => {
+  // `_wide-thumbnail` is a thumbnail cropped FROM the wide variant. The leading
+  // part records where the crop came from; the trailing shape is what the file
+  // actually is, confirmed against the pixels of all 31 of these.
+  const base = 'https://questurian-cdn.b-cdn.net/media/gaijin_1770086924310_wide-thumbnail'
+  const srcSet = buildSrcSet(`${base}.webp`)
+  assert.match(srcSet, /_wide-thumbnail_w128\.webp 128w/)
+  assert.equal(srcSet.endsWith(`${base}.webp 1200w`), true)
+
+  assert.match(
+    buildSrcSet('https://questurian-cdn.b-cdn.net/media/ch-ch_1770091514657_wide-1-thumbnail.webp'),
+    /_wide-1-thumbnail_w640\.webp 640w/,
+  )
+})
+
+test('open_graph survives, though it has an underscore of its own', () => {
+  // The shape is matched at the end of the name rather than by splitting on
+  // `_`, which would have read this one as "graph".
+  assert.match(
+    buildSrcSet('https://questurian-cdn.b-cdn.net/media/a-place_open_graph.webp'),
+    /_open_graph_w128\.webp 128w/,
   )
 })
 

@@ -228,10 +228,17 @@ describe('variantFromFilename', () => {
     expect(variantFromFilename('airport_1775163337363_square-1.webp')).toBe('square')
   })
 
-  it('declines a genuinely compound name', () => {
-    // A thumbnail OF a wide crop, not a deduplicated thumbnail.
-    expect(variantFromFilename('gaijin_1770086924310_wide-thumbnail.webp')).toBeNull()
-    expect(variantFromFilename('ch-ch_1770091514657_wide-1-thumbnail.webp')).toBeNull()
+  it('reads a derived name as the shape it ends with', () => {
+    // `_wide-thumbnail` is a thumbnail cropped FROM the wide variant.
+    expect(variantFromFilename('gaijin_1770086924310_wide-thumbnail.webp')).toBe('thumbnail')
+    expect(variantFromFilename('ch-ch_1770091514657_wide-1-thumbnail.webp')).toBe('thumbnail')
+    expect(variantFromFilename('27-tapas_1775119212550_editorial-hero.webp')).toBe('hero')
+  })
+
+  it('keeps open_graph whole', () => {
+    // Splitting on `_` would have read this as "graph".
+    expect(variantFromFilename('a-place_open_graph.webp')).toBe('open_graph')
+    expect(variantFromFilename('a-place_editorial-open_graph.webp')).toBe('open_graph')
   })
 
   it('declines anything without a shape to resize against', () => {
