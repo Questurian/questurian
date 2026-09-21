@@ -53,9 +53,18 @@ third-party requests are not in any scenario; measure them in a real browser.
 ### k6
 
 `k6` is installed on the Mac (approved 2026-09-21) for runs that need more
-arrivals than one Node process can generate. `load/k6/` holds the target-
-platform scripts (CAP-08). The Node harness is the source of truth for
-correctness classification; k6 is for volume.
+arrivals than one Node process can generate. `apps/questura/load/k6/` holds
+the target-platform scripts, one per CAP-08 row
+([`cap08-proof-matrix.md`](cap08-proof-matrix.md)). A local smoke run:
+
+```bash
+k6 run -e CLIENT_URL=http://localhost:3100 -e BASE_URL=http://localhost:4100 \
+  -e ORIGIN=https://capacity-client.invalid -e SCALE=0.05 -e TIME_SCALE=0.02 \
+  apps/questura/load/k6/campaign-readers.js
+```
+
+The Node harness is the source of truth for correctness classification; k6
+is for volume.
 
 ## A production build on the Mac, beside `pnpm dev`
 

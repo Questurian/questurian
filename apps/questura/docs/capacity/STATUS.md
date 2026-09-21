@@ -18,8 +18,8 @@ find bottlenecks and price the code; they do not say what a platform can carry.
 | CAP-04 Cache correctness, route coverage | implemented locally; shared-CDN proof owed to CAP-07/08 | `public-surface.md`, `runs/2026-09-21-cap04-*` |
 | CAP-05 Cold query amplification | implemented locally | `runs/2026-09-21-cap05-*` |
 | CAP-06 Durable refresh, safe startup | implemented locally; platform scheduler owed to CAP-07 | `pnpm verify:refresh-outbox` |
-| CAP-07 Platform, recovery, cost | blocked: awaiting provider, budget, recovery targets | |
-| CAP-08 Capacity proof | blocked: needs CAP-07 target | |
+| CAP-07 Platform, recovery, cost | blocked: awaiting owner decisions D1–D6; everything else prepared | `cap07-platform-readiness.md` |
+| CAP-08 Capacity proof | blocked: needs CAP-07 target; scripts ready and smoke-run locally | `cap08-proof-matrix.md`, `load/k6/` |
 
 Starting SHA: `d948bcfb` (main, 2026-09-21).
 
@@ -433,9 +433,43 @@ deploy. Reverting the code leaves an unused table; the migration's `down`
 drops it (review before running). Pending rows survive a rollback of code and
 are drained again once it returns.
 
+## CAP-07 / CAP-08 — prepared, blocked on decisions
+
+Neither can be completed from a Mac: both need a chosen, provisioned,
+production-class platform and approval for billed load. What could be done
+without that is done:
+
+- [`cap07-platform-readiness.md`](cap07-platform-readiness.md): the six
+  owner decisions with a recommendation each; the connection budget worked
+  for the recommended fleet; every setting the code now requires; schedulers;
+  portable alerts; restore / rollback / dependency-failure rehearsals; cost
+  model with measured page weights (Lima HTML 32 KB gzip; images 3.88 MB on a
+  full desktop scroll → 3.4–67 TB/month across the plan's range).
+- [`cap08-proof-matrix.md`](cap08-proof-matrix.md) and
+  `apps/questura/load/k6/`: six k6 scripts, one per proof row, with the
+  plan's gates and abort rule encoded as thresholds. Smoke-run against the
+  local production builds at tiny scale: every reader scenario 0 failures,
+  0 dropped iterations, all thresholds evaluated. The cold-heavy smoke
+  confirmed two properties worth knowing on the platform: a `?cold=` suffix
+  defeats CDN caching but not server coalescing (use distinct pages), and at
+  381 req/s the render bucket (2,400/min for curated pages) throttles — size
+  `PUBLIC_READ_RENDER_MULTIPLIER` there.
+
+**Program status.** Not production ready, and not claimed to be. Locally:
+the harness tells the truth, overload is bounded and shed cleanly, anonymous
+identity costs no database work, every public read is covered and bounded,
+Payload's REST mount can no longer hand out 271 MB per request, failures
+cannot be cached as content, curated pages keep their last good version,
+the Lima page costs 55% fewer statements and a process carries ~3× more
+uncached page assemblies, and refresh work is durable. Capacity on the
+platform is unmeasured until CAP-08 runs.
+
 ## Next action
 
-CAP-07/08: blocked on owner decisions (backend provider/plan/region, monthly
-and spike budget, max instances and pooler limits, campaign URLs, recovery
-targets). Everything that can be prepared without them is in
-`docs/capacity/cap07-platform-readiness.md` and `load/k6/`.
+Owner: decide D1–D6 in `cap07-platform-readiness.md` and approve provisioning
+plus a spend-capped load test. Then: configure the platform from §3–§4 of that
+file, run the rehearsals in §6, and run the CAP-08 matrix row by row.
+
+Before the parked laptop's next deploy: add `DATABASE_MAX_CONNECTIONS=100`,
+`APP_PROCESS_COUNT=1`, `APP_ROLLOUT_SURGE=0` to `~/questura/config/server.env`
+(see `infra/softprod/README.md`), or the new release will refuse to boot.
