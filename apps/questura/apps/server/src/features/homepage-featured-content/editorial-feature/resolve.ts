@@ -1,5 +1,6 @@
 import type { PayloadInstance } from '@/types'
 import { resolveMediaSetForPlacement } from '@/features/media/lib/resolve-public-image'
+import { isNotFoundError } from '@/shared/lib/not-found-error'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -62,8 +63,10 @@ export async function resolveEditorialFeatureFields(
       featureImagePortrait = resolveMediaSetForPlacement(mediaSet, 'portrait-card')
       featureImageWide = resolveMediaSetForPlacement(mediaSet, 'wide-card')
       featureImageAltReady = mediaSetHasAuthoredAlt(mediaSet)
-    } catch {
+    } catch (error) {
       // Missing relationship is represented by null images and publish blockers.
+      // A failed read is not a missing relationship.
+      if (!isNotFoundError(error)) throw error
     }
   }
 
@@ -108,7 +111,8 @@ export async function resolveEditorialFeatureFields(
         isLinkable: Boolean(href),
       }
       if (!href) linkWarning = 'Selected Location does not have an enabled, published homepage.'
-    } catch {
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error
       linkWarning = 'Selected Location no longer exists.'
     }
   }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import config from '@/payload.config'
+import { publicRead } from '@/shared/http/public-read'
 
 function badRequest(message: string) {
   return NextResponse.json({ message }, { status: 400 })
@@ -20,26 +21,29 @@ export async function GET(req: NextRequest) {
 
     const payload = await getPayload({ config })
 
-    const result = await payload.find({
-      collection: 'article-redirects',
-      where: { oldPath: { equals: path } },
-      limit: 1,
-      depth: 0,
-      overrideAccess: true,
+    // Rate limit, admission, counting and cache headers: shared/http/public-read.ts.
+    return await publicRead({ req, scope: 'navigation', payload }, async () => {
+      const result = await payload.find({
+        collection: 'article-redirects',
+        where: { oldPath: { equals: path } },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+
+      if (result.totalDocs === 0) return notFound()
+
+      const row = result.docs[0] as unknown as {
+        newPath?: unknown
+        statusCode?: unknown
+      }
+      const newPath = typeof row.newPath === 'string' ? row.newPath : null
+      if (!newPath) return notFound()
+
+      const statusCode = row.statusCode === '308' ? 308 : 301
+
+      return NextResponse.json({ newPath, statusCode })
     })
-
-    if (result.totalDocs === 0) return notFound()
-
-    const row = result.docs[0] as unknown as {
-      newPath?: unknown
-      statusCode?: unknown
-    }
-    const newPath = typeof row.newPath === 'string' ? row.newPath : null
-    if (!newPath) return notFound()
-
-    const statusCode = row.statusCode === '308' ? 308 : 301
-
-    return NextResponse.json({ newPath, statusCode })
   } catch (error) {
     const message =
       error instanceof Error && error.message ? error.message : 'Failed to load redirect.'

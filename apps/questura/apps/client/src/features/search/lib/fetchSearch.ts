@@ -1,6 +1,7 @@
 import { config } from '@/lib/config'
-import { PUBLIC_CONTENT_REVALIDATE_SECONDS } from '@/lib/cache/public-cache'
+import { PUBLIC_CONTENT_REVALIDATE_SECONDS, renderHeaders } from '@/lib/cache/public-cache'
 import { DEFAULT_LOCALE } from '@/lib/i18n/locales'
+import { readPublicResponse } from '@/lib/cache/readPublicResponse'
 
 export type LocationSearchItem = {
   locationKey: string
@@ -115,10 +116,11 @@ export async function fetchLocationContent(
 
   const url = `${config.backendUrl}/api/public/articles/by-location?${params.toString()}`
   const res = await fetch(url, {
+    headers: renderHeaders(),
     next: { revalidate: LOCATION_CONTENT_REVALIDATE[cache] },
   })
 
-  if (!res.ok) return null
-
-  return res.json() as Promise<LocationContentResponse>
+  // A failed read is not an empty location: the city and country pages turn
+  // `null` into notFound(), which ISR would cache.
+  return readPublicResponse<LocationContentResponse>(res, 'location content')
 }

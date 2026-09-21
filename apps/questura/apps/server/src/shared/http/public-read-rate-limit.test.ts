@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const incrementCounter = vi.fn()
 
@@ -77,5 +77,47 @@ describe('publicReadRateLimitResponse', () => {
     // A 429 is about one caller right now; caching it applies it to everyone
     // sharing the cache.
     expect(response.headers.get('Cache-Control')).toBe('no-store')
+  })
+})
+
+describe('frontend render budget', () => {
+  const TOKEN = 'r'.repeat(40)
+
+  beforeEach(() => {
+    vi.stubEnv('QUESTURA_RENDER_TOKEN', TOKEN)
+    vi.stubEnv('PUBLIC_READ_RENDER_MULTIPLIER', '')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('gives the frontend its own larger bucket, still bounded', async () => {
+    const headers = new Headers({ 'x-questura-render-token': TOKEN })
+    incrementCounter.mockResolvedValue({ count: PUBLIC_READ_RATE_LIMITS.locationHomepage * 20, ttlSeconds: 60 })
+    expect(await checkPublicReadRateLimit(headers, 'locationHomepage')).toEqual({ allowed: true })
+
+    incrementCounter.mockResolvedValue({ count: PUBLIC_READ_RATE_LIMITS.locationHomepage * 20 + 1, ttlSeconds: 9 })
+    expect(await checkPublicReadRateLimit(headers, 'locationHomepage')).toEqual({ allowed: false, retryAfterSeconds: 9 })
+
+    const [key] = incrementCounter.mock.calls[0] as [string]
+    expect(key).toBe('public-read:rate-limit:locationHomepage:render')
+  })
+
+  // Never a bypass on a public header alone.
+  it('treats a wrong or missing token as an ordinary per-IP caller', async () => {
+    incrementCounter.mockResolvedValue({ count: PUBLIC_READ_RATE_LIMITS.locationHomepage + 1, ttlSeconds: 5 })
+
+    for (const headers of [new Headers({ 'x-questura-render-token': 'guess' }), new Headers()]) {
+      expect(await checkPublicReadRateLimit(headers, 'locationHomepage')).toMatchObject({ allowed: false })
+    }
+    for (const [key] of incrementCounter.mock.calls as Array<[string]>) expect(key).toContain(':ip:')
+  })
+
+  it('ignores a configured token too short to be a secret', async () => {
+    vi.stubEnv('QUESTURA_RENDER_TOKEN', 'short')
+    incrementCounter.mockResolvedValue({ count: 1, ttlSeconds: 60 })
+    await checkPublicReadRateLimit(new Headers({ 'x-questura-render-token': 'short' }), 'search')
+    expect((incrementCounter.mock.calls[0] as [string])[0]).toContain(':ip:')
   })
 })

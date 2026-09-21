@@ -6,6 +6,7 @@ import { locationGridSelect } from '../constants'
 import { HOMEPAGE_BLOCK_POPULATE } from '../../populate'
 import { readDocumentOnce } from '../../reference-grid/page-read-budget'
 import { normalizeLocationGridCandidate } from './candidate'
+import { whenNotFound } from '@/shared/lib/not-found-error'
 
 export async function findLocationGridDoc(
   payload: Payload,
@@ -24,8 +25,9 @@ export async function findLocationGridDoc(
       })
 
       return normalizeLocationGridCandidate(doc as LocationDocLike)
-    } catch {
-      return null
+    } catch (error) {
+      // Deleted is omitted; failed is an error (shared/lib/not-found-error.ts).
+      return whenNotFound(error, null)
     }
   })
 }

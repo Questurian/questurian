@@ -5,6 +5,7 @@ import type { AccommodationDocLike, HomepageHotelCandidate, HomepageHotelItemRef
 import { ACCOMMODATION_ROOT_SELECT, HOMEPAGE_BLOCK_POPULATE } from '../../populate'
 import { readDocumentOnce } from '../../reference-grid/page-read-budget'
 import { normalizeHotelCandidate } from './candidate'
+import { whenNotFound } from '@/shared/lib/not-found-error'
 
 export async function findHotelDoc(
   payload: Payload,
@@ -22,8 +23,9 @@ export async function findHotelDoc(
         populate: HOMEPAGE_BLOCK_POPULATE,
       })
       return normalizeHotelCandidate(doc as AccommodationDocLike)
-    } catch {
-      return null
+    } catch (error) {
+      // Deleted is omitted; failed is an error (shared/lib/not-found-error.ts).
+      return whenNotFound(error, null)
     }
   })
 }

@@ -6,6 +6,7 @@ import { classify, parseServerTiming, takeSample, type FetchLike, type Sample } 
 import { runArrival, runClosed, AbortGuard } from './run'
 import { pickIteration, stepHeaders, validateScenario, type Scenario, type Step } from './scenario'
 import { summarizeStep, throughput } from './stats'
+import { parseUrlList, prewarm } from './prewarm'
 
 const step: Step = { name: 'page', target: 'server', path: '/x', expect: { body: 'json' } }
 
@@ -304,5 +305,38 @@ describe('AbortGuard', () => {
       verdict ??= guard.record(sample({ outcome: 'server-error', status: 500 }))
     }
     expect(verdict).toMatch(/failure rate/)
+  })
+})
+
+describe('prewarm', () => {
+  it('renders each URL once, then checks the cache answered, a bounded few at a time', async () => {
+    let inFlight = 0
+    let peak = 0
+    const seen: string[] = []
+    const fetchImpl: FetchLike = async (url) => {
+      inFlight += 1
+      peak = Math.max(peak, inFlight)
+      seen.push(url)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      inFlight -= 1
+      return new Response('<html>ok</html>', { status: 200, headers: { 'x-nextjs-cache': 'HIT' } })
+    }
+    const urls = parseUrlList('# comment\n/a\n\n/b\n/c\nhttps://other.example/d', 'https://site.example/')
+
+    const results = await prewarm(urls, { concurrency: 2, timeoutMs: 1000, fetchImpl })
+
+    expect(urls).toEqual(['https://site.example/a', 'https://site.example/b', 'https://site.example/c', 'https://other.example/d'])
+    expect(results.map((result) => result.second.cacheStatus)).toEqual(['HIT', 'HIT', 'HIT', 'HIT'])
+    expect(seen).toHaveLength(8)
+    expect(peak).toBeLessThanOrEqual(2)
+  })
+
+  it('reports a failed render rather than hiding it', async () => {
+    const results = await prewarm(['https://site.example/x'], {
+      concurrency: 1,
+      timeoutMs: 1000,
+      fetchImpl: respond(503, 'busy'),
+    })
+    expect(results[0]!.first.outcome).toBe('server-error')
   })
 })

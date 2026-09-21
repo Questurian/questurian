@@ -37,6 +37,7 @@ import { Bookmarks } from './features/bookmarks'
 import { StripeWebhookEvents } from './features/payments/collections/StripeWebhookEvents'
 import { APP_CONFIG, APP_URLS } from './shared/config'
 import { poolSizes } from './shared/database/pool-budget'
+import { anonymousApiBoundsPlugin } from './shared/payload/anonymous-api-bounds'
 import { poolTimeoutOptions, servingTimeouts } from './shared/database/timeouts'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -133,5 +134,8 @@ export default buildConfig({
         region: 'ny',
       },
     }),
+    // Last, so it sees every collection any plugin above added. Clamps and
+    // rate-limits anonymous REST/GraphQL reads; see the plugin for why.
+    anonymousApiBoundsPlugin,
   ],
 })

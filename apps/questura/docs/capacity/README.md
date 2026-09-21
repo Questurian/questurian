@@ -86,6 +86,15 @@ pnpm measure:api -- --base http://localhost:4100 --json ../../docs/capacity/runs
 The client builds the same way (`NEXT_DIST_DIR=.next-capacity`,
 `NEXT_PUBLIC_BACKEND_URL=http://localhost:4100`, `next start -p 3100`).
 
+## Prewarming campaign pages
+
+```bash
+pnpm prewarm:campaign -- --client https://www.questurian.com --urls ../../docs/capacity/campaign-urls.txt --concurrency 2
+```
+
+Each URL is rendered once, then fetched again to see whether the cache
+answered. Bounded (≤ 8 at a time, one pass). Exit 2 if any URL failed.
+
 ## What to record
 
 Each run in `runs/` gets its JSON plus a line in `STATUS.md`: SHA, mode,

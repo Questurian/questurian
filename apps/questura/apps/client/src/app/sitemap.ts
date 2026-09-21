@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { publicCacheTags, publicFetchOptions } from '@/lib/cache/public-cache'
+import { readPublicResponse } from '@/lib/cache/readPublicResponse'
 import { config } from '@/lib/config'
 import { DEFAULT_LOCALE } from '@/lib/i18n/locales'
 import { getPublicBaseUrl } from '@/lib/seo/publicBaseUrl'
@@ -22,14 +23,10 @@ export const revalidate = 3600
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const url = `${config.backendUrl}/api/public/sitemap-entries?lang=${DEFAULT_LOCALE}`
-  let data: SitemapEntriesResponse | null = null
-
-  try {
-    const res = await fetch(url, publicFetchOptions([publicCacheTags.sitemap()]))
-    if (res.ok) data = (await res.json()) as SitemapEntriesResponse
-  } catch {
-    data = null
-  }
+  // A failed read used to become a one-URL sitemap, cached for an hour and
+  // handed to every crawler. Throwing keeps the last good sitemap instead.
+  const res = await fetch(url, publicFetchOptions([publicCacheTags.sitemap()]))
+  const data = await readPublicResponse<SitemapEntriesResponse>(res, 'sitemap entries')
 
   const base = PUBLIC_BASE_URL.replace(/\/+$/, '')
   const home: MetadataRoute.Sitemap[number] = {

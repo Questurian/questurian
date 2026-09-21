@@ -1,0 +1,7 @@
+# Campaign landing pages to prewarm before a campaign goes out.
+# One path (or absolute URL) per line. Replace with the campaign's real links.
+/peru/lima
+/colombia/medellin
+/mexico/mexico-city
+/peru/lima/guides/a-beginners-guide-to-when-to-visit-lima-peru
+/colombia/medellin/guides/medelln-digital-nomad-guide-visas-costs-and-safety-for-2026

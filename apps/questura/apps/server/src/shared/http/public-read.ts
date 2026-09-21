@@ -22,12 +22,19 @@ type PayloadLike = { db?: { pool?: unknown } }
  * (a hot page would then refuse readers who cost nothing), so the gate has to
  * wrap the shared work, not the request. Those routes call `admitPublicWork`.
  */
-const SCOPE_WORK: Record<PublicReadScope, PublicWorkClass | 'route'> = {
+const SCOPE_WORK: Record<PublicReadScope, PublicWorkClass | 'route' | 'none'> = {
   search: 'query',
   locationFeed: 'query',
   articleIndex: 'query',
   authorPage: 'query',
+  articleRead: 'query',
+  sitemap: 'query',
+  related: 'query',
   locationHomepage: 'route',
+  // A handful of depth-0 reads; gating them would only add a queue.
+  navigation: 'none',
+  // Not served through publicRead; the Payload hook uses only the limiter.
+  payloadApi: 'none',
 }
 
 /**
@@ -77,7 +84,11 @@ export function overloadedResponse(error: AdmissionRefused): NextResponse {
  * request.
  */
 export async function publicRead(
-  options: { req: NextRequest; scope: PublicReadScope; payload: PayloadLike },
+  options: {
+    req: Pick<NextRequest, 'headers'> & { signal?: AbortSignal | null }
+    scope: PublicReadScope
+    payload: PayloadLike
+  },
   handle: () => Promise<NextResponse>,
 ): Promise<NextResponse> {
   const limit = await checkPublicReadRateLimit(options.req.headers, options.scope)
@@ -85,7 +96,9 @@ export async function publicRead(
 
   const work = SCOPE_WORK[options.scope]
   const admitted =
-    work === 'route' ? handle : () => admitPublicWork(work, handle, options.req.signal)
+    work === 'route' || work === 'none'
+      ? handle
+      : () => admitPublicWork(work, handle, options.req.signal ?? undefined)
 
   try {
     const response = await withPublicReadDiagnostics(options.payload, options.req.headers, admitted)

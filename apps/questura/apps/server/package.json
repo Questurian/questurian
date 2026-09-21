@@ -42,7 +42,8 @@
     "typecheck": "tsc --noEmit",
     "rebuild:search-index": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/rebuild-search-index.ts",
     "audit:visitor-auth-orphans": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/audit-visitor-auth-orphans.ts",
-    "measure:api": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/measure-public-api.ts"
+    "measure:api": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/measure-public-api.ts",
+    "prewarm:campaign": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/prewarm-campaign-urls.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.79.1",
