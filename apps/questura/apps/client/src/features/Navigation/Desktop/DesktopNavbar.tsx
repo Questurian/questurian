@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import {
+  AuthSlot,
   MenuIcon,
   Logo,
   SubscribeButton,
-  SignInButton,
-  UserIcon,
 } from "../shared/components";
 import { useDesktopNavbarState } from "./hooks/use-desktop-navbar-state";
 
@@ -52,15 +51,12 @@ export default function DesktopNavbar() {
                 <SubscribeButton />
               </Link>
             ) : null}
-            {loading ? null : (
-              <>
-                {isAuthenticated ? (
-                  <UserIcon isMember={isActive} />
-                ) : (
-                  <SignInButton className="!text-black" />
-                )}
-              </>
-            )}
+            <AuthSlot
+              loading={loading}
+              isAuthenticated={isAuthenticated}
+              isMember={isActive}
+              signInClassName="!text-black"
+            />
           </div>
         </div>
       </div>
