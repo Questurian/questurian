@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/PublicLink'
 import { ArrowRight } from 'lucide-react'
 
 import { ShimmerImage } from '@/components/media/ShimmerImage'

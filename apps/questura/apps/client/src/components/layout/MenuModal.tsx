@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/navigation/PublicLink";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Building2, Search, X } from "lucide-react";
@@ -10,6 +10,7 @@ import {
   type LocationMenuResponse,
 } from "@/features/Navigation/lib/fetchLocationMenu";
 import CountryFlag from "@/components/shared/ui/CountryFlag";
+import { navigateWithFeedback } from "@/components/navigation/navigationFeedbackStore";
 
 interface MenuModalProps {
   isOpen: boolean;
@@ -49,7 +50,9 @@ export default function MenuModal({
     if (!trimmed) return;
     onClose();
     setQuery("");
-    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+    // The menu unmounts on close, so the root owner carries the feedback.
+    const href = `/search?q=${encodeURIComponent(trimmed)}`;
+    if (!navigateWithFeedback(href)) router.push(href);
   };
 
   if (!isOpen) return null;
@@ -200,6 +203,7 @@ export default function MenuModal({
                   >
                     <Link
                       href={country.href}
+                      keepFeedbackAfterUnmount
                       onClick={onClose}
                       className="group inline-flex items-center gap-2.5 font-display text-[1.75rem] font-semibold leading-none text-white transition-colors hover:text-white/78 focus:outline-none focus-visible:text-white/78 1024:text-[2rem]"
                     >
@@ -217,6 +221,7 @@ export default function MenuModal({
                           <Link
                             key={city.locationKey}
                             href={city.href}
+                            keepFeedbackAfterUnmount
                             onClick={onClose}
                             className="flex items-center gap-2.5 text-[1.05rem] font-bold text-white/88 transition-colors hover:text-white focus:outline-none focus-visible:text-white"
                           >
@@ -227,6 +232,7 @@ export default function MenuModal({
                       ) : (
                         <Link
                           href={country.href}
+                          keepFeedbackAfterUnmount
                           onClick={onClose}
                           className="flex items-center gap-2.5 text-[1.05rem] font-bold text-white/88 transition-colors hover:text-white focus:outline-none focus-visible:text-white"
                         >

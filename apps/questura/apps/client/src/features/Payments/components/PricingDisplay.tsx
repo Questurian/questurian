@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/navigation/PublicLink';
 import messages from '../../../../messages/en.json';
 import {
   formatPerMonthEquivalent,

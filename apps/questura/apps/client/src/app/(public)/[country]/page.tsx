@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/navigation/PublicLink'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ArrowUpRight } from 'lucide-react'

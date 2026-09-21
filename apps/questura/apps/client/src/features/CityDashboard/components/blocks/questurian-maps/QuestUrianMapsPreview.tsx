@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/navigation/PublicLink'
 import { useRef, useState, type JSX } from 'react'
 
 import type {

@@ -180,3 +180,34 @@ a[href][data-no-hover-underline]:focus-visible :is(h1, h2, h3, h4, h5, h6),
 /* `data-article-dek` marks the meta description on a card that serves an
    article. Every such card carries it, so the dek behaves the same way in the
    city blocks, the article index, author pages, search and bookmarks. */
+
+/* Navigation feedback (NavigationFeedback + navigationFeedbackStore).
+   `html[data-navigating]` is set the moment a click starts a navigation and
+   cleared when the framework's transition settles. The working cursor shows at
+   once; the blue line only if the wait passes 150 ms, so fast clicks never
+   flash. The line is static -- an activity signal, not fake progress -- so
+   there is no motion for reduced-motion readers to opt out of. */
+.nav-feedback {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 2147483000;
+  height: 3px;
+  background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+html[data-navigating] .nav-feedback {
+  animation: nav-feedback-show 0s linear 150ms forwards;
+}
+
+@keyframes nav-feedback-show {
+  to {
+    opacity: 1;
+  }
+}
+
+html[data-navigating],
+html[data-navigating] :is(body, a[href], button, [role="link"]) {
+  cursor: progress;
+}

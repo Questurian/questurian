@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/navigation/PublicLink";
 import type { JSX } from "react";
 import type {
   AuthorArticleItem,
