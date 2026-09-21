@@ -1,5 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 
+import { whenNotFound } from '@/shared/lib/not-found-error'
+
 import { MAX_CONCURRENT_DOCUMENT_READS } from './bounded-reads'
 
 /**
@@ -47,6 +49,10 @@ export type PageReadStats = {
   peakConcurrency: number
   /** The ceiling those reads were held under. */
   limit: number
+  /** Batched reads (`prefetchDocuments`): one query for many documents. Included in `reads`. */
+  batches: number
+  /** Slot reads answered by a batch instead of their own query. */
+  prefetched: number
 }
 
 type PageReadBudget = {
@@ -55,8 +61,12 @@ type PageReadBudget = {
   peak: number
   reads: number
   deduped: number
+  batches: number
+  prefetched: number
   waiters: Array<() => void>
   cache: Map<string, Promise<unknown>>
+  /** Keys seeded by a batch and not yet read; the first read counts as `prefetched`. */
+  seeded: Set<string>
 }
 
 const budgetStore = new AsyncLocalStorage<PageReadBudget>()
@@ -113,7 +123,7 @@ export async function withPageReadBudget<T>(
   // budget turns out to queue a page behind itself somewhere unexpected.
   if (options.disabled || process.env.PAGE_READ_BUDGET === 'off') {
     const result = await assemble()
-    return { result, stats: { reads: 0, deduped: 0, peakConcurrency: 0, limit: 0 } }
+    return { result, stats: { reads: 0, deduped: 0, peakConcurrency: 0, limit: 0, batches: 0, prefetched: 0 } }
   }
 
   const existing = budgetStore.getStore()
@@ -129,8 +139,11 @@ export async function withPageReadBudget<T>(
     peak: 0,
     reads: 0,
     deduped: 0,
+    batches: 0,
+    prefetched: 0,
     waiters: [],
     cache: new Map(),
+    seeded: new Set(),
   }
 
   const result = await budgetStore.run(budget, assemble)
@@ -143,6 +156,8 @@ function readStats(budget: PageReadBudget): PageReadStats {
     deduped: budget.deduped,
     peakConcurrency: budget.peak,
     limit: budget.limit,
+    batches: budget.batches,
+    prefetched: budget.prefetched,
   }
 }
 
@@ -187,7 +202,8 @@ export function readDocumentOnce<T>(key: string, read: () => Promise<T>): Promis
 
   const cached = budget.cache.get(key) as Promise<T> | undefined
   if (cached) {
-    budget.deduped += 1
+    if (budget.seeded.delete(key)) budget.prefetched += 1
+    else budget.deduped += 1
     return cached
   }
 
@@ -199,6 +215,118 @@ export function readDocumentOnce<T>(key: string, read: () => Promise<T>): Promis
 
   budget.cache.set(key, pending)
   return pending
+}
+
+/**
+ * How one repository reads one document, so many can be read in one query.
+ *
+ * Must describe exactly the read the repository's own `findByID` does — same
+ * collection, `depth`, `select` and `populate`, same normalisation, same cache
+ * key — because a batch seeds the cache the repository then reads from.
+ */
+export type DocumentReadSpec = {
+  collection: string
+  key: (id: string | number) => string
+  depth: number
+  select: Record<string, unknown>
+  populate?: unknown
+  normalize: (doc: Record<string, unknown>) => unknown
+}
+
+type FindManyPayload = {
+  find: (args: Record<string, unknown>) => Promise<{ docs: unknown[] }>
+}
+
+type FindOnePayload = {
+  findByID: (args: Record<string, unknown>) => Promise<unknown>
+}
+
+/**
+ * Read one document by its spec, once per request: the single-document path
+ * `prefetchDocuments` shares its shape and cache key with. Not-found is
+ * `null`; any other failure propagates (shared/lib/not-found-error.ts).
+ */
+export function readDocumentBySpec<T>(
+  payload: FindOnePayload,
+  spec: DocumentReadSpec,
+  id: string | number,
+): Promise<T | null> {
+  return readDocumentOnce(spec.key(id), async () => {
+    try {
+      const doc = await payload.findByID({
+        collection: spec.collection,
+        id,
+        depth: spec.depth,
+        overrideAccess: true,
+        select: spec.select,
+        ...(spec.populate ? { populate: spec.populate } : {}),
+      })
+      return spec.normalize(doc as Record<string, unknown>) as T
+    } catch (error) {
+      return whenNotFound(error, null)
+    }
+  })
+}
+
+/**
+ * Read every listed document of one shape in a single query and seed the
+ * page's read cache with the results, so the per-slot reads that follow are
+ * answered from memory.
+ *
+ * A curated block used to read each slot with its own `findByID`, and every
+ * one of those populated its relationships on its own: Lima's page was 43
+ * document reads and 382 statements. One `find` with `id in (...)` lets
+ * Payload populate the whole set together.
+ *
+ * A document the batch does not return is seeded as `null` — the same answer
+ * the repository gives for a not-found. If the batch itself fails nothing is
+ * seeded, and each slot falls back to its own read (and its own error), which
+ * is exactly the behaviour before batching.
+ *
+ * Only inside a page read budget; outside one (admin validation paths) there
+ * is no request cache to seed, so it does nothing.
+ */
+export async function prefetchDocuments(
+  payload: FindManyPayload,
+  spec: DocumentReadSpec,
+  ids: ReadonlyArray<string | number>,
+): Promise<void> {
+  const budget = budgetStore.getStore()
+  if (!budget) return
+
+  const pending = [...new Set(ids.map(String))].filter((id) => !budget.cache.has(spec.key(id)))
+  if (pending.length === 0) return
+
+  let found: Map<string, Record<string, unknown>>
+  try {
+    const result = await withReadSlot(() =>
+      payload.find({
+        collection: spec.collection,
+        where: { id: { in: pending } },
+        depth: spec.depth,
+        select: spec.select,
+        ...(spec.populate ? { populate: spec.populate } : {}),
+        limit: pending.length,
+        pagination: false,
+        overrideAccess: true,
+      }),
+    )
+    found = new Map(
+      (result.docs as Array<Record<string, unknown>>).map((doc) => [String(doc.id), doc]),
+    )
+  } catch {
+    return
+  }
+
+  budget.reads += 1
+  budget.batches += 1
+  for (const id of pending) {
+    const key = spec.key(id)
+    if (budget.cache.has(key)) continue
+    const doc = found.get(id)
+    budget.cache.set(key, Promise.resolve(doc ? spec.normalize(doc) : null))
+    budget.seeded.add(key)
+  }
 }
 
 /**

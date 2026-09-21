@@ -3,7 +3,7 @@ import type { Payload } from 'payload'
 import type { HomepageHotelSelection, HotelGridSelectionOptions } from '../types'
 
 import { parseHotelGridSlots } from '../lib/refs'
-import { findHotelDoc } from '../lib/repository'
+import { findHotelDoc, prefetchHotelDocs } from '../lib/repository'
 import { getNumericReferenceGridSelectionFromItems } from '../../reference-grid/numeric-grid'
 
 export async function getHotelGridSelectionFromItems(
@@ -13,6 +13,7 @@ export async function getHotelGridSelectionFromItems(
 ): Promise<HomepageHotelSelection> {
   return getNumericReferenceGridSelectionFromItems(payload, rawItems, options, {
     findDoc: findHotelDoc,
+    prefetch: prefetchHotelDocs,
     parseSlots: parseHotelGridSlots,
   })
 }

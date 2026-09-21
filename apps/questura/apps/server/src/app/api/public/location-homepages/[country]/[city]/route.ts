@@ -114,6 +114,8 @@ export async function GET(
       if (value.stats) {
         noteOnRequest('reads', value.stats.reads)
         noteOnRequest('deduped', value.stats.deduped)
+        noteOnRequest('batches', value.stats.batches)
+        noteOnRequest('prefetched', value.stats.prefetched)
         noteOnRequest('peak', `${value.stats.peakConcurrency}/${value.stats.limit}`)
       }
       noteOnRequest('coalesced', joined ? 'joined' : 'ran')

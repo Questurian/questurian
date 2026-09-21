@@ -14,7 +14,7 @@ import type {
 import { readWithBoundedConcurrency } from '../../reference-grid/bounded-reads'
 import { getHomepageFeaturedCollectionLabel } from '../lib/candidate'
 import { parseHomepageFeaturedSlots } from '../lib/refs'
-import { findHomepageFeaturedDoc } from '../lib/repository'
+import { findHomepageFeaturedDoc, prefetchHomepageFeaturedDocs } from '../lib/repository'
 
 export async function getHomepageFeaturedSelectionFromItems(
   payload: Payload,
@@ -34,6 +34,12 @@ export async function getHomepageFeaturedSelectionFromItems(
   // made a seven-slot block seven sequential round trips, each one populating
   // relationships three levels deep. The decision loop below is unchanged, so
   // slot order, invalid reasons and completeness cannot move.
+  // One query per collection for the whole block first; the per-slot reads
+  // below are then answered from the request cache.
+  await prefetchHomepageFeaturedDocs(
+    payload,
+    parsedSlots.flatMap((slot) => (slot.ref ? [slot.ref] : [])),
+  )
   const candidates = await readWithBoundedConcurrency(parsedSlots, (slot) =>
     slot.ref ? findHomepageFeaturedDoc(payload, slot.ref) : Promise.resolve(null),
   )

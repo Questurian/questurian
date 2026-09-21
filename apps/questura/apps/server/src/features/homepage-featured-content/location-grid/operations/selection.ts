@@ -10,7 +10,7 @@ import type {
 import { readWithBoundedConcurrency } from '../../reference-grid/bounded-reads'
 import { readDocumentOnce } from '../../reference-grid/page-read-budget'
 import { LOCATION_GRID_MIN_SLOTS } from '../constants'
-import { findLocationGridDoc } from '../lib/repository'
+import { findLocationGridDoc, prefetchLocationGridDocs } from '../lib/repository'
 import {
   parseLocationGridSlots,
   parseStoredLocationGridDescriptions,
@@ -63,6 +63,12 @@ export async function getLocationGridSelectionFromItems(
 
   // Read first, decide after. The decision loop is unchanged, so slot order,
   // invalid reasons and completeness cannot move.
+  // One query for the whole block first; the per-slot reads below are then
+  // answered from the request cache.
+  await prefetchLocationGridDocs(
+    payload,
+    parsedSlots.flatMap((slot) => (slot.ref ? [slot.ref] : [])),
+  )
   const candidates = await readWithBoundedConcurrency(parsedSlots, (slot) =>
     slot.ref ? findLocationGridDoc(payload, slot.ref) : Promise.resolve(null),
   )

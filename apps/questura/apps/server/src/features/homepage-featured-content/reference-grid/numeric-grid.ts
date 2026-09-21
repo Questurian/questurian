@@ -90,6 +90,8 @@ export type NumericReferenceGridSelectionConfig<
   TCandidate extends NumericReferenceGridCandidate,
 > = {
   findDoc: (payload: Payload, ref: TRef) => Promise<TCandidate | null>
+  /** Read every slot's document in one query first (page read budget only). */
+  prefetch?: (payload: Payload, refs: TRef[]) => Promise<void>
   parseSlots: (rawItems: unknown) => ParsedNumericReferenceSlot<TRef>[]
 }
 
@@ -107,6 +109,13 @@ export async function getNumericReferenceGridSelectionFromItems<
   const parsedSlots = config.parseSlots(rawItems)
   const items: Array<TCandidate & { slot: number }> = []
   const invalidItems: NumericReferenceInvalidItem[] = []
+
+  // One query for the whole block, then the per-slot reads come from the
+  // request cache (page-read-budget.ts, prefetchDocuments).
+  await config.prefetch?.(
+    payload,
+    parsedSlots.flatMap((slot) => (slot.ref ? [slot.ref] : [])),
+  )
 
   // Read first, decide after: the decision loop below is unchanged, so slot
   // order, invalid reasons and completeness cannot move.
