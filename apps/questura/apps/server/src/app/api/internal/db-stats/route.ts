@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 import { describePoolBudget, poolBudget } from '@/shared/database/pool-budget'
+import { admissionStats } from '@/shared/http/admission'
 import { servingTimeouts, advisoryLockTimeouts } from '@/shared/database/timeouts'
 import { advisoryLockPoolStats } from '@/shared/utils/advisory-lock'
 
@@ -104,6 +105,10 @@ export async function GET(req: NextRequest) {
         },
         advisoryLockPool: advisoryLockPoolStats(),
         budget: { ...budget, description: describePoolBudget(budget) },
+        // Expensive public work admitted, queued and refused in this process.
+        // `refused` climbing means the gate is shedding load; `queued` pinned
+        // at its maximum means it is about to.
+        admission: admissionStats(),
         timeouts: {
           serving: servingTimeouts(),
           advisoryLock: advisoryLockTimeouts(),

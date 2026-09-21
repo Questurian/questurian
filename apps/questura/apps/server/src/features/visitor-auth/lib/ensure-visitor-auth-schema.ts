@@ -1,5 +1,7 @@
 import { Pool } from 'pg'
 
+import { poolSizes } from '@/shared/database/pool-budget'
+
 import { APP_CONFIG } from '@/shared/config'
 
 /**
@@ -86,7 +88,7 @@ export async function ensureVisitorAuthSchema(): Promise<void> {
 
   const pool = new Pool({
     connectionString: APP_CONFIG.database.uri,
-    max: 1,
+    max: poolSizes().startup,
     idleTimeoutMillis: 5000,
     connectionTimeoutMillis: 10000,
   })

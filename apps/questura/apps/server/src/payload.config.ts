@@ -36,6 +36,7 @@ import { VisitorProfiles } from './features/visitor-auth'
 import { Bookmarks } from './features/bookmarks'
 import { StripeWebhookEvents } from './features/payments/collections/StripeWebhookEvents'
 import { APP_CONFIG, APP_URLS } from './shared/config'
+import { poolSizes } from './shared/database/pool-budget'
 import { poolTimeoutOptions, servingTimeouts } from './shared/database/timeouts'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -64,7 +65,9 @@ export default buildConfig({
     push: false,
     pool: {
       connectionString: APP_CONFIG.database.uri,
-      max: 20, // Maximum number of connections in the pool
+      // Sized in one place with every other pool, so the budget check adds
+      // up the numbers that are actually used (shared/database/pool-budget.ts).
+      max: poolSizes().payload,
       min: 2, // Minimum number of connections to keep open
       idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
       connectionTimeoutMillis: 10000, // Fail fast instead of hanging forever

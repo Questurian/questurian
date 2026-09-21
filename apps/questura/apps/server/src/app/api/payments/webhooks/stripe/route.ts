@@ -163,8 +163,8 @@ export async function POST(req: NextRequest) {
     // in-flight delivery.
     //
     // If lock-pool exhaustion is ever observed, in increasing order of risk:
-    //   1. Raise `LOCK_POOL_MAX`. Postgres allows 100 and this app is nowhere
-    //      near it; 10 -> 20 is a one-line doubling.
+    //   1. Raise `DATABASE_POOL_ADVISORY_LOCK_MAX` (default 10). The boot
+    //      budget check (shared/database/pool-budget.ts) says whether it fits.
     //   2. Drop this outer lock and rely on the per-subscription lock inside
     //      `resyncSubscription` plus the unique `eventId`. Every handler
     //      currently funnels into resync, so this is plausible — but it is a

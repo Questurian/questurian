@@ -95,17 +95,38 @@ DATABASE_URI=<pooled, for everything else>
 DATABASE_URI_UNPOOLED=<direct, for the advisory locks>
 ```
 
-Declare the connection allowance too, so the budget is checked rather than
-assumed. Pool maxima are per process — 20 Payload + 10 Better Auth + 10
-advisory locks + 1 startup = 41 — and nothing multiplied that by the replica
-count before:
+State the connection budget. **Production refuses to boot without it** — and
+since CAP-02 the refusal really stops the process (it used to be logged and
+ignored). Pool maxima are per process — 20 Payload + 10 Better Auth + 10
+advisory locks + 1 startup = 41 by default — and autoscaling, a rolling
+deploy and a scheduled job each multiply them:
 
 ```
-DATABASE_MAX_CONNECTIONS=<what the plan actually allows>
-APP_PROCESS_COUNT=<replicas × processes per replica>
+DATABASE_MAX_CONNECTIONS=<real Postgres backends the plan allows>
+APP_PROCESS_COUNT=<maximum serving instances autoscaling may start>
+APP_ROLLOUT_SURGE=<extra instances alive during a deploy; 0 only if old stops before new starts>
+# optional
+APP_JOB_PROCESS_COUNT=<concurrent scheduled-job processes; default 1>
+DATABASE_RESERVED_CONNECTIONS=<operator/migration headroom; default 5>
+DATABASE_POOL_PAYLOAD_MAX=<per-instance Payload pool; default 20>
+DATABASE_POOL_VISITOR_AUTH_MAX=<default 10>
+DATABASE_POOL_ADVISORY_LOCK_MAX=<default 10>
 ```
 
-Production refuses to boot when the product exceeds the allowance.
+Behind a transaction pooler (`DATABASE_URI` looks pooled) pooled clients are
+counted against the pooler, not against Postgres, so two more are required:
+
+```
+DATABASE_POOLER_MAX_CLIENTS=<the pooler's client limit>
+DATABASE_POOLER_POOL_SIZE=<real backends the pooler itself holds>
+```
+
+The model and its arithmetic: `apps/server/src/shared/database/pool-budget.ts`.
+Serverless instances usually want much smaller per-instance pools (e.g. 5/3/2)
+so a large `APP_PROCESS_COUNT` still fits. Re-measure the admission gate
+limits (`PUBLIC_ASSEMBLY_*`, `PUBLIC_QUERY_*`, `apps/server/src/shared/http/admission.ts`)
+on the platform: they were sized from a Mac baseline and assume a 20-connection
+Payload pool.
 
 ### 4b. Decide what runs at boot
 

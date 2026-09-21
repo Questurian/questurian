@@ -161,6 +161,21 @@ Operators signed in before the change keep a host-only `payload-token` on
 logging out cannot expire it, so their previous session survives until it
 expires on its own (2h). Signing out and back in after the deploy avoids it.
 
+`~/questura/config/server.env` must also state the connection budget before a
+release containing CAP-02 (2026-09-21) is deployed, or the server exits at
+boot and the healthcheck fails. One serving process, releases swapped
+stop-then-start, the nightly reconcile as the one job; check the container's
+real limit with `SHOW max_connections` first:
+
+```
+DATABASE_MAX_CONNECTIONS=100
+APP_PROCESS_COUNT=1
+APP_ROLLOUT_SURGE=0
+```
+
+(1 + 0 + 1 job) × 41 + 5 reserve = 87. Adding the keys ahead of the deploy is
+safe; older releases ignore them.
+
 This migrates existing app env files into mode-0600 canonical config, extracts
 the existing Compose password into a mode-0600 `.env` without printing it,
 installs sanitized Compose/Tunnel config, and renders validated units under

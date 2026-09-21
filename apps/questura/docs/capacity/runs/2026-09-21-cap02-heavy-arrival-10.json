@@ -1,0 +1,207 @@
+{
+  "meta": {
+    "takenAt": "2026-09-21T20:58:01.042Z",
+    "sha": "430b45b1-dirty",
+    "scenario": "heavy-homepage",
+    "scenarioDescription": "The most expensive public read (the Lima city page assembly) with coalescing skipped, so N concurrent requests are N assemblies. Uses the x-questura-read-limit measurement header, which the server honours only outside production or when the operator set PUBLIC_API_DIAGNOSTICS=1. Rate limits apply: reset the local Redis between levels, never spoof a trusted IP header.",
+    "node": "v24.15.0",
+    "generatorHost": "darwin arm64 8 cpus",
+    "label": "CAP-02 heavy arrival 10/s with admission gate (assembly 2/8/1500ms), local prod build",
+    "warmupSamples": 1,
+    "poolScope": "single-process"
+  },
+  "args": {
+    "base": "http://localhost:4100",
+    "client": "http://localhost:3000",
+    "origin": "http://localhost:3000",
+    "scenario": "heavy-homepage",
+    "mode": "arrival",
+    "cache": "warm",
+    "runs": 10,
+    "concurrent": 1,
+    "warmup": 1,
+    "timeoutMs": 15000,
+    "rate": 10,
+    "durationS": 20,
+    "maxInFlight": 200,
+    "abortErrorRate": 1,
+    "abortMinSamples": 50,
+    "jsonPath": "../../docs/capacity/runs/2026-09-21-cap02-heavy-arrival-10.json",
+    "htmlPath": "",
+    "label": "CAP-02 heavy arrival 10/s with admission gate (assembly 2/8/1500ms), local prod build"
+  },
+  "throughput": {
+    "offered": 200,
+    "started": 200,
+    "dropped": 0,
+    "completedRequests": 200,
+    "okRequests": 61,
+    "elapsedS": 19.9016415,
+    "offeredPerS": 10.049422305190253,
+    "completedPerS": 10.049422305190253,
+    "okPerS": 3.065073803083027,
+    "lateness": {
+      "n": 200,
+      "p50": 0.6072090000016033,
+      "p95": 1.2635840000002645,
+      "p99": 1.4284589999999753,
+      "min": 0.005542000000787084,
+      "max": 5.308042000000569
+    },
+    "generatorSaturated": false
+  },
+  "steps": [
+    {
+      "step": "homepage peru/lima (uncoalesced)",
+      "measured": 200,
+      "outcomes": {
+        "ok": 61,
+        "throttled": 81,
+        "client-error": 0,
+        "server-error": 58,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0.695,
+      "okLatency": {
+        "n": 61,
+        "p50": 1826.7250830000012,
+        "p95": 1991.717458,
+        "p99": 2137.0880419999994,
+        "min": 415.87654100000003,
+        "max": 2137.0880419999994
+      },
+      "failedLatency": {
+        "n": 139,
+        "p50": 14.496166999999332,
+        "p95": 1519.073584,
+        "p99": 1537.0138749999996,
+        "min": 2.805083999999624,
+        "max": 1539.0861669999995
+      },
+      "bytes": {
+        "median": 56251,
+        "max": 56251,
+        "reported": 61
+      },
+      "statements": {
+        "median": 382,
+        "max": 382,
+        "reported": 61
+      },
+      "statementMs": {
+        "median": 2295,
+        "max": 4466,
+        "reported": 61
+      },
+      "reads": {
+        "median": 43,
+        "max": 43,
+        "reported": 61
+      },
+      "poolWaitMs": {
+        "median": 13,
+        "max": 40,
+        "reported": 61
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    }
+  ],
+  "pool": {
+    "samples": 21,
+    "failedSamples": 0,
+    "maxWaiting": 0,
+    "maxTotal": 15,
+    "waitingSeries": [
+      [
+        0,
+        0
+      ],
+      [
+        1.1,
+        0
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        7.1,
+        0
+      ],
+      [
+        8.1,
+        0
+      ],
+      [
+        9,
+        0
+      ],
+      [
+        10,
+        0
+      ],
+      [
+        11,
+        0
+      ],
+      [
+        12.1,
+        0
+      ],
+      [
+        13,
+        0
+      ],
+      [
+        14,
+        0
+      ],
+      [
+        15,
+        0
+      ],
+      [
+        16,
+        0
+      ],
+      [
+        17,
+        0
+      ],
+      [
+        18,
+        0
+      ],
+      [
+        19,
+        0
+      ],
+      [
+        20,
+        0
+      ]
+    ],
+    "scope": "single-process"
+  },
+  "aborted": null
+}

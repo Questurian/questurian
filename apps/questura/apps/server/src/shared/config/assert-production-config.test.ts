@@ -22,6 +22,9 @@ const VALID_PRODUCTION_ENV = {
   STRIPE_WEBHOOK_SECRET: 'whsec_placeholder_not_a_real_secret',
   STRIPE_PRICE_ID: 'price_monthly_placeholder',
   TRUSTED_PROXY: 'cloudflare',
+  DATABASE_MAX_CONNECTIONS: '100',
+  APP_PROCESS_COUNT: '1',
+  APP_ROLLOUT_SURGE: '0',
 }
 
 describe('production config assertion', () => {
@@ -45,6 +48,14 @@ describe('production config assertion', () => {
     vi.stubEnv('DATABASE_URL_UNPOOLED', '')
     vi.stubEnv('DATABASE_MAX_CONNECTIONS', '')
     vi.stubEnv('APP_PROCESS_COUNT', '')
+    vi.stubEnv('APP_ROLLOUT_SURGE', '')
+    vi.stubEnv('APP_JOB_PROCESS_COUNT', '')
+    vi.stubEnv('DATABASE_RESERVED_CONNECTIONS', '')
+    vi.stubEnv('DATABASE_POOLER_MAX_CLIENTS', '')
+    vi.stubEnv('DATABASE_POOLER_POOL_SIZE', '')
+    vi.stubEnv('DATABASE_POOL_PAYLOAD_MAX', '')
+    vi.stubEnv('DATABASE_POOL_VISITOR_AUTH_MAX', '')
+    vi.stubEnv('DATABASE_POOL_ADVISORY_LOCK_MAX', '')
   })
 
   afterEach(() => {
@@ -415,6 +426,8 @@ describe('production config assertion', () => {
     const { collectProductionConfigProblems } = await load({
       ...VALID_PRODUCTION_ENV,
       DATABASE_URI: 'postgres://u:p@ep-x-123-pooler.us-east-2.aws.neon.tech/db',
+      DATABASE_POOLER_MAX_CLIENTS: '1000',
+      DATABASE_POOLER_POOL_SIZE: '20',
     })
 
     expect(collectProductionConfigProblems()).toEqual([
@@ -426,6 +439,8 @@ describe('production config assertion', () => {
     const { collectProductionConfigProblems } = await load({
       ...VALID_PRODUCTION_ENV,
       DATABASE_URI: 'postgres://u:p@ep-x-123-pooler.us-east-2.aws.neon.tech/db',
+      DATABASE_POOLER_MAX_CLIENTS: '1000',
+      DATABASE_POOLER_POOL_SIZE: '20',
       DATABASE_URI_UNPOOLED: 'postgres://u:p@ep-x-123.us-east-2.aws.neon.tech/db',
     })
 
@@ -436,6 +451,8 @@ describe('production config assertion', () => {
     const { collectProductionConfigProblems } = await load({
       ...VALID_PRODUCTION_ENV,
       DATABASE_URI: 'postgres://u:p@ep-x-123-pooler.us-east-2.aws.neon.tech/db',
+      DATABASE_POOLER_MAX_CLIENTS: '1000',
+      DATABASE_POOLER_POOL_SIZE: '20',
       DATABASE_URI_UNPOOLED: 'postgres://u:p@other-pooler.us-east-2.aws.neon.tech/db',
     })
 
@@ -455,6 +472,21 @@ describe('production config assertion', () => {
 
     expect(collectProductionConfigProblems()).toEqual([
       expect.stringContaining('exceed the database allowance'),
+    ])
+  })
+
+  it('refuses a production boot that has not stated its connection budget', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      DATABASE_MAX_CONNECTIONS: '',
+      APP_PROCESS_COUNT: '',
+      APP_ROLLOUT_SURGE: '',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([
+      'Connection budget: DATABASE_MAX_CONNECTIONS is not set.',
+      'Connection budget: APP_PROCESS_COUNT is not set.',
+      'Connection budget: APP_ROLLOUT_SURGE is not set.',
     ])
   })
 

@@ -249,11 +249,16 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
     )
   }
 
-  // Pool maxima are per process and live in three files. Nothing multiplied
-  // them by the number of processes, and Postgres does not care which pool
-  // exhausts it: the first symptom is `FATAL: sorry, too many clients already`
-  // on whichever pool asks next.
+  // Pool maxima are per process, autoscaling multiplies them, a rolling deploy
+  // runs two generations at once and a scheduled job is a whole process.
+  // Postgres does not care which pool exhausts it: the first symptom is
+  // `FATAL: sorry, too many clients already` on whichever pool asks next. So
+  // production states every number the answer depends on, and the answer has
+  // to fit.
   const budget = poolBudget()
+  for (const problem of budget.problems) {
+    problems.push(`Connection budget: ${problem}`)
+  }
   if (budget.exceedsAllowance) {
     problems.push(
       `Configured connection pools exceed the database allowance: ${describePoolBudget(budget)}.`

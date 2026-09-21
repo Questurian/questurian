@@ -101,13 +101,8 @@ export const APP_CONFIG = {
     directUri:
       process.env.DATABASE_URI_UNPOOLED || process.env.DATABASE_URL_UNPOOLED || '',
 
-    /**
-     * How many connections this database accepts in total, and how many
-     * processes share it. Pool maxima are per process, so the number that
-     * matters is the product, and nothing was computing it.
-     */
-    maxConnections: Number(process.env.DATABASE_MAX_CONNECTIONS || '') || 0,
-    processCount: Number(process.env.APP_PROCESS_COUNT || '') || 1,
+    // Connection allowance, process counts and pool sizes are read by
+    // `shared/database/pool-budget.ts`, the one place they are defined.
   },
 
   // Redis Configuration

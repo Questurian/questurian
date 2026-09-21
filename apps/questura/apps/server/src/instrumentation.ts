@@ -7,6 +7,12 @@
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
+    // First, and outside the catch below: that catch used to swallow the
+    // production config refusal thrown from Payload's onInit, and the process
+    // served anyway. See shared/config/boot-guard.ts.
+    const { refuseBootOnInvalidConfig } = await import('./shared/config/boot-guard')
+    refuseBootOnInvalidConfig()
+
     const { logger } = await import('./shared/utils/logger')
     const { ensureCurrencyStartupTask } = await import('./features/shared/currencies/startup')
     const { ensureLocationStartupTask } = await import('./features/location/startup')
