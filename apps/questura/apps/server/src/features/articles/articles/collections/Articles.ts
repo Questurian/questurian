@@ -13,6 +13,7 @@ import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import { languageField } from '@/shared/i18n/languageField'
 import { accessTierField } from '@/shared/content/accessTier'
 import { revalidateArticleCollection } from '@/features/public-revalidation/revalidate-client'
+import { syncSearchIndexForCollection } from '@/features/articles/public/search-index/hooks'
 import {
   assertCanDeleteHomepageFeaturedContent,
   assertCanUnpublishHomepageFeaturedContent,
@@ -43,6 +44,7 @@ import {
 } from './fields'
 
 const articleRevalidation = revalidateArticleCollection('articles')
+const searchIndexSync = syncSearchIndexForCollection('articles')
 
 export const Articles: CollectionConfig = {
   slug: 'articles',
@@ -266,7 +268,7 @@ export const Articles: CollectionConfig = {
       },
     ],
     afterRead: [gateExternalApiRead('articles')],
-    afterChange: [articleRevalidation.afterChange],
-    afterDelete: [articleRevalidation.afterDelete],
+    afterChange: [articleRevalidation.afterChange, searchIndexSync.afterChange],
+    afterDelete: [articleRevalidation.afterDelete, searchIndexSync.afterDelete],
   },
 }

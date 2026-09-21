@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { revalidateArticleCollection } from '@/features/public-revalidation/revalidate-client'
+import { syncSearchIndexForCollection } from '@/features/articles/public/search-index/hooks'
 import {
   syncSharedNeighborhoodsField,
 } from '@/shared/location/server/articleLocationScope'
@@ -13,6 +14,7 @@ import {
 import { validateSingleTypeListicle } from './validateSingleTypeListicle'
 
 const articleRevalidation = revalidateArticleCollection('single-type-listicles')
+const searchIndexSync = syncSearchIndexForCollection('single-type-listicles')
 
 export const singleTypeListicleHooks: CollectionConfig['hooks'] = {
   beforeChange: [

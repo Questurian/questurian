@@ -43,6 +43,7 @@ import * as migration_20260823_212107_single_author_feature from './20260823_212
 import * as migration_20260823_225423_author_feature_editable_copy from './20260823_225423_author_feature_editable_copy'
 import * as migration_20260823_235319_expand_single_type_listicle_angle_values from './20260823_235319_expand_single_type_listicle_angle_values'
 import * as migration_20260920_120000_public_feed_indexes from './20260920_120000_public_feed_indexes';
+import * as migration_20260920_140000_public_search_documents from './20260920_140000_public_search_documents';
 
 export const migrations = [
   {
@@ -269,5 +270,10 @@ export const migrations = [
     up: migration_20260920_120000_public_feed_indexes.up,
     down: migration_20260920_120000_public_feed_indexes.down,
     name: '20260920_120000_public_feed_indexes',
+  },
+  {
+    up: migration_20260920_140000_public_search_documents.up,
+    down: migration_20260920_140000_public_search_documents.down,
+    name: '20260920_140000_public_search_documents',
   },
 ]

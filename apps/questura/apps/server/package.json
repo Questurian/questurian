@@ -39,7 +39,8 @@
     "test:deploy": "node --test scripts/deploy/*.test.mjs",
     "test:softprod": "bash ../../infra/softprod/deploy.test.sh && bash ../../infra/softprod/release-lib.test.sh && bash ../../infra/softprod/stage-host-config.test.sh && bash ../../infra/softprod/prepare-host-release.test.sh && bash ../../infra/softprod/adopt-host-release.test.sh && bash ../../infra/softprod/healthcheck.test.sh && bash ../../infra/softprod/reconcile.test.sh && bash ../../infra/softprod/wait-for-postgres.test.sh",
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "rebuild:search-index": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/rebuild-search-index.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.79.1",

@@ -10,6 +10,7 @@ import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import { languageField } from '@/shared/i18n/languageField'
 import { accessTierField } from '@/shared/content/accessTier'
 import { revalidateArticleCollection } from '@/features/public-revalidation/revalidate-client'
+import { syncSearchIndexForCollection } from '@/features/articles/public/search-index/hooks'
 import { gateExternalApiRead } from '@/features/articles/public/gateExternalApiRead'
 import {
   assertCanDeleteHomepageFeaturedContent,
@@ -46,6 +47,7 @@ import {
 } from './validateListicleItineraryBlockRows'
 
 const articleRevalidation = revalidateArticleCollection('listicle-itineraries')
+const searchIndexSync = syncSearchIndexForCollection('listicle-itineraries')
 
 const getValue = <T,>(data: Record<string, unknown> | undefined, key: string): T | undefined => {
   return data?.[key] as T | undefined
@@ -374,7 +376,7 @@ export const ListicleItineraries: CollectionConfig = {
       },
     ],
     afterRead: [gateExternalApiRead('listicle-itineraries')],
-    afterChange: [articleRevalidation.afterChange],
-    afterDelete: [articleRevalidation.afterDelete],
+    afterChange: [articleRevalidation.afterChange, searchIndexSync.afterChange],
+    afterDelete: [articleRevalidation.afterDelete, searchIndexSync.afterDelete],
   },
 }
