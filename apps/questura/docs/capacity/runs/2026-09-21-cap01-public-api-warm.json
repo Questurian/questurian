@@ -1,0 +1,692 @@
+{
+  "meta": {
+    "takenAt": "2026-09-21T20:43:15.993Z",
+    "sha": "d948bcfb-dirty",
+    "scenario": "public-api",
+    "scenarioDescription": "Every anonymous public read the frontend makes to render a city page, measured one endpoint at a time. The successor to the original measure:api target list.",
+    "node": "v24.15.0",
+    "generatorHost": "darwin arm64 8 cpus",
+    "label": "CAP-01 baseline: local prod build, warm, sequential",
+    "warmupSamples": 20,
+    "poolScope": "single-process"
+  },
+  "args": {
+    "base": "http://localhost:4100",
+    "client": "http://localhost:3000",
+    "scenario": "public-api",
+    "mode": "closed",
+    "cache": "warm",
+    "runs": 20,
+    "concurrent": 1,
+    "warmup": 2,
+    "timeoutMs": 15000,
+    "rate": 5,
+    "durationS": 30,
+    "maxInFlight": 200,
+    "abortErrorRate": 1,
+    "abortMinSamples": 50,
+    "jsonPath": "../../docs/capacity/runs/2026-09-21-cap01-public-api-warm.json",
+    "htmlPath": "",
+    "label": "CAP-01 baseline: local prod build, warm, sequential"
+  },
+  "throughput": {
+    "offered": 200,
+    "started": 200,
+    "dropped": 0,
+    "completedRequests": 200,
+    "okRequests": 200,
+    "elapsedS": 10.950177291,
+    "offeredPerS": 18.264544462159613,
+    "completedPerS": 18.264544462159613,
+    "okPerS": 18.264544462159613,
+    "lateness": {
+      "n": 200,
+      "p50": 0,
+      "p95": 0,
+      "p99": 0,
+      "min": 0,
+      "max": 0
+    },
+    "generatorSaturated": false
+  },
+  "steps": [
+    {
+      "step": "city homepage",
+      "measured": 20,
+      "outcomes": {
+        "ok": 20,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 20,
+        "p50": 297.57249999999976,
+        "p95": 401.86708400000043,
+        "p99": 436.09679099999994,
+        "min": 200.91541599999982,
+        "max": 436.09679099999994
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 56251,
+        "max": 56251,
+        "reported": 20
+      },
+      "statements": {
+        "median": 382,
+        "max": 382,
+        "reported": 20
+      },
+      "statementMs": {
+        "median": 1530,
+        "max": 2194,
+        "reported": 20
+      },
+      "reads": {
+        "median": 43,
+        "max": 43,
+        "reported": 20
+      },
+      "poolWaitMs": {
+        "median": 16,
+        "max": 35,
+        "reported": 20
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "author page",
+      "measured": 20,
+      "outcomes": {
+        "ok": 20,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 20,
+        "p50": 15.01549999999952,
+        "p95": 26.550792,
+        "p99": 34.92150000000038,
+        "min": 13.745499999999993,
+        "max": 34.92150000000038
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 2866,
+        "max": 2866,
+        "reported": 20
+      },
+      "statements": {
+        "median": 22,
+        "max": 22,
+        "reported": 20
+      },
+      "statementMs": {
+        "median": 16,
+        "max": 49,
+        "reported": 20
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 0,
+        "max": 6,
+        "reported": 20
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "country cities",
+      "measured": 20,
+      "outcomes": {
+        "ok": 20,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 20,
+        "p50": 6.279000000000451,
+        "p95": 10.871208999999908,
+        "p99": 14.858124999999745,
+        "min": 4.661624999999731,
+        "max": 14.858124999999745
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 102,
+        "max": 102,
+        "reported": 20
+      },
+      "statements": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "statementMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "cacheControl": null,
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "search",
+      "measured": 20,
+      "outcomes": {
+        "ok": 20,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 20,
+        "p50": 63.150541999999405,
+        "p95": 105.31366600000001,
+        "p99": 111.08799999999974,
+        "min": 38.40937499999927,
+        "max": 111.08799999999974
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 12417,
+        "max": 12417,
+        "reported": 20
+      },
+      "statements": {
+        "median": 26,
+        "max": 26,
+        "reported": 20
+      },
+      "statementMs": {
+        "median": 122,
+        "max": 242,
+        "reported": 20
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 2,
+        "max": 6,
+        "reported": 20
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "location feed",
+      "measured": 20,
+      "outcomes": {
+        "ok": 20,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 20,
+        "p50": 31.557457999999315,
+        "p95": 54.428375000001324,
+        "p99": 57.15191700000105,
+        "min": 25.336584000000585,
+        "max": 57.15191700000105
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 10640,
+        "max": 10640,
+        "reported": 20
+      },
+      "statements": {
+        "median": 28,
+        "max": 28,
+        "reported": 20
+      },
+      "statementMs": {
+        "median": 58,
+        "max": 135,
+        "reported": 20
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 1,
+        "max": 5,
+        "reported": 20
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "article index",
+      "measured": 20,
+      "outcomes": {
+        "ok": 20,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 20,
+        "p50": 27.226250000001528,
+        "p95": 35.383749999999054,
+        "p99": 49.41954199999964,
+        "min": 23.15558299999975,
+        "max": 49.41954199999964
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 11352,
+        "max": 11352,
+        "reported": 20
+      },
+      "statements": {
+        "median": 9,
+        "max": 9,
+        "reported": 20
+      },
+      "statementMs": {
+        "median": 13,
+        "max": 25,
+        "reported": 20
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 0,
+        "max": 3,
+        "reported": 20
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "article by path",
+      "measured": 20,
+      "outcomes": {
+        "ok": 20,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 20,
+        "p50": 24.982208000001265,
+        "p95": 50.03587499999958,
+        "p99": 54.601167000000714,
+        "min": 22.059500000001208,
+        "max": 54.601167000000714
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 23969,
+        "max": 23969,
+        "reported": 20
+      },
+      "statements": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "statementMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "cacheControl": null,
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "navigation menu",
+      "measured": 20,
+      "outcomes": {
+        "ok": 20,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 20,
+        "p50": 7.976125000001048,
+        "p95": 10.229709000001094,
+        "p99": 12.950415999999677,
+        "min": 5.0902920000007725,
+        "max": 12.950415999999677
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 864,
+        "max": 864,
+        "reported": 20
+      },
+      "statements": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "statementMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "cacheControl": null,
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "sitemap entries",
+      "measured": 20,
+      "outcomes": {
+        "ok": 20,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 20,
+        "p50": 32.491165999999794,
+        "p95": 43.24845800000003,
+        "p99": 58.22650000000067,
+        "min": 25.88237499999923,
+        "max": 58.22650000000067
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 4138,
+        "max": 4138,
+        "reported": 20
+      },
+      "statements": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "statementMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "cacheControl": null,
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "identity (no cookie)",
+      "measured": 20,
+      "outcomes": {
+        "ok": 20,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 20,
+        "p50": 2.3599580000009155,
+        "p95": 3.0421669999996084,
+        "p99": 3.793583000000581,
+        "min": 1.6490410000005795,
+        "max": 3.793583000000581
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 40,
+        "max": 40,
+        "reported": 20
+      },
+      "statements": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "statementMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "cacheControl": "no-store, no-cache, must-revalidate",
+      "cacheStatuses": {},
+      "errors": {}
+    }
+  ],
+  "pool": {
+    "samples": 12,
+    "failedSamples": 0,
+    "maxWaiting": 0,
+    "maxTotal": 16,
+    "waitingSeries": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        5.1,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        7,
+        0
+      ],
+      [
+        8,
+        0
+      ],
+      [
+        9,
+        0
+      ],
+      [
+        10,
+        0
+      ],
+      [
+        11,
+        0
+      ]
+    ],
+    "scope": "single-process"
+  },
+  "aborted": null
+}

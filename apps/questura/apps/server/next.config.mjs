@@ -2,7 +2,9 @@ import { withPayload } from '@payloadcms/next/withPayload'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Your Next.js config here
+  // Lets a production build for measurement live beside a running `pnpm dev`
+  // without clobbering its `.next` (docs/capacity/README.md).
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   eslint: {
     // Disable ESLint linting during builds to work around pnpm + ESLint version resolution issues
     ignoreDuringBuilds: true,

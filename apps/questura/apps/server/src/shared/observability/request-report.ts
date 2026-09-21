@@ -30,6 +30,15 @@ export type RequestReport = {
    * at once, which is the thing a connection pool actually runs out of.
    */
   statementMs: number
+  /**
+   * Milliseconds spent waiting for `pool.connect()` to hand over a client,
+   * summed, and how many times one was asked for. Waiting here means the pool
+   * was full: the request queued for a *connection*, not for the database.
+   * (A bare `pool.query` acquires internally; its wait lands in
+   * `statementMs` instead, which is why this is a floor, not the whole wait.)
+   */
+  poolWaitMs: number
+  poolAcquires: number
   /** Whatever the handler chose to record, e.g. page read stats. */
   notes: Record<string, number | string>
 }
@@ -53,6 +62,8 @@ export async function withRequestReport<T>(
     startedAt: Date.now(),
     statements: 0,
     statementMs: 0,
+    poolWaitMs: 0,
+    poolAcquires: 0,
     notes: {},
   }
 
@@ -122,9 +133,18 @@ export function countPoolStatements(pool: unknown): void {
     target.__questuraOriginalConnect = connect
 
     target.connect = async (...args: unknown[]) => {
-      const client = await connect(...args)
-      countQueries(client)
-      return client
+      const report = reportStore.getStore()
+      const startedAt = Date.now()
+      try {
+        const client = await connect(...args)
+        countQueries(client)
+        return client
+      } finally {
+        if (report) {
+          report.poolAcquires += 1
+          report.poolWaitMs += Date.now() - startedAt
+        }
+      }
     }
   }
 
@@ -157,6 +177,7 @@ export function serverTimingHeader(report: RequestReport): string {
     // comma-separated list, a quoted comma is legal, and plenty of parsers
     // split on the comma anyway. Ours did.
     `sql;dur=${report.statementMs};desc="${report.statements} statements (cumulative)"`,
+    `pool;dur=${report.poolWaitMs};desc="${report.poolAcquires} acquires"`,
   ]
 
   for (const [key, value] of Object.entries(report.notes)) {

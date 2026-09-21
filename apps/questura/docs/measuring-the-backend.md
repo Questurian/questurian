@@ -58,33 +58,20 @@ measurement is never confounded by a join.
 
 ## 2. `pnpm measure:api`
 
-Samples every public read repeatedly, holds the first request out of the
-distribution (it compiles routes and warms caches), and reports p50/p95/p99
-next to the statement and read counts from `Server-Timing`.
+The load harness. Scenarios, closed and arrival modes, one outcome per
+response, latency over successful responses only, dropped arrivals counted,
+JSON evidence. Full guide: [`capacity/README.md`](capacity/README.md).
 
 ```bash
 cd apps/questura/apps/server
-pnpm measure:api
+pnpm measure:api                                   # public-api, warm, sequential
 pnpm measure:api -- --runs 20 --concurrent 4
+pnpm measure:api -- --scenario heavy-homepage --mode arrival --rate 4 --duration 20
 pnpm measure:api -- --json /tmp/api.json --html /tmp/api.html
 ```
 
-```
-endpoint             n     cold      p50      p95      p99   stmts  reads    bytes
-----------------------------------------------------------------------------------
-city homepage        7   2202.9   1129.9   1250.5   1250.5     382     43    56251
-search               7    100.7     72.9     78.3     78.3      26      -    12417
-location feed        7    104.4     78.1     88.9     88.9      28      -    10640
-article index        7     61.2     37.3     42.6     42.6       9      -    11352
-navigation menu      7     32.4     14.9     18.6     18.6       -      -      864
-```
-
-`--concurrent N` fires N identical requests at once, which is how request
-coalescing is checked: one row reports its statements and the rest report zero.
-
-A development server compiles on first hit and does not optimise, so its
-absolute numbers say nothing about production. Comparisons between two runs on
-the same server do.
+`--concurrent N` against a coalescing route still proves coalescing: one
+response reports statements, the rest report the join.
 
 ## 3. `GET /api/internal/db-stats`
 

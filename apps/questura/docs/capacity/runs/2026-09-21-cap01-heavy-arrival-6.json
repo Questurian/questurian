@@ -1,0 +1,235 @@
+{
+  "meta": {
+    "takenAt": "2026-09-21T20:46:41.368Z",
+    "sha": "d948bcfb-dirty",
+    "scenario": "heavy-homepage",
+    "scenarioDescription": "The most expensive public read (the Lima city page assembly) with coalescing skipped, so N concurrent requests are N assemblies. Uses the x-questura-read-limit measurement header, which the server honours only outside production or when the operator set PUBLIC_API_DIAGNOSTICS=1. Rate limits apply: reset the local Redis between levels, never spoof a trusted IP header.",
+    "node": "v24.15.0",
+    "generatorHost": "darwin arm64 8 cpus",
+    "label": "CAP-01 heavy arrival 6/s, local prod build",
+    "warmupSamples": 1,
+    "poolScope": "single-process"
+  },
+  "args": {
+    "base": "http://localhost:4100",
+    "client": "http://localhost:3000",
+    "origin": "http://localhost:3000",
+    "scenario": "heavy-homepage",
+    "mode": "arrival",
+    "cache": "warm",
+    "runs": 10,
+    "concurrent": 1,
+    "warmup": 1,
+    "timeoutMs": 15000,
+    "rate": 6,
+    "durationS": 20,
+    "maxInFlight": 200,
+    "abortErrorRate": 1,
+    "abortMinSamples": 50,
+    "jsonPath": "../../docs/capacity/runs/2026-09-21-cap01-heavy-arrival-6.json",
+    "htmlPath": "",
+    "label": "CAP-01 heavy arrival 6/s, local prod build"
+  },
+  "throughput": {
+    "offered": 120,
+    "started": 120,
+    "dropped": 0,
+    "completedRequests": 120,
+    "okRequests": 119,
+    "elapsedS": 19.833630125,
+    "offeredPerS": 6.05032962920599,
+    "completedPerS": 6.05032962920599,
+    "okPerS": 5.999910215629273,
+    "lateness": {
+      "n": 120,
+      "p50": 0.6943750000009459,
+      "p95": 1.6507076666666762,
+      "p99": 2.36045766666939,
+      "min": 0.005999666669595172,
+      "max": 10.09320799999989
+    },
+    "generatorSaturated": false
+  },
+  "steps": [
+    {
+      "step": "homepage peru/lima (uncoalesced)",
+      "measured": 120,
+      "outcomes": {
+        "ok": 119,
+        "throttled": 1,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0.008333333333333333,
+      "okLatency": {
+        "n": 119,
+        "p50": 8075.598334,
+        "p95": 10935.915083,
+        "p99": 10999.844500000001,
+        "min": 271.10933300000005,
+        "max": 11009.080292
+      },
+      "failedLatency": {
+        "n": 1,
+        "p50": 49.96008299999812,
+        "p95": 49.96008299999812,
+        "p99": 49.96008299999812,
+        "min": 49.96008299999812,
+        "max": 49.96008299999812
+      },
+      "bytes": {
+        "median": 56251,
+        "max": 56251,
+        "reported": 119
+      },
+      "statements": {
+        "median": 382,
+        "max": 382,
+        "reported": 119
+      },
+      "statementMs": {
+        "median": 44433,
+        "max": 60695,
+        "reported": 119
+      },
+      "reads": {
+        "median": 43,
+        "max": 43,
+        "reported": 119
+      },
+      "poolWaitMs": {
+        "median": 12,
+        "max": 24,
+        "reported": 119
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    }
+  ],
+  "pool": {
+    "samples": 28,
+    "failedSamples": 0,
+    "maxWaiting": 296,
+    "maxTotal": 20,
+    "waitingSeries": [
+      [
+        0,
+        0
+      ],
+      [
+        1.1,
+        0
+      ],
+      [
+        2.1,
+        17
+      ],
+      [
+        3.1,
+        33
+      ],
+      [
+        4.1,
+        46
+      ],
+      [
+        5.1,
+        58
+      ],
+      [
+        6.1,
+        75
+      ],
+      [
+        7.1,
+        88
+      ],
+      [
+        8.2,
+        103
+      ],
+      [
+        9.2,
+        117
+      ],
+      [
+        10.2,
+        133
+      ],
+      [
+        11.3,
+        142
+      ],
+      [
+        12.3,
+        158
+      ],
+      [
+        13.3,
+        177
+      ],
+      [
+        14.3,
+        199
+      ],
+      [
+        15.3,
+        213
+      ],
+      [
+        16.4,
+        230
+      ],
+      [
+        17.4,
+        246
+      ],
+      [
+        18.4,
+        265
+      ],
+      [
+        19.4,
+        282
+      ],
+      [
+        20.4,
+        296
+      ],
+      [
+        21.4,
+        287
+      ],
+      [
+        22.4,
+        266
+      ],
+      [
+        23.4,
+        240
+      ],
+      [
+        24.3,
+        209
+      ],
+      [
+        25.3,
+        172
+      ],
+      [
+        26.2,
+        120
+      ],
+      [
+        27.1,
+        16
+      ]
+    ],
+    "scope": "single-process"
+  },
+  "aborted": null
+}

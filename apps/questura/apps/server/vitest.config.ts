@@ -18,6 +18,9 @@ export default defineConfig({
       'src/shared/**/*.test.ts',
       'src/features/**/*.test.ts',
       'src/app/**/*.test.ts',
+      // The load harness's pure modules. Registered deliberately: everything
+      // else under scripts/ is operational and has no unit tests.
+      'scripts/measure/**/*.test.ts',
     ],
   },
 })

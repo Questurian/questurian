@@ -1,0 +1,104 @@
+{
+  "name": "public-api",
+  "description": "Every anonymous public read the frontend makes to render a city page, measured one endpoint at a time. The successor to the original measure:api target list.",
+  "iterations": [
+    {
+      "name": "public reads",
+      "steps": [
+        {
+          "name": "city homepage",
+          "target": "server",
+          "path": "/api/public/location-homepages/peru/lima",
+          "expect": {
+            "body": "json",
+            "minBytes": 2000
+          }
+        },
+        {
+          "name": "author page",
+          "target": "server",
+          "path": "/api/public/authors/carlos-lima",
+          "expect": {
+            "body": "json",
+            "minBytes": 100
+          }
+        },
+        {
+          "name": "country cities",
+          "target": "server",
+          "path": "/api/public/countries/peru/cities",
+          "expect": {
+            "body": "json",
+            "minBytes": 20
+          }
+        },
+        {
+          "name": "search",
+          "target": "server",
+          "path": "/api/public/articles/search?q=lima",
+          "expect": {
+            "body": "json",
+            "minBytes": 50
+          }
+        },
+        {
+          "name": "location feed",
+          "target": "server",
+          "path": "/api/public/articles/by-location?key=peru%7Clima&page=1&pageSize=20",
+          "expect": {
+            "body": "json",
+            "minBytes": 50
+          }
+        },
+        {
+          "name": "article index",
+          "target": "server",
+          "path": "/api/public/articles/index?scope=global&type=articles&pageSize=20",
+          "expect": {
+            "body": "json",
+            "minBytes": 50
+          }
+        },
+        {
+          "name": "article by path",
+          "target": "server",
+          "path": "/api/public/articles/by-canonical-path?path=%2Fperu%2Flima%2Fguides%2Fa-beginners-guide-to-when-to-visit-lima-peru",
+          "expect": {
+            "body": "json",
+            "minBytes": 500
+          }
+        },
+        {
+          "name": "navigation menu",
+          "target": "server",
+          "path": "/api/public/locations/menu",
+          "expect": {
+            "body": "json",
+            "minBytes": 50
+          }
+        },
+        {
+          "name": "sitemap entries",
+          "target": "server",
+          "path": "/api/public/sitemap-entries",
+          "expect": {
+            "body": "json",
+            "minBytes": 50
+          }
+        },
+        {
+          "name": "identity (no cookie)",
+          "target": "server",
+          "path": "/api/me",
+          "expect": {
+            "status": [
+              200,
+              401
+            ],
+            "body": "json"
+          }
+        }
+      ]
+    }
+  ]
+}

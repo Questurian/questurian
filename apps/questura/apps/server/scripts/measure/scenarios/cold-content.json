@@ -1,0 +1,162 @@
+{
+  "name": "cold-content",
+  "description": "Heavy backend reads spread across distinct URLs, for cold and long-tail measurement. Use with --cache cold on a freshly started server, or under arrival mode to see how uncached assemblies queue.",
+  "iterations": [
+    {
+      "name": "lima",
+      "steps": [
+        {
+          "name": "homepage peru/lima",
+          "target": "server",
+          "path": "/api/public/location-homepages/peru/lima",
+          "expect": {
+            "body": "json",
+            "minBytes": 2000
+          }
+        }
+      ]
+    },
+    {
+      "name": "medellin",
+      "steps": [
+        {
+          "name": "homepage colombia/medellin",
+          "target": "server",
+          "path": "/api/public/location-homepages/colombia/medellin",
+          "expect": {
+            "body": "json",
+            "minBytes": 100,
+            "contains": "\"pageBlocks\""
+          }
+        }
+      ]
+    },
+    {
+      "name": "mexico-city",
+      "steps": [
+        {
+          "name": "homepage mexico/mexico-city",
+          "target": "server",
+          "path": "/api/public/location-homepages/mexico/mexico-city",
+          "expect": {
+            "body": "json",
+            "minBytes": 100,
+            "contains": "\"pageBlocks\""
+          }
+        }
+      ]
+    },
+    {
+      "name": "sitemap",
+      "steps": [
+        {
+          "name": "sitemap entries",
+          "target": "server",
+          "path": "/api/public/sitemap-entries",
+          "expect": {
+            "body": "json",
+            "minBytes": 50
+          }
+        }
+      ]
+    },
+    {
+      "name": "article 1",
+      "steps": [
+        {
+          "name": "article by path 1",
+          "target": "server",
+          "path": "/api/public/articles/by-canonical-path?path=%2Fperu%2Flima%2Fguides%2Fa-beginners-guide-to-when-to-visit-lima-peru",
+          "expect": {
+            "body": "json",
+            "minBytes": 500
+          }
+        }
+      ]
+    },
+    {
+      "name": "article 2",
+      "steps": [
+        {
+          "name": "article by path 2",
+          "target": "server",
+          "path": "/api/public/articles/by-canonical-path?path=%2Fcolombia%2Fmedellin%2Fguides%2Fmedelln-digital-nomad-guide-visas-costs-and-safety-for-2026",
+          "expect": {
+            "body": "json",
+            "minBytes": 500
+          }
+        }
+      ]
+    },
+    {
+      "name": "article 3",
+      "steps": [
+        {
+          "name": "article by path 3",
+          "target": "server",
+          "path": "/api/public/articles/by-canonical-path?path=%2Fperu%2Fguides%2Fperu-visa-and-entry-requirements-a-complete-guide",
+          "expect": {
+            "body": "json",
+            "minBytes": 500
+          }
+        }
+      ]
+    },
+    {
+      "name": "article 4",
+      "steps": [
+        {
+          "name": "article by path 4",
+          "target": "server",
+          "path": "/api/public/articles/by-canonical-path?path=%2Fperu%2Flima%2Fneighborhoods%2Fwhere-to-stay-in-central-lima-a-guide-to-safety-hotels-and-vibe",
+          "expect": {
+            "body": "json",
+            "minBytes": 500
+          }
+        }
+      ]
+    },
+    {
+      "name": "feed peru%7Clima",
+      "steps": [
+        {
+          "name": "feed peru/lima",
+          "target": "server",
+          "path": "/api/public/articles/by-location?key=peru%7Clima&page=1&pageSize=20",
+          "expect": {
+            "body": "json",
+            "minBytes": 20
+          }
+        }
+      ]
+    },
+    {
+      "name": "feed colombia%7Cmedellin",
+      "steps": [
+        {
+          "name": "feed colombia/medellin",
+          "target": "server",
+          "path": "/api/public/articles/by-location?key=colombia%7Cmedellin&page=1&pageSize=20",
+          "expect": {
+            "body": "json",
+            "minBytes": 20
+          }
+        }
+      ]
+    },
+    {
+      "name": "feed mexico%7Cmexico-city",
+      "steps": [
+        {
+          "name": "feed mexico/mexico-city",
+          "target": "server",
+          "path": "/api/public/articles/by-location?key=mexico%7Cmexico-city&page=1&pageSize=20",
+          "expect": {
+            "body": "json",
+            "minBytes": 20
+          }
+        }
+      ]
+    }
+  ]
+}
