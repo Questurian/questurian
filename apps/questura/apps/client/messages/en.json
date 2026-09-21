@@ -22,5 +22,8 @@
   "join": {
     "localPreview": "Local preview — checkout disabled.",
     "loadingPlans": "Loading membership options…"
+  },
+  "navigation": {
+    "loading": "Loading page…"
   }
 }

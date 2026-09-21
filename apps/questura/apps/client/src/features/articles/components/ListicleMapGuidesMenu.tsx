@@ -2,7 +2,7 @@
 
 import { useRef, useState, type JSX } from 'react'
 import { ChevronDown, Compass } from 'lucide-react'
-import Link from 'next/link'
+import Link from '@/components/navigation/PublicLink'
 import { ShimmerImage } from '@/components/media/ShimmerImage'
 import type { RelatedMapsArticleTeaser } from '@/features/articles/lib/fetchRelatedMapsArticles'
 import { relatedArticleHref } from '@/features/articles/lib/relatedArticleHref'

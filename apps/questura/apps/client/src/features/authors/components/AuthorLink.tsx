@@ -1,8 +1,9 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/navigation/PublicLink'
 import { useRouter } from 'next/navigation'
-import type { JSX } from 'react'
+import type { JSX, KeyboardEvent, MouseEvent } from 'react'
+import { navigateWithFeedback } from '@/components/navigation/navigationFeedbackStore'
 import { authorPath } from '@/features/authors/lib/authorPath'
 
 type AuthorLinkProps = {
@@ -43,22 +44,26 @@ export function AuthorLink({
     )
   }
 
+  // A span has no link status of its own, so it navigates inside the root
+  // owner's transition. Modified clicks open a tab, as an anchor would.
+  const follow = (e: MouseEvent<HTMLSpanElement> | KeyboardEvent<HTMLSpanElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.metaKey || e.ctrlKey || e.shiftKey) {
+      window.open(href, '_blank', 'noopener')
+      return
+    }
+    if (!navigateWithFeedback(href)) router.push(href)
+  }
+
   return (
     <span
       role="link"
       tabIndex={0}
       className={className}
-      onClick={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        router.push(href)
-      }}
+      onClick={follow}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault()
-          e.stopPropagation()
-          router.push(href)
-        }
+        if (e.key === 'Enter') follow(e)
       }}
     >
       {children}

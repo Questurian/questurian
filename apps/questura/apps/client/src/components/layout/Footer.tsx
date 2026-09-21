@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/navigation/PublicLink";
 import Logo from "@/features/Navigation/shared/components/Logo";
 
 export default function Footer() {

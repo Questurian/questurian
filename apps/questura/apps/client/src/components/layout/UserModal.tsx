@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/navigation/PublicLink";
 import { useUserQuery, useLogoutMutation } from "@/lib/user/hooks";
 import { useDevStore } from "@/lib/stores/devStore";
 
@@ -111,6 +111,7 @@ export default function UserModal({ isOpen, onClose }: UserModalProps) {
                 className={`
                   text-white text-lg hover:underline transition-colors underline
                 `}
+                keepFeedbackAfterUnmount
                 onClick={onClose}
               >
                 Go to Account
@@ -120,6 +121,7 @@ export default function UserModal({ isOpen, onClose }: UserModalProps) {
                 className={`
                   text-white text-lg hover:underline transition-colors underline
                 `}
+                keepFeedbackAfterUnmount
                 onClick={onClose}
               >
                 Bookmarks

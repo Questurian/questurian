@@ -1,7 +1,7 @@
 "use client";
 
 import { AuthSlot, Logo, MenuIcon, SubscribeButton } from "./components";
-import Link from "next/link";
+import Link from "@/components/navigation/PublicLink";
 import { useAuth } from "@/lib/user/hooks";
 import { useMembership } from "@/features/Payments/hooks/useMembership";
 

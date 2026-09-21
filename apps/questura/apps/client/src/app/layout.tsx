@@ -8,6 +8,7 @@ import {
 import "./globals.css";
 import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
 import { IMAGE_CDN_ORIGIN } from "@/lib/media/imageCdnOrigin";
+import { NavigationFeedback } from "@/components/navigation/NavigationFeedback";
 
 /*
  * Only the families every route renders belong here: next/font preloads a
@@ -49,6 +50,7 @@ export default async function RootLayout({
         <div className="flex min-h-screen min-w-[280px] flex-col overflow-x-clip">
           {children}
         </div>
+        <NavigationFeedback />
       </body>
     </html>
   );

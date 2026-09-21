@@ -1,7 +1,9 @@
-import Link from 'next/link'
+import { Suspense } from 'react'
+import Link from '@/components/navigation/PublicLink'
 import { PublicImage } from '@/components/media/PublicImage'
 import { AdLabel, AdMockSurface } from '@/features/articles/components/AdMock'
 import type { ArticleIndexItem } from '@/features/articles/lib/fetchArticleIndex'
+import type { ArticleSidebarLists } from '@/features/articles/lib/fetchArticleSidebar'
 
 function AdSlot({ size }: { size: 'half-page' | 'square' }) {
   const height = size === 'half-page' ? 'h-[250px] 1024:h-[600px]' : 'h-[300px]'
@@ -115,5 +117,38 @@ export function ArticlePartners({ partners }: { partners: ArticleIndexItem[] }) 
         ))}
       </ul>
     </section>
+  )
+}
+
+/*
+ * The recommendation lookups are secondary: the article must not wait for
+ * them. Both placements read one shared promise, each behind its own boundary,
+ * so the heading and body stream first and the lists fill in when they land.
+ */
+
+async function ResolvedRail({ sidebar }: { sidebar: Promise<ArticleSidebarLists> }) {
+  const { trending } = await sidebar
+  return <ArticleRail trending={trending} />
+}
+
+/** The ads hold the rail's column while trending loads; no placeholder list. */
+export function StreamedArticleRail({ sidebar }: { sidebar: Promise<ArticleSidebarLists> }) {
+  return (
+    <Suspense fallback={<ArticleRail trending={[]} />}>
+      <ResolvedRail sidebar={sidebar} />
+    </Suspense>
+  )
+}
+
+async function ResolvedPartners({ sidebar }: { sidebar: Promise<ArticleSidebarLists> }) {
+  const { partners } = await sidebar
+  return <ArticlePartners partners={partners} />
+}
+
+export function StreamedArticlePartners({ sidebar }: { sidebar: Promise<ArticleSidebarLists> }) {
+  return (
+    <Suspense fallback={null}>
+      <ResolvedPartners sidebar={sidebar} />
+    </Suspense>
   )
 }

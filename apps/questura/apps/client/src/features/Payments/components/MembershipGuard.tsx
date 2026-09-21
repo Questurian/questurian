@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/navigation/PublicLink';
 import { isActiveMember } from '../lib/membership';
 import { useDevStore } from '@/lib/stores/devStore';
 import type { MembershipGuardProps } from '../types';

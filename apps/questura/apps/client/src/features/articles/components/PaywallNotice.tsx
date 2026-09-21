@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/navigation/PublicLink'
 import { Lock } from 'lucide-react'
 
 import { describeLock, type GateState } from '@/features/articles/lib/gate'

@@ -1,5 +1,5 @@
 import { type JSX } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/PublicLink'
 
 import type { LocationGridBlock, LocationGridItem, HomepageBlockLayoutProps } from '../../../types'
 import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
