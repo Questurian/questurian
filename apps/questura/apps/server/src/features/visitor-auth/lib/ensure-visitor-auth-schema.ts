@@ -8,19 +8,77 @@ import { APP_CONFIG } from '@/shared/config'
  * repairs databases previously booted with Payload's `push` mode, which can
  * drop tables that Payload does not recognise.
  *
- * This guard re-creates the tables after Payload has initialized (called from
- * `onInit`). The DDL is idempotent (`CREATE TABLE IF NOT EXISTS`)
- * and mirrors the committed migration
- * `src/migrations/20260529000000_better_auth_visitor_tables.ts`.
+ * The DDL is idempotent (`CREATE TABLE IF NOT EXISTS`) and mirrors the
+ * committed migration `src/migrations/20260529000000_better_auth_visitor_tables.ts`.
  *
- * After ensuring the schema, it *reports* orphaned `visitor_profiles` rows
- * (profiles whose `auth_user_id` no longer maps to a `visitor_auth_users` row),
- * which can arise because the auth tables above were dropped and recreated
- * empty while the Payload-owned profile table persisted.
+ * What runs at boot depends on where
+ * ---------------------------------
+ * Outside production this creates the tables, because a developer's database
+ * is frequently reset and the guard is what makes `pnpm dev` work on a fresh
+ * one.
  *
- * This function never writes to `visitor_profiles` and never alters the auth
- * tables' data. See the sweep block below for why reporting replaced deletion.
+ * In production it only *checks* them. Schema changes belong in reviewed
+ * migrations, and a process that issues DDL every time it starts is a
+ * different thing on a long-lived server than on one that sleeps: a serverless
+ * or suspend-and-resume deployment repeats every check and every scan on every
+ * cold start, in front of the reader who woke it. The check is five
+ * `to_regclass` lookups in one statement, and a missing table fails the boot
+ * loudly instead of being papered over — the missing migration is the bug, and
+ * creating the table at boot is what hides it.
+ *
+ * `VISITOR_AUTH_SCHEMA_GUARD=create` forces the DDL anywhere, for the one case
+ * that justified it in production: a database restored without the Better Auth
+ * tables, where the operator has decided the guard is the fastest way back.
+ *
+ * The orphan audit is no longer part of boot at all. It scans
+ * `visitor_profiles` — the table holding Stripe linkage and paid entitlement —
+ * and it is a diagnostic, not a precondition for serving. It moved to
+ * `pnpm audit:visitor-auth-orphans`, which reports and never deletes; see
+ * `scripts/audit-visitor-auth-orphans.ts` for why reporting replaced deletion.
  */
+
+export type VisitorAuthSchemaMode = 'create' | 'validate'
+
+const REQUIRED_TABLES = [
+  'visitor_auth_users',
+  'visitor_auth_sessions',
+  'visitor_auth_accounts',
+  'visitor_auth_verifications',
+  'visitor_auth_rate_limits',
+] as const
+
+export function visitorAuthSchemaMode(): VisitorAuthSchemaMode {
+  const configured = process.env.VISITOR_AUTH_SCHEMA_GUARD?.trim().toLowerCase()
+  if (configured === 'create' || configured === 'validate') return configured
+
+  return APP_CONFIG.isProduction ? 'validate' : 'create'
+}
+
+/**
+ * One statement, five `to_regclass` lookups: is every table Better Auth needs
+ * actually there?
+ */
+export async function assertVisitorAuthSchema(pool: {
+  query: (sql: string) => Promise<{ rows: Array<Record<string, unknown>> }>
+}): Promise<void> {
+  const { rows } = await pool.query(`
+    SELECT
+      ${REQUIRED_TABLES.map(
+        (table) => `to_regclass('public.${table}') IS NOT NULL AS "${table}"`,
+      ).join(',\n      ')};
+  `)
+
+  const present = rows[0] ?? {}
+  const missing = REQUIRED_TABLES.filter((table) => present[table] !== true)
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Visitor auth tables are missing: ${missing.join(', ')}. ` +
+        'Run the committed migrations (pnpm db:migrate) rather than creating them at boot.',
+    )
+  }
+}
+
 export async function ensureVisitorAuthSchema(): Promise<void> {
   if (!APP_CONFIG.database.uri) {
     throw new Error('DATABASE_URI is required to ensure the visitor auth schema')
@@ -34,6 +92,11 @@ export async function ensureVisitorAuthSchema(): Promise<void> {
   })
 
   try {
+    if (visitorAuthSchemaMode() === 'validate') {
+      await assertVisitorAuthSchema(pool)
+      return
+    }
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS "visitor_auth_users" (
         "id" text NOT NULL PRIMARY KEY,
@@ -112,54 +175,6 @@ export async function ensureVisitorAuthSchema(): Promise<void> {
       ON "visitor_auth_verifications" ("identifier");
     `)
 
-    // Report — never delete — orphaned visitor profiles.
-    //
-    // This block used to `DELETE` these rows on every boot, justified as keeping
-    // the sign-in email-existence check consistent with the auth source of
-    // truth. That justification does not hold: the account check
-    // (`findVisitorAccountByEmail`) resolves entirely against Better Auth's
-    // `visitor_auth_users` and never reads `visitor_profiles`. Orphans are inert
-    // — `authUserId` is unique and lookups are keyed on it, so a stale row can
-    // never be matched by a live session, and `email` is not unique, so it
-    // cannot collide with a re-registered visitor's new profile.
-    //
-    // The rows, however, are not cheap: `visitor_profiles` holds the Stripe
-    // linkage (`stripe_customer_id`, `stripe_subscription_id`) and the paid
-    // entitlement (`paid_through_at`). Deleting them on boot means a restore-ordering
-    // mistake, a lagging replica, or a wrong `DATABASE_URI` silently destroys
-    // billing linkage with no FK, no soft-delete, no audit and no row-count
-    // guard. Reporting keeps the diagnostic without the loss; reconciliation is
-    // a deliberate, reviewable operation, not a boot side effect.
-    const { rows: profileTableRows } = await pool.query<{ present: boolean }>(`
-      SELECT to_regclass('public.visitor_profiles') IS NOT NULL AS present;
-    `)
-
-    if (profileTableRows[0]?.present) {
-      const { rows: orphanRows } = await pool.query<{
-        orphan_count: string
-        sample_ids: string[] | null
-      }>(`
-        SELECT
-          COUNT(*)::text AS orphan_count,
-          (ARRAY_AGG(vp."id"::text ORDER BY vp."id"))[1:20] AS sample_ids
-        FROM "visitor_profiles" vp
-        WHERE vp."auth_user_id" IS NOT NULL
-          AND NOT EXISTS (
-            SELECT 1 FROM "visitor_auth_users" u WHERE u."id" = vp."auth_user_id"
-          );
-      `)
-
-      const orphanCount = Number(orphanRows[0]?.orphan_count ?? '0')
-
-      if (orphanCount > 0) {
-        console.warn(
-          `[visitor-auth] ${orphanCount} orphaned visitor_profiles row(s) detected ` +
-            `(auth_user_id with no matching visitor_auth_users row). These rows are ` +
-            `retained: they may carry Stripe billing linkage. Sample ids: ` +
-            `${(orphanRows[0]?.sample_ids ?? []).join(', ')}`
-        )
-      }
-    }
   } finally {
     await pool.end()
   }

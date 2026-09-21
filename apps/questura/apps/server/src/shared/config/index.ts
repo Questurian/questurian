@@ -83,6 +83,31 @@ export const APP_CONFIG = {
   // Database Configuration
   database: {
     uri: process.env.DATABASE_URI || '',
+
+    /**
+     * A connection that is not transaction-pooled, for session-level advisory
+     * locks.
+     *
+     * `pg_advisory_lock` holds its lock for the life of the *session*. Under
+     * PgBouncer transaction pooling a session is whatever fragment of a
+     * connection one transaction gets, so the lock can be taken on one backend
+     * and released against another, or outlive the caller entirely. Neon calls
+     * the direct endpoint `DATABASE_URL_UNPOOLED`; both spellings are accepted
+     * here so a deployment does not have to rename it.
+     *
+     * Empty means "the main URI is direct", which is true today and checked at
+     * boot rather than assumed — see `assert-production-config.ts`.
+     */
+    directUri:
+      process.env.DATABASE_URI_UNPOOLED || process.env.DATABASE_URL_UNPOOLED || '',
+
+    /**
+     * How many connections this database accepts in total, and how many
+     * processes share it. Pool maxima are per process, so the number that
+     * matters is the product, and nothing was computing it.
+     */
+    maxConnections: Number(process.env.DATABASE_MAX_CONNECTIONS || '') || 0,
+    processCount: Number(process.env.APP_PROCESS_COUNT || '') || 1,
   },
 
   // Redis Configuration

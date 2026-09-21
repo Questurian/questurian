@@ -76,6 +76,54 @@ truth for anything.
 
 Media is on Bunny and does not move with the database.
 
+### 4a. Name the direct endpoint, and the connection allowance
+
+**Blocker, and silent if missed.** `withAdvisoryLock` uses `pg_advisory_lock`,
+which is *session*-scoped. Under transaction pooling — Neon's `-pooler` host,
+Supabase's pooler, a PgBouncer sidecar — a session is whatever fragment of a
+connection one transaction gets, so the lock can be taken on one backend and
+released against another, or outlive its caller. Nothing errors. The lock that
+stops two concurrent Stripe webhooks for one customer from both reading the
+same before-state and both sending the same email just stops working.
+
+`assertProductionConfig` refuses to boot when `DATABASE_URI` looks pooled and
+no direct endpoint is named, so the failure is a boot error rather than a
+payment bug. Set both:
+
+```
+DATABASE_URI=<pooled, for everything else>
+DATABASE_URI_UNPOOLED=<direct, for the advisory locks>
+```
+
+Declare the connection allowance too, so the budget is checked rather than
+assumed. Pool maxima are per process — 20 Payload + 10 Better Auth + 10
+advisory locks + 1 startup = 41 — and nothing multiplied that by the replica
+count before:
+
+```
+DATABASE_MAX_CONNECTIONS=<what the plan actually allows>
+APP_PROCESS_COUNT=<replicas × processes per replica>
+```
+
+Production refuses to boot when the product exceeds the allowance.
+
+### 4b. Decide what runs at boot
+
+In production the visitor-auth schema guard only *checks* its tables; it does
+not create them, and the orphan scan of `visitor_profiles` is no longer a boot
+step (`pnpm audit:visitor-auth-orphans` when you want it). On a platform that
+sleeps, every cold start pays for whatever boot does, in front of the reader
+who woke it.
+
+That means the committed migrations must have run before the first request.
+`VISITOR_AUTH_SCHEMA_GUARD=create` forces the old behaviour for a restore that
+came back without the Better Auth tables — a deliberate repair, not a default.
+
+Run `pnpm rebuild:search-index` after the restore, or let the first deploy do
+it (`--if-empty`, already in `deploy.sh`). Search falls back to the old corpus
+query while the table is empty, so a missed backfill is slow rather than
+broken — but it is slow for every visitor.
+
 ## 5. Repoint the Stripe webhook endpoint
 
 New origin means a new endpoint, a new signing secret, and the event list has
