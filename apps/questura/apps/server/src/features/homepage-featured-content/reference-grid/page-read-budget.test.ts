@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { readWithBoundedConcurrency } from './bounded-reads'
-import { readDocumentOnce, withPageReadBudget, withReadSlot } from './page-read-budget'
+import { readBudgetOverrideFromHeaders, readDocumentOnce, withPageReadBudget, withReadSlot } from './page-read-budget'
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -196,5 +196,32 @@ describe('nested reads', () => {
 
     expect(peak).toBe(2)
     expect(stats.peakConcurrency).toBe(2)
+  })
+})
+
+describe('readBudgetOverrideFromHeaders', () => {
+  const headers = new Headers({ 'x-questura-read-limit': '1' })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('honours the measurement header outside production', () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    expect(readBudgetOverrideFromHeaders(headers)).toEqual({ limit: 1 })
+  })
+
+  // The route used to skip coalescing on the header's mere presence, so a
+  // production caller could force a full assembly per request.
+  it('ignores it in production, so a caller cannot skip coalescing either', () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('PUBLIC_API_DIAGNOSTICS', '')
+    expect(readBudgetOverrideFromHeaders(headers)).toEqual({})
+  })
+
+  it('honours it in production only when the operator turned diagnostics on', () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('PUBLIC_API_DIAGNOSTICS', '1')
+    expect(readBudgetOverrideFromHeaders(headers)).toEqual({ limit: 1 })
   })
 })

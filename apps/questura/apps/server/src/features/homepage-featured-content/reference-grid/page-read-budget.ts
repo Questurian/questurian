@@ -216,7 +216,11 @@ export function readDocumentOnce<T>(key: string, read: () => Promise<T>): Promis
 export function readBudgetOverrideFromHeaders(
   headers: Headers | undefined,
 ): PageReadBudgetOptions {
-  if (!headers || process.env.NODE_ENV === 'production') return {}
+  // Refused in production unless the operator turned diagnostics on for this
+  // process (`PUBLIC_API_DIAGNOSTICS=1`), which is how a production build is
+  // measured. A caller never decides this for themselves.
+  if (!headers) return {}
+  if (process.env.NODE_ENV === 'production' && process.env.PUBLIC_API_DIAGNOSTICS !== '1') return {}
 
   const raw = headers.get('x-questura-read-limit')?.trim().toLowerCase()
   if (!raw) return {}

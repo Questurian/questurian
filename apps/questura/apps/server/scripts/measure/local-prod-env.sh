@@ -34,6 +34,12 @@ export STRIPE_SECRET_KEY=sk_capacity_placeholder_not_a_key
 export STRIPE_WEBHOOK_SECRET=whsec_capacity_placeholder
 export STRIPE_PRICE_ID=price_capacity_placeholder
 export STRIPE_PRICE_ID_MONTHLY=price_capacity_placeholder
+# Connection budget, required in production. Two processes share the Mac's
+# Postgres during a measurement: this one and the developer's `pnpm dev`.
+export DATABASE_MAX_CONNECTIONS="${DATABASE_MAX_CONNECTIONS:-100}"
+export APP_PROCESS_COUNT=2
+export APP_ROLLOUT_SURGE=0
+export APP_JOB_PROCESS_COUNT=0
 # Diagnostics are refused by header in production; the operator switch turns
 # them on for this process so Server-Timing reaches the harness.
 export PUBLIC_API_DIAGNOSTICS=1

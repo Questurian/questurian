@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth'
+import { poolSizes } from '@/shared/database/pool-budget'
 import { poolTimeoutOptions, servingTimeouts } from '@/shared/database/timeouts'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { captcha } from 'better-auth/plugins'
@@ -57,7 +58,7 @@ export const visitorAuth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET || APP_CONFIG.payloadSecret,
   database: new Pool({
     connectionString: databaseUrl,
-    max: 10,
+    max: poolSizes().visitorAuth,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
     // Same statement, lock and idle budgets as Payload's pool: a session

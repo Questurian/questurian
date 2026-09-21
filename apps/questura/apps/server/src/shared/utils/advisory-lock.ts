@@ -4,6 +4,7 @@ import { Pool, type PoolClient } from 'pg'
 import type { getPayload } from 'payload'
 import { APP_CONFIG } from '@/shared/config'
 import { advisoryLockTimeouts, poolTimeoutOptions } from '@/shared/database/timeouts'
+import { poolSizes } from '@/shared/database/pool-budget'
 import { looksTransactionPooled } from '@/shared/database/pooled-uri'
 import { logger } from './logger'
 
@@ -61,10 +62,9 @@ type Payload = Awaited<ReturnType<typeof getPayload>>
 
 /**
  * Sized for lock holders, not for queries: one connection per in-flight locked
- * operation, and locked operations are webhook deliveries and resyncs. Kept well
- * clear of Postgres' 100, alongside Payload's 20 and BetterAuth's 10.
+ * operation, and locked operations are webhook deliveries and resyncs. The
+ * number lives with every other pool size in `shared/database/pool-budget.ts`.
  */
-const LOCK_POOL_MAX = 10
 
 /**
  * Survives Next's dev hot-reload, which re-evaluates this module and would
@@ -105,7 +105,7 @@ function getLockPool(): Pool | null {
   if (!globalForLocks.advisoryLockPool) {
     const pool = new Pool({
       connectionString,
-      max: LOCK_POOL_MAX,
+      max: poolSizes().advisoryLock,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000, // Fail fast instead of hanging forever
       // `lock_timeout` does not cover advisory locks, so waiting for one was
@@ -235,7 +235,7 @@ export function advisoryLockPoolStats(): {
     total: pool?.totalCount ?? 0,
     idle: pool?.idleCount ?? 0,
     waiting: pool?.waitingCount ?? 0,
-    max: LOCK_POOL_MAX,
+    max: poolSizes().advisoryLock,
     pooledConnection: advisoryLocksAreOnAPooledConnection(),
   }
 }

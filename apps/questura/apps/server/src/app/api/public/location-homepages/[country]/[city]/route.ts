@@ -14,7 +14,7 @@ import {
   type PageReadStats,
 } from '@/features/homepage-featured-content/reference-grid/page-read-budget'
 import { noteOnRequest } from '@/shared/observability/request-report'
-import { publicRead } from '@/shared/http/public-read'
+import { admitPublicWork, publicRead } from '@/shared/http/public-read'
 import { coalesce } from '@/shared/http/coalesce'
 
 /**
@@ -48,9 +48,13 @@ export async function GET(
       // moments it is asked for several times at once -- a cold cache after a
       // publish, a crawler on several connections -- are the moments the
       // server can least afford to do it several times. The A/B read-limit
-      // header opts out so a measurement is never confounded by a join.
+      // header opts out so a measurement is never confounded by a join --
+      // but only where the override itself is honoured. Checking the raw
+      // header let any caller in production skip coalescing and force one
+      // full assembly per request.
       const coalesceKey = `location-homepage:${locationKey}`
-      const skipCoalescing = Boolean(req.headers.get('x-questura-read-limit'))
+      const readBudget = readBudgetOverrideFromHeaders(req.headers)
+      const skipCoalescing = readBudget.limit !== undefined || readBudget.disabled === true
 
       const assemble = async (): Promise<PageResult> => {
         // Step 1: resolve location by locationKey
@@ -89,7 +93,7 @@ export async function GET(
           payload,
           getPublishedPageBlocks(doc),
           locationGridScope,
-          readBudgetOverrideFromHeaders(req.headers),
+          readBudget,
         )
 
         return {
@@ -99,9 +103,13 @@ export async function GET(
         }
       }
 
+      // The admission gate wraps the shared work, not each request: readers
+      // who join an assembly already in flight cost nothing and take no slot.
+      const admitted = () => admitPublicWork('assembly', assemble, req.signal)
+
       const { value, joined } = skipCoalescing
-        ? { value: await assemble(), joined: false }
-        : await coalesce(coalesceKey, assemble)
+        ? { value: await admitted(), joined: false }
+        : await coalesce(coalesceKey, admitted)
 
       if (value.stats) {
         noteOnRequest('reads', value.stats.reads)

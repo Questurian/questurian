@@ -13,7 +13,7 @@ find bottlenecks and price the code; they do not say what a platform can carry.
 | Ticket | Status | Evidence |
 |---|---|---|
 | CAP-01 Baseline and harness | implemented locally | this file, `runs/2026-09-21-cap01-*` |
-| CAP-02 Connection budget and overload | planned | |
+| CAP-02 Connection budget and overload | implemented locally | `runs/2026-09-21-cap02-*` |
 | CAP-03 Anonymous identity | planned | |
 | CAP-04 Cache correctness, route coverage | planned | |
 | CAP-05 Cold query amplification | planned | |
@@ -105,9 +105,81 @@ error in `vitest.config.ts` (vite 5/7 plugin types), present on main.
 
 **Rollback.** Revert the PR; the old script had no dependents.
 
+## CAP-02 — connection budget and overload boundaries
+
+**Problem (revalidated).** `pool-budget.ts` skipped the check when
+`DATABASE_MAX_CONNECTIONS` was unset (0) and defaulted the process count to 1;
+Payload's pool size was hardcoded separately in `payload.config.ts` (and
+Better Auth's, the lock pool's and the boot guard's in three more files).
+Nothing counted rollout overlap, scheduled jobs, an operator reserve, or the
+difference between pooler clients and real backends. Nothing bounded how many
+page assemblies ran at once. And (CAP-01 finding 1) a production boot
+refusal was logged and ignored.
+
+**Changed.**
+- `shared/database/pool-budget.ts` — the one source of pool sizes
+  (`poolSizes()`, env overrides `DATABASE_POOL_*_MAX`, never `NaN`) used by
+  `payload.config.ts`, `better-auth.ts`, `advisory-lock.ts` and
+  `ensure-visitor-auth-schema.ts`. Budget = (serving + rollout surge + jobs)
+  × per-process + reserve. Direct topology: all against
+  `DATABASE_MAX_CONNECTIONS`. Pooled topology: pooled pools against
+  `DATABASE_POOLER_MAX_CLIENTS`; pooler backends + direct lock pools + reserve
+  against `DATABASE_MAX_CONNECTIONS`. Production requires
+  `DATABASE_MAX_CONNECTIONS`, `APP_PROCESS_COUNT`, `APP_ROLLOUT_SURGE` (and the
+  two pooler values when pooled); every value is a bounded integer.
+- `shared/config/boot-guard.ts` + `instrumentation.ts` — config problems are
+  checked first, outside the catch, and the process exits 1.
+- `shared/http/admission.ts` — per-process gates. `assembly` (curated pages):
+  2 running, 8 queued, 1.5 s max wait. `query` (search, feeds, index,
+  author): 8 / 32 / 1.5 s. Refusal = 503, `Retry-After: 1`, `no-store`,
+  `X-Questura-Overload`. Waiters leave on abort; slots released in `finally`.
+  `publicRead` gates query scopes; the city page gates its *coalesced* work so
+  joiners take no slot. `/api/internal/db-stats` reports gate stats.
+- City page route: coalescing is skipped only when the read-budget override
+  is actually honoured (dev, or production with `PUBLIC_API_DIAGNOSTICS=1`).
+- Docs: launch checklist 4a, softprod README (laptop `server.env` needs the
+  three budget keys before the next deploy).
+
+**Why these gate sizes.** CAP-01 sweep: Lima throughput is flat (~4–5/s) from
+concurrency 1 to 16; pool full at 4; c=2 has the same throughput at half the
+latency of c=4 and leaves 8 of 20 Payload connections for everything else.
+They are env overrides and must be re-measured on the target platform.
+
+**Tests.** `pool-budget.test.ts` (omitted/invalid values, exact allowance
+boundary, multiple instances, rollout surge, pooled vs direct, smaller
+per-instance pools); `assert-production-config.test.ts`; `boot-guard.test.ts`;
+`admission.test.ts` (limit, queue-full, queue timeout, abort while waiting,
+throw/reject cannot leak, burst drains); `public-read.test.ts` (503 shape,
+coalesced routes not gated at the wrapper); override-header tests. Full suite
+1458 passed.
+
+**Measured** (local prod build, `heavy-homepage`, coalescing skipped):
+
+| Arrivals | Before (CAP-01) | After |
+|---|---|---|
+| 4/s | p95 308 ms, 0 failures | p95 251 ms, 0 failures |
+| 6/s | p50 8.1 s, p95 10.9 s, 296 waiting for the pool | p50 1.7 s, p95 1.96 s, p99 2.48 s; 20 refused (503, queue timeout); 5.0 ok/s; pool waiting 0 |
+| 10/s | — | 61 ok (3.1/s), 58 refused (503), 81 throttled (per-IP limit, one bucket locally); pool waiting 0; queue empty afterwards |
+
+Boot refusal verified: production start with `APP_ROLLOUT_SURGE` unset
+logged the problem and exited 1; nothing listened on the port.
+`public-api` regression unchanged (city page 382 statements / 43 reads).
+
+**Config requirement.** Every production environment (laptop included) must
+set `DATABASE_MAX_CONNECTIONS`, `APP_PROCESS_COUNT`, `APP_ROLLOUT_SURGE`
+before deploying this, or it will not start.
+
+**Rollback.** Revert the PR. To loosen the gate without a deploy, raise
+`PUBLIC_ASSEMBLY_CONCURRENCY` / `_QUEUE` / `_QUEUE_MS` (and `PUBLIC_QUERY_*`)
+and restart. Do not raise pool sizes to pass a load test.
+
+**Remaining risks.** The gate is per process: its total bound relies on
+`APP_PROCESS_COUNT` being a real autoscaling cap on the platform. Admitted
+requests whose client left still run to completion (statement timeouts bound
+them). Refusals are 503s the frontend must survive without caching — CAP-04.
+
 ## Next action
 
-CAP-02: make boot refusal real, require and single-source the connection
-budget, bound heavy public work with an admission gate sized from the sweep
-above (pool saturates at 4 concurrent Lima assemblies per process), and stop
-the coalescing bypass.
+CAP-03: measure `/api/me` for absent, malformed, unknown and valid cookies
+(add Server-Timing to it first), then remove only work that is shown to be
+unnecessary.
