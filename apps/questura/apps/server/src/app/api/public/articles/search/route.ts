@@ -8,7 +8,10 @@ import {
   INDEXED_ARTICLE_SEARCH_SQL,
   substringPattern,
 } from '@/features/articles/public/search-index/query-sql'
-import { searchIndexHasRows } from '@/features/articles/public/search-index/service'
+import {
+  searchIndexHasRows,
+  type SearchIndexPool,
+} from '@/features/articles/public/search-index/service'
 import { MAX_QUERY_LENGTH, normalizeQuery } from '@/features/articles/public/search/params'
 import { clampPageSize, resolvePagingWindow } from '@/features/articles/public/paging'
 import { hydrateHits, parseHits, type QueryablePool } from '@/features/articles/public/search/hits'
@@ -51,7 +54,7 @@ export async function GET(req: NextRequest) {
     const payload = await getPayload({ config })
 
     return await withPublicReadDiagnostics(payload, req.headers, async () => {
-      const pool = (payload.db as { pool?: QueryablePool }).pool
+      const pool = (payload.db as { pool?: QueryablePool & SearchIndexPool }).pool
       if (!pool) throw new Error('Expected Payload db.pool to be available.')
 
       let source = 'index'

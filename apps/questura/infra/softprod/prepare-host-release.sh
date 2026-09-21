@@ -79,6 +79,10 @@ echo "==> Running database migrations"
 pnpm db:migrate
 node scripts/deploy/check-pending-migrations.mjs --require-clean
 
+stage="search index backfill"
+echo "==> Backfilling the public search index if it is empty"
+pnpm rebuild:search-index -- --if-empty
+
 stage="client release completion"
 echo "==> Completing client release against current public server"
 complete_client_release "$TARGET_SHA"

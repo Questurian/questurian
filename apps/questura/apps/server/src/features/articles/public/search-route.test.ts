@@ -30,19 +30,20 @@ describe('public article search route', () => {
   })
 
   it('runs ranked full-text search and returns hydrated article items in rank order', async () => {
-    const pool = {
-      query: vi.fn().mockResolvedValue({
-        rows: [
-          {
-            rows: [
-              { type: 'articles', id: 1, rank: 4.2 },
-              { type: 'itineraries', id: 9, rank: 1.1 },
-            ],
-            total_count: '2',
-          },
-        ],
-      }),
-    }
+    // Held separately because the diagnostics wrapper replaces `pool.query`
+    // with its counting wrapper; the wrapper still calls this spy.
+    const querySpy = vi.fn().mockResolvedValue({
+      rows: [
+        {
+          rows: [
+            { type: 'articles', id: 1, rank: 4.2 },
+            { type: 'itineraries', id: 9, rank: 1.1 },
+          ],
+          total_count: '2',
+        },
+      ],
+    })
+    const pool = { query: querySpy }
     const payload = {
       db: { pool },
       find: vi.fn(({ collection }) => {
@@ -79,23 +80,30 @@ describe('public article search route', () => {
     vi.mocked(getPayload).mockResolvedValue(payload as never)
 
     const response = await GET(
-      new NextRequest('http://localhost:4000/api/public/articles/search?q= visa  guide &pageSize=10'),
+      new NextRequest(
+        'http://localhost:4000/api/public/articles/search?q= visa  guide &pageSize=10',
+      ),
     )
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(pool.query).toHaveBeenCalledWith(
-      expect.stringContaining('websearch_to_tsquery'),
-      ['visa guide', 'en', 10, 0],
+    // The stored search documents, with the substring pattern as a parameter.
+    expect(querySpy).toHaveBeenCalledWith(
+      expect.stringContaining('FROM public_search_documents d'),
+      ['visa guide', 'en', 10, 0, '%visa guide%'],
     )
-    expect(payload.find).toHaveBeenCalledWith(expect.objectContaining({
-      collection: 'articles',
-      where: { id: { in: [1] } },
-    }))
-    expect(payload.find).toHaveBeenCalledWith(expect.objectContaining({
-      collection: 'listicle-itineraries',
-      where: { id: { in: [9] } },
-    }))
+    expect(payload.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: 'articles',
+        where: { id: { in: [1] } },
+      }),
+    )
+    expect(payload.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: 'listicle-itineraries',
+        where: { id: { in: [9] } },
+      }),
+    )
     expect(data).toMatchObject({
       q: 'visa guide',
       page: 1,
