@@ -183,10 +183,11 @@ a[href][data-no-hover-underline]:focus-visible :is(h1, h2, h3, h4, h5, h6),
 
 /* Navigation feedback (NavigationFeedback + navigationFeedbackStore).
    `html[data-navigating]` is set the moment a click starts a navigation and
-   cleared when the framework's transition settles. The working cursor shows at
-   once; the blue line only if the wait passes 150 ms, so fast clicks never
-   flash. The line is static -- an activity signal, not fake progress -- so
-   there is no motion for reduced-motion readers to opt out of. */
+   cleared when the framework's transition settles. The blue line shows only
+   if the wait passes 150 ms, so fast clicks never flash. The cursor is left
+   alone on purpose: the system progress cursor read as too loud. The line is
+   static -- an activity signal, not fake progress -- so there is no motion
+   for reduced-motion readers to opt out of. */
 .nav-feedback {
   position: fixed;
   inset: 0 0 auto;
@@ -205,9 +206,4 @@ html[data-navigating] .nav-feedback {
   to {
     opacity: 1;
   }
-}
-
-html[data-navigating],
-html[data-navigating] :is(body, a[href], button, [role="link"]) {
-  cursor: progress;
 }
