@@ -13,6 +13,8 @@ import { AsyncLocalStorage } from 'node:async_hooks'
  * Off unless asked for. `PUBLIC_API_DIAGNOSTICS=1` turns the response header
  * on; outside that the counters still run (they are two integer increments)
  * but nothing is emitted, so nothing about the response changes.
+ *
+ * How to read what comes out: `apps/questura/docs/measuring-the-backend.md`.
  */
 
 export type RequestReport = {
@@ -151,7 +153,10 @@ export function requestDiagnosticsEnabled(headers?: Headers): boolean {
 export function serverTimingHeader(report: RequestReport): string {
   const parts = [
     `total;dur=${Date.now() - report.startedAt}`,
-    `sql;dur=${report.statementMs};desc="${report.statements} statements, cumulative"`,
+    // No comma inside the quoted description: `Server-Timing` is a
+    // comma-separated list, a quoted comma is legal, and plenty of parsers
+    // split on the comma anyway. Ours did.
+    `sql;dur=${report.statementMs};desc="${report.statements} statements (cumulative)"`,
   ]
 
   for (const [key, value] of Object.entries(report.notes)) {

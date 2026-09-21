@@ -102,7 +102,7 @@ describe('serverTimingHeader', () => {
 
     const header = serverTimingHeader(report)
 
-    expect(header).toContain('sql;dur=5438;desc="382 statements, cumulative"')
+    expect(header).toContain('sql;dur=5438;desc="382 statements (cumulative)"')
     expect(header).toContain('reads;desc="43"')
     expect(header).toContain('peak;desc="6/6"')
   })

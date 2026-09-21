@@ -28,6 +28,6 @@ export const singleTypeListicleHooks: CollectionConfig['hooks'] = {
     validateSingleTypeListicle,
   ],
   beforeDelete: [preventSingleTypeListicleDelete],
-  afterChange: [articleRevalidation.afterChange],
-  afterDelete: [articleRevalidation.afterDelete],
+  afterChange: [articleRevalidation.afterChange, searchIndexSync.afterChange],
+  afterDelete: [articleRevalidation.afterDelete, searchIndexSync.afterDelete],
 }

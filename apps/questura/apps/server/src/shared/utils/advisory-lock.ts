@@ -213,6 +213,33 @@ export async function withAdvisoryLock<T>(
   }
 }
 
+/**
+ * What the lock pool is doing right now, for the operational stats endpoint.
+ *
+ * `waitingCount` above zero is the number worth alerting on: it means webhook
+ * deliveries are queueing for a lock connection, which is the contention this
+ * pool exists to keep out of Payload's.
+ */
+export function advisoryLockPoolStats(): {
+  open: boolean
+  total: number
+  idle: number
+  waiting: number
+  max: number
+  pooledConnection: boolean
+} {
+  const pool = globalForLocks.advisoryLockPool
+
+  return {
+    open: Boolean(pool),
+    total: pool?.totalCount ?? 0,
+    idle: pool?.idleCount ?? 0,
+    waiting: pool?.waitingCount ?? 0,
+    max: LOCK_POOL_MAX,
+    pooledConnection: advisoryLocksAreOnAPooledConnection(),
+  }
+}
+
 /** Close the lock pool. For process shutdown and test teardown. */
 export async function closeAdvisoryLockPool(): Promise<void> {
   const pool = globalForLocks.advisoryLockPool

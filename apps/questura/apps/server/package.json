@@ -41,7 +41,8 @@
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.ts",
     "typecheck": "tsc --noEmit",
     "rebuild:search-index": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/rebuild-search-index.ts",
-    "audit:visitor-auth-orphans": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/audit-visitor-auth-orphans.ts"
+    "audit:visitor-auth-orphans": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/audit-visitor-auth-orphans.ts",
+    "measure:api": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/measure-public-api.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.79.1",
