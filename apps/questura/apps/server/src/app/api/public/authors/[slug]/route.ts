@@ -4,12 +4,30 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import type { Author } from '@/payload-types'
 import { DEFAULT_LANG, isSupportedLang } from '@/shared/i18n/languageField'
-import { serializeIndexItem, type IndexItem } from '@/features/articles/public/indexItem'
-import { TYPE_TO_COLLECTION, type ArticleTypeKey } from '@/features/articles/public/scope'
+import type { ArticleTypeKey } from '@/features/articles/public/scope'
 import { hasPublishedAuthorContent } from '@/features/articles/public/authorVisibility'
+import { AUTHOR_FEED_SQL } from '@/features/articles/public/author-feed/author-feed-sql'
+import {
+  hydrateArticleRefs,
+  parseArticleRefs,
+  type QueryablePool,
+} from '@/features/articles/public/hydrate-refs'
+import { clampPageSize, resolvePagingWindow } from '@/features/articles/public/paging'
 
 const ARTICLE_TYPES: ArticleTypeKey[] = ['articles', 'maps', 'itineraries']
-const MAX_ARTICLES_PER_COLLECTION = 100
+
+/**
+ * One page of an author's combined feed.
+ *
+ * The old route asked each of the three collections for up to 100 documents at
+ * depth 2 with no `select`, so a prolific author cost up to 300 fully populated
+ * documents — listicle bodies and venue relations included — to render cards
+ * that read eight fields. 100 is now the whole feed's page size rather than a
+ * per-collection cap, and the response carries `hasNext` so a continuation can
+ * be added without another shape change.
+ */
+const DEFAULT_PAGE_SIZE = 100
+const MAX_PAGE_SIZE = 100
 const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 
 // GET /api/public/authors/[slug]?lang=en
@@ -31,6 +49,17 @@ export async function GET(
     if (!isSupportedLang(lang)) {
       return NextResponse.json({ message: `unsupported lang: ${lang}` }, { status: 400 })
     }
+
+    const pageSize = clampPageSize(
+      req.nextUrl.searchParams.get('pageSize'),
+      DEFAULT_PAGE_SIZE,
+      MAX_PAGE_SIZE,
+    )
+    const window = resolvePagingWindow(req.nextUrl.searchParams.get('page'), pageSize)
+    if (!window.ok) {
+      return NextResponse.json({ message: window.message }, { status: 400 })
+    }
+    const { page, offset } = window
 
     const payload = await getPayload({ config })
 
@@ -116,30 +145,18 @@ export async function GET(
       website: author.socialLinks?.website || null,
     }
 
-    const results = await Promise.all(
-      ARTICLE_TYPES.map(async (type) => {
-        const result = await payload.find({
-          collection: TYPE_TO_COLLECTION[type],
-          where: {
-            and: [
-              { author: { equals: author.id } },
-              { status: { equals: 'published' } },
-              { language: { equals: lang } },
-            ],
-          },
-          limit: MAX_ARTICLES_PER_COLLECTION,
-          // Article -> MediaSet -> variant asset requires two relationship hops.
-          depth: 2,
-          sort: '-publishedAt',
-          overrideAccess: true,
-        })
-        return result.docs.map((doc) => serializeIndexItem(doc, type))
-      }),
-    )
+    const pool = (payload.db as { pool?: QueryablePool }).pool
+    if (!pool) throw new Error('Expected Payload db.pool to be available.')
 
-    const articles: IndexItem[] = results
-      .flat()
-      .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''))
+    // Ordering across the three collections happens in SQL over ids; only the
+    // ids on this page are hydrated, with the card `select` the article
+    // indexes already use.
+    const feed = await pool.query(AUTHOR_FEED_SQL, [author.id, lang, pageSize, offset])
+    const feedRow = feed.rows[0]
+    const refs = parseArticleRefs(feedRow?.rows)
+    const totalDocs = Number(feedRow?.total_count ?? 0)
+    const totalPages = totalDocs === 0 ? 0 : Math.ceil(totalDocs / pageSize)
+    const articles = await hydrateArticleRefs(payload, refs)
 
     return NextResponse.json({
       id: author.id,
@@ -149,6 +166,12 @@ export async function GET(
       avatar,
       socialLinks,
       articles,
+      page,
+      pageSize,
+      totalDocs,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
     })
   } catch (error) {
     const message = error instanceof Error && error.message ? error.message : 'Failed to load author.'

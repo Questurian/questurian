@@ -1,14 +1,17 @@
 import type { getPayload } from 'payload'
 
-import { TYPE_TO_COLLECTION, type ArticleTypeKey } from '@/features/articles/public/scope'
+import type { ArticleTypeKey } from '@/features/articles/public/scope'
 import {
-  INDEX_ITEM_DEPTH,
-  INDEX_ITEM_SELECT,
-  serializeIndexItem,
-  type IndexItem,
-} from '@/features/articles/public/indexItem'
+  ALL_ARTICLE_TYPES,
+  hydrateArticleRefs,
+  parseArticleRefs,
+  type ArticleRefItem,
+  type QueryablePool,
+} from '@/features/articles/public/hydrate-refs'
 
-export const ALL_TYPES: ArticleTypeKey[] = ['articles', 'maps', 'itineraries']
+export const ALL_TYPES: ArticleTypeKey[] = ALL_ARTICLE_TYPES
+
+export type { QueryablePool }
 
 export type ArticleSearchHit = {
   type: ArticleTypeKey
@@ -16,63 +19,35 @@ export type ArticleSearchHit = {
   rank: number
 }
 
-export type ArticleSearchItem = IndexItem & { type: ArticleTypeKey }
+export type ArticleSearchItem = ArticleRefItem
 
 export type SearchQueryResult = {
   rows: unknown
   total_count: number | string
 }
 
-export type QueryablePool = {
-  query: (sql: string, values: unknown[]) => Promise<{ rows: SearchQueryResult[] }>
-}
-
 export function parseHits(value: unknown): ArticleSearchHit[] {
   const rows = typeof value === 'string' ? JSON.parse(value) : value
-  if (!Array.isArray(rows)) return []
+  const refs = parseArticleRefs(rows)
+  const ranks = new Map<string, number>()
 
-  return rows.flatMap((row): ArticleSearchHit[] => {
-    if (!row || typeof row !== 'object') return []
-    const hit = row as Record<string, unknown>
-    if (!ALL_TYPES.includes(hit.type as ArticleTypeKey)) return []
-    if (typeof hit.id !== 'number' && typeof hit.id !== 'string') return []
+  if (Array.isArray(rows)) {
+    for (const row of rows) {
+      if (!row || typeof row !== 'object') continue
+      const hit = row as Record<string, unknown>
+      ranks.set(`${String(hit.type)}:${String(hit.id)}`, Number(hit.rank) || 0)
+    }
+  }
 
-    return [{
-      type: hit.type as ArticleTypeKey,
-      id: hit.id,
-      rank: Number(hit.rank) || 0,
-    }]
-  })
+  return refs.map((ref) => ({
+    ...ref,
+    rank: ranks.get(`${ref.type}:${String(ref.id)}`) ?? 0,
+  }))
 }
 
-export async function hydrateHits(payload: Awaited<ReturnType<typeof getPayload>>, hits: ArticleSearchHit[]) {
-  const itemsByKey = new Map<string, ArticleSearchItem>()
-
-  await Promise.all(
-    ALL_TYPES.map(async (type) => {
-      const ids = hits.filter((hit) => hit.type === type).map((hit) => hit.id)
-      if (ids.length === 0) return
-
-      const result = await payload.find({
-        collection: TYPE_TO_COLLECTION[type],
-        where: { id: { in: ids } },
-        limit: ids.length,
-        depth: INDEX_ITEM_DEPTH,
-        select: INDEX_ITEM_SELECT,
-        overrideAccess: true,
-      })
-
-      for (const doc of result.docs) {
-        const id = (doc as unknown as Record<string, unknown>).id
-        itemsByKey.set(`${type}:${String(id)}`, {
-          ...serializeIndexItem(doc, type),
-          type,
-        })
-      }
-    }),
-  )
-
-  return hits
-    .map((hit) => itemsByKey.get(`${hit.type}:${String(hit.id)}`))
-    .filter((item): item is ArticleSearchItem => Boolean(item))
+export async function hydrateHits(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  hits: ArticleSearchHit[],
+) {
+  return hydrateArticleRefs(payload, hits)
 }

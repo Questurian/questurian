@@ -1,49 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
-import type { Where } from 'payload'
 
 import config from '@/payload.config'
 import { DEFAULT_LANG, isSupportedLang } from '@/shared/i18n/languageField'
 import {
-  TYPE_TO_COLLECTION,
-  type ArticleTypeKey,
-} from '@/features/articles/public/scope'
-import {
-  INDEX_ITEM_DEPTH,
-  INDEX_ITEM_SELECT,
-  serializeIndexItem,
-  type IndexItem,
-} from '@/features/articles/public/indexItem'
+  hydrateArticleRefs,
+  parseArticleRefs,
+  type QueryablePool,
+} from '@/features/articles/public/hydrate-refs'
+import { LOCATION_FEED_SQL } from '@/features/articles/public/location-feed/location-feed-sql'
+import { clampPageSize, resolvePagingWindow } from '@/features/articles/public/paging'
 import { publicLocationLabel } from '@/shared/location/server/publicLocationLabel'
 
 const MAX_PAGE_SIZE = 50
 const DEFAULT_PAGE_SIZE = 20
 const LOCATION_KEY_PATTERN = /^[a-z0-9-]+(\|[a-z0-9-]+){0,2}$/
 
-const ALL_TYPES: ArticleTypeKey[] = ['articles', 'maps', 'itineraries']
-
-type TypedItem = IndexItem & { type: ArticleTypeKey }
-
 function badRequest(message: string) {
   return NextResponse.json({ message }, { status: 400 })
-}
-
-function clampPageSize(raw: string | null): number {
-  const value = Number(raw)
-  if (!Number.isFinite(value) || value < 1) return DEFAULT_PAGE_SIZE
-  return Math.min(Math.floor(value), MAX_PAGE_SIZE)
-}
-
-function clampPage(raw: string | null): number {
-  const value = Number(raw)
-  if (!Number.isFinite(value) || value < 1) return 1
-  return Math.floor(value)
-}
-
-function publishedAtValue(item: IndexItem): number {
-  if (!item.publishedAt) return 0
-  const time = new Date(item.publishedAt).getTime()
-  return Number.isNaN(time) ? 0 : time
 }
 
 // GET /api/public/articles/by-location?key=peru|lima&page=1&pageSize=20&lang=en
@@ -51,6 +25,9 @@ function publishedAtValue(item: IndexItem): number {
 // Flat, date-sorted list of all published content (articles + maps +
 // itineraries) attached to a location key or any of its descendants.
 // Works for any location, whether or not it has a homepage.
+//
+// Ordering happens in SQL over ids; only the requested page is hydrated into
+// cards. See `location-feed-sql.ts` for why the in-memory merge went away.
 export async function GET(req: NextRequest) {
   try {
     const params = req.nextUrl.searchParams
@@ -63,8 +40,10 @@ export async function GET(req: NextRequest) {
     const lang = params.get('lang') ?? DEFAULT_LANG
     if (!isSupportedLang(lang)) return badRequest(`unsupported lang: ${lang}`)
 
-    const page = clampPage(params.get('page'))
-    const pageSize = clampPageSize(params.get('pageSize'))
+    const pageSize = clampPageSize(params.get('pageSize'), DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE)
+    const window = resolvePagingWindow(params.get('page'), pageSize)
+    if (!window.ok) return badRequest(window.message)
+    const { page, offset } = window
 
     const payload = await getPayload({ config })
 
@@ -80,47 +59,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Unknown location.' }, { status: 404 })
     }
 
-    const where: Where = {
-      and: [
-        { status: { equals: 'published' } },
-        { language: { equals: lang } },
-        {
-          or: [
-            { location: { equals: key } },
-            { location: { like: `${key}|%` } },
-          ],
-        },
-      ],
-    }
+    const pool = (payload.db as { pool?: QueryablePool }).pool
+    if (!pool) throw new Error('Expected Payload db.pool to be available.')
 
-    // Merge the three collections in memory: fetch enough docs from each to
-    // cover the requested page, then sort and slice the combined list.
-    const fetchLimit = page * pageSize
-    const results = await Promise.all(
-      ALL_TYPES.map((type) =>
-        payload.find({
-          collection: TYPE_TO_COLLECTION[type],
-          where,
-          limit: fetchLimit,
-          depth: INDEX_ITEM_DEPTH,
-          select: INDEX_ITEM_SELECT,
-          sort: '-publishedAt',
-          overrideAccess: true,
-        }),
-      ),
-    )
-
-    const merged: TypedItem[] = results.flatMap((result, index) =>
-      result.docs.map((doc) => ({
-        ...serializeIndexItem(doc, ALL_TYPES[index]),
-        type: ALL_TYPES[index],
-      })),
-    )
-    merged.sort((a, b) => publishedAtValue(b) - publishedAtValue(a))
-
-    const totalDocs = results.reduce((sum, result) => sum + result.totalDocs, 0)
+    // `key` is validated against LOCATION_KEY_PATTERN above, so it carries no
+    // LIKE wildcard; the prefix is still passed as a parameter, not inlined.
+    const result = await pool.query(LOCATION_FEED_SQL, [key, `${key}|%`, lang, pageSize, offset])
+    const firstRow = result.rows[0]
+    const refs = parseArticleRefs(firstRow?.rows)
+    const totalDocs = Number(firstRow?.total_count ?? 0)
     const totalPages = Math.max(1, Math.ceil(totalDocs / pageSize))
-    const items = merged.slice((page - 1) * pageSize, page * pageSize)
+
+    const items = await hydrateArticleRefs(payload, refs)
 
     const label = publicLocationLabel(location)
 
