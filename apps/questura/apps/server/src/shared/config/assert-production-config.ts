@@ -5,6 +5,8 @@ import {
   validateCookieDomain,
 } from './session-cookie'
 import { TRUSTED_PROXY_NAMES } from './trusted-proxy'
+import { looksTransactionPooled } from '@/shared/database/pooled-uri'
+import { describePoolBudget, poolBudget } from '@/shared/database/pool-budget'
 
 /**
  * Fail fast on a production boot that is still carrying development defaults.
@@ -219,6 +221,42 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
   if (!monthlyPriceId) {
     problems.push(
       'STRIPE_PRICE_ID (or STRIPE_PRICE_ID_MONTHLY) is not set — checkout would 400 at peak intent.'
+    )
+  }
+
+  // Session-level advisory locks and transaction pooling are incompatible, and
+  // the incompatibility is silent: `pg_advisory_lock` holds its lock for the
+  // life of the session, and under PgBouncer transaction pooling a session is
+  // whatever fragment of a connection one transaction gets. The lock that stops
+  // two concurrent Stripe webhooks for one customer from both reading the same
+  // before-state and both sending the same email would simply stop working.
+  //
+  // Checked at the URI rather than trusted to a code review at migration time,
+  // because the change that breaks it is one environment variable and it is
+  // the obvious thing to do when moving to a managed Postgres.
+  if (looksTransactionPooled(APP_CONFIG.database.uri) && !APP_CONFIG.database.directUri.trim()) {
+    problems.push(
+      'DATABASE_URI looks transaction-pooled and DATABASE_URI_UNPOOLED is not set — ' +
+        'session-level advisory locks do not survive transaction pooling, so payment ' +
+        'coordination would silently stop working. Set the direct endpoint.'
+    )
+  }
+
+  if (APP_CONFIG.database.directUri.trim() && looksTransactionPooled(APP_CONFIG.database.directUri)) {
+    problems.push(
+      'DATABASE_URI_UNPOOLED also looks transaction-pooled — advisory locks need a ' +
+        'direct connection, not a second pooled one.'
+    )
+  }
+
+  // Pool maxima are per process and live in three files. Nothing multiplied
+  // them by the number of processes, and Postgres does not care which pool
+  // exhausts it: the first symptom is `FATAL: sorry, too many clients already`
+  // on whichever pool asks next.
+  const budget = poolBudget()
+  if (budget.exceedsAllowance) {
+    problems.push(
+      `Configured connection pools exceed the database allowance: ${describePoolBudget(budget)}.`
     )
   }
 

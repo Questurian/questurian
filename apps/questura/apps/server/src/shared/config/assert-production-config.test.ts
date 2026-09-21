@@ -40,6 +40,11 @@ describe('production config assertion', () => {
     vi.stubEnv('STRIPE_PRICE_ID', '')
     vi.stubEnv('STRIPE_PRICE_ID_MONTHLY', '')
     vi.stubEnv('TRUSTED_PROXY', '')
+    vi.stubEnv('DATABASE_URI', 'postgres://u:p@db.internal:5432/questura')
+    vi.stubEnv('DATABASE_URI_UNPOOLED', '')
+    vi.stubEnv('DATABASE_URL_UNPOOLED', '')
+    vi.stubEnv('DATABASE_MAX_CONNECTIONS', '')
+    vi.stubEnv('APP_PROCESS_COUNT', '')
   })
 
   afterEach(() => {
@@ -400,5 +405,66 @@ describe('production config assertion', () => {
     expect(() => assertProductionConfig()).toThrow(/Refusing to boot/)
     expect(() => assertProductionConfig()).toThrow(/NEXT_PUBLIC_APP_URL/)
     expect(() => assertProductionConfig()).toThrow(/BACKEND_URL_LOCAL/)
+  })
+
+  // Session-level advisory locks do not survive transaction pooling, and the
+  // failure is silent: the lock that stops two concurrent Stripe webhooks for
+  // one customer from both sending the same email simply stops working. The
+  // change that breaks it is one environment variable.
+  it('refuses a pooled DATABASE_URI with no direct endpoint for the locks', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      DATABASE_URI: 'postgres://u:p@ep-x-123-pooler.us-east-2.aws.neon.tech/db',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([
+      expect.stringContaining('DATABASE_URI_UNPOOLED is not set'),
+    ])
+  })
+
+  it('accepts a pooled DATABASE_URI once the direct endpoint is named', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      DATABASE_URI: 'postgres://u:p@ep-x-123-pooler.us-east-2.aws.neon.tech/db',
+      DATABASE_URI_UNPOOLED: 'postgres://u:p@ep-x-123.us-east-2.aws.neon.tech/db',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([])
+  })
+
+  it('refuses a direct endpoint that is itself pooled', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      DATABASE_URI: 'postgres://u:p@ep-x-123-pooler.us-east-2.aws.neon.tech/db',
+      DATABASE_URI_UNPOOLED: 'postgres://u:p@other-pooler.us-east-2.aws.neon.tech/db',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([
+      expect.stringContaining('DATABASE_URI_UNPOOLED also looks transaction-pooled'),
+    ])
+  })
+
+  // Pool maxima are per process and live in three files. The first symptom of
+  // getting this wrong is `FATAL: sorry, too many clients already`.
+  it('refuses a pool budget that cannot fit the declared allowance', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      DATABASE_MAX_CONNECTIONS: '100',
+      APP_PROCESS_COUNT: '3',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([
+      expect.stringContaining('exceed the database allowance'),
+    ])
+  })
+
+  it('accepts a pool budget that fits', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      DATABASE_MAX_CONNECTIONS: '200',
+      APP_PROCESS_COUNT: '3',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([])
   })
 })

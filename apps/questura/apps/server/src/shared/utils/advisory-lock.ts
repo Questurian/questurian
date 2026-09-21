@@ -4,6 +4,7 @@ import { Pool, type PoolClient } from 'pg'
 import type { getPayload } from 'payload'
 import { APP_CONFIG } from '@/shared/config'
 import { advisoryLockTimeouts, poolTimeoutOptions } from '@/shared/database/timeouts'
+import { looksTransactionPooled } from '@/shared/database/pooled-uri'
 import { logger } from './logger'
 
 /**
@@ -71,14 +72,39 @@ const LOCK_POOL_MAX = 10
  */
 const globalForLocks = globalThis as unknown as { advisoryLockPool?: Pool }
 
+/**
+ * The connection string these locks may use.
+ *
+ * A session-level lock holds its lock for the life of the session. Under
+ * PgBouncer transaction pooling a "session" is whatever fragment of a
+ * connection one transaction gets, so a lock can be taken on one backend and
+ * released against another, or outlive its caller entirely — silently, with no
+ * error anywhere. The direct URI is therefore preferred whenever one is
+ * configured, and required in production once the main URI looks pooled
+ * (`assert-production-config.ts` refuses to boot otherwise).
+ */
+export function advisoryLockConnectionString(): string {
+  const direct = (APP_CONFIG.database.directUri ?? '').trim()
+  if (direct) return direct
+
+  return APP_CONFIG.database.uri
+}
+
+/** True when locks would be taken on a transaction-pooled connection. */
+export function advisoryLocksAreOnAPooledConnection(): boolean {
+  return looksTransactionPooled(advisoryLockConnectionString())
+}
+
 function getLockPool(): Pool | null {
-  if (!APP_CONFIG.database.uri) {
+  const connectionString = advisoryLockConnectionString()
+
+  if (!connectionString) {
     return null
   }
 
   if (!globalForLocks.advisoryLockPool) {
     const pool = new Pool({
-      connectionString: APP_CONFIG.database.uri,
+      connectionString,
       max: LOCK_POOL_MAX,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000, // Fail fast instead of hanging forever
