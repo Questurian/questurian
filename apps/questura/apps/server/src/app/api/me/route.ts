@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getPayload } from 'payload'
+
+import config from '@/payload.config'
 
 import { forbiddenOriginResponse, getPrivateCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { getCurrentPrincipal } from '@/features/visitor-auth/lib/current-principal'
+import { visitorAuthPool } from '@/features/visitor-auth/lib/better-auth'
+import {
+  countPoolStatements,
+  requestDiagnosticsEnabled,
+  serverTimingHeader,
+  withRequestReport,
+} from '@/shared/observability/request-report'
 
 /**
  * Who the caller is, plus their membership state. Derived from the session
@@ -26,9 +36,23 @@ export async function GET(req: NextRequest) {
   const blocked = forbiddenOriginResponse(req, corsHeaders)
   if (blocked) return blocked
 
-  const principal = await getCurrentPrincipal(req.headers)
+  // Every page's navigation asks this, for every visitor, cached page or not,
+  // so its cost is multiplied by campaign traffic more directly than any
+  // content read. Counted like the public reads: statements on the session
+  // pool (and Payload's, for the profile), Redis round trips, reported only
+  // when diagnostics are on.
+  const diagnostics = requestDiagnosticsEnabled(req.headers)
+  if (diagnostics) {
+    countPoolStatements(visitorAuthPool)
+    countPoolStatements((await getPayload({ config })).db?.pool)
+  }
+  const { result: principal, report } = await withRequestReport(() => getCurrentPrincipal(req.headers))
 
-  return NextResponse.json(principal, { headers: corsHeaders })
+  const response = NextResponse.json(principal, { headers: corsHeaders })
+  if (diagnostics) {
+    response.headers.set('Server-Timing', serverTimingHeader(report))
+  }
+  return response
 }
 
 export async function OPTIONS(req: NextRequest) {

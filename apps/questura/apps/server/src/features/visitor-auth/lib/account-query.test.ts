@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   findUserByEmail: vi.fn(),
+  findAccounts: vi.fn(),
   listUserAccounts: vi.fn(),
 }))
 
@@ -10,6 +11,7 @@ vi.mock('./better-auth', () => ({
     $context: Promise.resolve({
       internalAdapter: {
         findUserByEmail: mocks.findUserByEmail,
+        findAccounts: mocks.findAccounts,
       },
     }),
     api: {
@@ -18,7 +20,12 @@ vi.mock('./better-auth', () => ({
   },
 }))
 
-import { deriveAuthMethods, findVisitorAccountByEmail, getVisitorAuthMethods } from './account-query'
+import {
+  deriveAuthMethods,
+  findVisitorAccountByEmail,
+  getVisitorAuthMethods,
+  getVisitorAuthMethodsForUser,
+} from './account-query'
 
 describe('Visitor account query', () => {
   beforeEach(() => {
@@ -104,5 +111,20 @@ describe('Visitor account query', () => {
     })
 
     consoleError.mockRestore()
+  })
+
+  it('resolves auth methods for a known user without another session lookup', async () => {
+    mocks.findAccounts.mockResolvedValue([{ providerId: 'google' }, { providerId: 'credential' }])
+
+    await expect(getVisitorAuthMethodsForUser('u1')).resolves.toMatchObject({ authProvider: 'dual' })
+    expect(mocks.findAccounts).toHaveBeenCalledWith('u1')
+    expect(mocks.listUserAccounts).not.toHaveBeenCalled()
+  })
+
+  it('degrades to unknown when the accounts query fails', async () => {
+    mocks.findAccounts.mockRejectedValue(new Error('db down'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await expect(getVisitorAuthMethodsForUser('u1')).resolves.toMatchObject({ authProvider: 'unknown' })
   })
 })

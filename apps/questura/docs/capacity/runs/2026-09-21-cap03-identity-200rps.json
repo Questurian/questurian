@@ -1,0 +1,323 @@
+{
+  "meta": {
+    "takenAt": "2026-09-21T21:08:27.340Z",
+    "sha": "e208b7df-dirty",
+    "scenario": "identity",
+    "scenarioDescription": "The anonymous identity check every public page's navigation makes, with no cookie, a malformed cookie and an unknown-but-well-formed cookie. A valid session needs a real signed-in cookie and is supplied by hand, never committed. Every step sends the browser's Origin ({origin}, the harness --origin flag): the server refuses cookie-bearing calls without an allowed one.",
+    "node": "v24.15.0",
+    "generatorHost": "darwin arm64 8 cpus",
+    "label": "CAP-03 identity 200/s, local prod build",
+    "warmupSamples": 3,
+    "poolScope": "single-process"
+  },
+  "args": {
+    "base": "http://localhost:4100",
+    "client": "http://localhost:3000",
+    "origin": "https://capacity-client.invalid",
+    "scenario": "identity",
+    "mode": "arrival",
+    "cache": "warm",
+    "runs": 10,
+    "concurrent": 1,
+    "warmup": 1,
+    "timeoutMs": 15000,
+    "rate": 200,
+    "durationS": 20,
+    "maxInFlight": 200,
+    "abortErrorRate": 0.01,
+    "abortMinSamples": 50,
+    "jsonPath": "../../docs/capacity/runs/2026-09-21-cap03-identity-200rps.json",
+    "htmlPath": "",
+    "label": "CAP-03 identity 200/s, local prod build"
+  },
+  "throughput": {
+    "offered": 4000,
+    "started": 4000,
+    "dropped": 0,
+    "completedRequests": 4000,
+    "okRequests": 4000,
+    "elapsedS": 19.995182583,
+    "offeredPerS": 200.04818577654896,
+    "completedPerS": 200.04818577654896,
+    "okPerS": 200.04818577654896,
+    "lateness": {
+      "n": 4000,
+      "p50": 0.004958000000442553,
+      "p95": 0.3574580000004062,
+      "p99": 0.5774169999999685,
+      "min": 0.001208000000588072,
+      "max": 9.387749999999983
+    },
+    "generatorSaturated": false
+  },
+  "steps": [
+    {
+      "step": "me: no cookie",
+      "measured": 3193,
+      "outcomes": {
+        "ok": 3193,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 3193,
+        "p50": 2.384750000001077,
+        "p95": 4.092540999999983,
+        "p99": 5.470666999999594,
+        "min": 0.9896669999998267,
+        "max": 10.410125000000335
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 40,
+        "max": 40,
+        "reported": 3193
+      },
+      "statements": {
+        "median": 0,
+        "max": 0,
+        "reported": 3193
+      },
+      "statementMs": {
+        "median": 0,
+        "max": 0,
+        "reported": 3193
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 0,
+        "max": 0,
+        "reported": 3193
+      },
+      "cacheControl": "no-store, no-cache, must-revalidate",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "me: malformed cookie",
+      "measured": 397,
+      "outcomes": {
+        "ok": 397,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 397,
+        "p50": 2.3695000000006985,
+        "p95": 4.246041000000332,
+        "p99": 5.398540999998659,
+        "min": 1.0968339999999444,
+        "max": 7.627416999999696
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 40,
+        "max": 40,
+        "reported": 397
+      },
+      "statements": {
+        "median": 0,
+        "max": 0,
+        "reported": 397
+      },
+      "statementMs": {
+        "median": 0,
+        "max": 0,
+        "reported": 397
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 0,
+        "max": 0,
+        "reported": 397
+      },
+      "cacheControl": "no-store, no-cache, must-revalidate",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "me: unknown cookie",
+      "measured": 410,
+      "outcomes": {
+        "ok": 410,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 410,
+        "p50": 2.514291000000412,
+        "p95": 4.832000000000335,
+        "p99": 5.422833999999057,
+        "min": 1.1566250000014406,
+        "max": 5.723833000000013
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 40,
+        "max": 40,
+        "reported": 410
+      },
+      "statements": {
+        "median": 0,
+        "max": 0,
+        "reported": 410
+      },
+      "statementMs": {
+        "median": 0,
+        "max": 0,
+        "reported": 410
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 0,
+        "max": 0,
+        "reported": 410
+      },
+      "cacheControl": "no-store, no-cache, must-revalidate",
+      "cacheStatuses": {},
+      "errors": {}
+    }
+  ],
+  "pool": {
+    "samples": 21,
+    "failedSamples": 0,
+    "maxWaiting": 0,
+    "maxTotal": 2,
+    "waitingSeries": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        7,
+        0
+      ],
+      [
+        8,
+        0
+      ],
+      [
+        9,
+        0
+      ],
+      [
+        10,
+        0
+      ],
+      [
+        11,
+        0
+      ],
+      [
+        12,
+        0
+      ],
+      [
+        13,
+        0
+      ],
+      [
+        14,
+        0
+      ],
+      [
+        15,
+        0
+      ],
+      [
+        16,
+        0
+      ],
+      [
+        17,
+        0
+      ],
+      [
+        18,
+        0
+      ],
+      [
+        19,
+        0
+      ],
+      [
+        20,
+        0
+      ]
+    ],
+    "scope": "single-process"
+  },
+  "aborted": null
+}

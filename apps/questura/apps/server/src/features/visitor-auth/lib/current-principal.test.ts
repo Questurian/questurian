@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   listUserAccounts: vi.fn(),
+  findAccounts: vi.fn(),
   payloadAuth: vi.fn(),
   findVisitorProfileByAuthUserId: vi.fn(),
   ensureVisitorProfileForAuthUser: vi.fn(),
@@ -14,6 +15,7 @@ vi.mock('./better-auth', () => ({
       getSession: mocks.getSession,
       listUserAccounts: mocks.listUserAccounts,
     },
+    $context: Promise.resolve({ internalAdapter: { findAccounts: mocks.findAccounts } }),
   },
 }))
 
@@ -39,9 +41,37 @@ describe('Current principal', () => {
     vi.clearAllMocks()
     mocks.getSession.mockResolvedValue(null)
     mocks.listUserAccounts.mockResolvedValue([])
+    mocks.findAccounts.mockResolvedValue([])
     mocks.payloadAuth.mockResolvedValue({ user: null })
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue(null)
     mocks.ensureVisitorProfileForAuthUser.mockResolvedValue(null)
+  })
+
+  // Every signed-in page view asks /api/me. `listUserAccounts({ headers })`
+  // resolved the session a second time just to learn the user id this lookup
+  // already had.
+  it('resolves the session once per signed-in request', async () => {
+    mocks.getSession.mockResolvedValue({
+      user: { id: 'visitor_1', email: 'v@example.com', emailVerified: true, name: 'V' },
+    })
+    mocks.findAccounts.mockResolvedValue([{ providerId: 'credential' }])
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({ id: 1, firstName: 'V', lastName: '' })
+
+    const result = await getCurrentPrincipal(new Headers({ cookie: 'questura_visitor.session_token=x.y' }))
+
+    expect(mocks.getSession).toHaveBeenCalledTimes(1)
+    expect(mocks.listUserAccounts).not.toHaveBeenCalled()
+    expect(mocks.findAccounts).toHaveBeenCalledWith('visitor_1')
+    expect(result.principal?.authProvider).toBe('local')
+  })
+
+  it('does no account or profile work for an anonymous caller', async () => {
+    const result = await getCurrentPrincipal(new Headers())
+
+    expect(result).toEqual({ authenticated: false, principal: null })
+    expect(mocks.findAccounts).not.toHaveBeenCalled()
+    expect(mocks.findVisitorProfileByAuthUserId).not.toHaveBeenCalled()
+    expect(mocks.ensureVisitorProfileForAuthUser).not.toHaveBeenCalled()
   })
 
   it('returns a Visitor principal and auth methods from a BetterAuth session', async () => {
@@ -53,7 +83,7 @@ describe('Current principal', () => {
         name: 'Ada Lovelace',
       },
     })
-    mocks.listUserAccounts.mockResolvedValue([
+    mocks.findAccounts.mockResolvedValue([
       { providerId: 'credential' },
       { providerId: 'google' },
     ])

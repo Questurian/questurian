@@ -50,21 +50,27 @@ const googleProvider =
       }
     : undefined
 
+/**
+ * Exported so `/api/me` can count the statements a session lookup sends
+ * (`Server-Timing`, diagnostics only).
+ */
+export const visitorAuthPool = new Pool({
+  connectionString: databaseUrl,
+  max: poolSizes().visitorAuth,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  // Same statement, lock and idle budgets as Payload's pool: a session
+  // lookup that hangs holds one of ten connections and stalls sign-in.
+  ...poolTimeoutOptions(servingTimeouts()),
+})
+
 export const visitorAuth = betterAuth({
   appName: 'Questura',
   baseURL: APP_URLS.backend,
   basePath: '/api/visitor-auth',
   trustedOrigins: APP_CONFIG.CORS_ORIGINS,
   secret: process.env.BETTER_AUTH_SECRET || APP_CONFIG.payloadSecret,
-  database: new Pool({
-    connectionString: databaseUrl,
-    max: poolSizes().visitorAuth,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
-    // Same statement, lock and idle budgets as Payload's pool: a session
-    // lookup that hangs holds one of ten connections and stalls sign-in.
-    ...poolTimeoutOptions(servingTimeouts()),
-  }),
+  database: visitorAuthPool,
   secondaryStorage: APP_CONFIG.isProduction ? redisSecondaryStorage : undefined,
   user: {
     modelName: 'visitor_auth_users',

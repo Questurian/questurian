@@ -1,4 +1,4 @@
-import { getVisitorAuthMethods } from './account-query'
+import { getVisitorAuthMethodsForUser } from './account-query'
 import type { AuthProvider } from './account-query'
 import { visitorAuth } from './better-auth'
 import { deriveVisitorMembership } from './membership-entitlement'
@@ -49,14 +49,21 @@ async function resolveVisitorPrincipal(headers: Headers): Promise<VisitorPrincip
   const visitorSession = await visitorAuth.api.getSession({ headers })
 
   if (visitorSession?.user) {
+    const user = visitorSession.user
+    // One session lookup per request: the accounts query takes the user id
+    // this lookup already produced rather than resolving the session again.
+    // The profile and the accounts are independent, so they run together.
+    const [foundProfile, authMethods] = await Promise.all([
+      findVisitorProfileByAuthUserId(user.id),
+      getVisitorAuthMethodsForUser(user.id),
+    ])
     const profile =
-      (await findVisitorProfileByAuthUserId(visitorSession.user.id)) ??
+      foundProfile ??
       (await ensureVisitorProfileForAuthUser({
-        id: visitorSession.user.id,
-        email: visitorSession.user.email,
-        name: visitorSession.user.name,
+        id: user.id,
+        email: user.email,
+        name: user.name,
       }))
-    const authMethods = await getVisitorAuthMethods(headers)
 
     return {
       kind: 'visitor',
