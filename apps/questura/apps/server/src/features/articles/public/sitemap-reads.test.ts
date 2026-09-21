@@ -37,13 +37,13 @@ describe('readAllPages', () => {
 
 describe('authorsWithPublishedContent', () => {
   it('answers for every author in one query', async () => {
-    const pool = { query: vi.fn(async () => ({ rows: [{ author_id: 3 }, { author_id: '7' }] })) }
+    const pool = { query: vi.fn(async (_sql: string) => ({ rows: [{ author_id: 3 }, { author_id: '7' }] })) }
 
     const visible = await authorsWithPublishedContent(pool, ['articles', 'maps', 'itineraries'])
 
     expect(pool.query).toHaveBeenCalledTimes(1)
     expect([...visible]).toEqual(['3', '7'])
-    const sql = pool.query.mock.calls[0]![0] as string
+    const sql = pool.query.mock.calls[0]![0]
     expect(sql.match(/UNION/g)).toHaveLength(2)
     expect(sql).toContain("status = 'published'")
     // Any language, like hasPublishedAuthorContent.

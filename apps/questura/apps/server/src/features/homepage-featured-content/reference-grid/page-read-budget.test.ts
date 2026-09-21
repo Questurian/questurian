@@ -244,8 +244,8 @@ describe('prefetchDocuments', () => {
 
   it('reads a block in one query and answers every slot from it', async () => {
     const payload = {
-      find: vi.fn(async () => ({ docs: [{ id: 1 }, { id: 2 }] })),
-      findByID: vi.fn(),
+      find: vi.fn(async (_args: Record<string, unknown>) => ({ docs: [{ id: 1 }, { id: 2 }] })),
+      findByID: vi.fn(async (_args: Record<string, unknown>) => null),
     }
 
     const { result, stats } = await withPageReadBudget(async () => {
@@ -263,10 +263,10 @@ describe('prefetchDocuments', () => {
 
   it('falls back to per-slot reads when the batch fails', async () => {
     const payload = {
-      find: vi.fn(async () => {
+      find: vi.fn(async (_args: Record<string, unknown>): Promise<{ docs: unknown[] }> => {
         throw new Error('timeout')
       }),
-      findByID: vi.fn(async ({ id }: { id: unknown }) => ({ id })),
+      findByID: vi.fn(async (args: Record<string, unknown>) => ({ id: args.id })),
     }
 
     const { result } = await withPageReadBudget(async () => {
