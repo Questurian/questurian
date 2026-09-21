@@ -8,9 +8,9 @@
  *   transition for navigations whose source disappears on click — menus that
  *   close themselves, nested author bylines, search submission.
  *
- * `<html data-navigating>` is set the moment either source turns on, so the
- * working cursor needs no React render; the blue line and the screen-reader
- * status hang off that attribute and the subscription below.
+ * `<html data-navigating>` is set the moment either source turns on, without
+ * waiting for a React render; the blue line and the screen-reader status hang
+ * off that attribute and the subscription below.
  */
 
 type NavigateOptions = { replace?: boolean; scroll?: boolean }
