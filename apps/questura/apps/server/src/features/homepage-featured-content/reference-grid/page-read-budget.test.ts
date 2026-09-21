@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { readWithBoundedConcurrency } from './bounded-reads'
-import { readBudgetOverrideFromHeaders, readDocumentOnce, withPageReadBudget, withReadSlot } from './page-read-budget'
+import {
+  prefetchDocuments,
+  readBudgetOverrideFromHeaders,
+  readDocumentBySpec,
+  readDocumentOnce,
+  withPageReadBudget,
+  withReadSlot,
+} from './page-read-budget'
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -223,5 +230,69 @@ describe('readBudgetOverrideFromHeaders', () => {
     vi.stubEnv('NODE_ENV', 'production')
     vi.stubEnv('PUBLIC_API_DIAGNOSTICS', '1')
     expect(readBudgetOverrideFromHeaders(headers)).toEqual({ limit: 1 })
+  })
+})
+
+describe('prefetchDocuments', () => {
+  const spec = {
+    collection: 'accommodations',
+    key: (id: string | number) => `hotel:${id}`,
+    depth: 2,
+    select: { id: true },
+    normalize: (doc: Record<string, unknown>) => ({ normalized: doc.id }),
+  }
+
+  it('reads a block in one query and answers every slot from it', async () => {
+    const payload = {
+      find: vi.fn(async () => ({ docs: [{ id: 1 }, { id: 2 }] })),
+      findByID: vi.fn(),
+    }
+
+    const { result, stats } = await withPageReadBudget(async () => {
+      await prefetchDocuments(payload, spec, [1, 2, 3, 2])
+      return Promise.all([1, 2, 3].map((id) => readDocumentBySpec(payload, spec, id)))
+    })
+
+    expect(payload.find).toHaveBeenCalledTimes(1)
+    expect(payload.find.mock.calls[0]![0]).toMatchObject({ where: { id: { in: ['1', '2', '3'] } }, depth: 2, pagination: false })
+    expect(payload.findByID).not.toHaveBeenCalled()
+    // A document the batch did not return is a not-found, exactly as findByID would say.
+    expect(result).toEqual([{ normalized: 1 }, { normalized: 2 }, null])
+    expect(stats).toMatchObject({ reads: 1, batches: 1, prefetched: 3, deduped: 0 })
+  })
+
+  it('falls back to per-slot reads when the batch fails', async () => {
+    const payload = {
+      find: vi.fn(async () => {
+        throw new Error('timeout')
+      }),
+      findByID: vi.fn(async ({ id }: { id: unknown }) => ({ id })),
+    }
+
+    const { result } = await withPageReadBudget(async () => {
+      await prefetchDocuments(payload, spec, [1])
+      return readDocumentBySpec(payload, spec, 1)
+    })
+
+    expect(result).toEqual({ normalized: 1 })
+    expect(payload.findByID).toHaveBeenCalledTimes(1)
+  })
+
+  it('does nothing outside a page budget', async () => {
+    const payload = { find: vi.fn(), findByID: vi.fn() }
+    await prefetchDocuments(payload, spec, [1])
+    expect(payload.find).not.toHaveBeenCalled()
+  })
+
+  it('propagates a real failure from the single read instead of omitting the slot', async () => {
+    const payload = {
+      find: vi.fn(),
+      findByID: vi.fn(async () => {
+        throw new Error('canceling statement due to statement timeout')
+      }),
+    }
+    await expect(
+      withPageReadBudget(() => readDocumentBySpec(payload, spec, 9)),
+    ).rejects.toThrow('statement timeout')
   })
 })

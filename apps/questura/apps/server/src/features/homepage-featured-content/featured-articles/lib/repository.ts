@@ -7,9 +7,12 @@ import type {
 } from '../types'
 
 import { HOMEPAGE_BLOCK_POPULATE } from '../../populate'
-import { readDocumentOnce } from '../../reference-grid/page-read-budget'
+import {
+  prefetchDocuments,
+  readDocumentBySpec,
+  type DocumentReadSpec,
+} from '../../reference-grid/page-read-budget'
 import { normalizeHomepageFeaturedCandidate } from './candidate'
-import { whenNotFound } from '@/shared/lib/not-found-error'
 
 export const homepageFeaturedSelect = {
   id: true,
@@ -27,28 +30,42 @@ export const homepageFeaturedSelect = {
   category: true,
 } as const
 
-export async function findHomepageFeaturedDoc(
+/**
+ * One shape per collection for the single read and the batch. Populates
+ * featuredImage → mediaSet → variants.square for `imageUrlSquare`.
+ */
+export function homepageFeaturedReadSpec(relationTo: HomepageFeaturedItemRef['relationTo']): DocumentReadSpec {
+  return {
+    collection: relationTo,
+    key: (id) => `featured:${relationTo}:${id}`,
+    depth: 3,
+    select: homepageFeaturedSelect,
+    populate: HOMEPAGE_BLOCK_POPULATE,
+    normalize: (doc) => normalizeHomepageFeaturedCandidate(relationTo, doc as PayloadDocLike),
+  }
+}
+
+export function findHomepageFeaturedDoc(
   payload: Payload,
   ref: HomepageFeaturedItemRef,
 ): Promise<HomepageFeaturedCandidate | null> {
-  // The same article can sit in two placements on one page, and this read
-  // populates featuredImage -> mediaSet -> variants three levels deep.
-  return readDocumentOnce(`featured:${ref.relationTo}:${ref.id}`, async () => {
-    try {
-      const doc = await payload.findByID({
-        collection: ref.relationTo,
-        id: ref.id,
-        // Populate featuredImage → mediaSet → variants.square for `imageUrlSquare`
-        depth: 3,
-        overrideAccess: true,
-        select: homepageFeaturedSelect,
-        populate: HOMEPAGE_BLOCK_POPULATE,
-      })
+  // The same article can sit in two placements on one page; the request cache
+  // reads it once.
+  return readDocumentBySpec(payload as never, homepageFeaturedReadSpec(ref.relationTo), ref.id)
+}
 
-      return normalizeHomepageFeaturedCandidate(ref.relationTo, doc as PayloadDocLike)
-    } catch (error) {
-      // Deleted is omitted; failed is an error (shared/lib/not-found-error.ts).
-      return whenNotFound(error, null)
-    }
-  })
+/** One query per collection for every featured slot on a block. */
+export async function prefetchHomepageFeaturedDocs(
+  payload: Payload,
+  refs: HomepageFeaturedItemRef[],
+): Promise<void> {
+  const byCollection = new Map<HomepageFeaturedItemRef['relationTo'], Array<string | number>>()
+  for (const ref of refs) {
+    byCollection.set(ref.relationTo, [...(byCollection.get(ref.relationTo) ?? []), ref.id])
+  }
+  await Promise.all(
+    [...byCollection].map(([relationTo, ids]) =>
+      prefetchDocuments(payload as never, homepageFeaturedReadSpec(relationTo), ids),
+    ),
+  )
 }

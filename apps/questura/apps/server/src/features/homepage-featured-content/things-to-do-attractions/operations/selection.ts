@@ -4,7 +4,7 @@ import type { HomepageHotelSelection } from '../../types'
 import type { ThingsToDoAttractionsSelectionOptions } from '../types'
 
 import { parseAttractionSlots } from '../lib/refs'
-import { findAttractionDoc } from '../lib/repository'
+import { findAttractionDoc, prefetchAttractionDocs } from '../lib/repository'
 import { getNumericReferenceGridSelectionFromItems } from '../../reference-grid/numeric-grid'
 
 export async function getThingsToDoAttractionsSelectionFromItems(
@@ -14,6 +14,7 @@ export async function getThingsToDoAttractionsSelectionFromItems(
 ): Promise<HomepageHotelSelection> {
   return getNumericReferenceGridSelectionFromItems(payload, rawItems, options, {
     findDoc: findAttractionDoc,
+    prefetch: prefetchAttractionDocs,
     parseSlots: parseAttractionSlots,
   })
 }

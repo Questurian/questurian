@@ -16,7 +16,7 @@ find bottlenecks and price the code; they do not say what a platform can carry.
 | CAP-02 Connection budget and overload | implemented locally | `runs/2026-09-21-cap02-*` |
 | CAP-03 Anonymous identity | implemented locally (valid-session path proven by tests + source, not measured) | `runs/2026-09-21-cap03-*` |
 | CAP-04 Cache correctness, route coverage | implemented locally; shared-CDN proof owed to CAP-07/08 | `public-surface.md`, `runs/2026-09-21-cap04-*` |
-| CAP-05 Cold query amplification | planned | |
+| CAP-05 Cold query amplification | implemented locally | `runs/2026-09-21-cap05-*` |
 | CAP-06 Durable refresh, safe startup | planned | |
 | CAP-07 Platform, recovery, cost | blocked: awaiting provider, budget, recovery targets | |
 | CAP-08 Capacity proof | blocked: needs CAP-07 target | |
@@ -306,8 +306,61 @@ decision on anonymous REST access (listed in `public-surface.md`).
 **Rollback.** Revert the PR. Loosen the REST clamp by editing the two
 constants; the render bucket is off when the token is unset.
 
+## CAP-05 — cold query amplification
+
+**Changed.**
+- `reference-grid/page-read-budget.ts`: `DocumentReadSpec`,
+  `readDocumentBySpec` (the single read) and `prefetchDocuments` (one
+  `find({ id: { in } })` per block and collection, seeding the request cache
+  the single reads then hit). Same collection, `depth`, `select`, `populate`,
+  normalisation and cache key by construction: both paths use one spec.
+  Missing from the batch = not-found (`null`); a failed batch seeds nothing
+  and each slot falls back to its own read.
+- The five curated repositories (featured articles, hotels, tours,
+  attractions, location grid) now declare their spec; their block selections
+  prefetch before the (unchanged) slot loop, so slot order, invalid reasons
+  and completeness cannot move.
+- Sitemap: minimal `select`; every page read (`readAllPages`, refuses past
+  50,000 rows instead of silently stopping at 5,000); one grouped `UNION`
+  query for author visibility instead of three counts per author.
+- Server-Timing on the city page adds `batches` and `prefetched`.
+
+**Measured** (local prod build; outputs diffed with `jq -S` against a
+snapshot taken before the change):
+
+| | Before | After | Output |
+|---|---|---|---|
+| Lima page | 382 statements, 43 reads | **171 statements, 17 reads** (13 batches, 39 slots prefetched) | byte-identical |
+| Medellín, Mexico City | 4 statements | 4 | identical |
+| Sitemap entries | 27 statements; 3 counts × authors | **13 statements**, constant in authors | identical |
+| Lima, one at a time | p50 253 ms | **p50 91 ms** | |
+| Lima, 4 concurrent | p50 860 ms | p50 226 ms | |
+| Lima arrivals 6/s (gate on) | p95 1.96 s, 20 refused | **p95 131 ms, 0 refused** | |
+| Uncoalesced ceiling, one process | ~4–5 /s | **~12 /s**, overflow shed as fast 503s | |
+
+The assembly gate stays at 2 (it now admits ~12/s); raise it only after
+re-measuring on the platform.
+
+**Indexes.** The committed feed indexes (`*_public_location_feed_idx`,
+`*_public_author_feed_idx`, partial on published) and the search index are
+installed locally (both migrations applied). The new author `UNION` is
+covered at scale by the partial author index; `canonical_path` has a unique
+index. Local tables are tiny, so their plans are sequential scans and prove
+nothing about a large corpus — no new index was justified or added.
+
+**Not done.** Author- and editorial-feature reads (4 per Lima page) are not
+batched; cross-block batching (two featured-article blocks share one query)
+was not attempted. A publish-time read model is **not needed** on this
+evidence: batching met the target without it.
+
+**Tests.** `page-read-budget.test.ts` (one query answers every slot; missing
+is null; failed batch falls back; no-op outside a budget; real failure
+propagates), `sitemap-reads.test.ts`. Server suite 1497+ passed.
+
+**Rollback.** Revert the PR; no schema or config change.
+
 ## Next action
 
-CAP-05: batch the curated-page reads (382 statements / 43 reads for Lima),
-replace the sitemap's per-author counts with a grouped query, read EXPLAIN
-plans, and prove identical output.
+CAP-06: move currency seed/sync out of per-instance startup, and make search
+indexing and public revalidation recoverable (durable, deduplicated,
+retried) instead of best-effort.

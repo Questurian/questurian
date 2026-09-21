@@ -4,30 +4,30 @@ import type { LocationDocLike, LocationGridCandidate, LocationGridItemRef } from
 
 import { locationGridSelect } from '../constants'
 import { HOMEPAGE_BLOCK_POPULATE } from '../../populate'
-import { readDocumentOnce } from '../../reference-grid/page-read-budget'
+import {
+  prefetchDocuments,
+  readDocumentBySpec,
+  type DocumentReadSpec,
+} from '../../reference-grid/page-read-budget'
 import { normalizeLocationGridCandidate } from './candidate'
-import { whenNotFound } from '@/shared/lib/not-found-error'
 
-export async function findLocationGridDoc(
+/** One shape for the single read and the batch; the key names the shape. */
+export const locationGridReadSpec: DocumentReadSpec = {
+  collection: 'locations',
+  key: (id) => `location-grid:${id}`,
+  depth: 2,
+  select: locationGridSelect,
+  populate: HOMEPAGE_BLOCK_POPULATE,
+  normalize: (doc) => normalizeLocationGridCandidate(doc as LocationDocLike),
+}
+
+export function findLocationGridDoc(
   payload: Payload,
   ref: LocationGridItemRef,
 ): Promise<LocationGridCandidate | null> {
-  // Deduped per request; the key names this repository's query shape.
-  return readDocumentOnce(`location-grid:${ref.id}`, async () => {
-    try {
-      const doc = await payload.findByID({
-        collection: 'locations',
-        id: ref.id,
-        depth: 2,
-        overrideAccess: true,
-        select: locationGridSelect,
-        populate: HOMEPAGE_BLOCK_POPULATE,
-      })
+  return readDocumentBySpec(payload as never, locationGridReadSpec, ref.id)
+}
 
-      return normalizeLocationGridCandidate(doc as LocationDocLike)
-    } catch (error) {
-      // Deleted is omitted; failed is an error (shared/lib/not-found-error.ts).
-      return whenNotFound(error, null)
-    }
-  })
+export function prefetchLocationGridDocs(payload: Payload, refs: LocationGridItemRef[]): Promise<void> {
+  return prefetchDocuments(payload as never, locationGridReadSpec, refs.map((ref) => ref.id))
 }

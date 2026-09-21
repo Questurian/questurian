@@ -4,7 +4,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { publicRead } from '@/shared/http/public-read'
 import { DEFAULT_LANG } from '@/shared/i18n/languageField'
-import { hasPublishedAuthorContent } from '@/features/articles/public/authorVisibility'
+import { authorsWithPublishedContent, readAllPages } from '@/features/articles/public/sitemap-reads'
 import type { ArticleTypeKey } from '@/features/articles/public/scope'
 
 export const dynamic = 'force-dynamic'
@@ -46,69 +46,28 @@ export async function GET(req: Request) {
 
     // Rate limit, admission, counting and cache headers: shared/http/public-read.ts.
     return await publicRead({ req, scope: 'sitemap', payload }, async () => {
+      // Only the fields this route reads, every page of them (sitemap-reads.ts).
+      const find = payload.find.bind(payload) as unknown as Parameters<typeof readAllPages>[0]
+      const published = { and: [{ status: { equals: 'published' } }, { language: { equals: lang } }] }
+      const contentSelect = { slug: true, location: true, canonicalPath: true, updatedAt: true }
+      const locationSelect = { country: true, city: true, updatedAt: true }
+
       const [countries, cities, articles, maps, itineraries, authors] = await Promise.all([
-        payload.find({
-          collection: 'locations',
-          where: { level: { equals: 'country' } },
-          limit: 500,
-          depth: 0,
-          overrideAccess: true,
-        }),
-        payload.find({
-          collection: 'locations',
-          where: { level: { equals: 'city' } },
-          limit: 2000,
-          depth: 0,
-          overrideAccess: true,
-        }),
-        payload.find({
-          collection: 'articles',
-          where: {
-            and: [
-              { status: { equals: 'published' } },
-              { language: { equals: lang } },
-            ],
-          },
-          limit: 5000,
-          depth: 0,
-          overrideAccess: true,
-        }),
-        payload.find({
-          collection: 'single-type-listicles',
-          where: {
-            and: [
-              { status: { equals: 'published' } },
-              { language: { equals: lang } },
-            ],
-          },
-          limit: 5000,
-          depth: 0,
-          overrideAccess: true,
-        }),
-        payload.find({
-          collection: 'listicle-itineraries',
-          where: {
-            and: [
-              { status: { equals: 'published' } },
-              { language: { equals: lang } },
-            ],
-          },
-          limit: 5000,
-          depth: 0,
-          overrideAccess: true,
-        }),
-        payload.find({
+        readAllPages(find, { collection: 'locations', where: { level: { equals: 'country' } }, select: locationSelect }),
+        readAllPages(find, { collection: 'locations', where: { level: { equals: 'city' } }, select: locationSelect }),
+        readAllPages(find, { collection: 'articles', where: published, select: contentSelect }),
+        readAllPages(find, { collection: 'single-type-listicles', where: published, select: contentSelect }),
+        readAllPages(find, { collection: 'listicle-itineraries', where: published, select: contentSelect }),
+        readAllPages(find, {
           collection: 'authors',
           where: { slug: { exists: true } },
-          limit: 2000,
-          depth: 0,
-          overrideAccess: true,
+          select: { slug: true, updatedAt: true },
         }),
       ])
 
       const hubEntries: SitemapEntry[] = []
 
-      for (const rawCountry of countries.docs) {
+      for (const rawCountry of countries) {
         const country = rawCountry as unknown as Record<string, unknown>
         const slug = typeof country.country === 'string' ? country.country : null
         if (!slug) continue
@@ -118,7 +77,7 @@ export async function GET(req: Request) {
         })
       }
 
-      for (const rawCity of cities.docs) {
+      for (const rawCity of cities) {
         const city = rawCity as unknown as Record<string, unknown>
         const countrySlug = typeof city.country === 'string' ? city.country : null
         const citySlug = typeof city.city === 'string' ? city.city : null
@@ -160,13 +119,13 @@ export async function GET(req: Request) {
         indexCounts.set(indexKey, (indexCounts.get(indexKey) ?? 0) + 1)
       }
 
-      for (const doc of articles.docs) {
+      for (const doc of articles) {
         recordContent(doc as unknown as Record<string, unknown>, 'articles')
       }
-      for (const doc of maps.docs) {
+      for (const doc of maps) {
         recordContent(doc as unknown as Record<string, unknown>, 'maps')
       }
-      for (const doc of itineraries.docs) {
+      for (const doc of itineraries) {
         recordContent(doc as unknown as Record<string, unknown>, 'itineraries')
       }
 
@@ -190,22 +149,23 @@ export async function GET(req: Request) {
       // and content only. This array exists so the build can pre-render author
       // pages. Whether they also belong in the sitemap is a separate call.
       const authorEntries: SitemapEntry[] = []
-      const visibility = await Promise.all(
-        authors.docs.map(async (rawAuthor) => {
-          const author = rawAuthor as unknown as Record<string, unknown>
-          const slug = typeof author.slug === 'string' && author.slug ? author.slug : null
-          const id = author.id
-          if (!slug || (typeof id !== 'number' && typeof id !== 'string')) return null
-          const visible = await hasPublishedAuthorContent(payload, id, ARTICLE_TYPES)
-          if (!visible) return null
-          return {
-            url: `/authors/${slug}`,
-            lastModified: typeof author.updatedAt === 'string' ? author.updatedAt : null,
-          }
-        }),
+      // One grouped query for "has any published item", not three counts per
+      // author: same rule as hasPublishedAuthorContent, which the author route
+      // still uses for its single author.
+      const visible = await authorsWithPublishedContent(
+        (payload.db as unknown as { pool: Parameters<typeof authorsWithPublishedContent>[0] }).pool,
+        ARTICLE_TYPES,
       )
-      for (const entry of visibility) {
-        if (entry) authorEntries.push(entry)
+      for (const rawAuthor of authors) {
+        const author = rawAuthor as unknown as Record<string, unknown>
+        const slug = typeof author.slug === 'string' && author.slug ? author.slug : null
+        const id = author.id
+        if (!slug || (typeof id !== 'number' && typeof id !== 'string')) continue
+        if (!visible.has(String(id))) continue
+        authorEntries.push({
+          url: `/authors/${slug}`,
+          lastModified: typeof author.updatedAt === 'string' ? author.updatedAt : null,
+        })
       }
 
       return NextResponse.json({

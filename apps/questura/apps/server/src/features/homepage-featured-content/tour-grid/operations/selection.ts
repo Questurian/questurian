@@ -3,7 +3,7 @@ import type { Payload } from 'payload'
 import type { HomepageTourSelection, TourGridSelectionOptions } from '../types'
 
 import { parseTourGridSlots } from '../lib/refs'
-import { findTourDoc } from '../lib/repository'
+import { findTourDoc, prefetchTourDocs } from '../lib/repository'
 import { getNumericReferenceGridSelectionFromItems } from '../../reference-grid/numeric-grid'
 
 export async function getTourGridSelectionFromItems(
@@ -13,6 +13,7 @@ export async function getTourGridSelectionFromItems(
 ): Promise<HomepageTourSelection> {
   return getNumericReferenceGridSelectionFromItems(payload, rawItems, options, {
     findDoc: findTourDoc,
+    prefetch: prefetchTourDocs,
     parseSlots: parseTourGridSlots,
   })
 }
