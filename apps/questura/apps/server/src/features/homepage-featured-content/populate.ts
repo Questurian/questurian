@@ -64,3 +64,67 @@ export const HOMEPAGE_BLOCK_POPULATE: PopulateType = {
   'affiliate-products': ID_ONLY,
   'key-locations': ID_ONLY,
 }
+
+/**
+ * What a city homepage block read fetches off the *root* document (#596).
+ *
+ * `populate` above narrows what a *related* document brings back, but Payload
+ * still issues the query that fetched it. Only a top-level `select` stops the
+ * read reaching for the relationship in the first place. PR #601 took the
+ * endpoint from 428 follow-up queries to 350 with `populate` alone; what was
+ * left was three blocks reading at `depth: 2` with no select, so every
+ * relationship on an accommodation, tour or attraction still went out —
+ * `createdBy`, the Instagram gallery, an attraction's whole `tours` list.
+ *
+ * Each select is the exact set of root fields its normalizer reads. Selecting
+ * a group or an array field keeps everything inside it, so `gallery: true`
+ * still resolves `gallery[].image` through `depth` and the populate map.
+ *
+ * The normalizers also read `slug` off accommodations and attractions, which
+ * have no such field — that read has always produced `null` and is left
+ * alone here rather than quietly changed.
+ *
+ * Same silent coupling as the populate map, and the same guard:
+ * `populate.test.ts` records what each normalizer touches and fails when a
+ * read is not in the select.
+ */
+
+/** Read by `normalizeHotelCandidate`. */
+export const ACCOMMODATION_ROOT_SELECT = {
+  title: true,
+  status: true,
+  updatedAt: true,
+  type: true,
+  priceLevel: true,
+  core: true,
+  theStay: true,
+  theExperience: true,
+  theDetails: true,
+  gallery: true,
+  location: true,
+  locationRef: true,
+} as const
+
+/** Read by `normalizeTourCandidate`. */
+export const TOUR_ROOT_SELECT = {
+  title: true,
+  status: true,
+  updatedAt: true,
+  price: true,
+  bookingLink: true,
+  img: true,
+  locationRef: true,
+} as const
+
+/** Read by `normalizeAttractionCandidate`. */
+export const ATTRACTION_ROOT_SELECT = {
+  title: true,
+  status: true,
+  updatedAt: true,
+  type: true,
+  priceLevel: true,
+  attractionsDetails: true,
+  gallery: true,
+  location: true,
+  locationRef: true,
+} as const
