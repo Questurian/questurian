@@ -29,11 +29,12 @@ async function indexForScope(scope: ArticleScope): Promise<ArticleIndexItem[]> {
 
 async function firstNonEmptyIndex(
   scopes: ArticleScope[],
+  lookup: (scope: ArticleScope) => Promise<ArticleIndexItem[]>,
   article: Article,
   path?: string,
 ): Promise<ArticleIndexItem[]> {
   for (const scope of scopes) {
-    const items = excludeCurrent(await indexForScope(scope), article, path)
+    const items = excludeCurrent(await lookup(scope), article, path)
     if (items.length > 0) return items
   }
   return []
@@ -56,12 +57,22 @@ export type ArticleSidebarLists = {
   partners: ArticleIndexItem[]
 }
 
+/**
+ * Trending comes from the narrowest scope that has other articles; partners
+ * come from the global index. The global read does not depend on the local
+ * one, so it starts at the same time instead of after it, and the local chain
+ * reuses it when it falls back to global rather than asking twice.
+ */
 export async function fetchStandardArticleSidebar(
   article: Article,
   path?: string,
 ): Promise<ArticleSidebarLists> {
   const scopes = scopesFromLocation(article.location)
-  const localItems = await firstNonEmptyIndex(scopes, article, path)
+  const globalIndex = indexForScope({ kind: 'global' })
+  const lookup = (scope: ArticleScope) =>
+    scope.kind === 'global' ? globalIndex : indexForScope(scope)
+
+  const localItems = await firstNonEmptyIndex(scopes, lookup, article, path)
   const trending = localItems.slice(0, TRENDING_COUNT)
   const trendingIds = new Set(trending.map((item) => String(item.id)))
 
@@ -69,7 +80,7 @@ export async function fetchStandardArticleSidebar(
   if (scopes[0]?.kind === 'global') {
     partnerPool = localItems.slice(TRENDING_COUNT)
   } else {
-    const globalItems = excludeCurrent(await indexForScope({ kind: 'global' }), article, path).filter(
+    const globalItems = excludeCurrent(await globalIndex, article, path).filter(
       (item) => !trendingIds.has(String(item.id)),
     )
     partnerPool = globalItems.length > 0 ? globalItems : localItems.slice(TRENDING_COUNT)

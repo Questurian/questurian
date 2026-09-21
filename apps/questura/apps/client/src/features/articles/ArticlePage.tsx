@@ -1,12 +1,12 @@
-import Link from 'next/link'
+import Link from '@/components/navigation/PublicLink'
 import { PublicImage } from '@/components/media/PublicImage'
 import { GatedArticleBody } from '@/features/articles/components/GatedArticleBody'
 import { ArticleShareButton } from '@/features/articles/components/ArticleShareButton'
 import { AddOnGoogleButton } from '@/features/articles/components/AddOnGoogleButton'
 import { BookmarkButton } from '@/features/bookmarks/components/BookmarkButton'
 import {
-  ArticleRail,
-  ArticlePartners,
+  StreamedArticlePartners,
+  StreamedArticleRail,
 } from '@/features/articles/components/ArticleSidebar'
 import { planArticleAds } from '@/features/articles/lib/adPlacement'
 import { readGate } from '@/features/articles/lib/gate'
@@ -110,14 +110,15 @@ function StandardArticleHeader({
   )
 }
 
-export async function ArticlePage({ article, path }: { article: Article; path?: string }) {
+export function ArticlePage({ article, path }: { article: Article; path?: string }) {
   const { headerSection, contentBlocks } = article
   const featuredImage = headerSection?.featuredImage
   const gate = readGate(article)
   const adPlan = planArticleAds(contentBlocks ?? [], {
     gateAt: gate?.locked ? gate.shown : null,
   })
-  const sidebar = await fetchStandardArticleSidebar(article, path)
+  // Started here, awaited only inside the rail and footer boundaries.
+  const sidebar = fetchStandardArticleSidebar(article, path)
   const sharePath = path && path.startsWith('/') ? path : `/${article.slug}`
   const shareUrl = `${getPublicBaseUrl()}${sharePath}`
 
@@ -165,12 +166,12 @@ export async function ArticlePage({ article, path }: { article: Article; path?: 
           </div>
 
           <div className="px-4 pt-10 1024:col-start-2 1024:row-start-2 1024:px-0 1024:pt-0">
-            <ArticleRail trending={sidebar.trending} />
+            <StreamedArticleRail sidebar={sidebar} />
           </div>
         </div>
 
         <div className="px-4 1024:px-0">
-          <ArticlePartners partners={sidebar.partners} />
+          <StreamedArticlePartners sidebar={sidebar} />
         </div>
       </div>
     </article>
