@@ -30,6 +30,12 @@ export function ensureLocationStartupTask(
       const count = typeof result.totalDocs === 'number' ? result.totalDocs : result.docs?.length ?? 0
 
       if (count === 0) {
+        // Production seeds at deploy (`pnpm seed:locations`), never at boot:
+        // on a serverless platform every cold instance is a boot.
+        if (process.env.NODE_ENV === 'production') {
+          logger.warn('No locations found. Production does not seed at boot: run `pnpm seed:locations`.')
+          return
+        }
         logger.info('No locations found. Seeding default locations.')
         await seedLocations(payload)
         logger.info('Location seeding complete.')

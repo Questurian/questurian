@@ -45,6 +45,11 @@ export async function register() {
         void ensureCurrencyStartupTask(payload, logger)
         void ensureLocationStartupTask(payload, logger)
       }, 0)
+
+      // Refresh outbox: finish work a previous process left behind, and keep
+      // retrying on long-lived servers (features/refresh-outbox/drain-soon.ts).
+      const { startPeriodicDrain } = await import('./features/refresh-outbox/drain-soon')
+      if (startPeriodicDrain(payload)) logger.info('Refresh outbox periodic drain started.')
     } catch (error) {
       logger.error('❌ Database connection failed', {
         error: error instanceof Error ? error.message : 'Unknown error',

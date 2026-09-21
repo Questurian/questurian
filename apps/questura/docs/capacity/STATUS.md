@@ -17,7 +17,7 @@ find bottlenecks and price the code; they do not say what a platform can carry.
 | CAP-03 Anonymous identity | implemented locally (valid-session path proven by tests + source, not measured) | `runs/2026-09-21-cap03-*` |
 | CAP-04 Cache correctness, route coverage | implemented locally; shared-CDN proof owed to CAP-07/08 | `public-surface.md`, `runs/2026-09-21-cap04-*` |
 | CAP-05 Cold query amplification | implemented locally | `runs/2026-09-21-cap05-*` |
-| CAP-06 Durable refresh, safe startup | planned | |
+| CAP-06 Durable refresh, safe startup | implemented locally; platform scheduler owed to CAP-07 | `pnpm verify:refresh-outbox` |
 | CAP-07 Platform, recovery, cost | blocked: awaiting provider, budget, recovery targets | |
 | CAP-08 Capacity proof | blocked: needs CAP-07 target | |
 
@@ -359,8 +359,83 @@ propagates), `sitemap-reads.test.ts`. Server suite 1497+ passed.
 
 **Rollback.** Revert the PR; no schema or config change.
 
+## CAP-06 — durable refresh and safe startup
+
+**Problem (revalidated, worse than the plan said).** Revalidation and
+search-index refresh ran inline in `afterChange`. Payload runs `afterChange`
+*inside* the save's transaction, and the search refresh used its own pool
+connection, so it read the **previous committed state** of the row: a first
+publish could be indexed as "nothing to index" until the next edit or a
+rebuild. Revalidation could likewise reach the frontend before the change
+was visible. Failures were log lines; nothing retried. Every production boot
+also seeded (if empty) and re-synced exchange rates: each of this session's
+production restarts rewrote all 23 currency rows via the external API.
+
+**Changed.**
+- `features/refresh-outbox/`: hidden `refresh-jobs` collection (migration
+  `20260921_214514_refresh_jobs_outbox`, additive: new table + a nullable
+  column on `payload_locked_documents_rels`; reviewed, no destructive SQL in
+  `up`; applied locally; row counts of critical tables unchanged).
+  - `enqueue.ts`: `INSERT … ON CONFLICT (dedupe_key)` **in the save's
+    transaction** (a race can never become a unique-violation that rolls the
+    editor's save back), wrapped in a `SAVEPOINT` so a failed enqueue cannot
+    poison the transaction either. A conflicting row is reset to pending with
+    fresh attempts; revalidation targets are unioned.
+  - `worker.ts`: claims with `FOR UPDATE SKIP LOCKED` (safe with many
+    workers), 60 s claim lock (a dead worker's job is retaken), processes by
+    reading current state (search: re-derive the row — missing or unpublished
+    removes it; revalidate: idempotent), capped exponential backoff (30 s …
+    1 h, 20% jitter), `failed` after 8 attempts, completed rows pruned after
+    7 days. A change arriving mid-run is not overwritten by the run's
+    completion.
+  - `request.ts`: what the hooks call. Outbox on by default; if recording
+    fails or `REFRESH_OUTBOX=off`, falls back to the old inline behaviour.
+  - Drains: shortly after each enqueue (after commit), every 60 s on
+    long-lived production servers (`REFRESH_WORKER_INTERVAL_MS`), and on
+    demand: `POST /api/internal/refresh-jobs` (`REFRESH_WORKER_SECRET`),
+    `pnpm refresh:jobs -- stats|drain|failed|replay`.
+- Revalidation hooks (9) and search-index hooks go through the outbox.
+  `deliverClientRevalidation` throws on failure so the worker can retry.
+- Startup: production never seeds at boot (warns, points at
+  `pnpm bootstrap:currencies` / `pnpm seed:locations`); exchange rates sync at
+  boot only when the newest is over 24 h old (`CURRENCY_STARTUP_SYNC`
+  overrides). Development unchanged.
+
+**Verified against real Postgres** (`pnpm verify:refresh-outbox`: one
+transaction, always rolled back; `refresh_jobs` count 0 afterwards; passed 3/3
+runs): repeated change merges into one row and keeps its tags/paths; a
+drain claims due jobs; a search job for a missing document completes; a
+failed delivery is retried later, not dropped; a job in backoff is not
+claimed early; a dead worker's claim is taken over after its lock expires;
+after 8 attempts the job is kept as `failed`; a new change revives a failed
+job; a change arriving mid-run survives the run's completion.
+
+The verifier found a real bug before merge: `->` and `||` share a precedence
+level in Postgres, so the merge concatenated whole objects and a merged
+revalidation carried **empty** tags and paths — it would have been marked
+done having revalidated nothing. Fixed with parentheses; the check stays.
+
+Prod build: boot logged "Exchange rates are fresh. Skipping boot sync."; the
+worker endpoint answered with stats and a drain; 401 without the secret.
+
+**Not exercised.** A real Payload save end to end (hook → enqueue → commit
+→ drain → frontend) was not run against the local database; the SQL is
+verified above and the hook wiring by unit tests (fallback, savepoint,
+off-switch). Publish/media CPU contention was not measured.
+
+**Owed to CAP-07.** A scheduler on the chosen platform calling
+`POST /api/internal/refresh-jobs` every minute and
+`POST /api/internal/exchange-rates/sync` daily; an alert on
+`oldestPendingAgeS` and on `failed > 0`.
+
+**Rollback.** `REFRESH_OUTBOX=off` restores inline behaviour without a
+deploy. Reverting the code leaves an unused table; the migration's `down`
+drops it (review before running). Pending rows survive a rollback of code and
+are drained again once it returns.
+
 ## Next action
 
-CAP-06: move currency seed/sync out of per-instance startup, and make search
-indexing and public revalidation recoverable (durable, deduplicated,
-retried) instead of best-effort.
+CAP-07/08: blocked on owner decisions (backend provider/plan/region, monthly
+and spike budget, max instances and pooler limits, campaign URLs, recovery
+targets). Everything that can be prepared without them is in
+`docs/capacity/cap07-platform-readiness.md` and `load/k6/`.
