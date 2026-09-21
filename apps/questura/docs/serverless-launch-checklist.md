@@ -206,4 +206,13 @@ Added by the campaign capacity work; each is also tracked in `docs/capacity/STAT
   clamp and rate limit make it affordable; they do not make it necessary.
 - **Prewarm** campaign landing URLs after each deploy and before each
   campaign: `pnpm prewarm:campaign -- --client <origin> --urls <file>`.
+- **Schedulers.** Call `POST /api/internal/refresh-jobs` every minute
+  (`Authorization: Bearer $REFRESH_WORKER_SECRET`) and
+  `POST /api/internal/exchange-rates/sync` daily. Serverless instances do not
+  live long enough for the in-process drain to be the guarantee.
+- **Deploy-time seeds.** Production no longer seeds at boot. A fresh database
+  needs `pnpm bootstrap:currencies` and `pnpm seed:locations` once, after
+  migrations.
+- **Alerts.** `oldestPendingAgeS` (from `/api/internal/refresh-jobs`) growing,
+  or `failed > 0`: publishes are not reaching readers or search.
 

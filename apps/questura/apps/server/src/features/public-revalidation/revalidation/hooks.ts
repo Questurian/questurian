@@ -1,5 +1,5 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'payload'
-import { triggerClientRevalidation } from './delivery'
+import { requestRevalidation } from '@/features/refresh-outbox/request'
 import {
   articleRevalidationTarget,
   authoredArticlesTarget,
@@ -15,8 +15,9 @@ import type { AnyDoc } from './types'
 export function revalidateArticleCollection(
   collection: 'articles' | 'single-type-listicles' | 'listicle-itineraries',
 ) {
-  const afterChange: CollectionAfterChangeHook = async ({ doc, previousDoc, operation }) => {
-    await triggerClientRevalidation(
+  const afterChange: CollectionAfterChangeHook = async ({ doc, previousDoc, operation, req }) => {
+    await requestRevalidation(
+      req,
       mergeTargets(
         articleRevalidationTarget(collection, previousDoc as AnyDoc | undefined),
         articleRevalidationTarget(collection, doc as AnyDoc | undefined),
@@ -25,8 +26,9 @@ export function revalidateArticleCollection(
     )
   }
 
-  const afterDelete: CollectionAfterDeleteHook = async ({ doc }) => {
-    await triggerClientRevalidation(
+  const afterDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
+    await requestRevalidation(
+      req,
       articleRevalidationTarget(collection, doc as AnyDoc | undefined),
       `${collection}:delete`,
     )
@@ -47,7 +49,8 @@ export const revalidateAuthorAfterChange: CollectionAfterChangeHook = async ({
 }) => {
   const authorId = idValue(doc) ?? idValue(previousDoc)
 
-  await triggerClientRevalidation(
+  await requestRevalidation(
+    req,
     mergeTargets(
       authorTarget(previousDoc as AnyDoc | undefined),
       authorTarget(doc as AnyDoc | undefined),
@@ -63,7 +66,8 @@ export const revalidateLocationHomepageAfterChange: CollectionAfterChangeHook = 
   req,
   operation,
 }) => {
-  await triggerClientRevalidation(
+  await requestRevalidation(
+    req,
     mergeTargets(
       await locationHomepageTarget(req, previousDoc as AnyDoc | undefined),
       await locationHomepageTarget(req, doc as AnyDoc | undefined),
@@ -76,7 +80,8 @@ export const revalidateLocationHomepageAfterDelete: CollectionAfterDeleteHook = 
   doc,
   req,
 }) => {
-  await triggerClientRevalidation(
+  await requestRevalidation(
+    req,
     await locationHomepageTarget(req, doc as AnyDoc | undefined),
     'location-homepages:delete',
   )
@@ -86,8 +91,10 @@ export const revalidateLocationAfterChange: CollectionAfterChangeHook = async ({
   doc,
   previousDoc,
   operation,
+  req,
 }) => {
-  await triggerClientRevalidation(
+  await requestRevalidation(
+    req,
     mergeTargets(
       locationTarget(previousDoc as AnyDoc | undefined),
       locationTarget(doc as AnyDoc | undefined),
@@ -96,16 +103,18 @@ export const revalidateLocationAfterChange: CollectionAfterChangeHook = async ({
   )
 }
 
-export const revalidateLocationAfterDelete: CollectionAfterDeleteHook = async ({ doc }) => {
-  await triggerClientRevalidation(locationTarget(doc as AnyDoc | undefined), 'locations:delete')
+export const revalidateLocationAfterDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
+  await requestRevalidation(req, locationTarget(doc as AnyDoc | undefined), 'locations:delete')
 }
 
 export const revalidateArticleRedirectAfterChange: CollectionAfterChangeHook = async ({
   doc,
   previousDoc,
   operation,
+  req,
 }) => {
-  await triggerClientRevalidation(
+  await requestRevalidation(
+    req,
     mergeTargets(
       redirectTarget(previousDoc as AnyDoc | undefined),
       redirectTarget(doc as AnyDoc | undefined),
@@ -114,8 +123,9 @@ export const revalidateArticleRedirectAfterChange: CollectionAfterChangeHook = a
   )
 }
 
-export const revalidateArticleRedirectAfterDelete: CollectionAfterDeleteHook = async ({ doc }) => {
-  await triggerClientRevalidation(
+export const revalidateArticleRedirectAfterDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
+  await requestRevalidation(
+    req,
     redirectTarget(doc as AnyDoc | undefined),
     'article-redirects:delete',
   )

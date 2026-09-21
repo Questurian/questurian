@@ -36,6 +36,7 @@ import { VisitorProfiles } from './features/visitor-auth'
 import { Bookmarks } from './features/bookmarks'
 import { StripeWebhookEvents } from './features/payments/collections/StripeWebhookEvents'
 import { APP_CONFIG, APP_URLS } from './shared/config'
+import { RefreshJobs } from './features/refresh-outbox/collection'
 import { poolSizes } from './shared/database/pool-budget'
 import { anonymousApiBoundsPlugin } from './shared/payload/anonymous-api-bounds'
 import { poolTimeoutOptions, servingTimeouts } from './shared/database/timeouts'
@@ -55,7 +56,7 @@ export default buildConfig({
   serverURL: APP_URLS.backendLocal,
   cors: APP_CONFIG.CORS_ORIGINS,
   csrf: APP_CONFIG.CORS_ORIGINS,
-  collections: [Users, ServiceAccounts, Authors, EmailLogs, VisitorProfiles, Bookmarks, MediaAsset, MediaSet, Articles, SingleTypeListicles, ListicleItineraries, ArticleRedirects, Locations, Categories, Tags, Accommodations, Dining, Attractions, Tours, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags, Currencies, LocationHomepages, StripeWebhookEvents],
+  collections: [Users, ServiceAccounts, Authors, EmailLogs, VisitorProfiles, Bookmarks, MediaAsset, MediaSet, Articles, SingleTypeListicles, ListicleItineraries, ArticleRedirects, Locations, Categories, Tags, Accommodations, Dining, Attractions, Tours, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags, Currencies, LocationHomepages, StripeWebhookEvents, RefreshJobs],
   globals: [MainHomepage],
   editor: lexicalEditor(),
   secret: APP_CONFIG.payloadSecret,
