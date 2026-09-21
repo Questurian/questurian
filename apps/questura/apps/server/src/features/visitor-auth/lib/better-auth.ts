@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth'
+import { poolTimeoutOptions, servingTimeouts } from '@/shared/database/timeouts'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { captcha } from 'better-auth/plugins'
 import { getPayload } from 'payload'
@@ -59,6 +60,9 @@ export const visitorAuth = betterAuth({
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
+    // Same statement, lock and idle budgets as Payload's pool: a session
+    // lookup that hangs holds one of ten connections and stalls sign-in.
+    ...poolTimeoutOptions(servingTimeouts()),
   }),
   secondaryStorage: APP_CONFIG.isProduction ? redisSecondaryStorage : undefined,
   user: {

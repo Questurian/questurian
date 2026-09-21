@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { Pool, type PoolClient } from 'pg'
 import type { getPayload } from 'payload'
 import { APP_CONFIG } from '@/shared/config'
+import { advisoryLockTimeouts, poolTimeoutOptions } from '@/shared/database/timeouts'
 import { logger } from './logger'
 
 /**
@@ -81,6 +82,11 @@ function getLockPool(): Pool | null {
       max: LOCK_POOL_MAX,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000, // Fail fast instead of hanging forever
+      // `lock_timeout` does not cover advisory locks, so waiting for one was
+      // bounded by nothing at all: a webhook could hold a connection until the
+      // process died. This pool runs nothing but lock and unlock, so a
+      // statement budget here bounds waiting and only waiting.
+      ...poolTimeoutOptions(advisoryLockTimeouts()),
     })
 
     // An idle client erroring (server restart, network drop) emits on the pool;

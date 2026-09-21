@@ -90,7 +90,9 @@ describe('removeSearchDocument', () => {
     await removeSearchDocument(pool, 'itineraries', 12)
 
     expect(pool.query).toHaveBeenCalledTimes(1)
-    expect(pool.query.mock.calls[0]![0]).toContain('DELETE FROM public_search_documents')
+    expect(String(pool.query.mock.calls.at(0)?.at(0))).toContain(
+      'DELETE FROM public_search_documents',
+    )
   })
 })
 
