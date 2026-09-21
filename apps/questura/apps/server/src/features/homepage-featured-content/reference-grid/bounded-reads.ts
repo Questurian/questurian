@@ -1,3 +1,5 @@
+import { currentPageReadBudget, withReadSlot } from './page-read-budget'
+
 /**
  * Bounded-parallel document reads for one page assembly.
  *
@@ -31,12 +33,21 @@ export const MAX_CONCURRENT_DOCUMENT_READS = 6
  * Order is the contract: slots are numbered, `invalidItems` reports them by
  * number, and layouts place cards by position. A faster read must never
  * reorder a curated page.
+ *
+ * Inside a page read budget the `limit` argument is ignored and every entry
+ * queues on the page's shared counter instead. Each block owning its own
+ * counter is exactly the defect: the comment above describes a page-wide bound
+ * that a per-block counter never enforced.
  */
 export async function readWithBoundedConcurrency<TIn, TOut>(
   entries: readonly TIn[],
   load: (entry: TIn, index: number) => Promise<TOut>,
   limit: number = MAX_CONCURRENT_DOCUMENT_READS,
 ): Promise<TOut[]> {
+  if (currentPageReadBudget()) {
+    return Promise.all(entries.map((entry, index) => withReadSlot(() => load(entry, index))))
+  }
+
   const results = new Array<TOut>(entries.length)
   let next = 0
 

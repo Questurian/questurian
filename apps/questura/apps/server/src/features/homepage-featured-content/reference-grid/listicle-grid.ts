@@ -23,6 +23,7 @@ import {
   normalizeReferenceGridSearchOptions,
   type ReferenceGridSearchOptions,
 } from './numeric-grid'
+import { readDocumentOnce } from './page-read-budget'
 import { toReferenceKey } from './refs'
 
 export type SingleTypeListicleDocLike = {
@@ -60,12 +61,18 @@ export async function findSingleTypeListicleDoc(
   ref: HomepageFeaturedItemRef,
   config: SingleTypeListicleGridConfig,
 ): Promise<SingleTypeListicleDocLike> {
-  return (await payload.findByID({
-    collection: config.collection,
-    id: ref.id,
-    depth: 0,
-    overrideAccess: true,
-  })) as SingleTypeListicleDocLike
+  // Depth 0, so cheap — but it still takes a connection, and the same
+  // listicle can be referenced by more than one block on a page.
+  return readDocumentOnce(
+    `listicle-type:${config.collection}:${ref.id}`,
+    async () =>
+      (await payload.findByID({
+        collection: config.collection,
+        id: ref.id,
+        depth: 0,
+        overrideAccess: true,
+      })) as SingleTypeListicleDocLike,
+  )
 }
 
 export async function validateSingleTypeListicleGridItems<TRef extends HomepageFeaturedItemRef>(

@@ -8,6 +8,7 @@ import type {
 } from '../types'
 
 import { readWithBoundedConcurrency } from '../../reference-grid/bounded-reads'
+import { readDocumentOnce } from '../../reference-grid/page-read-budget'
 import { LOCATION_GRID_MIN_SLOTS } from '../constants'
 import { findLocationGridDoc } from '../lib/repository'
 import {
@@ -26,23 +27,26 @@ async function resolvePublishedHomepageHref(
   payload: Payload,
   candidate: LocationGridCandidate,
 ): Promise<string | null> {
-  const result = await payload.find({
-    collection: 'location-homepages',
-    where: {
-      and: [
-        { location: { equals: candidate.id } },
-        { isEnabled: { equals: true } },
-        { publishedRevision: { greater_than: 0 } },
-      ],
-    },
-    limit: 1,
-    depth: 0,
-    overrideAccess: true,
-    select: { publishedPageBlocks: true },
+  // One lookup per location per request, however many grids point at it.
+  return readDocumentOnce(`location-homepage-href:${candidate.id}`, async () => {
+    const result = await payload.find({
+      collection: 'location-homepages',
+      where: {
+        and: [
+          { location: { equals: candidate.id } },
+          { isEnabled: { equals: true } },
+          { publishedRevision: { greater_than: 0 } },
+        ],
+      },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+      select: { publishedPageBlocks: true },
+    })
+    const homepage = (result as { docs?: Array<{ publishedPageBlocks?: unknown[] }> } | undefined)
+      ?.docs?.[0]
+    return homepage?.publishedPageBlocks?.length ? publicLocationHref(candidate.locationKey) : null
   })
-  const homepage = (result as { docs?: Array<{ publishedPageBlocks?: unknown[] }> } | undefined)
-    ?.docs?.[0]
-  return homepage?.publishedPageBlocks?.length ? publicLocationHref(candidate.locationKey) : null
 }
 
 export async function getLocationGridSelectionFromItems(

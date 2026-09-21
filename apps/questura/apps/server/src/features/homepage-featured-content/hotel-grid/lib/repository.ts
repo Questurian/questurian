@@ -3,23 +3,27 @@ import type { Payload } from 'payload'
 import type { AccommodationDocLike, HomepageHotelCandidate, HomepageHotelItemRef } from '../types'
 
 import { ACCOMMODATION_ROOT_SELECT, HOMEPAGE_BLOCK_POPULATE } from '../../populate'
+import { readDocumentOnce } from '../../reference-grid/page-read-budget'
 import { normalizeHotelCandidate } from './candidate'
 
 export async function findHotelDoc(
   payload: Payload,
   ref: HomepageHotelItemRef,
 ): Promise<HomepageHotelCandidate | null> {
-  try {
-    const doc = await payload.findByID({
-      collection: 'accommodations',
-      id: ref.id,
-      depth: 2,
-      overrideAccess: true,
-      select: ACCOMMODATION_ROOT_SELECT,
-      populate: HOMEPAGE_BLOCK_POPULATE,
-    })
-    return normalizeHotelCandidate(doc as AccommodationDocLike)
-  } catch {
-    return null
-  }
+  // Deduped per request; the key names this repository's query shape.
+  return readDocumentOnce(`hotel:${ref.id}`, async () => {
+    try {
+      const doc = await payload.findByID({
+        collection: 'accommodations',
+        id: ref.id,
+        depth: 2,
+        overrideAccess: true,
+        select: ACCOMMODATION_ROOT_SELECT,
+        populate: HOMEPAGE_BLOCK_POPULATE,
+      })
+      return normalizeHotelCandidate(doc as AccommodationDocLike)
+    } catch {
+      return null
+    }
+  })
 }
