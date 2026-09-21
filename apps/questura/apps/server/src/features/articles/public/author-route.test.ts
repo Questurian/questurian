@@ -18,9 +18,20 @@ describe('public author route', () => {
     vi.clearAllMocks()
   })
 
+  // The feed's order now comes from SQL over ids and the cards are fetched
+  // with the index `select`, but the card image still needs the second
+  // relationship hop: Article -> MediaSet -> variant asset. Anything less and
+  // every author card is a grey box.
   it('hydrates nested MediaSet variants for author article thumbnails', async () => {
     const payload = {
       count: vi.fn().mockResolvedValue({ totalDocs: 1 }),
+      db: {
+        pool: {
+          query: vi.fn().mockResolvedValue({
+            rows: [{ rows: [{ type: 'itineraries', id: 17 }], total_count: 1 }],
+          }),
+        },
+      },
       find: vi.fn(({ collection, depth }: { collection: string; depth: number }) => {
         if (collection === 'authors') {
           return Promise.resolve({
