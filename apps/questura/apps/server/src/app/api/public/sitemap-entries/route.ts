@@ -3,8 +3,12 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 import { DEFAULT_LANG } from '@/shared/i18n/languageField'
+import { hasPublishedAuthorContent } from '@/features/articles/public/authorVisibility'
+import type { ArticleTypeKey } from '@/features/articles/public/scope'
 
 export const dynamic = 'force-dynamic'
+
+const ARTICLE_TYPES: ArticleTypeKey[] = ['articles', 'maps', 'itineraries']
 
 type SitemapEntry = {
   url: string
@@ -39,7 +43,7 @@ export async function GET(req: Request) {
 
     const payload = await getPayload({ config })
 
-    const [countries, cities, articles, maps, itineraries] = await Promise.all([
+    const [countries, cities, articles, maps, itineraries, authors] = await Promise.all([
       payload.find({
         collection: 'locations',
         where: { level: { equals: 'country' } },
@@ -87,6 +91,13 @@ export async function GET(req: Request) {
           ],
         },
         limit: 5000,
+        depth: 0,
+        overrideAccess: true,
+      }),
+      payload.find({
+        collection: 'authors',
+        where: { slug: { exists: true } },
+        limit: 2000,
         depth: 0,
         overrideAccess: true,
       }),
@@ -168,11 +179,38 @@ export async function GET(req: Request) {
       }
     }
 
+    // Byline implies visibility, so the same check the author route uses to
+    // decide between a page and a 404 decides who is enumerable here. Reusing
+    // it keeps this list from naming a URL that would 404 on arrival.
+    //
+    // Not folded into sitemap.xml: the client's sitemap reads hubs, indexes
+    // and content only. This array exists so the build can pre-render author
+    // pages. Whether they also belong in the sitemap is a separate call.
+    const authorEntries: SitemapEntry[] = []
+    const visibility = await Promise.all(
+      authors.docs.map(async (rawAuthor) => {
+        const author = rawAuthor as unknown as Record<string, unknown>
+        const slug = typeof author.slug === 'string' && author.slug ? author.slug : null
+        const id = author.id
+        if (!slug || (typeof id !== 'number' && typeof id !== 'string')) return null
+        const visible = await hasPublishedAuthorContent(payload, id, ARTICLE_TYPES)
+        if (!visible) return null
+        return {
+          url: `/authors/${slug}`,
+          lastModified: typeof author.updatedAt === 'string' ? author.updatedAt : null,
+        }
+      }),
+    )
+    for (const entry of visibility) {
+      if (entry) authorEntries.push(entry)
+    }
+
     return NextResponse.json({
       lang,
       hubs: hubEntries,
       indexes: indexEntries,
       content: contentEntries,
+      authors: authorEntries,
     })
   } catch (error) {
     const message =

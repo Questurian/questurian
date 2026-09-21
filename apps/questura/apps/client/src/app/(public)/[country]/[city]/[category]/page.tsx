@@ -11,12 +11,23 @@ import {
   guardCountrySegment,
 } from '@/lib/routing/guardReservedSegment'
 import { buildArticleMetadataByPath } from '@/features/articles/lib/buildArticleMetadata'
+import { countryScopeArticleParams } from '@/lib/routing/publicRouteParams'
+import { publicUrlIndex } from '@/lib/routing/publicStaticParams'
 
 // Country-scope category article: /[country]/[categorySlug]/[articleSlug]
 // (3 segments). The folder names are [city]/[category] because they sit
 // inside the existing city-scope tree, but in this 3-segment handler the
 // `city` param is actually the category slug and the `category` param is
 // actually the article slug — both interpreted by canonicalPath lookup.
+// Pre-rendered at build time so a first visitor — often the crawler — is
+// served a cached page instead of paying a live render. dynamicParams stays at
+// its default, so a country-scope article published after the last deploy still renders on
+// demand. See src/lib/routing/publicStaticParams.ts.
+export async function generateStaticParams() {
+  const { pages } = await publicUrlIndex()
+  return countryScopeArticleParams(pages)
+}
+
 type Props = {
   params: Promise<{ country: string; city: string; category: string }>
 }
