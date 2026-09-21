@@ -1,0 +1,167 @@
+{
+  "meta": {
+    "takenAt": "2026-09-21T20:45:15.173Z",
+    "sha": "d948bcfb-dirty",
+    "scenario": "heavy-homepage",
+    "scenarioDescription": "The most expensive public read (the Lima city page assembly) with coalescing skipped, so N concurrent requests are N assemblies. Uses the x-questura-read-limit measurement header, which the server honours only outside production or when the operator set PUBLIC_API_DIAGNOSTICS=1. Rate limits apply: reset the local Redis between levels, never spoof a trusted IP header.",
+    "node": "v24.15.0",
+    "generatorHost": "darwin arm64 8 cpus",
+    "label": "CAP-01 heavy sweep c=8, local prod build",
+    "warmupSamples": 1,
+    "poolScope": "single-process"
+  },
+  "args": {
+    "base": "http://localhost:4100",
+    "client": "http://localhost:3000",
+    "origin": "http://localhost:3000",
+    "scenario": "heavy-homepage",
+    "mode": "closed",
+    "cache": "warm",
+    "runs": 6,
+    "concurrent": 8,
+    "warmup": 1,
+    "timeoutMs": 30000,
+    "rate": 5,
+    "durationS": 30,
+    "maxInFlight": 200,
+    "abortErrorRate": 1,
+    "abortMinSamples": 50,
+    "jsonPath": "../../docs/capacity/runs/2026-09-21-cap01-heavy-c8.json",
+    "htmlPath": "",
+    "label": "CAP-01 heavy sweep c=8, local prod build"
+  },
+  "throughput": {
+    "offered": 48,
+    "started": 48,
+    "dropped": 0,
+    "completedRequests": 48,
+    "okRequests": 48,
+    "elapsedS": 10.069199,
+    "offeredPerS": 4.767012748481781,
+    "completedPerS": 4.767012748481781,
+    "okPerS": 4.767012748481781,
+    "lateness": {
+      "n": 48,
+      "p50": 0,
+      "p95": 0,
+      "p99": 0,
+      "min": 0,
+      "max": 0
+    },
+    "generatorSaturated": false
+  },
+  "steps": [
+    {
+      "step": "homepage peru/lima (uncoalesced)",
+      "measured": 48,
+      "outcomes": {
+        "ok": 48,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 48,
+        "p50": 1659.8416670000006,
+        "p95": 1717.511875,
+        "p99": 1718.046542,
+        "min": 1587.2289170000004,
+        "max": 1718.046542
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 56251,
+        "max": 56251,
+        "reported": 48
+      },
+      "statements": {
+        "median": 382,
+        "max": 382,
+        "reported": 48
+      },
+      "statementMs": {
+        "median": 9418,
+        "max": 9753,
+        "reported": 48
+      },
+      "reads": {
+        "median": 43,
+        "max": 43,
+        "reported": 48
+      },
+      "poolWaitMs": {
+        "median": 12,
+        "max": 20,
+        "reported": 48
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    }
+  ],
+  "pool": {
+    "samples": 11,
+    "failedSamples": 0,
+    "maxWaiting": 35,
+    "maxTotal": 20,
+    "waitingSeries": [
+      [
+        0,
+        0
+      ],
+      [
+        1.1,
+        29
+      ],
+      [
+        2.1,
+        19
+      ],
+      [
+        3.1,
+        35
+      ],
+      [
+        4.1,
+        29
+      ],
+      [
+        5.1,
+        29
+      ],
+      [
+        6.1,
+        29
+      ],
+      [
+        7,
+        0
+      ],
+      [
+        8.1,
+        35
+      ],
+      [
+        9.1,
+        29
+      ],
+      [
+        10.1,
+        29
+      ]
+    ],
+    "scope": "single-process"
+  },
+  "aborted": null
+}

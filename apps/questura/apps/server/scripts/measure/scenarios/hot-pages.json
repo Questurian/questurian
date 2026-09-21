@@ -1,0 +1,9 @@
+{
+  "name": "hot-pages",
+  "description": "Arrival-rate headroom: single public page requests against a small set of prewarmed campaign landing pages. No think time; one iteration is one request.",
+  "iterations": [
+    { "name": "lima", "weight": 4, "steps": [ { "name": "page: city lima", "target": "client", "path": "/peru/lima", "expect": { "body": "html", "minBytes": 5000 } } ] },
+    { "name": "medellin", "weight": 3, "steps": [ { "name": "page: city medellin", "target": "client", "path": "/colombia/medellin", "expect": { "body": "html", "minBytes": 5000 } } ] },
+    { "name": "article", "weight": 3, "steps": [ { "name": "page: article", "target": "client", "path": "/peru/lima/guides/a-beginners-guide-to-when-to-visit-lima-peru", "expect": { "body": "html", "minBytes": 5000 } } ] }
+  ]
+}

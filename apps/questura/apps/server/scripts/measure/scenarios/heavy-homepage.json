@@ -1,0 +1,12 @@
+{
+  "name": "heavy-homepage",
+  "description": "The most expensive public read (the Lima city page assembly) with coalescing skipped, so N concurrent requests are N assemblies. Uses the x-questura-read-limit measurement header, which the server honours only outside production or when the operator set PUBLIC_API_DIAGNOSTICS=1. Rate limits apply: reset the local Redis between levels, never spoof a trusted IP header.",
+  "iterations": [
+    {
+      "name": "lima assembly",
+      "steps": [
+        { "name": "homepage peru/lima (uncoalesced)", "target": "server", "path": "/api/public/location-homepages/peru/lima", "headers": { "x-questura-read-limit": "6" }, "expect": { "body": "json", "minBytes": 2000 } }
+      ]
+    }
+  ]
+}

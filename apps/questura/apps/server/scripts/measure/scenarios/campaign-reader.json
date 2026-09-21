@@ -1,0 +1,174 @@
+{
+  "name": "campaign-reader",
+  "description": "One campaign visitor: lands on a public page, reads, opens one more page. Two pages per visit, 90 s between them (a 180 s visit). Each page is the HTML document plus the anonymous identity check the navigation makes. Assets, RSC prefetch and images are not included and must be accounted for separately.",
+  "iterations": [
+    {
+      "name": "city then article",
+      "weight": 5,
+      "steps": [
+        {
+          "name": "page: city",
+          "target": "client",
+          "path": "/peru/lima?utm_source=campaign&utm_medium=social",
+          "expect": {
+            "body": "html",
+            "minBytes": 5000
+          }
+        },
+        {
+          "name": "identity",
+          "target": "server",
+          "path": "/api/me",
+          "expect": {
+            "status": [
+              200,
+              401
+            ],
+            "body": "json"
+          },
+          "thinkMs": 90000,
+          "headers": {
+            "origin": "{origin}"
+          }
+        },
+        {
+          "name": "page: article",
+          "target": "client",
+          "path": "/peru/lima/guides/a-beginners-guide-to-when-to-visit-lima-peru",
+          "expect": {
+            "body": "html",
+            "minBytes": 5000
+          }
+        },
+        {
+          "name": "identity",
+          "target": "server",
+          "path": "/api/me",
+          "expect": {
+            "status": [
+              200,
+              401
+            ],
+            "body": "json"
+          },
+          "headers": {
+            "origin": "{origin}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "article then city",
+      "weight": 3,
+      "steps": [
+        {
+          "name": "page: article",
+          "target": "client",
+          "path": "/colombia/medellin/guides/medelln-digital-nomad-guide-visas-costs-and-safety-for-2026?utm_source=campaign",
+          "expect": {
+            "body": "html",
+            "minBytes": 5000
+          }
+        },
+        {
+          "name": "identity",
+          "target": "server",
+          "path": "/api/me",
+          "expect": {
+            "status": [
+              200,
+              401
+            ],
+            "body": "json"
+          },
+          "thinkMs": 90000,
+          "headers": {
+            "origin": "{origin}"
+          }
+        },
+        {
+          "name": "page: city",
+          "target": "client",
+          "path": "/colombia/medellin",
+          "expect": {
+            "body": "html",
+            "minBytes": 5000
+          }
+        },
+        {
+          "name": "identity",
+          "target": "server",
+          "path": "/api/me",
+          "expect": {
+            "status": [
+              200,
+              401
+            ],
+            "body": "json"
+          },
+          "headers": {
+            "origin": "{origin}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "home redirect then city",
+      "weight": 2,
+      "steps": [
+        {
+          "name": "page: home (redirect)",
+          "target": "client",
+          "path": "/",
+          "expect": {
+            "status": [
+              307,
+              308
+            ],
+            "body": "any"
+          }
+        },
+        {
+          "name": "identity",
+          "target": "server",
+          "path": "/api/me",
+          "expect": {
+            "status": [
+              200,
+              401
+            ],
+            "body": "json"
+          },
+          "thinkMs": 90000,
+          "headers": {
+            "origin": "{origin}"
+          }
+        },
+        {
+          "name": "page: city",
+          "target": "client",
+          "path": "/mexico/mexico-city",
+          "expect": {
+            "body": "html",
+            "minBytes": 5000
+          }
+        },
+        {
+          "name": "identity",
+          "target": "server",
+          "path": "/api/me",
+          "expect": {
+            "status": [
+              200,
+              401
+            ],
+            "body": "json"
+          },
+          "headers": {
+            "origin": "{origin}"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -47,6 +47,27 @@ describe('countPoolStatements', () => {
     expect(report.statements).toBe(3)
   })
 
+  // A full pool shows up as time spent in connect(), before any statement
+  // runs. Without it a slow page could not say whether it waited for the
+  // database or for a connection to reach the database with.
+  it('records time spent waiting for a pooled client', async () => {
+    const client = { query: vi.fn(async () => ({ rows: [] })) }
+    const pool = {
+      query: vi.fn(async () => ({ rows: [] })),
+      connect: vi.fn(() => new Promise<typeof client>((resolve) => setTimeout(() => resolve(client), 25))),
+    }
+    countPoolStatements(pool)
+
+    const { report } = await withRequestReport(async () => {
+      await pool.connect()
+      await pool.connect()
+    })
+
+    expect(report.poolAcquires).toBe(2)
+    expect(report.poolWaitMs).toBeGreaterThanOrEqual(40)
+    expect(serverTimingHeader(report)).toMatch(/pool;dur=\d+;desc="2 acquires"/)
+  })
+
   it('counts each statement once however often the pool is re-patched', async () => {
     const pool = fakePool()
     countPoolStatements(pool)

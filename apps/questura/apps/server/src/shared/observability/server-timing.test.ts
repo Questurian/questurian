@@ -35,6 +35,6 @@ describe('serverTimingHeader', () => {
       .split(',')
       .map((part) => part.trim().split(';')[0])
 
-    expect(names).toEqual(['total', 'sql', 'reads', 'peak'])
+    expect(names).toEqual(['total', 'sql', 'pool', 'reads', 'peak'])
   })
 })

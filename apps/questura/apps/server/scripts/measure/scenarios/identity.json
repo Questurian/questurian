@@ -1,0 +1,71 @@
+{
+  "name": "identity",
+  "description": "The anonymous identity check every public page's navigation makes, with no cookie, a malformed cookie and an unknown-but-well-formed cookie. A valid session needs a real signed-in cookie and is supplied by hand, never committed. Every step sends the browser's Origin ({origin}, the harness --origin flag): the server refuses cookie-bearing calls without an allowed one.",
+  "iterations": [
+    {
+      "name": "no cookie",
+      "weight": 8,
+      "steps": [
+        {
+          "name": "me: no cookie",
+          "target": "server",
+          "path": "/api/me",
+          "expect": {
+            "status": [
+              200,
+              401
+            ],
+            "body": "json"
+          },
+          "headers": {
+            "origin": "{origin}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "malformed cookie",
+      "weight": 1,
+      "steps": [
+        {
+          "name": "me: malformed cookie",
+          "target": "server",
+          "path": "/api/me",
+          "headers": {
+            "cookie": "questura_visitor.session_token=not-a-token",
+            "origin": "{origin}"
+          },
+          "expect": {
+            "status": [
+              200,
+              401
+            ],
+            "body": "json"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown cookie",
+      "weight": 1,
+      "steps": [
+        {
+          "name": "me: unknown cookie",
+          "target": "server",
+          "path": "/api/me",
+          "headers": {
+            "cookie": "questura_visitor.session_token=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA%3D",
+            "origin": "{origin}"
+          },
+          "expect": {
+            "status": [
+              200,
+              401
+            ],
+            "body": "json"
+          }
+        }
+      ]
+    }
+  ]
+}
