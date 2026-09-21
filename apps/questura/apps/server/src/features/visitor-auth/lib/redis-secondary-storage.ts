@@ -1,20 +1,45 @@
 import Redis from 'ioredis'
 
 import { APP_CONFIG } from '@/shared/config'
+import { countOnRequest } from '@/shared/observability/request-report'
 
 let redis: Redis | null = null
 
+function readMs(name: string, fallback: number): number {
+  const value = Number(process.env[name])
+  return Number.isInteger(value) && value > 0 ? value : fallback
+}
+
+/**
+ * Deadlines for every Redis call. Sessions and every rate limit go through
+ * this client, and ioredis waits on a command for as long as the connection
+ * lives by default: a slow or half-open Redis held each request open with it,
+ * which under campaign traffic is every identity check at once. A command
+ * that misses its deadline rejects, and each caller's own policy decides
+ * what that means (public read limits fail open, payments fail closed).
+ * Reconnects back off with jitter so a fleet does not retry in step.
+ */
+export function redisClientOptions() {
+  return {
+    lazyConnect: true,
+    maxRetriesPerRequest: 2,
+    enableReadyCheck: true,
+    connectTimeout: readMs('REDIS_CONNECT_TIMEOUT_MS', 3_000),
+    commandTimeout: readMs('REDIS_COMMAND_TIMEOUT_MS', 1_000),
+    retryStrategy: (times: number) => Math.min(times * 200, 2_000) + Math.floor(Math.random() * 100),
+  }
+}
+
 function getRedis(): Redis {
+  // One call here is one round trip (or one script); counted per request so
+  // `/api/me`'s Server-Timing can say what a session lookup cost.
+  countOnRequest('redis')
   if (!APP_CONFIG.redis.url) {
     throw new Error('REDIS_URL is required for production Visitor auth rate limiting')
   }
 
   if (!redis) {
-    redis = new Redis(APP_CONFIG.redis.url, {
-      lazyConnect: true,
-      maxRetriesPerRequest: 2,
-      enableReadyCheck: true,
-    })
+    redis = new Redis(APP_CONFIG.redis.url, redisClientOptions())
   }
 
   return redis

@@ -68,6 +68,42 @@ describe('countPoolStatements', () => {
     expect(serverTimingHeader(report)).toMatch(/pool;dur=\d+;desc="2 acquires"/)
   })
 
+  // pg-pool's own query() calls this.connect(callback). The wrapper awaited
+  // the callback form's `undefined` return and threw an unhandled rejection
+  // on every pool.query against a counted pool (seen from /api/internal/db-stats).
+  it('passes the callback form of connect through untouched', async () => {
+    const client = { query: vi.fn(async () => ({ rows: [] })) }
+    const pool = {
+      query: vi.fn(async () => ({ rows: [] })),
+      connect: vi.fn((callback?: (error: unknown, client: unknown, done: () => void) => void) => {
+        if (callback) {
+          setTimeout(() => callback(undefined, client, () => {}), 5)
+          return undefined
+        }
+        return Promise.resolve(client)
+      }),
+    }
+    countPoolStatements(pool)
+    const unhandled = vi.fn()
+    process.on('unhandledRejection', unhandled)
+
+    const { report } = await withRequestReport(
+      () =>
+        new Promise<void>((resolve) => {
+          ;(pool.connect as (cb: (error: unknown, c: unknown) => void) => void)((error, received) => {
+            expect(error).toBeUndefined()
+            expect(received).toBe(client)
+            resolve()
+          })
+        }),
+    )
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    process.off('unhandledRejection', unhandled)
+
+    expect(unhandled).not.toHaveBeenCalled()
+    expect(report.poolAcquires).toBe(1)
+  })
+
   it('counts each statement once however often the pool is re-patched', async () => {
     const pool = fakePool()
     countPoolStatements(pool)

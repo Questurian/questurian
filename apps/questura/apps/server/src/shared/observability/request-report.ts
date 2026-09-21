@@ -55,6 +55,12 @@ export function noteOnRequest(key: string, value: number | string): void {
   if (report) report.notes[key] = value
 }
 
+/** Add to a named count on the current request, if one is being measured. */
+export function countOnRequest(key: string, by = 1): void {
+  const report = reportStore.getStore()
+  if (report) report.notes[key] = (Number(report.notes[key]) || 0) + by
+}
+
 export async function withRequestReport<T>(
   run: () => Promise<T>,
 ): Promise<{ result: T; report: RequestReport }> {
@@ -132,20 +138,43 @@ export function countPoolStatements(pool: unknown): void {
     const connect = target.__questuraOriginalConnect ?? target.connect.bind(target)
     target.__questuraOriginalConnect = connect
 
-    target.connect = async (...args: unknown[]) => {
+    target.connect = ((...args: unknown[]) => {
       const report = reportStore.getStore()
       const startedAt = Date.now()
-      try {
-        const client = await connect(...args)
-        countQueries(client)
-        return client
-      } finally {
+      const settle = (client: Queryable | undefined, count: boolean) => {
+        if (client && count) countQueries(client)
         if (report) {
           report.poolAcquires += 1
           report.poolWaitMs += Date.now() - startedAt
         }
       }
-    }
+
+      // pg-pool's own `query()` calls `this.connect(callback)` and gets
+      // `undefined` back, so the callback form has to stay a callback. Treating
+      // it as a promise awaited `undefined` and threw on it: an unhandled
+      // rejection every time anything used `pool.query` on a counted pool.
+      // The client it hands over is not patched: `pool.query` is already
+      // counted once at the pool, and counting its client too would count
+      // that statement twice.
+      const callback = args[args.length - 1]
+      if (typeof callback === 'function') {
+        return connect(
+          ...args.slice(0, -1),
+          (error: unknown, client: Queryable | undefined, done: unknown) => {
+            settle(error ? undefined : client, false)
+            ;(callback as (...values: unknown[]) => void)(error, client, done)
+          },
+        )
+      }
+
+      return connect(...args).then((client) => {
+        settle(client, true)
+        return client
+      }, (error: unknown) => {
+        settle(undefined, false)
+        throw error
+      })
+    }) as QueryablePool['connect']
   }
 
   countQueries(target)

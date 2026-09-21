@@ -43,6 +43,30 @@ export async function findVisitorAccountByEmail(email: string): Promise<VisitorA
   }
 }
 
+/**
+ * Sign-in methods for a user whose session has already been resolved.
+ *
+ * `/api/me` used to call `listUserAccounts({ headers })` for this, which runs
+ * Better Auth's session middleware again: a second session lookup (a Redis
+ * read in production, and whatever refresh check comes with it) on every
+ * signed-in page view, to learn a user id the caller already had. This is the
+ * accounts query alone.
+ */
+export async function getVisitorAuthMethodsForUser(userId: string): Promise<VisitorAuthMethods> {
+  try {
+    const { internalAdapter } = await visitorAuth.$context
+    const accounts = await internalAdapter.findAccounts(userId)
+    return deriveAuthMethods(accounts.map((account) => account.providerId))
+  } catch (error) {
+    console.error('Failed to resolve Visitor auth methods:', error)
+    return {
+      hasLocalPassword: false,
+      hasGoogleOAuth: false,
+      authProvider: 'unknown',
+    }
+  }
+}
+
 export async function getVisitorAuthMethods(headers: Headers): Promise<VisitorAuthMethods> {
   try {
     const accounts = await visitorAuth.api.listUserAccounts({ headers })
