@@ -189,3 +189,21 @@ with new evidence, not a fresh argument.
 | Webhook resend past 30 days | `event-retention.ts` | Handlers converge on a second run; the two that mutate Stripe are idempotent in effect. Know it before resending an old event. |
 | Nav Subscribe button copy | `SubscribeButton.tsx` | Hardcoded on purpose. Not driven from Stripe or `/api/payments/plans`. |
 | Advertised price vs laptop charge | `docs/membership-pricing.md` | Intentional until item 1 above. Never sync the UI down to $0.50. |
+
+## Campaign capacity items (docs/capacity/)
+
+Added by the campaign capacity work; each is also tracked in `docs/capacity/STATUS.md`.
+
+- **Render token.** Set `QUESTURA_RENDER_TOKEN` (32+ characters, same value on
+  the frontend and backend) so server-side renders get their own bounded
+  rate-limit bucket instead of sharing the frontend's egress IP.
+- **CDN behaviour.** Prove on the platform that tag/path revalidation purges
+  the CDN, that tracking parameters do not fragment the cache, that no
+  response with `Set-Cookie` is cached, and that no shared cache sits between
+  the frontend's server-side fetches and the backend's `/api/public/*`.
+- **Anonymous Payload REST.** Decide per collection whether anonymous
+  `access.read` should stay (list in `docs/capacity/public-surface.md`). The
+  clamp and rate limit make it affordable; they do not make it necessary.
+- **Prewarm** campaign landing URLs after each deploy and before each
+  campaign: `pnpm prewarm:campaign -- --client <origin> --urls <file>`.
+

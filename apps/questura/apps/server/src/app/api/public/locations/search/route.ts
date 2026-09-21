@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import config from '@/payload.config'
+import { publicRead } from '@/shared/http/public-read'
 
 const MAX_RESULTS = 20
 
@@ -47,38 +48,41 @@ export async function GET(req: NextRequest) {
 
     const payload = await getPayload({ config })
 
-    const result = await payload.find({
-      collection: 'locations',
-      where: {
-        or: [
-          { country: { like: q } },
-          { city: { like: q } },
-          { neighborhood: { like: q } },
-          { countryName: { like: q } },
-          { cityName: { like: q } },
-          { neighborhoodName: { like: q } },
-        ],
-      },
-      limit: MAX_RESULTS,
-      depth: 0,
-      overrideAccess: true,
+    // Rate limit, admission, counting and cache headers: shared/http/public-read.ts.
+    return await publicRead({ req, scope: 'navigation', payload }, async () => {
+      const result = await payload.find({
+        collection: 'locations',
+        where: {
+          or: [
+            { country: { like: q } },
+            { city: { like: q } },
+            { neighborhood: { like: q } },
+            { countryName: { like: q } },
+            { cityName: { like: q } },
+            { neighborhoodName: { like: q } },
+          ],
+        },
+        limit: MAX_RESULTS,
+        depth: 0,
+        overrideAccess: true,
+      })
+
+      const items: LocationSearchItem[] = result.docs
+        .filter((doc) => typeof doc.locationKey === 'string' && doc.locationKey)
+        .map((doc) => ({
+          locationKey: doc.locationKey as string,
+          level: doc.level as LocationSearchItem['level'],
+          label: buildLabel(doc as Parameters<typeof buildLabel>[0]),
+          country: doc.country,
+          city: doc.city ?? null,
+          neighborhood: doc.neighborhood ?? null,
+        }))
+        .sort(
+          (a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level] || a.label.localeCompare(b.label),
+        )
+
+      return NextResponse.json({ items })
     })
-
-    const items: LocationSearchItem[] = result.docs
-      .filter((doc) => typeof doc.locationKey === 'string' && doc.locationKey)
-      .map((doc) => ({
-        locationKey: doc.locationKey as string,
-        level: doc.level as LocationSearchItem['level'],
-        label: buildLabel(doc as Parameters<typeof buildLabel>[0]),
-        country: doc.country,
-        city: doc.city ?? null,
-        neighborhood: doc.neighborhood ?? null,
-      }))
-      .sort(
-        (a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level] || a.label.localeCompare(b.label),
-      )
-
-    return NextResponse.json({ items })
   } catch (error) {
     const message = error instanceof Error && error.message ? error.message : 'Search failed.'
     return NextResponse.json({ message }, { status: 500 })

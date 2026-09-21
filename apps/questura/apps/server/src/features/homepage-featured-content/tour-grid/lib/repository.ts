@@ -5,6 +5,7 @@ import type { HomepageTourCandidate, HomepageTourItemRef, TourDocLike } from '..
 import { HOMEPAGE_BLOCK_POPULATE, TOUR_ROOT_SELECT } from '../../populate'
 import { readDocumentOnce } from '../../reference-grid/page-read-budget'
 import { normalizeTourCandidate } from './candidate'
+import { whenNotFound } from '@/shared/lib/not-found-error'
 
 export async function findTourDoc(
   payload: Payload,
@@ -22,8 +23,9 @@ export async function findTourDoc(
         populate: HOMEPAGE_BLOCK_POPULATE,
       })
       return normalizeTourCandidate(doc as TourDocLike)
-    } catch {
-      return null
+    } catch (error) {
+      // Deleted is omitted; failed is an error (shared/lib/not-found-error.ts).
+      return whenNotFound(error, null)
     }
   })
 }

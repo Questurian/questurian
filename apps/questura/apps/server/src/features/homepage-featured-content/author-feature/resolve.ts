@@ -13,6 +13,7 @@ import {
   type AuthorFeatureImageStyle,
   type AuthorFeatureMotionStyle,
 } from './constants'
+import { isNotFoundError } from '@/shared/lib/not-found-error'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -169,7 +170,9 @@ export async function resolveAuthorFeatureFields(
           imageAltReady: selectedMediaSet ? mediaSetHasAuthoredAlt(selectedMediaSet) : false,
           spotlightNote: text(card.spotlightNote),
         }
-      } catch {
+      } catch (error) {
+        // Only a deleted author becomes an empty card; a failed read is an error.
+        if (!isNotFoundError(error)) throw error
         return {
           author: { id: authorId, name: null, slug: null, href: null, bio: null, expertise: [] },
           displayDescription: descriptionMode === 'custom' ? customDescription : null,

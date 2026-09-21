@@ -1,3 +1,5 @@
+import { createHash, timingSafeEqual } from 'node:crypto'
+
 import { NextResponse } from 'next/server'
 
 import { getClientIp, hashIdentifier, incrementCounter } from '@/shared/lib/rate-limit-counter'
@@ -43,9 +45,57 @@ export const PUBLIC_READ_RATE_LIMITS = {
   authorPage: 60,
   /** A curated city page: dozens of populated document reads. */
   locationHomepage: 120,
+  /** One article by path or slug: a populated read plus serialization. */
+  articleRead: 240,
+  /** Menu, country cities, redirects, location search: small bounded reads. */
+  navigation: 240,
+  /** The whole public URL list. Crawlers ask rarely; nobody else should. */
+  sitemap: 30,
+  /** Related-articles shelf under an article. */
+  related: 120,
+  /** Anonymous reads through Payload's own REST/GraphQL mounts. */
+  payloadApi: 120,
 } as const
 
 export type PublicReadScope = keyof typeof PUBLIC_READ_RATE_LIMITS
+
+/**
+ * Frontend server renders get their own, larger bucket.
+ *
+ * A server-rendered page asks the backend from the frontend's egress IP, not
+ * the reader's. Every reader whose visit triggers a cold render or a
+ * revalidation therefore shares one per-IP bucket: locally the 121st city
+ * page request in a minute was throttled (docs/capacity/STATUS.md, CAP-01),
+ * and a 429 there fails the render for everyone behind that frontend.
+ *
+ * The frontend proves it is the frontend with a shared secret
+ * (`QUESTURA_RENDER_TOKEN`, 32+ characters, set on both apps), never with a
+ * public header or an IP. It gets `PUBLIC_READ_RENDER_MULTIPLIER` (default
+ * 20) times the per-IP limit, under one key: still a bound, because a
+ * misbehaving renderer is still a load source. The admission gates apply to
+ * it exactly as to anyone else. Unset token: everything is per-IP, as before.
+ */
+export const RENDER_TOKEN_HEADER = 'x-questura-render-token'
+export const MIN_RENDER_TOKEN_LENGTH = 32
+
+function digest(value: string): Buffer {
+  return createHash('sha256').update(value).digest()
+}
+
+export function isTrustedRender(headers: Headers): boolean {
+  const configured = process.env.QUESTURA_RENDER_TOKEN?.trim()
+  if (!configured || configured.length < MIN_RENDER_TOKEN_LENGTH) return false
+
+  const provided = headers.get(RENDER_TOKEN_HEADER)?.trim()
+  if (!provided) return false
+
+  return timingSafeEqual(digest(provided), digest(configured))
+}
+
+function renderMultiplier(): number {
+  const value = Number(process.env.PUBLIC_READ_RENDER_MULTIPLIER)
+  return Number.isInteger(value) && value > 0 ? value : 20
+}
 
 export type PublicReadRateLimitResult =
   | { allowed: true }
@@ -55,7 +105,11 @@ export async function checkPublicReadRateLimit(
   headers: Headers,
   scope: PublicReadScope,
 ): Promise<PublicReadRateLimitResult> {
-  const key = `public-read:rate-limit:${scope}:ip:${hashIdentifier(getClientIp(headers))}`
+  const render = isTrustedRender(headers)
+  const key = render
+    ? `public-read:rate-limit:${scope}:render`
+    : `public-read:rate-limit:${scope}:ip:${hashIdentifier(getClientIp(headers))}`
+  const limit = PUBLIC_READ_RATE_LIMITS[scope] * (render ? renderMultiplier() : 1)
 
   let counter
   try {
@@ -68,7 +122,7 @@ export async function checkPublicReadRateLimit(
     return { allowed: true }
   }
 
-  if (counter.count > PUBLIC_READ_RATE_LIMITS[scope]) {
+  if (counter.count > limit) {
     return { allowed: false, retryAfterSeconds: counter.ttlSeconds }
   }
 

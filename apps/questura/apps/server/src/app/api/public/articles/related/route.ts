@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import config from '@/payload.config'
+import { publicRead } from '@/shared/http/public-read'
 import { fetchRelatedMapsArticles } from '@/features/articles/public/relatedMapsArticles'
 
 // GET /api/public/articles/related?country=...&city=...&currentSlug=...
@@ -16,13 +17,17 @@ export async function GET(req: NextRequest) {
     const currentSlug = params.get('currentSlug')
 
     const payload = await getPayload({ config })
-    const related = await fetchRelatedMapsArticles(payload, {
-      country,
-      city,
-      currentSlug,
-    })
 
-    return NextResponse.json(related)
+    // Rate limit, admission, counting and cache headers: shared/http/public-read.ts.
+    return await publicRead({ req, scope: 'related', payload }, async () => {
+      const related = await fetchRelatedMapsArticles(payload, {
+        country,
+        city,
+        currentSlug,
+      })
+
+      return NextResponse.json(related)
+    })
   } catch (error) {
     const message =
       error instanceof Error && error.message ? error.message : 'Failed to load related articles.'

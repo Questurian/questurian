@@ -9,6 +9,7 @@ import type {
 import { HOMEPAGE_BLOCK_POPULATE } from '../../populate'
 import { readDocumentOnce } from '../../reference-grid/page-read-budget'
 import { normalizeHomepageFeaturedCandidate } from './candidate'
+import { whenNotFound } from '@/shared/lib/not-found-error'
 
 export const homepageFeaturedSelect = {
   id: true,
@@ -45,8 +46,9 @@ export async function findHomepageFeaturedDoc(
       })
 
       return normalizeHomepageFeaturedCandidate(ref.relationTo, doc as PayloadDocLike)
-    } catch {
-      return null
+    } catch (error) {
+      // Deleted is omitted; failed is an error (shared/lib/not-found-error.ts).
+      return whenNotFound(error, null)
     }
   })
 }

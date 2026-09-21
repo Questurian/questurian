@@ -15,7 +15,7 @@ find bottlenecks and price the code; they do not say what a platform can carry.
 | CAP-01 Baseline and harness | implemented locally | this file, `runs/2026-09-21-cap01-*` |
 | CAP-02 Connection budget and overload | implemented locally | `runs/2026-09-21-cap02-*` |
 | CAP-03 Anonymous identity | implemented locally (valid-session path proven by tests + source, not measured) | `runs/2026-09-21-cap03-*` |
-| CAP-04 Cache correctness, route coverage | planned | |
+| CAP-04 Cache correctness, route coverage | implemented locally; shared-CDN proof owed to CAP-07/08 | `public-surface.md`, `runs/2026-09-21-cap04-*` |
 | CAP-05 Cold query amplification | planned | |
 | CAP-06 Durable refresh, safe startup | planned | |
 | CAP-07 Platform, recovery, cost | blocked: awaiting provider, budget, recovery targets | |
@@ -239,9 +239,75 @@ environment under project rules.
 
 **Rollback.** Revert the PR. Redis deadlines can be loosened by env.
 
+## CAP-04 — cache correctness and public-route coverage
+
+Full inventory and before/after: [`public-surface.md`](public-surface.md).
+
+**Changed.**
+- Eight unwrapped `/api/public/*` routes and the neighbourhood homepage now go
+  through `publicRead` (limit, gate, counting, cache headers). The
+  neighbourhood page also coalesces and uses the assembly gate. New scopes:
+  `articleRead` 240, `navigation` 240 (no gate), `sitemap` 30, `related` 120,
+  `payloadApi` 120.
+- **Payload REST/GraphQL anonymous bounds** (`shared/payload/anonymous-api-bounds.ts`):
+  per-IP limit, `limit ≤ 100`, `depth ≤ 2`, pagination forced. Measured:
+  `/api/locations?limit=1000&depth=10` went from **271 MB / 1.3 s** to
+  37.7 KB / 37 ms; `pagination=false` no longer returns every row. Staff,
+  service accounts and the Local API untouched.
+- **Missing vs failed.** `shared/lib/not-found-error.ts`; the five curated
+  repositories plus author/editorial resolvers omit only not-found. Client:
+  `readPublicResponse` (404 → null, anything else throws) for city and
+  neighbourhood homepages, location lists and the sitemap. Before, a backend
+  503 rendered Lima as its fallback list or a 404 and ISR cached it for an
+  hour; the sitemap collapsed to one URL.
+- **Last good output.** Next 15.4 rebuilds blocking after tag/path
+  invalidation. Curated pages fall back to the last good answer this process
+  saw (`lib/cache/lastGood.ts`, ≤ 7 days, 500 URLs); articles fail loudly.
+- **Render bucket.** Optional `QUESTURA_RENDER_TOKEN` gives frontend renders
+  their own bounded bucket (20× per-IP) instead of every reader sharing the
+  frontend's IP. Sent from `publicFetchOptions`, the location list fetch, the
+  menu and static params. Production refuses a token under 32 characters.
+- **Bounded staleness.** Client `expireTime` 7 days: HTML
+  `stale-while-revalidate` 1 year → 7 days.
+- **Prewarm.** `pnpm prewarm:campaign -- --client <origin> --urls docs/capacity/campaign-urls.txt`
+  renders each URL once (≤ 8 at a time), then reports whether the cache
+  answered. Exit 2 if any failed.
+- Client `distDir` from `NEXT_DIST_DIR` (measurement builds beside dev).
+
+**Verified locally** (client and server production builds, `next start`):
+
+| Check | Result |
+|---|---|
+| UTM / fbclid variants | ISR HIT |
+| Visitor cookie on the request | HIT, same HTML, nothing personal |
+| RSC variant | separate, HIT |
+| Backend 503 + tag invalidation, curated page | 200 from last good (logged), 259 KB, correct content |
+| Same, article | 500 (not cached), 200 again once the backend recovered |
+| Before the last-good change | tag or path invalidation during a 503 → 500 on every request until recovery |
+| Hot pages 50 / 100 / 250 per s, one client process | 0 failures; p99 16 / 11 / 45 ms |
+| `campaign-reader` 35 visits/s for 60 s (≈ 6,300 modelled readers; 2 pages + identity each) | 8,400 requests, **0 failures**, pages p99 ≤ 23 ms, identity p99 7 ms, 0 SQL; pool waiting 0 |
+
+The `campaign-reader` numbers describe one Mac serving cached pages from one
+process each, over loopback, with no images or JS. They show the code path
+holds; they are not the platform's capacity. (Its "page: city" row mixes
+three cities under one step name.)
+
+**Tests.** Server: `not-found-error.test.ts` (5 repositories × deleted vs
+failed), `anonymous-api-bounds.test.ts`, render-bucket tests, publicRead scope
+tests. Client: `readPublicResponse.test.mjs`, `lastGood.test.mjs` (179 pass).
+
+**Owed to CAP-07/08.** Target CDN honours tag purges; ignores tracking params;
+never caches `Set-Cookie`; is not a shared cache in front of the backend for
+render traffic; real proxy chain for the render bucket. Per-collection
+decision on anonymous REST access (listed in `public-surface.md`).
+
+**Config.** Optional `QUESTURA_RENDER_TOKEN` on both apps.
+
+**Rollback.** Revert the PR. Loosen the REST clamp by editing the two
+constants; the render bucket is off when the token is unset.
+
 ## Next action
 
-CAP-04: bring the unwrapped public routes under `publicRead`, separate
-frontend-render traffic from per-IP limits, make homepage/featured reads
-distinguish missing from failed, keep last-good output on failure, and add
-bounded prewarming.
+CAP-05: batch the curated-page reads (382 statements / 43 reads for Lima),
+replace the sitemap's per-author counts with a grouped query, read EXPLAIN
+plans, and prove identical output.

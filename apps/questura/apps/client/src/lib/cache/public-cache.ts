@@ -25,8 +25,21 @@ function scopeTag(scope: ArticleScope): string {
   return "global";
 }
 
+/**
+ * Identifies this frontend's server-side reads to the backend, which gives
+ * them their own bounded rate-limit bucket instead of the shared per-IP one
+ * every reader's render would otherwise land in (server:
+ * shared/http/public-read-rate-limit.ts). Server-only: the variable is not
+ * `NEXT_PUBLIC_`, so a browser bundle sees `undefined` and sends nothing.
+ */
+export function renderHeaders(): Record<string, string> {
+  const token = process.env.QUESTURA_RENDER_TOKEN?.trim();
+  return token ? { "x-questura-render-token": token } : {};
+}
+
 export function publicFetchOptions(tags: string[]): PublicFetchOptions {
   return {
+    headers: renderHeaders(),
     next: {
       revalidate: PUBLIC_CONTENT_REVALIDATE_SECONDS,
       tags,

@@ -1,0 +1,237 @@
+{
+  "meta": {
+    "takenAt": "2026-09-21T21:26:23.012Z",
+    "sha": "81a58836-dirty",
+    "scenario": "hot-pages",
+    "scenarioDescription": "Arrival-rate headroom: single public page requests against a small set of prewarmed campaign landing pages. No think time; one iteration is one request.",
+    "node": "v24.15.0",
+    "generatorHost": "darwin arm64 8 cpus",
+    "label": "CAP-04 hot pages 100/s, local client prod build (ISR hit)",
+    "warmupSamples": 3,
+    "poolScope": "unavailable"
+  },
+  "args": {
+    "base": "http://localhost:4000",
+    "client": "http://localhost:3100",
+    "origin": "http://localhost:3100",
+    "scenario": "hot-pages",
+    "mode": "arrival",
+    "cache": "warm",
+    "runs": 10,
+    "concurrent": 1,
+    "warmup": 1,
+    "timeoutMs": 10000,
+    "rate": 100,
+    "durationS": 20,
+    "maxInFlight": 200,
+    "abortErrorRate": 0.01,
+    "abortMinSamples": 50,
+    "jsonPath": "../../docs/capacity/runs/2026-09-21-cap04-hot-pages-100.json",
+    "htmlPath": "",
+    "label": "CAP-04 hot pages 100/s, local client prod build (ISR hit)"
+  },
+  "throughput": {
+    "offered": 2000,
+    "started": 2000,
+    "dropped": 0,
+    "completedRequests": 2000,
+    "okRequests": 2000,
+    "elapsedS": 19.990126208,
+    "offeredPerS": 100.04939334498073,
+    "completedPerS": 100.04939334498073,
+    "okPerS": 100.04939334498073,
+    "lateness": {
+      "n": 2000,
+      "p50": 0.004666000000725035,
+      "p95": 0.5022499999995489,
+      "p99": 1.0776660000001357,
+      "min": 0.0010410000004412723,
+      "max": 11.787582999999927
+    },
+    "generatorSaturated": false
+  },
+  "steps": [
+    {
+      "step": "page: city lima",
+      "measured": 764,
+      "outcomes": {
+        "ok": 764,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 764,
+        "p50": 5.839749999999185,
+        "p95": 7.872916000000259,
+        "p99": 10.961957999999868,
+        "min": 4.719750000000204,
+        "max": 32.99754100000064
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 259359,
+        "max": 259359,
+        "reported": 764
+      },
+      "statements": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "statementMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "cacheControl": "s-maxage=3600, stale-while-revalidate=601200",
+      "cacheStatuses": {
+        "HIT": 764
+      },
+      "errors": {}
+    },
+    {
+      "step": "page: city medellin",
+      "measured": 667,
+      "outcomes": {
+        "ok": 667,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 667,
+        "p50": 2.32037500000024,
+        "p95": 3.7738750000007713,
+        "p99": 7.7779580000024,
+        "min": 1.470542000000023,
+        "max": 54.530917000000045
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 23298,
+        "max": 23298,
+        "reported": 667
+      },
+      "statements": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "statementMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "cacheControl": "s-maxage=3600, stale-while-revalidate=601200",
+      "cacheStatuses": {
+        "HIT": 667
+      },
+      "errors": {}
+    },
+    {
+      "step": "page: article",
+      "measured": 569,
+      "outcomes": {
+        "ok": 569,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 569,
+        "p50": 4.449708000000101,
+        "p95": 6.18500000000131,
+        "p99": 8.553249999997206,
+        "min": 3.30883299999914,
+        "max": 16.903458999997383
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 123495,
+        "max": 123495,
+        "reported": 569
+      },
+      "statements": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "statementMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "cacheControl": "s-maxage=3600, stale-while-revalidate=601200",
+      "cacheStatuses": {
+        "HIT": 569
+      },
+      "errors": {}
+    }
+  ],
+  "pool": null,
+  "aborted": null
+}

@@ -249,6 +249,13 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
     )
   }
 
+  // Optional, but a short render token is a guessable bypass of the per-IP
+  // public read limits (public-read-rate-limit.ts).
+  const renderToken = process.env.QUESTURA_RENDER_TOKEN?.trim()
+  if (renderToken && renderToken.length < 32) {
+    problems.push('QUESTURA_RENDER_TOKEN is shorter than 32 characters.')
+  }
+
   // Pool maxima are per process, autoscaling multiplies them, a rolling deploy
   // runs two generations at once and a scheduled job is a whole process.
   // Postgres does not care which pool exhausts it: the first symptom is

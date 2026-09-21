@@ -1,0 +1,903 @@
+{
+  "meta": {
+    "takenAt": "2026-09-21T21:27:18.006Z",
+    "sha": "81a58836-dirty",
+    "scenario": "campaign-reader",
+    "scenarioDescription": "One campaign visitor: lands on a public page, reads, opens one more page. Two pages per visit, 90 s between them (a 180 s visit). Each page is the HTML document plus the anonymous identity check the navigation makes. Assets, RSC prefetch and images are not included and must be accounted for separately.",
+    "node": "v24.15.0",
+    "generatorHost": "darwin arm64 8 cpus",
+    "label": "CAP-04 campaign-reader 35 visits/s (~6,300 modeled readers), local prod builds, one process each",
+    "warmupSamples": 4,
+    "poolScope": "single-process"
+  },
+  "args": {
+    "base": "http://localhost:4100",
+    "client": "http://localhost:3100",
+    "origin": "https://capacity-client.invalid",
+    "scenario": "campaign-reader",
+    "mode": "arrival",
+    "cache": "warm",
+    "runs": 10,
+    "concurrent": 1,
+    "warmup": 1,
+    "timeoutMs": 10000,
+    "rate": 35,
+    "durationS": 60,
+    "maxInFlight": 6000,
+    "abortErrorRate": 0.01,
+    "abortMinSamples": 200,
+    "jsonPath": "../../docs/capacity/runs/2026-09-21-cap04-campaign-reader-35vps.json",
+    "htmlPath": "",
+    "label": "CAP-04 campaign-reader 35 visits/s (~6,300 modeled readers), local prod builds, one process each"
+  },
+  "throughput": {
+    "offered": 2100,
+    "started": 2100,
+    "dropped": 0,
+    "completedRequests": 8400,
+    "okRequests": 8400,
+    "elapsedS": 59.972191291,
+    "offeredPerS": 35.01622926883357,
+    "completedPerS": 140.06491707533428,
+    "okPerS": 140.06491707533428,
+    "lateness": {
+      "n": 8400,
+      "p50": 0,
+      "p95": 0.9672321428588475,
+      "p99": 1.509308857137512,
+      "min": 0,
+      "max": 101.20562500000233
+    },
+    "generatorSaturated": false
+  },
+  "steps": [
+    {
+      "step": "page: city",
+      "measured": 2100,
+      "outcomes": {
+        "ok": 2100,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 2100,
+        "p50": 6.18712499999674,
+        "p95": 11.321374999999534,
+        "p99": 23.004209000006085,
+        "min": 1.9436669999995502,
+        "max": 215.39129200000025
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 23316,
+        "max": 259359,
+        "reported": 2100
+      },
+      "statements": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "statementMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "cacheControl": "s-maxage=3600, stale-while-revalidate=601200",
+      "cacheStatuses": {
+        "HIT": 2100
+      },
+      "errors": {}
+    },
+    {
+      "step": "identity",
+      "measured": 4200,
+      "outcomes": {
+        "ok": 4200,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 4200,
+        "p50": 2.6221669999940787,
+        "p95": 4.699542000002111,
+        "p99": 6.9814579999947455,
+        "min": 1.2379589999909513,
+        "max": 220.34470800000054
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 40,
+        "max": 40,
+        "reported": 4200
+      },
+      "statements": {
+        "median": 0,
+        "max": 0,
+        "reported": 4200
+      },
+      "statementMs": {
+        "median": 0,
+        "max": 0,
+        "reported": 4200
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 0,
+        "max": 0,
+        "reported": 4200
+      },
+      "cacheControl": "no-store, no-cache, must-revalidate",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "page: article",
+      "measured": 1668,
+      "outcomes": {
+        "ok": 1668,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 1668,
+        "p50": 7.149874999995518,
+        "p95": 11.955457999996725,
+        "p99": 18.88966599997366,
+        "min": 3.928082999998878,
+        "max": 90.15312499999709
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 123495,
+        "max": 123495,
+        "reported": 1668
+      },
+      "statements": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "statementMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "cacheControl": "s-maxage=3600, stale-while-revalidate=601200",
+      "cacheStatuses": {
+        "HIT": 1668
+      },
+      "errors": {}
+    },
+    {
+      "step": "page: home (redirect)",
+      "measured": 432,
+      "outcomes": {
+        "ok": 432,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 432,
+        "p50": 2.9022919999999885,
+        "p95": 5.26024999999936,
+        "p99": 57.29500000000553,
+        "min": 1.8375000000014552,
+        "max": 99.36029100000087
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 11296,
+        "max": 11296,
+        "reported": 432
+      },
+      "statements": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "statementMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "cacheControl": "s-maxage=3600, stale-while-revalidate=601200",
+      "cacheStatuses": {
+        "HIT": 432
+      },
+      "errors": {}
+    }
+  ],
+  "pool": {
+    "samples": 150,
+    "failedSamples": 0,
+    "maxWaiting": 0,
+    "maxTotal": 2,
+    "waitingSeries": [
+      [
+        0.1,
+        0
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        7,
+        0
+      ],
+      [
+        8,
+        0
+      ],
+      [
+        9,
+        0
+      ],
+      [
+        10,
+        0
+      ],
+      [
+        11,
+        0
+      ],
+      [
+        12,
+        0
+      ],
+      [
+        13,
+        0
+      ],
+      [
+        14,
+        0
+      ],
+      [
+        15,
+        0
+      ],
+      [
+        16,
+        0
+      ],
+      [
+        17,
+        0
+      ],
+      [
+        18,
+        0
+      ],
+      [
+        19,
+        0
+      ],
+      [
+        20,
+        0
+      ],
+      [
+        21,
+        0
+      ],
+      [
+        22,
+        0
+      ],
+      [
+        23,
+        0
+      ],
+      [
+        24,
+        0
+      ],
+      [
+        25,
+        0
+      ],
+      [
+        26,
+        0
+      ],
+      [
+        27,
+        0
+      ],
+      [
+        28,
+        0
+      ],
+      [
+        29,
+        0
+      ],
+      [
+        30,
+        0
+      ],
+      [
+        31,
+        0
+      ],
+      [
+        32,
+        0
+      ],
+      [
+        33,
+        0
+      ],
+      [
+        34,
+        0
+      ],
+      [
+        35,
+        0
+      ],
+      [
+        36,
+        0
+      ],
+      [
+        37,
+        0
+      ],
+      [
+        38,
+        0
+      ],
+      [
+        39,
+        0
+      ],
+      [
+        40,
+        0
+      ],
+      [
+        41,
+        0
+      ],
+      [
+        42,
+        0
+      ],
+      [
+        43,
+        0
+      ],
+      [
+        44,
+        0
+      ],
+      [
+        45,
+        0
+      ],
+      [
+        46,
+        0
+      ],
+      [
+        47,
+        0
+      ],
+      [
+        48,
+        0
+      ],
+      [
+        49,
+        0
+      ],
+      [
+        50,
+        0
+      ],
+      [
+        51,
+        0
+      ],
+      [
+        52,
+        0
+      ],
+      [
+        53,
+        0
+      ],
+      [
+        54,
+        0
+      ],
+      [
+        55,
+        0
+      ],
+      [
+        56,
+        0
+      ],
+      [
+        57,
+        0
+      ],
+      [
+        58.1,
+        0
+      ],
+      [
+        59.1,
+        0
+      ],
+      [
+        60,
+        0
+      ],
+      [
+        61.1,
+        0
+      ],
+      [
+        62.1,
+        0
+      ],
+      [
+        63.1,
+        0
+      ],
+      [
+        64.1,
+        0
+      ],
+      [
+        65.1,
+        0
+      ],
+      [
+        66.1,
+        0
+      ],
+      [
+        67.1,
+        0
+      ],
+      [
+        68.1,
+        0
+      ],
+      [
+        69.1,
+        0
+      ],
+      [
+        70.1,
+        0
+      ],
+      [
+        71.1,
+        0
+      ],
+      [
+        72.1,
+        0
+      ],
+      [
+        73.1,
+        0
+      ],
+      [
+        74.1,
+        0
+      ],
+      [
+        75.1,
+        0
+      ],
+      [
+        76.1,
+        0
+      ],
+      [
+        77.1,
+        0
+      ],
+      [
+        78.1,
+        0
+      ],
+      [
+        79.1,
+        0
+      ],
+      [
+        80.1,
+        0
+      ],
+      [
+        81.1,
+        0
+      ],
+      [
+        82.1,
+        0
+      ],
+      [
+        83.1,
+        0
+      ],
+      [
+        84.1,
+        0
+      ],
+      [
+        85.1,
+        0
+      ],
+      [
+        86.1,
+        0
+      ],
+      [
+        87.1,
+        0
+      ],
+      [
+        88.1,
+        0
+      ],
+      [
+        89.1,
+        0
+      ],
+      [
+        90.1,
+        0
+      ],
+      [
+        91.1,
+        0
+      ],
+      [
+        92.1,
+        0
+      ],
+      [
+        93.1,
+        0
+      ],
+      [
+        94.1,
+        0
+      ],
+      [
+        95.1,
+        0
+      ],
+      [
+        96.1,
+        0
+      ],
+      [
+        97.1,
+        0
+      ],
+      [
+        98.1,
+        0
+      ],
+      [
+        99.1,
+        0
+      ],
+      [
+        100.1,
+        0
+      ],
+      [
+        101.1,
+        0
+      ],
+      [
+        102.1,
+        0
+      ],
+      [
+        103.1,
+        0
+      ],
+      [
+        104.1,
+        0
+      ],
+      [
+        105.1,
+        0
+      ],
+      [
+        106.1,
+        0
+      ],
+      [
+        107.1,
+        0
+      ],
+      [
+        108.1,
+        0
+      ],
+      [
+        109.1,
+        0
+      ],
+      [
+        110.1,
+        0
+      ],
+      [
+        111.1,
+        0
+      ],
+      [
+        112.1,
+        0
+      ],
+      [
+        113.1,
+        0
+      ],
+      [
+        114.1,
+        0
+      ],
+      [
+        115.1,
+        0
+      ],
+      [
+        116.1,
+        0
+      ],
+      [
+        117.1,
+        0
+      ],
+      [
+        118.1,
+        0
+      ],
+      [
+        119.1,
+        0
+      ],
+      [
+        120.1,
+        0
+      ],
+      [
+        121.1,
+        0
+      ],
+      [
+        122.1,
+        0
+      ],
+      [
+        123.1,
+        0
+      ],
+      [
+        124.1,
+        0
+      ],
+      [
+        125.1,
+        0
+      ],
+      [
+        126.1,
+        0
+      ],
+      [
+        127.1,
+        0
+      ],
+      [
+        128.1,
+        0
+      ],
+      [
+        129.1,
+        0
+      ],
+      [
+        130.1,
+        0
+      ],
+      [
+        131.1,
+        0
+      ],
+      [
+        132.1,
+        0
+      ],
+      [
+        133.1,
+        0
+      ],
+      [
+        134.1,
+        0
+      ],
+      [
+        135.1,
+        0
+      ],
+      [
+        136.1,
+        0
+      ],
+      [
+        137.1,
+        0
+      ],
+      [
+        138.1,
+        0
+      ],
+      [
+        139.1,
+        0
+      ],
+      [
+        140.1,
+        0
+      ],
+      [
+        141.1,
+        0
+      ],
+      [
+        142.1,
+        0
+      ],
+      [
+        143.1,
+        0
+      ],
+      [
+        144.1,
+        0
+      ],
+      [
+        145.1,
+        0
+      ],
+      [
+        146.1,
+        0
+      ],
+      [
+        147.1,
+        0
+      ],
+      [
+        148.1,
+        0
+      ],
+      [
+        149.1,
+        0
+      ]
+    ],
+    "scope": "single-process"
+  },
+  "aborted": null
+}

@@ -1,4 +1,5 @@
 import { config } from '@/lib/config'
+import { renderHeaders } from '@/lib/cache/public-cache'
 
 export type LocationMenuCity = {
   locationKey: string
@@ -22,7 +23,7 @@ export type LocationMenuResponse = {
 export async function fetchLocationMenu(): Promise<LocationMenuResponse> {
   const url = `${config.backendUrl}/api/public/locations/menu`
   const res = await fetch(url, {
-    headers: { Accept: 'application/json' },
+    headers: { Accept: 'application/json', ...renderHeaders() },
   })
 
   if (!res.ok) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import config from '@/payload.config'
+import { publicRead } from '@/shared/http/public-read'
 import { DEFAULT_LANG, isSupportedLang } from '@/shared/i18n/languageField'
 import {
   serializeArticleByCollection,
@@ -60,36 +61,39 @@ export async function GET(req: NextRequest) {
     const collection: ArticleCollectionSlug = TYPE_TO_COLLECTION[typeParam]
     const payload = await getPayload({ config })
 
-    const result = await payload.find({
-      collection,
-      where: {
-        and: [
-          { slug: { equals: slug } },
-          { status: { equals: 'published' } },
-          { language: { equals: lang } },
-        ],
-      },
-      limit: 1,
-      depth: 2,
-      overrideAccess: true,
-    })
+    // Rate limit, admission, counting and cache headers: shared/http/public-read.ts.
+    return await publicRead({ req, scope: 'articleRead', payload }, async () => {
+      const result = await payload.find({
+        collection,
+        where: {
+          and: [
+            { slug: { equals: slug } },
+            { status: { equals: 'published' } },
+            { language: { equals: lang } },
+          ],
+        },
+        limit: 1,
+        depth: 2,
+        overrideAccess: true,
+      })
 
-    if (result.totalDocs === 0) return notFound()
+      if (result.totalDocs === 0) return notFound()
 
-    const article = result.docs[0] as unknown as Record<string, unknown>
+      const article = result.docs[0] as unknown as Record<string, unknown>
 
-    if (scope.kind !== 'global') {
-      const locationKey = typeof article.location === 'string' ? article.location : ''
-      const expectedKey = scope.kind === 'country' ? scope.country : `${scope.country}|${scope.city}`
-      if (locationKey !== expectedKey && !locationKey.startsWith(`${expectedKey}|`)) {
-        return notFound()
+      if (scope.kind !== 'global') {
+        const locationKey = typeof article.location === 'string' ? article.location : ''
+        const expectedKey = scope.kind === 'country' ? scope.country : `${scope.country}|${scope.city}`
+        if (locationKey !== expectedKey && !locationKey.startsWith(`${expectedKey}|`)) {
+          return notFound()
+        }
       }
-    }
 
-    await serializeArticleByCollection(collection, article, payload)
-    gatePublicArticle(collection, article)
+      await serializeArticleByCollection(collection, article, payload)
+      gatePublicArticle(collection, article)
 
-    return NextResponse.json(article)
+      return NextResponse.json(article)
+    })
   } catch (error) {
     const message = error instanceof Error && error.message ? error.message : 'Failed to load article.'
     return NextResponse.json({ message }, { status: 500 })

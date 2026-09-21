@@ -1,5 +1,6 @@
 import { config } from '@/lib/config'
 import { DEFAULT_LOCALE } from '@/lib/i18n/locales'
+import { renderHeaders } from '@/lib/cache/public-cache'
 
 /**
  * The one build-time read of every public URL, shared by the
@@ -57,7 +58,7 @@ async function loadPublicUrlIndex(): Promise<PublicUrlIndex> {
 
   let data: SitemapEntriesResponse
   try {
-    const res = await fetch(url, { cache: 'no-store' })
+    const res = await fetch(url, { cache: 'no-store', headers: renderHeaders() })
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
     data = (await res.json()) as SitemapEntriesResponse
   } catch (error) {
