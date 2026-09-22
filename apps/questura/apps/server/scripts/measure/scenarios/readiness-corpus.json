@@ -1,0 +1,59 @@
+{
+  "name": "readiness-corpus",
+  "description": "Public reads whose cost is a function of how much content exists, measured against the synthetic corpus (L14). Every step but the last is scoped to the zz-readiness country so its cost scales with the corpus; the last is a real Lima read held fixed as a control, so a change there means the measurement drifted rather than the corpus mattering.",
+  "iterations": [
+    {
+      "name": "corpus-sensitive reads",
+      "steps": [
+        {
+          "name": "sitemap (every public URL)",
+          "target": "server",
+          "path": "/api/public/sitemap-entries?lang=en",
+          "expect": { "body": "json", "minBytes": 1000 }
+        },
+        {
+          "name": "country cities",
+          "target": "server",
+          "path": "/api/public/countries/zz-readiness/cities",
+          "expect": { "body": "json", "minBytes": 20 }
+        },
+        {
+          "name": "article index, one city",
+          "target": "server",
+          "path": "/api/public/articles/index?scope=city&country=zz-readiness&city=city-0000&type=articles&lang=en&page=1&pageSize=20",
+          "expect": { "body": "json", "minBytes": 100 }
+        },
+        {
+          "name": "article index, whole country",
+          "target": "server",
+          "path": "/api/public/articles/index?scope=country&country=zz-readiness&type=articles&lang=en&page=1&pageSize=20",
+          "expect": { "body": "json", "minBytes": 100 }
+        },
+        {
+          "name": "search",
+          "target": "server",
+          "path": "/api/public/articles/search?q=readiness&lang=en",
+          "expect": { "body": "json", "minBytes": 20 }
+        },
+        {
+          "name": "locations menu",
+          "target": "server",
+          "path": "/api/public/locations/menu?lang=en",
+          "expect": { "body": "json", "minBytes": 20 }
+        },
+        {
+          "name": "location search",
+          "target": "server",
+          "path": "/api/public/locations/search?q=city&lang=en",
+          "expect": { "body": "json", "minBytes": 20 }
+        },
+        {
+          "name": "control: real Lima city page",
+          "target": "server",
+          "path": "/api/public/location-homepages/peru/lima",
+          "expect": { "body": "json", "minBytes": 2000 }
+        }
+      ]
+    }
+  ]
+}

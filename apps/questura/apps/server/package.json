@@ -48,6 +48,12 @@
     "verify:refresh-outbox": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/verify-refresh-outbox.ts",
     "readiness": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/cli.ts",
     "readiness:publish": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/publish-e2e.ts",
+    "readiness:corpus": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/corpus.ts",
+    "readiness:fanout": "cross-env NODE_OPTIONS=\"--no-deprecation --expose-gc\" tsx scripts/readiness/fanout-memory.ts",
+    "readiness:serving": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/serving-fleet.ts",
+    "readiness:frontend-cache": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/frontend-cache.ts",
+    "readiness:corpus-baseline": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/corpus-baseline.ts",
+    "readiness:publish-under-load": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/publish-under-load.ts",
     "readiness:collect": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/collect.ts",
     "readiness:fleet": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/fleet-rehearsal.ts",
     "readiness:restore": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/restore-rehearsal.ts"

@@ -98,7 +98,41 @@ pnpm measure:api -- --base http://localhost:4100 --json ../../docs/capacity/runs
 ```
 
 The client builds the same way (`NEXT_DIST_DIR=.next-capacity`,
-`NEXT_PUBLIC_BACKEND_URL=http://localhost:4100`, `next start -p 3100`).
+`NEXT_PUBLIC_BACKEND_URL=http://localhost:4100`, `next start -p 3100`) —
+**but the backend has to be running first.** The client build pre-renders
+every public URL (PR #604) and fails with `Could not read public URLs from
+…/api/public/sitemap-entries` if nothing answers. Build the server, start it
+on 4100, then build the client.
+
+Both builds rewrite their `tsconfig.json` include list. `git checkout -- tsconfig.json`
+in each app afterwards.
+
+## The readiness harnesses that need those builds
+
+Four of the readiness scripts drive real production processes rather than a
+Payload instance, and they all expect `.next-readiness` (the default; override
+with `NEXT_DIST_DIR`) plus a Redis on 6390.
+
+```bash
+cd apps/questura/apps/server
+export READINESS_DATABASE_URI="postgres://$USER@127.0.0.1:5432/questura_readiness_scratch"
+
+pnpm readiness:fanout            # L03: fan-out cost at 250 → 16,000 articles
+pnpm readiness:serving           # L12: two serving processes behind a proxy
+pnpm readiness:frontend-cache    # L05: the page a reader actually gets
+pnpm readiness:corpus -- build large    # L14: a deterministic synthetic corpus
+pnpm readiness:corpus-baseline   # L14: the same reads at three corpus sizes
+pnpm readiness:publish-under-load   # L14: publishing while people are reading
+```
+
+`readiness:serving` owns 4100/4101/4102 and `readiness:frontend-cache` owns
+4100/3100; both refuse to start if a port is already serving, because a
+leftover process from a crashed run otherwise gets measured in place of the
+one the script started.
+
+`readiness:corpus-baseline` needs a backend already running on 4100 — it
+rebuilds the corpus between measurements and drives the existing
+`scripts/measure` harness against it.
 
 ## Prewarming campaign pages
 

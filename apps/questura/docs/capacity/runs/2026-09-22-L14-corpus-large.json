@@ -1,0 +1,521 @@
+{
+  "meta": {
+    "takenAt": "2026-09-22T14:17:09.125Z",
+    "sha": "0307b0c5-dirty",
+    "scenario": "readiness-corpus",
+    "scenarioDescription": "Public reads whose cost is a function of how much content exists, measured against the synthetic corpus (L14). Every step but the last is scoped to the zz-readiness country so its cost scales with the corpus; the last is a real Lima read held fixed as a control, so a change there means the measurement drifted rather than the corpus mattering.",
+    "node": "v24.15.0",
+    "generatorHost": "darwin arm64 8 cpus",
+    "label": null,
+    "warmupSamples": 8,
+    "poolScope": "unavailable"
+  },
+  "args": {
+    "base": "http://127.0.0.1:4100",
+    "client": "http://localhost:3000",
+    "origin": "http://localhost:3000",
+    "scenario": "readiness-corpus",
+    "mode": "closed",
+    "cache": "warm",
+    "runs": 12,
+    "concurrent": 1,
+    "warmup": 1,
+    "timeoutMs": 15000,
+    "rate": 5,
+    "durationS": 30,
+    "maxInFlight": 200,
+    "abortErrorRate": 1,
+    "abortMinSamples": 50,
+    "jsonPath": "/Users/alanmalpartida/Desktop/questurian/apps/questura/docs/capacity/runs/2026-09-22-L14-corpus-large.json",
+    "htmlPath": "",
+    "label": ""
+  },
+  "throughput": {
+    "offered": 96,
+    "started": 96,
+    "dropped": 0,
+    "completedRequests": 96,
+    "okRequests": 96,
+    "elapsedS": 6.952390916000001,
+    "offeredPerS": 13.808199389230085,
+    "completedPerS": 13.808199389230085,
+    "okPerS": 13.808199389230085,
+    "lateness": {
+      "n": 96,
+      "p50": 0,
+      "p95": 0,
+      "p99": 0,
+      "min": 0,
+      "max": 0
+    },
+    "generatorSaturated": false
+  },
+  "steps": [
+    {
+      "step": "sitemap (every public URL)",
+      "measured": 12,
+      "outcomes": {
+        "ok": 12,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 12,
+        "p50": 374.58000000000015,
+        "p95": 394.1837909999999,
+        "p99": 394.1837909999999,
+        "min": 363.64029100000016,
+        "max": 394.1837909999999
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 880004,
+        "max": 880004,
+        "reported": 12
+      },
+      "statements": {
+        "median": 29,
+        "max": 29,
+        "reported": 12
+      },
+      "statementMs": {
+        "median": 155,
+        "max": 177,
+        "reported": 12
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 0,
+        "max": 4,
+        "reported": 12
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "country cities",
+      "measured": 12,
+      "outcomes": {
+        "ok": 12,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 12,
+        "p50": 5.407583000000159,
+        "p95": 7.197667000000365,
+        "p99": 7.197667000000365,
+        "min": 4.798749999999927,
+        "max": 7.197667000000365
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 7373,
+        "max": 7373,
+        "reported": 12
+      },
+      "statements": {
+        "median": 4,
+        "max": 4,
+        "reported": 12
+      },
+      "statementMs": {
+        "median": 2,
+        "max": 3,
+        "reported": 12
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 0,
+        "max": 0,
+        "reported": 12
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "article index, one city",
+      "measured": 12,
+      "outcomes": {
+        "ok": 12,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 12,
+        "p50": 15.9004589999995,
+        "p95": 22.453625000000102,
+        "p99": 22.453625000000102,
+        "min": 13.128541000000041,
+        "max": 22.453625000000102
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 4555,
+        "max": 4555,
+        "reported": 12
+      },
+      "statements": {
+        "median": 2,
+        "max": 2,
+        "reported": 12
+      },
+      "statementMs": {
+        "median": 11,
+        "max": 19,
+        "reported": 12
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 0,
+        "max": 0,
+        "reported": 12
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "article index, whole country",
+      "measured": 12,
+      "outcomes": {
+        "ok": 12,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 12,
+        "p50": 24.88929199999984,
+        "p95": 30.016625000000204,
+        "p99": 30.016625000000204,
+        "min": 21.50079199999982,
+        "max": 30.016625000000204
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 4551,
+        "max": 4551,
+        "reported": 12
+      },
+      "statements": {
+        "median": 2,
+        "max": 2,
+        "reported": 12
+      },
+      "statementMs": {
+        "median": 14,
+        "max": 24,
+        "reported": 12
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 0,
+        "max": 0,
+        "reported": 12
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "search",
+      "measured": 12,
+      "outcomes": {
+        "ok": 12,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 12,
+        "p50": 26.99133299999994,
+        "p95": 33.699540999999954,
+        "p99": 33.699540999999954,
+        "min": 17.01525000000038,
+        "max": 33.699540999999954
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 2698,
+        "max": 2698,
+        "reported": 12
+      },
+      "statements": {
+        "median": 10,
+        "max": 10,
+        "reported": 12
+      },
+      "statementMs": {
+        "median": 11,
+        "max": 16,
+        "reported": 12
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 0,
+        "max": 1,
+        "reported": 12
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "locations menu",
+      "measured": 12,
+      "outcomes": {
+        "ok": 12,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 12,
+        "p50": 38.0142079999996,
+        "p95": 72.31137500000023,
+        "p99": 72.31137500000023,
+        "min": 37.36754199999996,
+        "max": 72.31137500000023
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 19776,
+        "max": 19776,
+        "reported": 12
+      },
+      "statements": {
+        "median": 4,
+        "max": 4,
+        "reported": 12
+      },
+      "statementMs": {
+        "median": 3,
+        "max": 5,
+        "reported": 12
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 0,
+        "max": 0,
+        "reported": 12
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "location search",
+      "measured": 12,
+      "outcomes": {
+        "ok": 12,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 12,
+        "p50": 4.1177910000005795,
+        "p95": 4.766000000000531,
+        "p99": 4.766000000000531,
+        "min": 3.3287090000003445,
+        "max": 4.766000000000531
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 3975,
+        "max": 3975,
+        "reported": 12
+      },
+      "statements": {
+        "median": 2,
+        "max": 2,
+        "reported": 12
+      },
+      "statementMs": {
+        "median": 2,
+        "max": 3,
+        "reported": 12
+      },
+      "reads": {
+        "median": null,
+        "max": null,
+        "reported": 0
+      },
+      "poolWaitMs": {
+        "median": 0,
+        "max": 0,
+        "reported": 12
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    },
+    {
+      "step": "control: real Lima city page",
+      "measured": 12,
+      "outcomes": {
+        "ok": 12,
+        "throttled": 0,
+        "client-error": 0,
+        "server-error": 0,
+        "invalid-body": 0,
+        "timeout": 0,
+        "transport": 0
+      },
+      "failureRate": 0,
+      "okLatency": {
+        "n": 12,
+        "p50": 79.06812499999978,
+        "p95": 91.57562499999949,
+        "p99": 91.57562499999949,
+        "min": 72.58929099999932,
+        "max": 91.57562499999949
+      },
+      "failedLatency": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "min": null,
+        "max": null
+      },
+      "bytes": {
+        "median": 56251,
+        "max": 56251,
+        "reported": 12
+      },
+      "statements": {
+        "median": 171,
+        "max": 171,
+        "reported": 12
+      },
+      "statementMs": {
+        "median": 352,
+        "max": 393,
+        "reported": 12
+      },
+      "reads": {
+        "median": 17,
+        "max": 17,
+        "reported": 12
+      },
+      "poolWaitMs": {
+        "median": 4,
+        "max": 6,
+        "reported": 12
+      },
+      "cacheControl": "public, s-maxage=60, stale-while-revalidate=600",
+      "cacheStatuses": {},
+      "errors": {}
+    }
+  ],
+  "pool": null,
+  "aborted": null
+}
