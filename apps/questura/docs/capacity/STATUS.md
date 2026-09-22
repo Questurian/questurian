@@ -55,7 +55,7 @@ implemented and merged. Full state, evidence and what is still owed:
 | L06 mount bounds, anonymous GraphQL closed | implemented locally | `runs/2026-09-22-L14-readiness-baseline.md` |
 | L07 ingress stage, Redis breaker, private budget | implemented locally | same |
 | L08 cache freshness contract | implemented locally; full-route limit is H03 | `cache-contract.md` |
-| L09 Cloudflare adapter | **blocked on tooling** (dependency not approved) | `../../apps/client/cloudflare/README.md` |
+| L09 Cloudflare adapter | implemented locally; Worker built and previewed | `runs/2026-09-22-L09-cloudflare-adapter.md` |
 | L10 fleet contract | implemented locally | `pnpm test:int` |
 | L11 per-instance evidence | implemented locally | `runs/2026-09-22-L14-readiness-baseline.md` |
 | L12 multi-process rehearsal | implemented locally; **serving-process half owed** | `runs/2026-09-22-L12-fleet-rehearsal.md` |
@@ -76,7 +76,11 @@ Four findings worth reading even if nothing else is:
    tests, typecheck and lint. A build job now runs.
 4. All four OpenNext cache components are required, not optional; without the
    tag cache and cache purge, publishing drains clean and the site stays
-   stale.
+   stale. Declaring the binding is not enough — `cachePurge` must be wired in
+   `open-next.config.ts` as well.
+5. Next 15.4.11 pins `@opennextjs/cloudflare` at **1.18.1**; 1.19.0 raises the
+   Next floor to 15.5.15. Both pins are exact so an install cannot drift past
+   it.
 
 Starting SHA: `d948bcfb` (main, 2026-09-21).
 
