@@ -1,6 +1,6 @@
 import { config } from '@/lib/config'
 import { publicCacheTags, publicFetchOptions } from '@/lib/cache/public-cache'
-import { LastGood } from '@/lib/cache/lastGood'
+import { LastGood, validatedAtFrom } from '@/lib/cache/lastGood'
 import { readPublicResponse } from '@/lib/cache/readPublicResponse'
 import type { CityHomepageResponse } from '../types'
 
@@ -8,9 +8,12 @@ import type { CityHomepageResponse } from '../types'
 const lastGoodHomepages = new LastGood()
 
 function logFallback(what: string) {
-  return (error: unknown, ageMs: number) => {
+  return (error: unknown, info: { ageMs: number; served: number }) => {
+    // The age reported is the origin's, not this process's. A fetch served
+    // out of Next's data cache used to reset the clock and make an old page
+    // look freshly validated.
     console.warn(
-      `[public-cache] serving last good ${what} (${Math.round(ageMs / 1000)}s old):`,
+      `[public-cache] serving last good ${what} (origin confirmed ${Math.round(info.ageMs / 1000)}s ago, ${info.served} served this process):`,
       error instanceof Error ? error.message : error,
     )
   }
@@ -29,7 +32,10 @@ export async function fetchCityHomepage(
         publicCacheTags.sitemap(),
       ]),
     )
-    return readPublicResponse<CityHomepageResponse>(res, 'city homepage')
+    return {
+      value: await readPublicResponse<CityHomepageResponse>(res, 'city homepage'),
+      validatedAt: validatedAtFrom(res),
+    }
   }, logFallback(`city homepage ${country}/${city}`))
 }
 
@@ -47,6 +53,9 @@ export async function fetchNeighborhoodHomepage(
         publicCacheTags.sitemap(),
       ]),
     )
-    return readPublicResponse<CityHomepageResponse>(res, 'neighborhood homepage')
+    return {
+      value: await readPublicResponse<CityHomepageResponse>(res, 'neighborhood homepage'),
+      validatedAt: validatedAtFrom(res),
+    }
   }, logFallback(`neighborhood homepage ${country}/${city}/${neighborhood}`))
 }
