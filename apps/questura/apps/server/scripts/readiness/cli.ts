@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 
 import {
+  copyDatabase,
   createSandboxDatabase,
   dropSandboxDatabase,
   sandboxDatabaseName,
@@ -52,13 +53,29 @@ async function main(): Promise<void> {
     return
   }
 
+  if (command === 'copy-from') {
+    // A working copy with a real schema and a real corpus.
+    //
+    // The migration chain cannot build a database from empty — its earliest
+    // migration assumes tables that predate the chain — so a usable sandbox
+    // has to start from a dump of a database that already has the schema.
+    // That is also true of the first database in any new hosted environment,
+    // which is an L15 restore constraint, not a local inconvenience.
+    const source = process.argv[3]
+    if (!source) throw new Error('Usage: pnpm readiness copy-from <source-database-name>')
+    assertPreflight(settings)
+    await copyDatabase(source)
+    console.log(`Copied ${source} into ${sandboxDatabaseName()}. The copy is disposable; the source was only read.`)
+    return
+  }
+
   if (command === 'manifest') {
     writeManifest(settings)
     console.log(`Wrote ${MANIFEST_PATH}`)
     return
   }
 
-  throw new Error(`Unknown command "${command}". Use check, up, down or manifest.`)
+  throw new Error(`Unknown command "${command}". Use check, up, copy-from, down or manifest.`)
 }
 
 function writeManifest(settings: ReturnType<typeof sandboxSettings>): void {
