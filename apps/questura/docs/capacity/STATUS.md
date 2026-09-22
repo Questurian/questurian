@@ -36,7 +36,47 @@ find bottlenecks and price the code; they do not say what a platform can carry.
 | CAP-05 Cold query amplification | implemented locally | `runs/2026-09-21-cap05-*` |
 | CAP-06 Durable refresh, safe startup | implemented locally; platform scheduler owed to CAP-07 | `pnpm verify:refresh-outbox` |
 | CAP-07 Platform, recovery, cost | blocked: stack chosen in principle (§1a); D3–D6 open; nothing provisioned | `cap07-platform-readiness.md` |
-| CAP-08 Capacity proof | blocked: needs CAP-07 target; scripts ready and smoke-run locally | `cap08-proof-matrix.md`, `load/k6/` |
+| CAP-08 Capacity proof | blocked: needs CAP-07 target; scripts ready, and their gates now proven able to fail (L13) | `cap08-proof-matrix.md`, `load/k6/` |
+
+## Local readiness series (L00–L15), 2026-09-22
+
+Sixteen tasks from [`local-readiness-plan.html`](local-readiness-plan.html),
+implemented and merged. Full state, evidence and what is still owed:
+[`local-readiness-handoff.md`](local-readiness-handoff.md).
+
+| Task | Status | Evidence |
+|---|---|---|
+| L00 disposable sandbox | implemented locally | `runs/readiness-sandbox.json` |
+| L01 publication atomicity | implemented locally | `runs/2026-09-22-L05-publish-end-to-end.md` |
+| L02 worker fencing (+ migration) | implemented locally | `runs/2026-09-22-L02-worker-fencing.md` |
+| L03 bounded fan-out | implemented locally; large-corpus memory not measured | unit tests |
+| L04 worker lifecycle and readiness | implemented locally | `runs/2026-09-22-L14-readiness-baseline.md` |
+| L05 publish chain end to end | implemented locally; **frontend page cache owed** | `runs/2026-09-22-L05-publish-end-to-end.md` |
+| L06 mount bounds, anonymous GraphQL closed | implemented locally | `runs/2026-09-22-L14-readiness-baseline.md` |
+| L07 ingress stage, Redis breaker, private budget | implemented locally | same |
+| L08 cache freshness contract | implemented locally; full-route limit is H03 | `cache-contract.md` |
+| L09 Cloudflare adapter | **blocked on tooling** (dependency not approved) | `../../apps/client/cloudflare/README.md` |
+| L10 fleet contract | implemented locally | `pnpm test:int` |
+| L11 per-instance evidence | implemented locally | `runs/2026-09-22-L14-readiness-baseline.md` |
+| L12 multi-process rehearsal | implemented locally; **serving-process half owed** | `runs/2026-09-22-L12-fleet-rehearsal.md` |
+| L13 proof gates that can fail | implemented locally | `runs/2026-09-22-L13-negative-controls.md` |
+| L14 local baseline | implemented locally; corpus is 25 articles | `runs/2026-09-22-L14-readiness-baseline.md` |
+| L15 restore and handoff | implemented locally | `pnpm readiness:restore` 10/10 |
+
+**Still not "verified on target".** Every number above is from a Mac.
+
+Four findings worth reading even if nothing else is:
+
+1. `pnpm db:migrate` **cannot build a Questura database from empty** — the
+   first database in any new hosted environment has to come from a dump.
+2. The fencing migration's rollout must **stop the drains** during the
+   old/new overlap, or an old-release worker can still finish a new worker's
+   claim.
+3. CI did not run a production build, and a build-breaking change passed
+   tests, typecheck and lint. A build job now runs.
+4. All four OpenNext cache components are required, not optional; without the
+   tag cache and cache purge, publishing drains clean and the site stays
+   stale.
 
 Starting SHA: `d948bcfb` (main, 2026-09-21).
 

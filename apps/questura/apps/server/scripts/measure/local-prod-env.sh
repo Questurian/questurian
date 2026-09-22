@@ -40,6 +40,17 @@ export DATABASE_MAX_CONNECTIONS="${DATABASE_MAX_CONNECTIONS:-100}"
 export APP_PROCESS_COUNT=2
 export APP_ROLLOUT_SURGE=0
 export APP_JOB_PROCESS_COUNT=0
+# Publishing configuration is required in production (L01): a boot with no
+# revalidation destination or secret would drain its refresh queue clean while
+# every page went stale, so it is refused. These are placeholders — the
+# destination does not exist, which is correct for a read-only measurement,
+# and the outbox worker is off below so nothing tries to deliver to it.
+export QUESTURA_CLIENT_URL=https://capacity-client.invalid
+export QUESTURA_REVALIDATION_SECRET="$(openssl rand -hex 32)"
+# No drains during a measurement: a background worker would add connections
+# and statements the run did not ask for.
+export REFRESH_WORKER_INTERVAL_MS=0
+
 # Diagnostics are refused by header in production; the operator switch turns
 # them on for this process so Server-Timing reaches the harness.
 export PUBLIC_API_DIAGNOSTICS=1

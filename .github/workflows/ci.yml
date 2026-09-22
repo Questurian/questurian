@@ -70,6 +70,52 @@ jobs:
       - name: Unit tests
         run: pnpm --dir apps/questura/apps/server run test:int
 
+  questura-server-build:
+    name: Questura server build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @questura/server...
+
+      # A green test run, a clean typecheck and a green lint all passed while
+      # `next build` was broken: `instrumentation.ts` was rewritten to use an
+      # early return instead of wrapping its body in a
+      # `NEXT_RUNTIME === 'nodejs'` block, which left Payload's config
+      # reachable from the *edge* bundle and made it try to resolve `crypto`,
+      # `fs` and `path`. Nothing but the build says so, so the build runs.
+      #
+      # Placeholders only. Nothing here connects to anything: the build needs
+      # these variables to exist because module scope reads them, not because
+      # it uses them.
+      - name: Production build
+        env:
+          NODE_ENV: production
+          DATABASE_URI: postgres://build:build@127.0.0.1:5432/build
+          DATABASE_URI_UNPOOLED: postgres://build:build@127.0.0.1:5432/build
+          PAYLOAD_SECRET: ci-build-placeholder-not-a-secret-00000000
+          BETTER_AUTH_SECRET: ci-build-placeholder-not-a-secret-11111111
+          # Page-data collection evaluates module scope, and the visitor-auth
+          # module refuses to load in production without this. Nothing
+          # connects: no Redis is started for this job.
+          REDIS_URL: redis://127.0.0.1:6390
+          NEXT_DIST_DIR: .next-ci
+        run: pnpm --dir apps/questura/apps/server run build
+
+      # The build rewrites the tsconfig include list, which is expected and
+      # not committed. A change under `src/` would mean the build rewrote
+      # source, which is worth knowing about.
+      - name: The build did not rewrite source
+        run: git diff --exit-code -- apps/questura/apps/server/src
+
   questura-client:
     name: Questura client tests
     runs-on: ubuntu-latest
