@@ -295,4 +295,147 @@ describe.skipIf(!available)('refresh worker fencing', () => {
       holder.release()
     }
   })
+
+  // ---------------------------------------------------------------------------
+  // Surge plan L06 (discovery finding 8): claims happen just in time.
+  // ---------------------------------------------------------------------------
+
+  async function statuses(): Promise<Record<string, number>> {
+    const result = await pool.query(`SELECT status, count(*)::int AS n FROM refresh_jobs GROUP BY status`)
+    return Object.fromEntries((result.rows as Array<{ status: string; n: number }>).map((row) => [row.status, row.n]))
+  }
+
+  // Four slow jobs, one serial worker. The old drain leased all four at once,
+  // so the fourth spent its lease waiting behind three slow deliveries.
+  it('never holds a lease on a job it has not started', async () => {
+    for (let index = 0; index < 4; index += 1) await enqueue(`revalidate:slow-${index}`, [`slow-${index}`])
+    receiver.mode = { kind: 'hang', ms: 150 }
+
+    const draining = drainRefreshJobs(pool as never, { concurrency: 1 })
+    const samples: Array<Record<string, number>> = []
+    for (let i = 0; i < 6; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 60))
+      samples.push(await statuses())
+    }
+    const result = await draining
+
+    // At every sample at most one job was running; the rest were pending and
+    // unleased, free for any other worker.
+    for (const sample of samples) expect(sample.running ?? 0).toBeLessThanOrEqual(1)
+    expect(samples.some((sample) => (sample.pending ?? 0) >= 2)).toBe(true)
+    expect(result).toMatchObject({ claimed: 4, done: 4, superseded: 0, duplicateDeliveries: 0 })
+  })
+
+  // A second worker on its own connections takes the jobs the first has not
+  // started — possible only because they were never leased.
+  it('lets a second worker take work the first has not started', async () => {
+    for (let index = 0; index < 4; index += 1) await enqueue(`revalidate:share-${index}`, [`share-${index}`])
+    receiver.mode = { kind: 'hang', ms: 120 }
+
+    const second = sandboxPool(4, SCHEMA)
+    try {
+      const [a, b] = await Promise.all([
+        drainRefreshJobs(pool as never, { concurrency: 1 }),
+        (async () => {
+          await new Promise((resolve) => setTimeout(resolve, 30))
+          return drainRefreshJobs(second as never, { concurrency: 1 })
+        })(),
+      ])
+      expect(a.claimed).toBeGreaterThan(0)
+      expect(b.claimed).toBeGreaterThan(0)
+      expect(a.done + b.done).toBe(4)
+      expect(a.duplicateDeliveries + b.duplicateDeliveries).toBe(0)
+      expect(receiver.allTags().size).toBe(4)
+    } finally {
+      await second.end()
+    }
+  })
+
+  // Concurrency is real now: two slots mean two jobs in flight, not a batch
+  // of two worked one after the other.
+  it('runs `concurrency` jobs genuinely at once', async () => {
+    for (let index = 0; index < 4; index += 1) await enqueue(`revalidate:pair-${index}`, [`pair-${index}`])
+    receiver.mode = { kind: 'hang', ms: 200 }
+
+    const started = Date.now()
+    const result = await drainRefreshJobs(pool as never, { concurrency: 2 })
+    const elapsed = Date.now() - started
+
+    expect(result.done).toBe(4)
+    // Serial would take ~800 ms; two real slots take ~400.
+    expect(elapsed).toBeLessThan(700)
+  })
+
+  // Delivery that would outlive the lease is aborted and retried by this
+  // worker, rather than reclaimed by another while still running.
+  it('aborts a delivery past the job deadline and keeps the job retryable', async () => {
+    const id = await enqueue('revalidate:deadline', ['late'])
+    receiver.mode = { kind: 'hang', ms: 2_000 }
+
+    const started = Date.now()
+    const result = await drainRefreshJobs(pool as never, { jobDeadlineMs: 200 })
+
+    expect(Date.now() - started).toBeLessThan(1_500)
+    expect(result).toMatchObject({ claimed: 1, done: 0, retried: 1 })
+    const row = await job(id)
+    expect(row.status).toBe('pending')
+    expect(row.claim_token).toBeNull()
+  })
+
+  // The final chunk fails after the first succeeded: the job is not done, and
+  // the retry replays every chunk so the targets converge.
+  it('retries every chunk when the last one fails, then converges', async () => {
+    const tags = Array.from({ length: 150 }, (_, index) => `chunk-${index}`)
+    const id = await enqueue('revalidate:chunks', tags)
+    receiver.mode = { kind: 'fail-nth', nth: 2, status: 503 }
+
+    const first = await drainRefreshJobs(pool as never)
+    expect(first).toMatchObject({ done: 0, retried: 1 })
+    expect((await job(id)).status).toBe('pending')
+    expect(receiver.allTags().size).toBe(100)
+
+    await pool.query(`UPDATE refresh_jobs SET next_attempt_at = now() WHERE id = $1`, [id])
+    const second = await drainRefreshJobs(pool as never)
+    expect(second.done).toBe(1)
+    expect(receiver.allTags()).toEqual(new Set(tags))
+    expect((await job(id)).status).toBe('done')
+  })
+
+  // A newer publication lands while the old generation is being delivered:
+  // the stale completion is refused and counted as a duplicate delivery, and
+  // the same drain's next just-in-time claim picks up the newer generation.
+  it('delivers the newer generation when a save lands mid-delivery', async () => {
+    const id = await enqueue('revalidate:mid', ['gen-1'])
+    receiver.mode = { kind: 'hang', ms: 200 }
+
+    const draining = drainRefreshJobs(pool as never)
+    await new Promise((resolve) => setTimeout(resolve, 60))
+    await enqueue('revalidate:mid', ['gen-2'])
+    const first = await draining
+
+    expect(first).toMatchObject({ claimed: 2, done: 1, superseded: 1, duplicateDeliveries: 1 })
+    expect(receiver.deliveries.map((delivery) => delivery.tags[0])).toEqual(['gen-1', 'gen-2'])
+    const row = await job(id)
+    expect(row.status).toBe('done')
+    expect(Number(row.generation)).toBe(2)
+  })
+
+  // Shutdown mid-drain: the job in flight finishes, nothing new is claimed,
+  // and the rest stay pending for whoever runs next.
+  it('stops claiming mid-drain on shutdown and leaves the obligation', async () => {
+    for (let index = 0; index < 3; index += 1) await enqueue(`revalidate:term-${index}`, [`term-${index}`])
+    receiver.mode = { kind: 'hang', ms: 150 }
+
+    const { stopClaimingRefreshJobs, resumeClaimingRefreshJobs } = await import('@/features/refresh-outbox/worker')
+    const draining = drainRefreshJobs(pool as never)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    stopClaimingRefreshJobs()
+    try {
+      const result = await draining
+      expect(result).toMatchObject({ claimed: 1, done: 1, stoppedEarly: true })
+    } finally {
+      resumeClaimingRefreshJobs()
+    }
+    expect(await statuses()).toMatchObject({ done: 1, pending: 2 })
+  })
 })

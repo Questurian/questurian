@@ -35,7 +35,7 @@ async function main() {
     } else if (command === 'drain') {
       const total = { claimed: 0, done: 0, retried: 0, failed: 0, superseded: 0 }
       for (let round = 0; round < 100; round += 1) {
-        const result = await runDrain(pool, { maxJobs: 100, concurrency: 4 })
+        const result = await runDrain(pool, { maxJobs: 100 })
         for (const key of Object.keys(total) as Array<keyof typeof total>) total[key] += result[key]
         if (result.claimed === 0) break
       }

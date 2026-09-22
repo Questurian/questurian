@@ -27,6 +27,8 @@ export type ReceiverMode =
   | { kind: 'status'; status: number; body?: string }
   | { kind: 'hang'; ms: number }
   | { kind: 'close' }
+  /** Accept every request except the `nth` (1-based, counted since `reset`), which answers `status`. */
+  | { kind: 'fail-nth'; nth: number; status: number }
 
 export class FaultReceiver {
   readonly deliveries: Delivery[] = []
@@ -35,6 +37,8 @@ export class FaultReceiver {
   expectedSecret: string | null = null
 
   private server: Server | null = null
+  /** Requests received since `reset`, accepted or not. */
+  received = 0
 
   async listen(port = 0): Promise<number> {
     this.server = createServer((req, res) => {
@@ -64,6 +68,13 @@ export class FaultReceiver {
     }
 
     const mode = this.mode
+    this.received += 1
+
+    if (mode.kind === 'fail-nth' && this.received === mode.nth) {
+      res.writeHead(mode.status, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ error: `receiver failed request ${mode.nth}` }))
+      return
+    }
 
     if (mode.kind === 'close') {
       res.destroy()
@@ -112,6 +123,7 @@ export class FaultReceiver {
   reset(): void {
     this.deliveries.length = 0
     this.mode = { kind: 'ok' }
+    this.received = 0
   }
 
   async close(): Promise<void> {

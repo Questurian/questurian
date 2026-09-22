@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
   // a drain is already running, this joins it and reports its real result
   // rather than starting a second (features/refresh-outbox/lifecycle.ts).
   return NextResponse.json(
-    { drained: await runDrain(db, { maxJobs: 100, concurrency: 4 }), worker: workerHealth() },
+    { drained: await runDrain(db, { maxJobs: 100 }), worker: workerHealth() },
     { headers: NO_STORE },
   )
 }
