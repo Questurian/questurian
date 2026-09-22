@@ -1,0 +1,34 @@
+{
+  "createdAt": "2026-09-22T06:27:40.353Z",
+  "source": {
+    "sha": "c969a30bf055cf1339624677fae0e4490d5ce338",
+    "dirty": true,
+    "diffFingerprint": "9416bc91f807ac87"
+  },
+  "runtime": {
+    "node": "v24.15.0",
+    "platform": "darwin"
+  },
+  "dataset": {
+    "database": "questura_readiness",
+    "redisNamespace": "readiness:",
+    "seed": 20260922
+  },
+  "ports": {
+    "frontend": 3100,
+    "backend": 4100,
+    "redis": 6390
+  },
+  "settings": {
+    "databaseUri": "postgres://127.0.0.1:5432/questura_readiness",
+    "redisUri": "redis://127.0.0.1:6390",
+    "frontendUrl": "http://127.0.0.1:3100",
+    "backendUrl": "http://127.0.0.1:4100"
+  },
+  "cleanup": {
+    "owns": [
+      "postgres database questura_readiness",
+      "redis keys under readiness:"
+    ]
+  }
+}

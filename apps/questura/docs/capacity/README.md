@@ -63,6 +63,11 @@ k6 run -e CLIENT_URL=http://localhost:3100 -e BASE_URL=http://localhost:4100 \
   apps/questura/load/k6/campaign-readers.js
 ```
 
+Every k6 run names a workload manifest and refuses to start without one.
+The local readiness sandbox, the manifests, the rolling-window abort
+supervisor and the negative controls that prove each gate can fail are in
+[`local-readiness.md`](local-readiness.md).
+
 The Node harness is the source of truth for correctness classification; k6
 is for volume.
 

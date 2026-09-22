@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "name": "negative-control",
+  "client": "http://127.0.0.1:3199",
+  "backend": "http://127.0.0.1:3199",
+  "pages": [
+    {
+      "path": "/peru/lima",
+      "kind": "landing",
+      "expect": {
+        "status": 200,
+        "contains": "data-revision=\"lima-r7\"",
+        "excludes": "MEMBER-ONLY-BODY-TEXT",
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/peru/lima/guides/when-to-visit",
+      "kind": "article",
+      "expect": {
+        "status": 200,
+        "contains": "data-revision=\"lima-r7\"",
+        "excludes": "MEMBER-ONLY-BODY-TEXT",
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/old-lima",
+      "kind": "redirect",
+      "expect": { "status": 308, "location": "/peru/lima" }
+    }
+  ],
+  "cold": [],
+  "identity": {
+    "anonymous": { "authenticated": false, "member": false },
+    "signedIn": { "authenticated": true, "member": true }
+  }
+}
