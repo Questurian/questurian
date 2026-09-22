@@ -169,3 +169,38 @@ export async function resetRefreshJobs(pool: Pool): Promise<void> {
   await pool.query(REFRESH_JOBS_DDL)
   await pool.query('TRUNCATE refresh_jobs RESTART IDENTITY')
 }
+
+/**
+ * Fill the sandbox from a dump of a database that already has the schema.
+ *
+ * `pnpm db:migrate` cannot build a Questura database from empty: the earliest
+ * committed migration assumes tables that predate the chain, so it fails on a
+ * fresh database. The committed migrations are a forward series from a
+ * mid-life snapshot, not a schema from zero. Any sandbox that needs the real
+ * schema therefore starts from a dump — and so does the first database in any
+ * new hosted environment, which makes this an L15 restore constraint rather
+ * than a local inconvenience.
+ *
+ * The source is only read. The destination is dropped and recreated, and
+ * preflight has already refused anything that is not on the disposable
+ * allowlist.
+ */
+export async function copyDatabase(sourceDatabase: string): Promise<void> {
+  const { execFileSync } = await import('node:child_process')
+  const target = new URL(sandboxDatabaseUri())
+  const host = target.hostname
+  const port = target.port || '5432'
+
+  await dropSandboxDatabase()
+  await createSandboxDatabase()
+
+  const dump = execFileSync('pg_dump', ['-h', host, '-p', port, '-d', sourceDatabase, '--no-owner', '--no-privileges'], {
+    encoding: 'utf8',
+    maxBuffer: 512 * 1024 * 1024,
+  })
+
+  execFileSync('psql', ['-q', '-h', host, '-p', port, '-d', sandboxDatabaseName(), '-v', 'ON_ERROR_STOP=0'], {
+    input: dump,
+    stdio: ['pipe', 'ignore', 'ignore'],
+  })
+}
