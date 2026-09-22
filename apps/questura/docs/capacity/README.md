@@ -122,6 +122,7 @@ pnpm readiness:serving           # L12: two serving processes behind a proxy
 pnpm readiness:frontend-cache    # L05: the page a reader actually gets
 pnpm readiness:corpus -- build large    # L14: a deterministic synthetic corpus
 pnpm readiness:corpus-baseline   # L14: the same reads at three corpus sizes
+pnpm readiness:publish-under-load   # L14: publishing while people are reading
 ```
 
 `readiness:serving` owns 4100/4101/4102 and `readiness:frontend-cache` owns

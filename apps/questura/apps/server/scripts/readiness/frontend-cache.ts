@@ -46,12 +46,22 @@
  * on 6390, and the scratch database. Exit 0 if every check passed.
  */
 
-import { spawn, type ChildProcess } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { resolve } from 'node:path'
-
 import { Pool } from 'pg'
 
+import {
+  assertBuilt,
+  assertPortsFree,
+  backendEnv,
+  backendUrl,
+  clientEnv,
+  clientUrl,
+  CLIENT_DIR,
+  ingressAdmitted,
+  SERVER_DIR,
+  startApp,
+  waitForApp,
+  type AppSettings,
+} from './apps'
 import { assertPreflight } from './preflight'
 import { sandboxSettings } from './sandbox'
 
@@ -71,136 +81,18 @@ const DATABASE =
 const REDIS = process.env.READINESS_REDIS_URL ?? 'redis://127.0.0.1:6390'
 const DIST = process.env.NEXT_DIST_DIR ?? '.next-readiness'
 
-const BACKEND_PORT = 4100
-const CLIENT_PORT = 3100
-const BACKEND = `http://127.0.0.1:${BACKEND_PORT}`
-const CLIENT = `http://127.0.0.1:${CLIENT_PORT}`
-
-/** Both apps must agree on this or every delivery is a 401. */
-const REVALIDATION_SECRET = 'readiness-frontend-cache-shared-secret'
-const DB_STATS_SECRET = 'readiness-frontend-cache-db-stats'
-
-const SERVER_DIR = resolve(process.cwd())
-const CLIENT_DIR = resolve(process.cwd(), '../client')
-
-function backendEnv(): NodeJS.ProcessEnv {
-  return {
-    PATH: process.env.PATH,
-    HOME: process.env.HOME,
-    NODE_ENV: 'production',
-    NEXT_DIST_DIR: DIST,
-
-    DATABASE_URI: DATABASE,
-    DATABASE_URI_UNPOOLED: DATABASE,
-    REDIS_URL: REDIS,
-
-    NEXT_PUBLIC_APP_URL: 'https://readiness-client.invalid',
-    BACKEND_URL_LOCAL: 'https://readiness-server.invalid',
-    CORS_ALLOWED_ORIGINS: 'https://readiness-client.invalid',
-    TRUSTED_PROXY: 'cloudflare',
-    PAYLOAD_COOKIE_DOMAIN: 'host-only',
-    PAYLOAD_SECRET: 'readiness-frontend-cache-payload-secret-not-real-0123456789abcd',
-    BETTER_AUTH_SECRET: 'readiness-frontend-cache-visitor-secret-not-real-0123456789',
-
-    // The real client, not a receiver. That is the point of this script.
-    QUESTURA_CLIENT_URL: CLIENT,
-    QUESTURA_REVALIDATION_SECRET: REVALIDATION_SECRET,
-    // The harness drains; a background worker would race it and make every
-    // "after the publish" observation ambiguous.
-    REFRESH_WORKER_INTERVAL_MS: '0',
-
-    STRIPE_SECRET_KEY: 'sk_readiness_placeholder_not_a_key',
-    STRIPE_WEBHOOK_SECRET: 'whsec_readiness_placeholder',
-    STRIPE_PRICE_ID: 'price_readiness_placeholder',
-    STRIPE_PRICE_ID_MONTHLY: 'price_readiness_placeholder',
-
-    DATABASE_MAX_CONNECTIONS: '100',
-    APP_PROCESS_COUNT: '1',
-    APP_ROLLOUT_SURGE: '0',
-    APP_JOB_PROCESS_COUNT: '0',
-    DATABASE_POOL_PAYLOAD_MAX: '10',
-    DATABASE_POOL_VISITOR_AUTH_MAX: '5',
-    DATABASE_POOL_ADVISORY_LOCK_MAX: '4',
-
-    QUESTURA_INSTANCE_ID: 'readiness-backend',
-    PUBLIC_API_DIAGNOSTICS: '1',
-    DB_STATS_SECRET,
-  }
+const APPS: AppSettings = {
+  ports: { backend: 4100, client: 3100 },
+  databaseUri: DATABASE,
+  redisUri: REDIS,
+  dist: DIST,
+  revalidationSecret: 'readiness-frontend-cache-shared-secret',
+  dbStatsSecret: 'readiness-frontend-cache-db-stats',
+  instanceId: 'readiness-frontend-cache-backend',
 }
 
-function clientEnv(): NodeJS.ProcessEnv {
-  return {
-    PATH: process.env.PATH,
-    HOME: process.env.HOME,
-    NODE_ENV: 'production',
-    NEXT_DIST_DIR: DIST,
-    NEXT_PUBLIC_BACKEND_URL: BACKEND,
-    BACKEND_URL_LOCAL: BACKEND,
-    NEXT_PUBLIC_APP_URL: CLIENT,
-    QUESTURA_REVALIDATION_SECRET: REVALIDATION_SECRET,
-  }
-}
-
-function start(name: string, cwd: string, port: number, env: NodeJS.ProcessEnv): ChildProcess {
-  const child = spawn('node_modules/.bin/next', ['start', '-p', String(port)], {
-    cwd,
-    env: { ...env, PORT: String(port) },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  })
-  child.stdout!.on('data', (chunk: Buffer) => {
-    if (process.env.READINESS_VERBOSE) console.log(`[${name}] ${chunk.toString().trim()}`)
-  })
-  child.stderr!.on('data', (chunk: Buffer) => {
-    const text = chunk.toString().trim()
-    if (text && !text.includes('lockfile') && !text.includes('Consider removing')) {
-      console.error(`[${name}] ${text.slice(0, 400)}`)
-    }
-  })
-  return child
-}
-
-async function waitFor(url: string, timeoutMs = 90_000, headers: Record<string, string> = {}): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(url, { headers, signal: AbortSignal.timeout(3_000) })
-      if (response.status < 500) return true
-    } catch {
-      // Not up yet.
-    }
-    await sleep(500)
-  }
-  return false
-}
-
-/**
- * Cumulative ingress admissions on the backend — how the cache is proved.
- *
- * This throws rather than returning a sentinel. The first version returned
- * `-1` on any failure, and the warm-cache check then compared `-1` to `-1`
- * and passed: a backend left running from an earlier command was answering on
- * this port with a different `DB_STATS_SECRET`, so the counter was never read
- * at all and the strongest check in the script was vacuous. A measurement
- * that cannot be taken has to stop the run, not equal itself.
- */
-async function backendAdmitted(): Promise<number> {
-  const response = await fetch(`${BACKEND}/api/internal/db-stats`, {
-    headers: { authorization: `Bearer ${DB_STATS_SECRET}` },
-    signal: AbortSignal.timeout(5_000),
-  })
-  if (!response.ok) {
-    throw new Error(
-      `Could not read the backend's admission counters (HTTP ${response.status}). ` +
-        `Something else may be listening on ${BACKEND} — check with \`lsof -nP -iTCP:${BACKEND_PORT}\`.`,
-    )
-  }
-  const body = (await response.json()) as { admission?: Record<string, { admitted?: number }> }
-  const admitted = body.admission?.ingress?.admitted
-  if (typeof admitted !== 'number') {
-    throw new Error('The backend answered db-stats without an ingress admission count.')
-  }
-  return admitted
-}
+const BACKEND = backendUrl(APPS)
+const CLIENT = clientUrl(APPS)
 
 type PageRead = { status: number; html: string }
 
@@ -220,23 +112,13 @@ const PAYWALL_MARKER = 'Members-only content'
 async function main(): Promise<void> {
   assertPreflight({ ...sandboxSettings(), databaseUri: DATABASE, env: {} })
 
-  for (const [label, dir] of [
-    ['server', SERVER_DIR],
-    ['client', CLIENT_DIR],
-  ] as const) {
-    if (!existsSync(resolve(dir, DIST))) {
-      throw new Error(
-        `No production build for the ${label} at ${dir}/${DIST}.\n` +
-          `See docs/capacity/README.md — both apps have to be built, and the client's build needs the backend running.`,
-      )
-    }
-  }
+  assertBuilt(DIST)
 
   // The harness's own Payload: it writes, and it drains to the real client.
   process.env.DATABASE_URI = DATABASE
   process.env.DATABASE_URI_UNPOOLED = DATABASE
   process.env.QUESTURA_CLIENT_URL = CLIENT
-  process.env.QUESTURA_REVALIDATION_SECRET = REVALIDATION_SECRET
+  process.env.QUESTURA_REVALIDATION_SECRET = APPS.revalidationSecret
   process.env.REFRESH_WORKER_INTERVAL_MS = '0'
   delete process.env.REFRESH_DISCONNECTED
   process.env.PAYLOAD_SECRET = 'readiness-frontend-cache-harness-secret-not-a-real-one'
@@ -245,22 +127,10 @@ async function main(): Promise<void> {
     delete process.env[name]
   }
 
-  // A process left over from an earlier run answers on these ports and makes
-  // every later observation a measurement of the wrong server.
-  for (const port of [BACKEND_PORT, CLIENT_PORT]) {
-    const taken = await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(1_500) })
-      .then(() => true)
-      .catch(() => false)
-    if (taken) {
-      throw new Error(
-        `Port ${port} is already serving. Stop it first — this harness has to own both ports, ` +
-          `or it will read one server's cache while writing through another.`,
-      )
-    }
-  }
+  await assertPortsFree([APPS.ports.backend, APPS.ports.client])
 
-  const backend = start('backend', SERVER_DIR, BACKEND_PORT, backendEnv())
-  const client = start('client', CLIENT_DIR, CLIENT_PORT, clientEnv())
+  const backend = startApp('backend', SERVER_DIR(), APPS.ports.backend, backendEnv(APPS))
+  const client = startApp('client', CLIENT_DIR(), APPS.ports.client, clientEnv(APPS))
   const stopAll = () => {
     backend.kill('SIGKILL')
     client.kill('SIGKILL')
@@ -272,8 +142,8 @@ async function main(): Promise<void> {
   try {
     step('starting both production builds')
     const [backendUp, clientUp] = await Promise.all([
-      waitFor(`${BACKEND}/api/internal/db-stats`, 90_000, { authorization: `Bearer ${DB_STATS_SECRET}` }),
-      waitFor(`${CLIENT}/`, 90_000),
+      waitForApp(`${BACKEND}/api/internal/db-stats`, 90_000, { authorization: `Bearer ${APPS.dbStatsSecret}` }),
+      waitForApp(`${CLIENT}/`, 90_000),
     ])
     if (!backendUp || !clientUp) {
       throw new Error(`An app did not come up (backend=${backendUp}, client=${clientUp}). See the stderr above.`)
@@ -399,9 +269,9 @@ async function main(): Promise<void> {
     await payload.update({ collection: 'articles', id: article.id, data: { title: newTitle }, overrideAccess: true })
     await deliver()
 
-    const beforeRebuild = await backendAdmitted()
+    const beforeRebuild = await ingressAdmitted(APPS)
     const afterPublish = await readPage(PATH)
-    const afterRebuild = await backendAdmitted()
+    const afterRebuild = await ingressAdmitted(APPS)
 
     check(
       afterPublish.status === 200 && afterPublish.html.includes(newTitle),
@@ -419,7 +289,7 @@ async function main(): Promise<void> {
     )
 
     const second = await readPage(PATH)
-    const afterWarm = await backendAdmitted()
+    const afterWarm = await ingressAdmitted(APPS)
     check(
       second.status === 200 && second.html.includes(newTitle) && afterWarm === afterRebuild,
       'and the very next read is served from the frontend cache — the backend was not asked again',

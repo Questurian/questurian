@@ -60,7 +60,7 @@ implemented and merged. Full state, evidence and what is still owed:
 | L11 per-instance evidence | implemented locally | `runs/2026-09-22-L14-readiness-baseline.md` |
 | L12 multi-process rehearsal | implemented locally, **both halves** | `runs/2026-09-22-L12-fleet-rehearsal.md` + `runs/2026-09-22-L12-serving-fleet.md` (10/10) |
 | L13 proof gates that can fail | implemented locally | `runs/2026-09-22-L13-negative-controls.md` |
-| L14 local baseline | corpus built (8,000 articles / 200 cities); load still owed | `runs/2026-09-22-L14-readiness-baseline.md` + `runs/2026-09-22-L14-corpus-baseline.md` (6/6) |
+| L14 local baseline | corpus (8,000 articles / 200 cities) + publish-under-load; session load, browser assets and fault recovery deliberately skipped | `runs/2026-09-22-L14-readiness-baseline.md`, `runs/2026-09-22-L14-corpus-baseline.md` (6/6), `runs/2026-09-22-L14-publish-under-load.md` (8/8) |
 | L15 restore and handoff | implemented locally | `pnpm readiness:restore` 10/10 |
 
 **Still not "verified on target".** Every number above is from a Mac.

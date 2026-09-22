@@ -28,7 +28,7 @@ launch approval, and nothing here is a capacity claim.**
 | L11 per-instance evidence | locally verified | live `db-stats` sample in the L14 run |
 | L12 multi-process | locally verified, **both halves** | `runs/2026-09-22-L12-fleet-rehearsal.md` + `runs/2026-09-22-L12-serving-fleet.md` (10/10) |
 | L13 proof gates | locally verified | `runs/2026-09-22-L13-negative-controls.md`, 16/16 |
-| L14 baseline | locally verified; corpus built, load still owed | `runs/2026-09-22-L14-readiness-baseline.md` + `runs/2026-09-22-L14-corpus-baseline.md` (6/6) |
+| L14 baseline | corpus + publish-under-load done; three items deliberately skipped | `runs/2026-09-22-L14-readiness-baseline.md`, `runs/2026-09-22-L14-corpus-baseline.md` (6/6), `runs/2026-09-22-L14-publish-under-load.md` (8/8) |
 | L15 handoff | this file | `pnpm readiness:restore`, 10/10 |
 
 ## Running any of it
@@ -49,6 +49,7 @@ pnpm readiness:serving          # L12: two serving processes behind a proxy
 pnpm readiness:frontend-cache   # L05: the page a reader actually gets
 pnpm readiness:corpus -- build large   # L14: a deterministic synthetic corpus
 pnpm readiness:corpus-baseline  # L14: the same reads at three corpus sizes
+pnpm readiness:publish-under-load  # L14: publishing while people are reading
 ```
 
 The last four need a production build in `.next-readiness` for both apps and
@@ -120,9 +121,20 @@ closed; what is left is listed honestly rather than rounded up.
 | **L05 frontend cache half** | **Done.** 12/12. A publish produces the new page, a negative cache clears on first publish, and an access change is not served from a warm cache. On Cloudflare this is a different cache, so it bounds H03 from below rather than answering it. |
 | **L12 serving half** | **Done.** 10/10. Routing fairness, skewed routing, a rolling release under traffic, termination grace, and the split between per-process gates and the fleet-wide Redis budget. |
 | **L03 fan-out memory** | **Done.** 6/6. Memory is not the problem; **481 sequential delivery requests for one save at 16,000 articles** is. |
-| **L14 representative corpus** | **Partly done.** The deterministic corpus exists (small / medium / large, up to 8,000 published articles across 200 cities) and the same reads are measured at all three sizes. **Still owed:** valid-session load, publish-during-load contention, browser assets, sustained fault recovery. |
+| **L14 representative corpus** | **Mostly done.** The deterministic corpus exists (small / medium / large, up to 8,000 published articles across 200 cities), the same reads are measured at all three sizes, and publishing-during-load is proven (8/8). **Still owed, deliberately not done:** valid-session load, browser assets, sustained fault recovery — see below. |
 
-### The three findings those runs produced
+### What was deliberately not done, and why
+
+The owner chose publishing-under-load and stopped there. The other three L14
+items are **not** done and are not claimed:
+
+| Skipped | Why |
+|---|---|
+| **Valid-session load** | Needs minting a genuine Better Auth session against the sandbox. Real work with real risk of time spent on auth internals, and the anonymous identity path is already covered by the `identity` scenario. |
+| **Browser assets** | Overlaps the image width ladder and the perf sweep (PRs #564, #590–#598), which measured page weight against the real client already. |
+| **Sustained fault recovery** | Killing Redis and dropping database connections under load. Genuinely valuable, genuinely not done. Safe to do locally whenever it is wanted: the sandbox Redis is disposable and only the scratch database's connections would be dropped. |
+
+### The four findings those runs produced
 
 1. **The author fan-out's cost is delivery, not memory.** 16,000 published
    articles is a 7.1 MB target and a 71.8 MB peak — both small — but **481
@@ -135,6 +147,10 @@ closed; what is left is listed honestly rather than rounded up.
 3. **A real city page issues 171 statements** whatever the corpus holds. That
    is the control in the L14 run and it is stable, which is what makes the
    comparison valid — and it is a standing item of its own.
+4. **Publishing costs readers about 20% of p95 and 14% of throughput**, and
+   costs them nothing in correctness: across 11,686 reads during eight
+   publishes, every page was exactly one version of itself and 7,060 of them
+   carried the new one.
 
 ## Configuration a deployment must now state
 
@@ -179,8 +195,9 @@ the owner's decision or a hosted environment:
    shared fallback storage. Still open, and better decided from hosted
    numbers. It blocks nothing.
 3. **The rest of L14**, if more local work is wanted before provisioning:
-   valid-session load, publish-during-load contention, browser assets,
-   sustained fault recovery. The corpus they need now exists.
+   valid-session load, browser assets, sustained fault recovery. The corpus
+   and the two-app harness they would need already exist, so each is a
+   smaller job than it was. Publishing-during-load is done.
 
 Two earlier decisions were resolved on 22 September: the Cloudflare
 dependency was approved, and the L01 "saves fail loudly" policy was confirmed
