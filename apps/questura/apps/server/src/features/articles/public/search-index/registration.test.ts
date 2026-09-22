@@ -3,6 +3,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { Articles } from '@/features/articles/articles/collections/Articles'
 import { ListicleItineraries } from '@/features/articles/listicle-itineraries/collections'
 import { SingleTypeListicles } from '@/features/articles/single-type-listicles/collections'
+import { fakeTransactionalReq } from '@/test-utils'
+
+vi.mock('@/features/refresh-outbox/drain-soon', () => ({ scheduleDrain: vi.fn() }))
 
 vi.mock('@/features/public-revalidation/revalidate-client', async (importOriginal) => {
   const actual =
@@ -32,60 +35,39 @@ const SEARCHABLE_COLLECTIONS = [
   ['listicle-itineraries', ListicleItineraries, 'itineraries'],
 ] as const
 
+/**
+ * The hooks record an obligation in the save's transaction rather than
+ * writing `public_search_documents` themselves, so this now asserts the
+ * enqueued job. The registration question is unchanged: does each searchable
+ * collection actually run the hook, and does it carry the right type key?
+ */
 function recordingReq() {
-  const statements: Array<{ sql: string; values: unknown[] }> = []
-  const client = {
-    query: async (sql: string, values: unknown[] = []) => {
-      statements.push({ sql, values })
-      return { rows: [], rowCount: 0 }
-    },
-    release: () => {},
-  }
-
-  return {
-    statements,
-    req: {
-      payload: {
-        db: {
-          pool: {
-            query: client.query,
-            connect: async () => client,
-          },
-        },
-      },
-    } as never,
-  }
+  const { req, sql } = fakeTransactionalReq()
+  return { req, sql }
 }
 
 describe('search index hook registration', () => {
   for (const [slug, collection, typeKey] of SEARCHABLE_COLLECTIONS) {
-    it(`${slug} writes its search row on change`, async () => {
-      const { req, statements } = recordingReq()
+    it(`${slug} owes a search refresh on change`, async () => {
+      const { req, sql } = recordingReq()
 
       for (const hook of collection.hooks?.afterChange ?? []) {
         await hook({ doc: { id: 12 }, req, operation: 'update' } as never)
       }
 
-      const touched = statements.filter((statement) =>
-        statement.sql.includes('public_search_documents'),
-      )
-      expect(touched.length, `${slug} never touched public_search_documents`).toBeGreaterThan(0)
-      expect(touched.some((statement) => statement.values[0] === typeKey)).toBe(true)
-      expect(touched.some((statement) => statement.values[1] === 12)).toBe(true)
+      expect(sql(), `${slug} never enqueued a refresh job`).toContain('INSERT INTO refresh_jobs')
+      expect(sql(), `${slug} enqueued the wrong search type`).toContain(`search:${typeKey}:12`)
     })
 
-    it(`${slug} removes its search row on delete`, async () => {
-      const { req, statements } = recordingReq()
+    it(`${slug} owes a search refresh on delete`, async () => {
+      const { req, sql } = recordingReq()
 
       for (const hook of collection.hooks?.afterDelete ?? []) {
         await hook({ doc: { id: 12 }, req } as never)
       }
 
-      const deletes = statements.filter((statement) =>
-        statement.sql.includes('DELETE FROM public_search_documents'),
-      )
-      expect(deletes.length, `${slug} never removed its search row`).toBeGreaterThan(0)
-      expect(deletes[0]?.values).toEqual([typeKey, 12])
+      expect(sql(), `${slug} never enqueued a delete refresh`).toContain(`search:${typeKey}:12`)
+      expect(sql()).toContain(`${typeKey}:delete`)
     })
   }
 })

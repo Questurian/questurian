@@ -25,6 +25,9 @@ const VALID_PRODUCTION_ENV = {
   DATABASE_MAX_CONNECTIONS: '100',
   APP_PROCESS_COUNT: '1',
   APP_ROLLOUT_SURGE: '0',
+  // Publishing is only durable if the frontend it publishes to is named.
+  QUESTURA_CLIENT_URL: 'https://questurian.com',
+  QUESTURA_REVALIDATION_SECRET: 'r'.repeat(32),
 }
 
 describe('production config assertion', () => {
@@ -56,6 +59,14 @@ describe('production config assertion', () => {
     vi.stubEnv('DATABASE_POOL_PAYLOAD_MAX', '')
     vi.stubEnv('DATABASE_POOL_VISITOR_AUTH_MAX', '')
     vi.stubEnv('DATABASE_POOL_ADVISORY_LOCK_MAX', '')
+    vi.stubEnv('QUESTURA_CLIENT_URL', '')
+    vi.stubEnv('NEXT_PUBLIC_FRONTEND_URL', '')
+    vi.stubEnv('FRONTEND_URL', '')
+    vi.stubEnv('QUESTURA_REVALIDATION_SECRET', '')
+    vi.stubEnv('REVALIDATION_SECRET', '')
+    vi.stubEnv('REFRESH_DISCONNECTED', '')
+    vi.stubEnv('REFRESH_OUTBOX', '')
+    vi.stubEnv('REFRESH_OUTBOX_DEGRADED_ACK', '')
   })
 
   afterEach(() => {
@@ -495,6 +506,91 @@ describe('production config assertion', () => {
       ...VALID_PRODUCTION_ENV,
       DATABASE_MAX_CONNECTIONS: '200',
       APP_PROCESS_COUNT: '3',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([])
+  })
+})
+
+/**
+ * The publication contract's half of the boot refusal.
+ *
+ * Every one of these used to be a quiet success. A deployment with no
+ * frontend URL drained its whole refresh queue to `done` without telling the
+ * frontend anything, because unconfigured delivery returned without an error.
+ * `REFRESH_OUTBOX=off` reads like a safe revert and is a mode with known data
+ * loss. Neither should be reachable by leaving one variable unset.
+ */
+describe('publication configuration', () => {
+  beforeEach(() => {
+    for (const name of [
+      'QUESTURA_CLIENT_URL',
+      'NEXT_PUBLIC_FRONTEND_URL',
+      'FRONTEND_URL',
+      'QUESTURA_REVALIDATION_SECRET',
+      'REVALIDATION_SECRET',
+      'REFRESH_DISCONNECTED',
+      'REFRESH_OUTBOX',
+      'REFRESH_OUTBOX_DEGRADED_ACK',
+    ]) {
+      vi.stubEnv(name, '')
+    }
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it('refuses a production boot with no frontend to revalidate', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      QUESTURA_CLIENT_URL: '',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([
+      expect.stringContaining('No frontend revalidation destination'),
+    ])
+  })
+
+  it('refuses a production boot with no revalidation secret', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      QUESTURA_REVALIDATION_SECRET: '',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([
+      expect.stringContaining('QUESTURA_REVALIDATION_SECRET is not set'),
+    ])
+  })
+
+  it('refuses the development disconnected mode in production', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      REFRESH_DISCONNECTED: '1',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([
+      expect.stringContaining('REFRESH_DISCONNECTED is set'),
+    ])
+  })
+
+  it('refuses REFRESH_OUTBOX=off unless it is acknowledged as degraded', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      REFRESH_OUTBOX: 'off',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([
+      expect.stringContaining('degraded emergency mode, not a rollback'),
+    ])
+  })
+
+  it('allows the degraded mode once it is acknowledged by name', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      REFRESH_OUTBOX: 'off',
+      REFRESH_OUTBOX_DEGRADED_ACK: 'outbox table locked, 2026-09-22, rebuild index after',
     })
 
     expect(collectProductionConfigProblems()).toEqual([])
