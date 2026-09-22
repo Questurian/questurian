@@ -59,6 +59,42 @@ export function articleTypeForCollection(
   return 'articles'
 }
 
+/**
+ * A location that genuinely is not there, as opposed to a lookup that failed.
+ *
+ * These used to be the same answer. `catch { return null }` turned a timeout,
+ * a dropped connection or a pool exhaustion into "this document has no
+ * location", and the caller built a target from the remaining fields and
+ * reported success. The result is an invalidation that covers the sitemap and
+ * nothing else — the country and city pages that actually changed are never
+ * refreshed, and nothing anywhere records that they were missed.
+ *
+ * A missing row is a real answer and stays `null`. Anything else is rethrown,
+ * which fails the save (features/refresh-outbox/request.ts) rather than
+ * publishing a half-built target.
+ */
+export class LocationLookupFailed extends Error {
+  constructor(
+    readonly locationId: string | number,
+    cause: unknown,
+  ) {
+    super(
+      `Could not read location ${String(locationId)} while working out what to refresh, so the ` +
+        `invalidation would have been incomplete. Nothing was published; try saving again. ` +
+        `Detail: ${cause instanceof Error ? cause.message : String(cause)}`,
+    )
+    this.name = 'LocationLookupFailed'
+  }
+}
+
+function isNotFound(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const candidate = error as { name?: unknown; status?: unknown; message?: unknown }
+  if (candidate.name === 'NotFound') return true
+  if (candidate.status === 404) return true
+  return typeof candidate.message === 'string' && /not found/i.test(candidate.message)
+}
+
 export async function resolveLocationDoc(req: PayloadRequest, locationValue: unknown): Promise<AnyDoc | null> {
   const id = idValue(locationValue)
   if (!id) return null
@@ -74,7 +110,8 @@ export async function resolveLocationDoc(req: PayloadRequest, locationValue: unk
       depth: 0,
       overrideAccess: true,
     })) as unknown as AnyDoc
-  } catch {
-    return null
+  } catch (error) {
+    if (isNotFound(error)) return null
+    throw new LocationLookupFailed(id, error)
   }
 }
