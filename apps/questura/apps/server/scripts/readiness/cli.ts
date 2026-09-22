@@ -9,6 +9,7 @@ import {
   sandboxPool,
   REFRESH_JOBS_DDL,
 } from './database'
+import { bootstrapSandbox, refreshFixture } from './bootstrap'
 import { assertPreflight } from './preflight'
 import { buildManifest, sandboxSettings } from './sandbox'
 
@@ -53,6 +54,24 @@ async function main(): Promise<void> {
     return
   }
 
+  if (command === 'bootstrap') {
+    // The reproducible route: committed schema fixture + real migrations, no
+    // developer database involved. Everything else starts here.
+    const result = await bootstrapSandbox()
+    writeManifest(settings)
+    console.log(
+      `Bootstrapped ${result.database}: ${result.tables} tables; migrations applied on top of the fixture: ` +
+        (result.migrated.length ? result.migrated.join(', ') : 'none'),
+    )
+    return
+  }
+
+  if (command === 'fixture-refresh') {
+    refreshFixture()
+    console.log('Rewrote scripts/readiness/fixtures/schema.sql from the sandbox (schema + migration ledger only).')
+    return
+  }
+
   if (command === 'copy-from') {
     // A working copy with a real schema and a real corpus.
     //
@@ -75,7 +94,7 @@ async function main(): Promise<void> {
     return
   }
 
-  throw new Error(`Unknown command "${command}". Use check, up, copy-from, down or manifest.`)
+  throw new Error(`Unknown command "${command}". Use check, up, bootstrap, fixture-refresh, copy-from, down or manifest.`)
 }
 
 function writeManifest(settings: ReturnType<typeof sandboxSettings>): void {

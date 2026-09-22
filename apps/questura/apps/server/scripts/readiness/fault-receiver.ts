@@ -27,8 +27,12 @@ export type ReceiverMode =
   | { kind: 'status'; status: number; body?: string }
   | { kind: 'hang'; ms: number }
   | { kind: 'close' }
-  /** Accept every request except the `nth` (1-based, counted since `reset`), which answers `status`. */
-  | { kind: 'fail-nth'; nth: number; status: number }
+  /**
+   * Accept every request except the `nth` (1-based) whose body contains
+   * `match`, which answers `status`. Counting only matching requests keeps a
+   * late arrival from an earlier test from shifting the count.
+   */
+  | { kind: 'fail-nth'; nth: number; status: number; match: string }
 
 export class FaultReceiver {
   readonly deliveries: Delivery[] = []
@@ -39,6 +43,7 @@ export class FaultReceiver {
   private server: Server | null = null
   /** Requests received since `reset`, accepted or not. */
   received = 0
+  private matched = 0
 
   async listen(port = 0): Promise<number> {
     this.server = createServer((req, res) => {
@@ -69,8 +74,9 @@ export class FaultReceiver {
 
     const mode = this.mode
     this.received += 1
+    if (mode.kind === 'fail-nth' && body.includes(mode.match)) this.matched += 1
 
-    if (mode.kind === 'fail-nth' && this.received === mode.nth) {
+    if (mode.kind === 'fail-nth' && body.includes(mode.match) && this.matched === mode.nth) {
       res.writeHead(mode.status, { 'content-type': 'application/json' })
       res.end(JSON.stringify({ error: `receiver failed request ${mode.nth}` }))
       return
@@ -124,6 +130,7 @@ export class FaultReceiver {
     this.deliveries.length = 0
     this.mode = { kind: 'ok' }
     this.received = 0
+    this.matched = 0
   }
 
   async close(): Promise<void> {

@@ -56,6 +56,9 @@
     "readiness:publish-under-load": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/publish-under-load.ts",
     "readiness:collect": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/collect.ts",
     "readiness:fleet": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/fleet-rehearsal.ts",
+    "readiness:launch": "cross-env NODE_OPTIONS=\"--no-deprecation --require ./scripts/readiness/deny-outbound.cjs\" tsx scripts/readiness/launch-corpus.ts",
+    "readiness:stack": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/stack.ts",
+    "readiness:routes": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/route-checks.ts",
     "readiness:restore": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/restore-rehearsal.ts"
   },
   "dependencies": {

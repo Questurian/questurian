@@ -35,7 +35,17 @@ export const ALLOWED_DATABASES = [
 /** Ports that belong to the owner's ordinary development, not to a sandbox. */
 export const RESERVED_PORTS = [3000, 3003, 4000, 4003, 5432, 5433, 6379] as const
 
-const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]', '0.0.0.0'])
+/**
+ * Loopback, and only loopback. `0.0.0.0` used to be on this list; it is a
+ * bind address meaning "every interface", so a sandbox pointed at it was
+ * reachable from the network while the preflight reported loopback-only
+ * (surge plan L00). `*.localhost` names are loopback by definition (RFC 6761).
+ */
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
+
+function isLoopbackHost(host: string): boolean {
+  return LOOPBACK_HOSTS.has(host) || host.endsWith('.localhost')
+}
 
 export type SandboxSettings = {
   /** Postgres URI for the disposable database. */
@@ -130,7 +140,7 @@ export function collectPreflightProblems(settings: SandboxSettings): string[] {
       problems.push(`${name} is not a valid URL (${value}).`)
       continue
     }
-    if (!LOOPBACK_HOSTS.has(parsed.host)) {
+    if (!isLoopbackHost(parsed.host)) {
       problems.push(`${name} points off this machine (${parsed.host}). A readiness run is loopback only.`)
     }
     if (reservedPortIsFatal && parsed.port !== null && (RESERVED_PORTS as readonly number[]).includes(parsed.port)) {

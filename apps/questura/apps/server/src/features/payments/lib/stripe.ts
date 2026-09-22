@@ -45,6 +45,30 @@ const STRIPE_MAX_NETWORK_RETRIES = 1
 
 let stripeInstance: Stripe | null = null
 
+/**
+ * The readiness sandbox's Stripe stub (`scripts/readiness/stripe-stub.ts`),
+ * or nothing.
+ *
+ * Honoured only when `READINESS_SANDBOX=1` *and* the stub URL is loopback, so
+ * the worst a stray variable can do in a real deployment is point Stripe at
+ * the machine's own loopback — every call then fails, closed, and no request
+ * leaves for anywhere else. It exists because a readiness run must not even
+ * *attempt* a Stripe call (surge plan L01); refusing the connection at the
+ * socket still counts as an attempt.
+ */
+export function sandboxStripeHost(
+  env: Record<string, string | undefined> = process.env,
+): { host: string; port: number; protocol: 'http' } | null {
+  if (env.READINESS_SANDBOX !== '1') return null
+  const raw = env.READINESS_STRIPE_STUB_URL?.trim()
+  if (!raw) return null
+  const url = new URL(raw)
+  if (url.hostname !== '127.0.0.1' || url.protocol !== 'http:' || !url.port) {
+    throw new Error('READINESS_STRIPE_STUB_URL must be http://127.0.0.1:<port>.')
+  }
+  return { host: url.hostname, port: Number(url.port), protocol: 'http' }
+}
+
 export function getStripe(): Stripe {
   if (!stripeInstance) {
     if (!APP_CONFIG.stripe.secretKey) {
@@ -55,6 +79,7 @@ export function getStripe(): Stripe {
       typescript: true,
       timeout: STRIPE_REQUEST_TIMEOUT_MS,
       maxNetworkRetries: STRIPE_MAX_NETWORK_RETRIES,
+      ...(sandboxStripeHost() ?? {}),
     })
   }
   return stripeInstance

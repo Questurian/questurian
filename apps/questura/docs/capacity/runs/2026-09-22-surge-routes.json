@@ -1,0 +1,713 @@
+{
+  "kind": "surge-route-checks",
+  "takenAt": "2026-09-22T23:10:18.002Z",
+  "source": {
+    "sha": "fe0231e6b588e274ca7880bdcd643e6d35342432",
+    "dirty": true,
+    "diffFingerprint": "3f65388a70b917b1"
+  },
+  "dataset": {
+    "version": "launch-v1"
+  },
+  "stack": {
+    "ports": {
+      "client": 3100,
+      "backend": 4100,
+      "media": 3190,
+      "stripe": 3191,
+      "redis": 6390
+    },
+    "builtFrom": "fe0231e6b588e274ca7880bdcd643e6d35342432"
+  },
+  "counts": {
+    "total": 114,
+    "passed": 114,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "group": "identity",
+      "name": "anonymous is anonymous",
+      "ok": true,
+      "detail": "{\"authenticated\":false,\"principal\":null}"
+    },
+    {
+      "group": "identity",
+      "name": "no-cookie identity runs zero SQL",
+      "ok": true,
+      "detail": "statements=0"
+    },
+    {
+      "group": "identity",
+      "name": "identity is never stored",
+      "ok": true,
+      "detail": "no-store, no-cache, must-revalidate"
+    },
+    {
+      "group": "identity",
+      "name": "member-a → member",
+      "ok": true,
+      "detail": "HTTP 200 {\"authenticated\":true,\"email\":\"member-a@example.com\",\"active\":true}"
+    },
+    {
+      "group": "identity",
+      "name": "member-b → member",
+      "ok": true,
+      "detail": "HTTP 200 {\"authenticated\":true,\"email\":\"member-b@example.com\",\"active\":true}"
+    },
+    {
+      "group": "identity",
+      "name": "nonmember → signed-in non-member",
+      "ok": true,
+      "detail": "HTTP 200 {\"authenticated\":true,\"email\":\"nonmember@example.com\",\"active\":false}"
+    },
+    {
+      "group": "identity",
+      "name": "expired → signed out",
+      "ok": true,
+      "detail": "HTTP 200 {\"authenticated\":false}"
+    },
+    {
+      "group": "identity",
+      "name": "a random signed-looking token → signed out",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "identity",
+      "name": "a malformed token → signed out",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "bookmarks",
+      "name": "member-a sees exactly their own refs",
+      "ok": true,
+      "detail": "got articles:11,articles:12,articles:1,articles:29; want articles:11,articles:12,articles:1,articles:29"
+    },
+    {
+      "group": "bookmarks",
+      "name": "member-a refs are no-store",
+      "ok": true,
+      "detail": "no-store, no-cache, must-revalidate"
+    },
+    {
+      "group": "bookmarks",
+      "name": "member-b sees exactly their own refs",
+      "ok": true,
+      "detail": "got articles:14,articles:15,itineraries:1; want articles:14,articles:15,itineraries:1"
+    },
+    {
+      "group": "bookmarks",
+      "name": "member-b refs are no-store",
+      "ok": true,
+      "detail": "no-store, no-cache, must-revalidate"
+    },
+    {
+      "group": "bookmarks",
+      "name": "nonmember sees exactly their own refs",
+      "ok": true,
+      "detail": "got none; want none"
+    },
+    {
+      "group": "bookmarks",
+      "name": "nonmember refs are no-store",
+      "ok": true,
+      "detail": "no-store, no-cache, must-revalidate"
+    },
+    {
+      "group": "bookmarks",
+      "name": "anonymous refs → signed out, nothing listed",
+      "ok": true,
+      "detail": "{\"authenticated\":false,\"refs\":[]}"
+    },
+    {
+      "group": "bookmarks",
+      "name": "expired refs → signed out, nothing listed",
+      "ok": true,
+      "detail": "{\"authenticated\":false,\"refs\":[]}"
+    },
+    {
+      "group": "bookmarks",
+      "name": "A and B fixtures do not overlap",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ART-00 for member-a → 200 with body",
+      "ok": true,
+      "detail": "HTTP 200, member marker present"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ART-00 for member-b → 200 with body",
+      "ok": true,
+      "detail": "HTTP 200, member marker present"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ART-00 for nonmember → 403, no body",
+      "ok": true,
+      "detail": "HTTP 403, member marker absent"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ART-00 for expired → 401, no body",
+      "ok": true,
+      "detail": "HTTP 401, member marker absent"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ART-00 for anonymous → 401, no body",
+      "ok": true,
+      "detail": "HTTP 401, member marker absent"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ART-04 for member-a → 200 with body",
+      "ok": true,
+      "detail": "HTTP 200, member marker present"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ART-04 for member-b → 200 with body",
+      "ok": true,
+      "detail": "HTTP 200, member marker present"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ART-04 for nonmember → 403, no body",
+      "ok": true,
+      "detail": "HTTP 403, member marker absent"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ART-04 for expired → 401, no body",
+      "ok": true,
+      "detail": "HTTP 401, member marker absent"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ART-04 for anonymous → 401, no body",
+      "ok": true,
+      "detail": "HTTP 401, member marker absent"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ITN-01 for member-a → 200 with body",
+      "ok": true,
+      "detail": "HTTP 200, member marker present"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ITN-01 for member-b → 200 with body",
+      "ok": true,
+      "detail": "HTTP 200, member marker present"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ITN-01 for nonmember → 403, no body",
+      "ok": true,
+      "detail": "HTTP 403, member marker absent"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ITN-01 for expired → 401, no body",
+      "ok": true,
+      "detail": "HTTP 401, member marker absent"
+    },
+    {
+      "group": "member-body",
+      "name": "LM-ITN-01 for anonymous → 401, no body",
+      "ok": true,
+      "detail": "HTTP 401, member marker absent"
+    },
+    {
+      "group": "member-body",
+      "name": "a free piece is not served by the member route",
+      "ok": true,
+      "detail": "HTTP 404"
+    },
+    {
+      "group": "public-page",
+      "name": "LM-ART-00 public page: title+body marker, no member marker",
+      "ok": true,
+      "detail": "HTTP 200; member marker absent; body marker present"
+    },
+    {
+      "group": "public-page",
+      "name": "LM-ART-01 public page: title+body marker, no member marker",
+      "ok": true,
+      "detail": "HTTP 200; member marker absent; body marker present"
+    },
+    {
+      "group": "public-page",
+      "name": "LM-ART-02 public page: title+body marker, no member marker",
+      "ok": true,
+      "detail": "HTTP 200; member marker absent; body marker present"
+    },
+    {
+      "group": "public-page",
+      "name": "LM-ART-03 public page: title+body marker, no member marker",
+      "ok": true,
+      "detail": "HTTP 200; member marker absent; body marker present"
+    },
+    {
+      "group": "public-page",
+      "name": "LM-ART-04 public page: title+body marker, no member marker",
+      "ok": true,
+      "detail": "HTTP 200; member marker absent; body marker present"
+    },
+    {
+      "group": "public-page",
+      "name": "LM-ART-05 public page: title+body marker, no member marker",
+      "ok": true,
+      "detail": "HTTP 200; member marker absent; body marker present"
+    },
+    {
+      "group": "public-page",
+      "name": "LM-ART-06 public page: title+body marker, no member marker",
+      "ok": true,
+      "detail": "HTTP 200; member marker absent; body marker present"
+    },
+    {
+      "group": "public-page",
+      "name": "LM-ITN-00 public page: title+body marker, no member marker",
+      "ok": true,
+      "detail": "HTTP 200; member marker absent; body marker present"
+    },
+    {
+      "group": "public-page",
+      "name": "LM-ITN-01 public page: title+body marker, no member marker",
+      "ok": true,
+      "detail": "HTTP 200; member marker absent; body marker present"
+    },
+    {
+      "group": "public-page",
+      "name": "LM-ITN-02 public page: title+body marker, no member marker",
+      "ok": true,
+      "detail": "HTTP 200; member marker absent; body marker present"
+    },
+    {
+      "group": "public-page",
+      "name": "LM-ITN-03 public page: title+body marker, no member marker",
+      "ok": true,
+      "detail": "HTTP 200; member marker absent; body marker present"
+    },
+    {
+      "group": "credentials",
+      "name": "the synthetic staff account signs in",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "an admin can mint a service account key",
+      "ok": true,
+      "detail": "HTTP 201"
+    },
+    {
+      "group": "credentials",
+      "name": "a disabled staff token exists to test with",
+      "ok": true,
+      "detail": "create 201, login 200"
+    },
+    {
+      "group": "credentials",
+      "name": "absent: REST read clamped to 100",
+      "ok": true,
+      "detail": "HTTP 200, limit 100"
+    },
+    {
+      "group": "credentials",
+      "name": "absent: disguised POST read refused",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "absent: GraphQL refused before it runs",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "absent: never enters the staff gate",
+      "ok": true,
+      "detail": "staff gate +0"
+    },
+    {
+      "group": "credentials",
+      "name": "absent: global answers",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "absent: skips the credential gate",
+      "ok": true,
+      "detail": "credential gate +0"
+    },
+    {
+      "group": "credentials",
+      "name": "unrelated cookie: REST read clamped to 100",
+      "ok": true,
+      "detail": "HTTP 200, limit 100"
+    },
+    {
+      "group": "credentials",
+      "name": "unrelated cookie: disguised POST read refused",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "unrelated cookie: GraphQL refused before it runs",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "unrelated cookie: never enters the staff gate",
+      "ok": true,
+      "detail": "staff gate +0"
+    },
+    {
+      "group": "credentials",
+      "name": "unrelated cookie: global answers",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "unrelated cookie: skips the credential gate",
+      "ok": true,
+      "detail": "credential gate +0"
+    },
+    {
+      "group": "credentials",
+      "name": "malformed header: REST read clamped to 100",
+      "ok": true,
+      "detail": "HTTP 200, limit 100"
+    },
+    {
+      "group": "credentials",
+      "name": "malformed header: disguised POST read refused",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "malformed header: GraphQL refused before it runs",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "malformed header: never enters the staff gate",
+      "ok": true,
+      "detail": "staff gate +0"
+    },
+    {
+      "group": "credentials",
+      "name": "malformed header: global answers",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "malformed header: verified in the credential gate",
+      "ok": true,
+      "detail": "credential gate +4"
+    },
+    {
+      "group": "credentials",
+      "name": "expired JWT: REST read clamped to 100",
+      "ok": true,
+      "detail": "HTTP 200, limit 100"
+    },
+    {
+      "group": "credentials",
+      "name": "expired JWT: disguised POST read refused",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "expired JWT: GraphQL refused before it runs",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "expired JWT: never enters the staff gate",
+      "ok": true,
+      "detail": "staff gate +0"
+    },
+    {
+      "group": "credentials",
+      "name": "expired JWT: global answers",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "expired JWT: verified in the credential gate",
+      "ok": true,
+      "detail": "credential gate +4"
+    },
+    {
+      "group": "credentials",
+      "name": "forged JWT: REST read clamped to 100",
+      "ok": true,
+      "detail": "HTTP 200, limit 100"
+    },
+    {
+      "group": "credentials",
+      "name": "forged JWT: disguised POST read refused",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "forged JWT: GraphQL refused before it runs",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "forged JWT: never enters the staff gate",
+      "ok": true,
+      "detail": "staff gate +0"
+    },
+    {
+      "group": "credentials",
+      "name": "forged JWT: global answers",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "forged JWT: verified in the credential gate",
+      "ok": true,
+      "detail": "credential gate +4"
+    },
+    {
+      "group": "credentials",
+      "name": "forged payload-token cookie: REST read clamped to 100",
+      "ok": true,
+      "detail": "HTTP 200, limit 100"
+    },
+    {
+      "group": "credentials",
+      "name": "forged payload-token cookie: disguised POST read refused",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "forged payload-token cookie: GraphQL refused before it runs",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "forged payload-token cookie: never enters the staff gate",
+      "ok": true,
+      "detail": "staff gate +0"
+    },
+    {
+      "group": "credentials",
+      "name": "forged payload-token cookie: global answers",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "forged payload-token cookie: verified in the credential gate",
+      "ok": true,
+      "detail": "credential gate +4"
+    },
+    {
+      "group": "credentials",
+      "name": "bogus API key: REST read clamped to 100",
+      "ok": true,
+      "detail": "HTTP 200, limit 100"
+    },
+    {
+      "group": "credentials",
+      "name": "bogus API key: disguised POST read refused",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "bogus API key: GraphQL refused before it runs",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "bogus API key: never enters the staff gate",
+      "ok": true,
+      "detail": "staff gate +0"
+    },
+    {
+      "group": "credentials",
+      "name": "bogus API key: global answers",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "bogus API key: verified in the credential gate",
+      "ok": true,
+      "detail": "credential gate +4"
+    },
+    {
+      "group": "credentials",
+      "name": "x-api-key header: REST read clamped to 100",
+      "ok": true,
+      "detail": "HTTP 200, limit 100"
+    },
+    {
+      "group": "credentials",
+      "name": "x-api-key header: disguised POST read refused",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "x-api-key header: GraphQL refused before it runs",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "x-api-key header: never enters the staff gate",
+      "ok": true,
+      "detail": "staff gate +0"
+    },
+    {
+      "group": "credentials",
+      "name": "x-api-key header: global answers",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "x-api-key header: skips the credential gate",
+      "ok": true,
+      "detail": "credential gate +0"
+    },
+    {
+      "group": "credentials",
+      "name": "disabled staff: REST read clamped to 100",
+      "ok": true,
+      "detail": "HTTP 200, limit 100"
+    },
+    {
+      "group": "credentials",
+      "name": "disabled staff: disguised POST read refused",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "disabled staff: GraphQL refused before it runs",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "credentials",
+      "name": "disabled staff: never enters the staff gate",
+      "ok": true,
+      "detail": "staff gate +0"
+    },
+    {
+      "group": "credentials",
+      "name": "disabled staff: global answers",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "disabled staff: verified in the credential gate",
+      "ok": true,
+      "detail": "credential gate +4"
+    },
+    {
+      "group": "credentials",
+      "name": "valid staff: REST read keeps its own limit (1000)",
+      "ok": true,
+      "detail": "HTTP 200, limit 1000"
+    },
+    {
+      "group": "credentials",
+      "name": "valid staff: disguised POST read allowed",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "valid staff: GraphQL reaches Payload",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "valid staff: runs in the finite staff gate",
+      "ok": true,
+      "detail": "staff gate +4"
+    },
+    {
+      "group": "credentials",
+      "name": "valid staff: global answers",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "valid staff: verified in the credential gate",
+      "ok": true,
+      "detail": "credential gate +4"
+    },
+    {
+      "group": "credentials",
+      "name": "valid service account: REST read keeps its own limit (1000)",
+      "ok": true,
+      "detail": "HTTP 200, limit 1000"
+    },
+    {
+      "group": "credentials",
+      "name": "valid service account: disguised POST read allowed",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "valid service account: GraphQL reaches Payload",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "valid service account: runs in the finite staff gate",
+      "ok": true,
+      "detail": "staff gate +4"
+    },
+    {
+      "group": "credentials",
+      "name": "valid service account: global answers",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "credentials",
+      "name": "valid service account: verified in the credential gate",
+      "ok": true,
+      "detail": "credential gate +4"
+    }
+  ]
+}

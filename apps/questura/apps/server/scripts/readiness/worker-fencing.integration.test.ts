@@ -387,7 +387,7 @@ describe.skipIf(!available)('refresh worker fencing', () => {
   it('retries every chunk when the last one fails, then converges', async () => {
     const tags = Array.from({ length: 150 }, (_, index) => `chunk-${index}`)
     const id = await enqueue('revalidate:chunks', tags)
-    receiver.mode = { kind: 'fail-nth', nth: 2, status: 503 }
+    receiver.mode = { kind: 'fail-nth', nth: 2, status: 503, match: 'chunk-' }
 
     const first = await drainRefreshJobs(pool as never)
     expect(first).toMatchObject({ done: 0, retried: 1 })
