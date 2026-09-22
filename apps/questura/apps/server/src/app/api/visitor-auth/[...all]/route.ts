@@ -2,19 +2,40 @@ import { toNextJsHandler } from 'better-auth/next-js'
 import type { NextRequest } from 'next/server'
 
 import { visitorAuth } from '@/features/visitor-auth/lib/better-auth'
+import { AdmissionRefused } from '@/shared/http/admission'
+import { admitPublicWork, overloadedResponse } from '@/shared/http/public-read'
 import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 
 const handlers = toNextJsHandler(visitorAuth)
 
+/**
+ * Every Better Auth route — sign-in, sign-up, callbacks, get-session — runs
+ * inside ingress and then the `auth` gate (`shared/http/admission.ts`).
+ *
+ * Better Auth's own rate limiter counts requests per address and path; it
+ * does not bound how many password hashes run at once, and a burst of
+ * distinct addresses each under their limit could occupy every core with
+ * scrypt while page readers queued behind them. The gate is small and
+ * patient: a person signing in waits longer than a page reader would, and a
+ * refusal is a no-store 503 with `Retry-After`, never a half-written session.
+ * Callback and provider contracts are unchanged — the handler that runs is
+ * Better Auth's, untouched, once admitted.
+ */
 async function withCors(req: NextRequest, handler: (request: Request) => Promise<Response>) {
   let response: Response
 
   try {
-    response = await handler(req)
+    response = await admitPublicWork(
+      'ingress',
+      () => admitPublicWork('auth', () => handler(req), req.signal ?? undefined),
+      req.signal ?? undefined,
+    )
   } catch (error) {
-    response = error instanceof Response
-      ? error
-      : Response.json({ error: 'Authentication request failed' }, { status: 500 })
+    response = error instanceof AdmissionRefused
+      ? overloadedResponse(error)
+      : error instanceof Response
+        ? error
+        : Response.json({ error: 'Authentication request failed' }, { status: 500 })
   }
 
   const headers = new Headers(response.headers)

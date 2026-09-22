@@ -10,6 +10,8 @@ import {
 } from '@/features/bookmarks/lib/service'
 import { isBookmarkTargetType, parseTargetId } from '@/features/bookmarks/lib/target'
 import { forbiddenOriginResponse, getPrivateCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
+import { runPrivateWork, temporarilyUnavailable, tooManyRequests } from '@/features/visitor-auth/lib/private-route'
+import { hasVisitorSessionCookie } from '@/features/visitor-auth/lib/session-cookie'
 
 /**
  * Bookmark read/write for the signed-in Visitor (ADR-0010).
@@ -22,7 +24,23 @@ import { forbiddenOriginResponse, getPrivateCorsHeaders, handleCorsOptions } fro
  * Membership is irrelevant here in both directions. A bookmark grants no
  * access, so an unentitled visitor may bookmark a Gated item freely; what they
  * get on opening it is still the Free sample.
+ *
+ * Every method runs in the shared private order (`private-route.ts`): a
+ * request with no session cookie is refused before any work, and everything
+ * else — session resolution included — runs inside the private gate. Writes
+ * keep their per-account limit, which needs the identity and so comes after it.
  */
+
+function signedOut(corsHeaders: Record<string, string>) {
+  return unauthorized(corsHeaders, 'Authentication required', 401)
+}
+
+function writeLimited(corsHeaders: Record<string, string>, rateLimit: { allowed: false; retryAfterSeconds: number; unavailable?: boolean }) {
+  // A counter outage is not abuse. Say which it was, so a client retries an
+  // outage and backs off a limit instead of treating both as the same thing.
+  if (rateLimit.unavailable) return temporarilyUnavailable(corsHeaders, 'counter-unavailable', rateLimit.retryAfterSeconds)
+  return tooManyRequests(corsHeaders, rateLimit.retryAfterSeconds, 'account')
+}
 
 function unauthorized(corsHeaders: Record<string, string>, message: string, status: 401 | 403) {
   return NextResponse.json({ error: message }, { status, headers: corsHeaders })
@@ -43,7 +61,14 @@ export async function GET(req: NextRequest) {
 
   const blocked = forbiddenOriginResponse(req, corsHeaders)
   if (blocked) return blocked
+  if (!hasVisitorSessionCookie(req.headers)) return signedOut(corsHeaders)
 
+  return runPrivateWork({ headers: req.headers, signal: req.signal, corsHeaders, route: 'GET /api/account/bookmarks' }, () =>
+    listBookmarks(req, corsHeaders),
+  )
+}
+
+async function listBookmarks(req: NextRequest, corsHeaders: Record<string, string>) {
   const auth = await requireCurrentPrincipal(req.headers)
   if (auth.error || !auth.principal) {
     return unauthorized(corsHeaders, auth.error ?? 'Authentication required', auth.status as 401)
@@ -72,7 +97,8 @@ export async function GET(req: NextRequest) {
     console.error('[bookmarks] failed to list', error)
     return NextResponse.json(
       { error: 'Failed to load bookmarks.' },
-      { status: 500, headers: corsHeaders }
+      // Temporary, and said so: a list that failed is not an empty list.
+      { status: 503, headers: { ...corsHeaders, 'Retry-After': '2' } }
     )
   }
 }
@@ -83,21 +109,21 @@ export async function POST(req: NextRequest) {
 
   const blocked = forbiddenOriginResponse(req, corsHeaders)
   if (blocked) return blocked
+  if (!hasVisitorSessionCookie(req.headers)) return signedOut(corsHeaders)
 
+  return runPrivateWork({ headers: req.headers, signal: req.signal, corsHeaders, route: 'POST /api/account/bookmarks' }, () =>
+    saveBookmark(req, corsHeaders),
+  )
+}
+
+async function saveBookmark(req: NextRequest, corsHeaders: Record<string, string>) {
   const auth = await requireCurrentPrincipal(req.headers)
   if (auth.error || !auth.principal) {
     return unauthorized(corsHeaders, auth.error ?? 'Authentication required', auth.status as 401)
   }
 
   const rateLimit = await checkBookmarkWriteRateLimit(auth.principal.id, req.headers)
-  if (!rateLimit.allowed) {
-    const response = NextResponse.json(
-      { error: 'Too many requests. Please try again shortly.' },
-      { status: 429, headers: corsHeaders }
-    )
-    response.headers.set('Retry-After', String(rateLimit.retryAfterSeconds))
-    return response
-  }
+  if (!rateLimit.allowed) return writeLimited(corsHeaders, rateLimit)
 
   let body: { targetType?: unknown; targetId?: unknown }
   try {
@@ -139,21 +165,21 @@ export async function DELETE(req: NextRequest) {
 
   const blocked = forbiddenOriginResponse(req, corsHeaders)
   if (blocked) return blocked
+  if (!hasVisitorSessionCookie(req.headers)) return signedOut(corsHeaders)
 
+  return runPrivateWork({ headers: req.headers, signal: req.signal, corsHeaders, route: 'DELETE /api/account/bookmarks' }, () =>
+    deleteBookmark(req, corsHeaders),
+  )
+}
+
+async function deleteBookmark(req: NextRequest, corsHeaders: Record<string, string>) {
   const auth = await requireCurrentPrincipal(req.headers)
   if (auth.error || !auth.principal) {
     return unauthorized(corsHeaders, auth.error ?? 'Authentication required', auth.status as 401)
   }
 
   const rateLimit = await checkBookmarkWriteRateLimit(auth.principal.id, req.headers)
-  if (!rateLimit.allowed) {
-    const response = NextResponse.json(
-      { error: 'Too many requests. Please try again shortly.' },
-      { status: 429, headers: corsHeaders }
-    )
-    response.headers.set('Retry-After', String(rateLimit.retryAfterSeconds))
-    return response
-  }
+  if (!rateLimit.allowed) return writeLimited(corsHeaders, rateLimit)
 
   const params = req.nextUrl.searchParams
   const parsed = parseRef({

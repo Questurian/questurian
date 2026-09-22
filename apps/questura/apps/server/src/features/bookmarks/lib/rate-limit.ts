@@ -18,7 +18,7 @@ const MAX_WRITES_PER_ACCOUNT = 60
 
 export type BookmarkRateLimitResult =
   | { allowed: true }
-  | { allowed: false; retryAfterSeconds: number }
+  | { allowed: false; retryAfterSeconds: number; unavailable?: boolean }
 
 export async function checkBookmarkWriteRateLimit(
   authUserId: string,
@@ -38,7 +38,9 @@ export async function checkBookmarkWriteRateLimit(
       `[bookmarks] write rate limit unavailable; denying (ip=${hashIdentifier(getClientIp(headers))})`,
       error
     )
-    return { allowed: false, retryAfterSeconds: WINDOW_SECONDS }
+    // `unavailable` lets the route answer 503 rather than 429: still closed,
+    // but not misreported as this reader having written too much.
+    return { allowed: false, retryAfterSeconds: 5, unavailable: true }
   }
 
   if (counter.count > MAX_WRITES_PER_ACCOUNT) {

@@ -2,6 +2,7 @@ import { APIError } from 'better-auth/api'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { visitorAuth } from '@/features/visitor-auth/lib/better-auth'
+import { runPrivateWork } from '@/features/visitor-auth/lib/private-route'
 import { checkSetPasswordRateLimit } from '@/features/visitor-auth/lib/set-password-rate-limit'
 import { getPasswordStrengthError } from '@/shared/lib/password-strength'
 import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
@@ -43,6 +44,14 @@ export async function POST(req: NextRequest) {
     return response
   }
 
+  // Hashes a password: the `auth` gate, the same one sign-in uses.
+  return runPrivateWork(
+    { headers: req.headers, signal: req.signal, corsHeaders, gate: 'auth', route: '/api/account/set-password' },
+    () => setPassword(req, corsHeaders),
+  )
+}
+
+async function setPassword(req: NextRequest, corsHeaders: Record<string, string>) {
   try {
     const body = await req.json() as { newPassword?: unknown }
     if (typeof body.newPassword !== 'string') {

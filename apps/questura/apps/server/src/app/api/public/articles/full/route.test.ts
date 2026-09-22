@@ -44,9 +44,20 @@ vi.mock('@/features/articles/public/articles-full-rate-limit', async (importOrig
   }
 })
 
-const { GET } = await import('./route')
+const sessionTraffic = vi.fn(async () => ({ allowed: true }) as const)
+vi.mock('@/features/visitor-auth/lib/session-traffic-limit', () => ({
+  get checkSessionTrafficLimit() {
+    return sessionTraffic
+  },
+}))
 
-function request(query: Record<string, string>, headers: Record<string, string> = {}): NextRequest {
+const { GET } = await import('./route')
+const { admissionGate, resetAdmissionGates } = await import('@/shared/http/admission')
+
+/** A signed-in browser on the site's own origin, unless a test says otherwise. */
+const SIGNED_IN = { origin: 'http://localhost:3000', cookie: 'questura_visitor.session_token=abc' }
+
+function request(query: Record<string, string>, headers: Record<string, string> = SIGNED_IN): NextRequest {
   const url = new URL('https://cms.example.test/api/public/articles/full')
   for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value)
 
@@ -68,6 +79,7 @@ const GATED_DOC = { id: 42, access: 'member', contentBlocks: [1, 2, 3, 4, 5] }
 
 beforeEach(() => {
   vi.clearAllMocks()
+  resetAdmissionGates()
   find.mockResolvedValue({ totalDocs: 1, docs: [{ ...GATED_DOC }] })
   requireVisitorPrincipal.mockResolvedValue(entitled(true))
   checkArticlesFullRateLimit.mockResolvedValue({ allowed: true })
@@ -102,6 +114,15 @@ describe('GET /api/public/articles/full — refusals', () => {
     const res = await GET(request({ type: 'articles', id: '42' }))
 
     expect(res.status).toBe(401)
+    expect(find).not.toHaveBeenCalled()
+  })
+
+  it('401s a caller with no session cookie before the limiter, the lookup or the database', async () => {
+    const res = await GET(request({ type: 'articles', id: '42' }, { origin: 'http://localhost:3000' }))
+
+    expect(res.status).toBe(401)
+    expect(checkArticlesFullRateLimit).not.toHaveBeenCalled()
+    expect(requireVisitorPrincipal).not.toHaveBeenCalled()
     expect(find).not.toHaveBeenCalled()
   })
 
@@ -173,6 +194,57 @@ describe('GET /api/public/articles/full — refusals', () => {
     expect(res.headers.get('retry-after')).toBe('17')
     expect(requireVisitorPrincipal).not.toHaveBeenCalled()
     expect(find).not.toHaveBeenCalled()
+  })
+
+  // Fail closed, but say it was an outage: 503, not "you asked too often".
+  it('503s without touching auth when the limiter is unavailable', async () => {
+    checkArticlesFullRateLimit.mockResolvedValue({ allowed: false, retryAfterSeconds: 5, unavailable: true })
+
+    const res = await GET(request({ type: 'articles', id: '42' }))
+
+    expect(res.status).toBe(503)
+    expect(res.headers.get('x-questura-unavailable')).toBe('counter-unavailable')
+    expect(res.headers.get('cache-control')).toContain('no-store')
+    expect(requireVisitorPrincipal).not.toHaveBeenCalled()
+  })
+
+  it('holds the private gate for the whole read, and refuses past its queue', async () => {
+    vi.stubEnv('PRIVATE_READ_CONCURRENCY', '1')
+    vi.stubEnv('PRIVATE_READ_QUEUE', '0')
+    resetAdmissionGates()
+    let release!: () => void
+    find.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve({ totalDocs: 1, docs: [{ ...GATED_DOC }] })
+        }),
+    )
+
+    const first = GET(request({ type: 'articles', id: '42' }))
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    expect(admissionGate('private').stats().active).toBe(1)
+
+    const refused = await GET(request({ type: 'articles', id: '42' }))
+    expect(refused.status).toBe(503)
+    expect(refused.headers.get('x-questura-overload')).toBe('private; queue-full')
+    expect(refused.headers.get('cache-control')).toContain('no-store')
+    expect(refused.headers.get('vary')).toContain('Cookie')
+
+    release()
+    expect((await first).status).toBe(200)
+    expect(admissionGate('private').stats().active).toBe(0)
+    vi.unstubAllEnvs()
+  })
+
+  it('answers 503 with private headers when the session lookup itself throws', async () => {
+    requireVisitorPrincipal.mockRejectedValue(new Error('connect ECONNREFUSED'))
+
+    const res = await GET(request({ type: 'articles', id: '42' }))
+
+    expect(res.status).toBe(503)
+    expect(res.headers.get('cache-control')).toContain('no-store')
+    expect(res.headers.get('retry-after')).toBe('2')
+    expect(admissionGate('private').stats().active).toBe(0)
   })
 
   it('does not leak internal error text on a 500', async () => {

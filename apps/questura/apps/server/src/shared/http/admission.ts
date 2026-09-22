@@ -170,7 +170,7 @@ export class AdmissionGate {
 // The process's gates.
 // ---------------------------------------------------------------------------
 
-export type PublicWorkClass = 'assembly' | 'query' | 'ingress' | 'private' | 'credential' | 'staff'
+export type PublicWorkClass = 'assembly' | 'query' | 'ingress' | 'private' | 'credential' | 'staff' | 'auth'
 
 /**
  * A whole number at or above `min`, or the default.
@@ -233,6 +233,14 @@ export const GATE_DEFAULTS: Record<
   // writer and Location Manager read up to 200 rows at depth 2 — but finite:
   // a valid key is not a licence for unbounded work.
   staff: { prefix: 'MOUNT_STAFF', what: 'staff and service reads', limit: 16, maxQueue: 64, maxWaitMs: 5_000 },
+  // Better Auth's own routes and set-password: sign-in and sign-up hash a
+  // password (scrypt — tens of milliseconds of CPU each), callbacks write
+  // sessions and profiles. Few at once, a patient queue: a person signing in
+  // waits longer than a page reader will, and a refusal here is a failed
+  // sign-in, so the queue is long and the wait is long. Four at once keeps
+  // these plus the private gate's session lookups near Better Auth's
+  // ten-connection pool rather than far past it.
+  auth: { prefix: 'VISITOR_AUTH', what: 'sign-in and account writes', limit: 4, maxQueue: 64, maxWaitMs: 3_000 },
 }
 
 export function gateOptions(kind: PublicWorkClass): AdmissionOptions {

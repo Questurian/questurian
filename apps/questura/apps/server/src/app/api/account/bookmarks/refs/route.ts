@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { requireCurrentPrincipal } from '@/features/visitor-auth/lib/current-principal'
 import { listBookmarkRefs } from '@/features/bookmarks/lib/service'
+import { runPrivateWork } from '@/features/visitor-auth/lib/private-route'
+import { hasVisitorSessionCookie } from '@/features/visitor-auth/lib/session-cookie'
 import { forbiddenOriginResponse, getPrivateCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 
 /**
@@ -23,28 +25,38 @@ export async function GET(req: NextRequest) {
   const blocked = forbiddenOriginResponse(req, corsHeaders)
   if (blocked) return blocked
 
-  const auth = await requireCurrentPrincipal(req.headers)
-  if (auth.error || !auth.principal) {
-    // Signed out is an ordinary state for this route: the bookmark control is
-    // rendered for everyone, and it asks before it knows who is asking.
-    //
-    // `authenticated` is reported because an empty `refs` is otherwise
-    // ambiguous — a signed-out reader and a signed-in reader who has saved
-    // nothing look identical. The control needs to tell them apart to send a
-    // signed-out click to the sign-in modal without first flipping itself on.
+  // Signed out is an ordinary state for this route: the bookmark control is
+  // rendered for everyone, and it asks before it knows who is asking. With no
+  // session cookie there is nobody to look up, so the answer costs nothing.
+  //
+  // `authenticated` is reported because an empty `refs` is otherwise
+  // ambiguous — a signed-out reader and a signed-in reader who has saved
+  // nothing look identical. The control needs to tell them apart to send a
+  // signed-out click to the sign-in modal without first flipping itself on.
+  if (!hasVisitorSessionCookie(req.headers)) {
     return NextResponse.json({ authenticated: false, refs: [] }, { headers: corsHeaders })
   }
 
-  try {
-    const refs = await listBookmarkRefs(auth.principal.id)
-    return NextResponse.json({ authenticated: true, refs }, { headers: corsHeaders })
-  } catch (error) {
-    console.error('[bookmarks] failed to list refs', error)
-    return NextResponse.json(
-      { error: 'Failed to load bookmarks.' },
-      { status: 500, headers: corsHeaders }
-    )
-  }
+  return runPrivateWork(
+    { headers: req.headers, signal: req.signal, corsHeaders, route: '/api/account/bookmarks/refs' },
+    async () => {
+      const auth = await requireCurrentPrincipal(req.headers)
+      if (auth.error || !auth.principal) {
+        return NextResponse.json({ authenticated: false, refs: [] }, { headers: corsHeaders })
+      }
+
+      try {
+        const refs = await listBookmarkRefs(auth.principal.id)
+        return NextResponse.json({ authenticated: true, refs }, { headers: corsHeaders })
+      } catch (error) {
+        console.error('[bookmarks] failed to list refs', error)
+        return NextResponse.json(
+          { error: 'Failed to load bookmarks.' },
+          { status: 503, headers: { ...corsHeaders, 'Retry-After': '2' } }
+        )
+      }
+    },
+  )
 }
 
 export async function OPTIONS(req: NextRequest) {
