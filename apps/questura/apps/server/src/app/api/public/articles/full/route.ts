@@ -13,6 +13,8 @@ import {
 import { serializeArticleByCollection } from '@/features/articles/public/serializeArticleBlocks'
 import { isArticleTypeKey, TYPE_TO_COLLECTION } from '@/features/articles/public/scope'
 import { isGatedItem } from '@/shared/content/accessTier'
+import { runPrivateWork, temporarilyUnavailable } from '@/features/visitor-auth/lib/private-route'
+import { hasVisitorSessionCookie } from '@/features/visitor-auth/lib/session-cookie'
 
 /**
  * Full body of a Gated item, for a reader who has paid for it (ADR-0009).
@@ -41,37 +43,64 @@ export async function GET(req: NextRequest) {
   const blocked = forbiddenOriginResponse(req, corsHeaders)
   if (blocked) return blocked
 
-  const rateLimit = await checkArticlesFullRateLimit(req.headers)
-  if (!rateLimit.allowed) {
-    return articlesFullRateLimitResponse(corsHeaders, rateLimit.retryAfterSeconds)
+  // No session, no paid body — and no Redis call or query to find that out.
+  if (!hasVisitorSessionCookie(req.headers)) return fail(corsHeaders, 'Authentication required', 401)
+
+  // The per-address limit fails closed (it guards the paid body), and runs
+  // inside ingress so a slow Redis cannot collect waiters. The session lookup
+  // and the depth-2 read run inside the private gate: a flood of distinct
+  // visitors each under the per-address limit used to reach the shared pools
+  // with no bound at all (discovery finding 2).
+  return runPrivateWork(
+    {
+      headers: req.headers,
+      signal: req.signal,
+      corsHeaders,
+      route: '/api/public/articles/full',
+      limits: [
+        async (headers) => {
+          const rateLimit = await checkArticlesFullRateLimit(headers)
+          if (rateLimit.allowed) return null
+          if (rateLimit.unavailable) return temporarilyUnavailable(corsHeaders, 'counter-unavailable', rateLimit.retryAfterSeconds)
+          return articlesFullRateLimitResponse(corsHeaders, rateLimit.retryAfterSeconds)
+        },
+      ],
+    },
+    () => readGatedBody(req, corsHeaders),
+  )
+}
+
+async function readGatedBody(req: NextRequest, corsHeaders: Record<string, string>) {
+  const params = req.nextUrl.searchParams
+
+  const type = params.get('type')
+  if (!isArticleTypeKey(type)) return fail(corsHeaders, 'type must be articles, maps or itineraries', 400)
+
+  const id = params.get('id')
+  if (!id) return fail(corsHeaders, 'id required', 400)
+
+  const lang = params.get('lang') ?? DEFAULT_LANG
+  if (!isSupportedLang(lang)) return fail(corsHeaders, `unsupported lang: ${lang}`, 400)
+
+  // Verification is deliberately not required. Checkout does not require it
+  // either, so demanding it here would let a visitor complete a real charge
+  // and then be refused the content they just bought.
+  //
+  // Outside the try below on purpose: a session store that throws is a
+  // temporary failure (`runPrivateWork` answers 503 + Retry-After), not a
+  // failed read — and never "signed out".
+  const auth = await requireVisitorPrincipal(req.headers)
+  if (auth.error || !auth.principal) {
+    return fail(corsHeaders, auth.error ?? 'Authentication required', auth.status)
+  }
+
+  // Entitlement is the paid-through date plus any dunning grace (ADR-0008),
+  // never the mirrored subscription status.
+  if (!auth.principal.membership.active) {
+    return fail(corsHeaders, 'Membership required', 403)
   }
 
   try {
-    const params = req.nextUrl.searchParams
-
-    const type = params.get('type')
-    if (!isArticleTypeKey(type)) return fail(corsHeaders, 'type must be articles, maps or itineraries', 400)
-
-    const id = params.get('id')
-    if (!id) return fail(corsHeaders, 'id required', 400)
-
-    const lang = params.get('lang') ?? DEFAULT_LANG
-    if (!isSupportedLang(lang)) return fail(corsHeaders, `unsupported lang: ${lang}`, 400)
-
-    // Verification is deliberately not required. Checkout does not require it
-    // either, so demanding it here would let a visitor complete a real charge
-    // and then be refused the content they just bought.
-    const auth = await requireVisitorPrincipal(req.headers)
-    if (auth.error || !auth.principal) {
-      return fail(corsHeaders, auth.error ?? 'Authentication required', auth.status)
-    }
-
-    // Entitlement is the paid-through date plus any dunning grace (ADR-0008),
-    // never the mirrored subscription status.
-    if (!auth.principal.membership.active) {
-      return fail(corsHeaders, 'Membership required', 403)
-    }
-
     const collection = TYPE_TO_COLLECTION[type]
     const payload = await getPayload({ config })
 

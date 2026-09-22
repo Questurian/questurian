@@ -24,7 +24,7 @@ export const ARTICLES_FULL_RATE_LIMIT = 30
 
 export type ArticlesFullRateLimitResult =
   | { allowed: true }
-  | { allowed: false; retryAfterSeconds: number }
+  | { allowed: false; retryAfterSeconds: number; unavailable?: boolean }
 
 export async function checkArticlesFullRateLimit(
   headers: Headers
@@ -38,7 +38,9 @@ export async function checkArticlesFullRateLimit(
     logger.error('Articles full rate limit unavailable; denying', {
       error: error instanceof Error ? error.message : String(error),
     })
-    return { allowed: false, retryAfterSeconds: WINDOW_SECONDS }
+    // Still closed. `unavailable` lets the route say 503 rather than 429, so an
+    // outage is not reported as this reader having asked too often.
+    return { allowed: false, retryAfterSeconds: 5, unavailable: true }
   }
 
   if (counter.count > ARTICLES_FULL_RATE_LIMIT) {
@@ -57,5 +59,6 @@ export function articlesFullRateLimitResponse(
     { status: 429, headers: corsHeaders }
   )
   response.headers.set('Retry-After', String(retryAfterSeconds))
+  response.headers.set('Cache-Control', 'no-store')
   return response
 }

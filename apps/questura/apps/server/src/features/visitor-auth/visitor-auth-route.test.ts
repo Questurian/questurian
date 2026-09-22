@@ -41,6 +41,7 @@ vi.mock('@/shared/config', () => ({
 }))
 
 import { GET, OPTIONS, POST } from '@/app/api/visitor-auth/[...all]/route'
+import { admissionGate, resetAdmissionGates } from '@/shared/http/admission'
 
 function createRequest(method: string) {
   return new Request('http://localhost:4000/api/visitor-auth/sign-in/email', {
@@ -54,6 +55,8 @@ function createRequest(method: string) {
 describe('Visitor auth route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllEnvs()
+    resetAdmissionGates()
     mocks.getHandler.mockResolvedValue(Response.json({ ok: true }))
     mocks.postHandler.mockResolvedValue(Response.json({ ok: true }))
   })
@@ -93,5 +96,36 @@ describe('Visitor auth route', () => {
     expect(response.status).toBe(500)
     expect(response.headers.get('access-control-allow-origin')).toBe('http://localhost:3000')
     expect(response.headers.get('access-control-allow-credentials')).toBe('true')
+  })
+
+  // Better Auth limits requests per address and path; nothing bounded how many
+  // password hashes ran at once. The `auth` gate does, and its refusal keeps
+  // the credentialed CORS headers and is never cacheable.
+  it('runs sign-in inside the auth gate and refuses past its queue', async () => {
+    vi.stubEnv('VISITOR_AUTH_CONCURRENCY', '1')
+    vi.stubEnv('VISITOR_AUTH_QUEUE', '0')
+    resetAdmissionGates()
+    let release!: () => void
+    mocks.postHandler.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve(Response.json({ ok: true }))
+        }),
+    )
+
+    const first = POST(createRequest('POST'))
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    expect(admissionGate('auth').stats().active).toBe(1)
+
+    const refused = await POST(createRequest('POST'))
+    expect(refused.status).toBe(503)
+    expect(refused.headers.get('x-questura-overload')).toBe('auth; queue-full')
+    expect(refused.headers.get('cache-control')).toBe('no-store')
+    expect(refused.headers.get('access-control-allow-origin')).toBe('http://localhost:3000')
+    expect(mocks.postHandler).toHaveBeenCalledTimes(1)
+
+    release()
+    expect((await first).status).toBe(200)
+    expect(admissionGate('auth').stats().active).toBe(0)
   })
 })
