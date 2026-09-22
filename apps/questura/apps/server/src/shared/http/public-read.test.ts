@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const rateLimitMock = vi.hoisted(() => vi.fn(async () => ({ allowed: true, retryAfterSeconds: 0 })))
+
 vi.mock('./public-read-rate-limit', () => ({
-  checkPublicReadRateLimit: vi.fn(async () => ({ allowed: true })),
+  checkPublicReadRateLimit: rateLimitMock,
   publicReadRateLimitResponse: vi.fn(),
 }))
 
@@ -84,5 +86,103 @@ describe('publicRead admission', () => {
       }),
     ).rejects.toThrow('boom')
     expect(admissionGate('query').stats().active).toBe(0)
+  })
+})
+
+/**
+ * L07: the ingress stage, and why it sits before the rate limiter.
+ *
+ * The limiter is a Redis call. It fails open when Redis is unavailable, which
+ * is right — but "fails open" describes the answer, not the wait. A half-open
+ * Redis answers slowly rather than not at all, so every arriving request sits
+ * in the limiter until its command deadline, and nothing bounded how many
+ * requests could be sitting there at once. A deadline caps one command; it
+ * says nothing about how many requests are holding one.
+ */
+describe('the ingress stage', () => {
+  beforeEach(() => {
+    rateLimitMock.mockReset()
+    rateLimitMock.mockResolvedValue({ allowed: true, retryAfterSeconds: 0 })
+    resetAdmissionGates()
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    resetAdmissionGates()
+  })
+
+  it('bounds requests waiting on a slow rate limiter', async () => {
+    vi.stubEnv('PUBLIC_INGRESS_CONCURRENCY', '1')
+    vi.stubEnv('PUBLIC_INGRESS_QUEUE', '0')
+    resetAdmissionGates()
+
+    let releaseRedis!: () => void
+    const redisIsSlow = new Promise<void>((resolve) => {
+      releaseRedis = resolve
+    })
+    rateLimitMock.mockImplementation(async () => {
+      await redisIsSlow
+      return { allowed: true, retryAfterSeconds: 0 }
+    })
+
+    const first = publicRead(
+      { req: { headers: new Headers() }, scope: 'navigation', payload: {} },
+      async () => NextResponse.json({ ok: true }),
+    )
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    const second = await publicRead(
+      { req: { headers: new Headers() }, scope: 'navigation', payload: {} },
+      async () => NextResponse.json({ ok: true }),
+    )
+
+    // Refused while the first is still inside the limiter — which is the
+    // whole point: something has to be able to say no while the dependency
+    // behind it is still deciding.
+    expect(second.status).toBe(503)
+    expect(second.headers.get('Cache-Control')).toBe('no-store')
+
+    releaseRedis()
+    expect((await first).status).toBe(200)
+  })
+
+  // `navigation` is a handful of depth-0 reads and deliberately has no
+  // assembly or query gate. It still has to be bounded as a *request*.
+  it('covers navigation, which has no work gate of its own', async () => {
+    vi.stubEnv('PUBLIC_INGRESS_CONCURRENCY', '1')
+    vi.stubEnv('PUBLIC_INGRESS_QUEUE', '0')
+    resetAdmissionGates()
+
+    let release!: () => void
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+
+    const first = publicRead({ req: { headers: new Headers() }, scope: 'navigation', payload: {} }, async () => {
+      await held
+      return NextResponse.json({ ok: true })
+    })
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    const second = await publicRead(
+      { req: { headers: new Headers() }, scope: 'navigation', payload: {} },
+      async () => NextResponse.json({ ok: true }),
+    )
+
+    expect(second.status).toBe(503)
+    release()
+    await first
+  })
+
+  it('does not refuse anything while it has room', async () => {
+    const responses = await Promise.all(
+      Array.from({ length: 8 }, () =>
+        publicRead({ req: { headers: new Headers() }, scope: 'navigation', payload: {} }, async () =>
+          NextResponse.json({ ok: true }),
+        ),
+      ),
+    )
+
+    expect(responses.every((response) => response.status === 200)).toBe(true)
   })
 })

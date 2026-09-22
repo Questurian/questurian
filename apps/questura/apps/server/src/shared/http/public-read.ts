@@ -71,13 +71,25 @@ export function overloadedResponse(error: AdmissionRefused): NextResponse {
 }
 
 /**
- * The four things every expensive public read needs, in the order they have
+ * The five things every expensive public read needs, in the order they have
  * to happen.
  *
+ * 0. Bound how many requests are in this process at all — *before* the rate
+ *    limiter, because the rate limiter is a Redis call.
  * 1. Refuse the caller who is asking too often, before any database work.
  * 2. Admit the work only if the process has room for it (`admission.ts`).
  * 3. Count the work the request actually does.
  * 4. Say how long the answer may be reused.
+ *
+ * Step 0 is the one L07 added, and the ordering is the whole point. The rate
+ * limiter fails open when Redis is unavailable, which is right — but "fails
+ * open" describes the *answer*, not the *wait*. A half-open Redis answers
+ * slowly rather than not at all, so every arriving request sits in the
+ * limiter until its command deadline, and nothing bounded how many requests
+ * could be sitting there. A command deadline caps one command; it says
+ * nothing about how many requests are holding one. The ingress gate is the
+ * only thing in this path that can refuse while the dependency behind it is
+ * still deciding, and it covers `navigation` too, which had no gate at all.
  *
  * A wrapper rather than middleware because middleware cannot see the Payload
  * instance, and the counting has to be attached to the pool that serves this
@@ -91,18 +103,24 @@ export async function publicRead(
   },
   handle: () => Promise<NextResponse>,
 ): Promise<NextResponse> {
-  const limit = await checkPublicReadRateLimit(options.req.headers, options.scope)
-  if (!limit.allowed) return publicReadRateLimitResponse(limit.retryAfterSeconds)
-
-  const work = SCOPE_WORK[options.scope]
-  const admitted =
-    work === 'route' || work === 'none'
-      ? handle
-      : () => admitPublicWork(work, handle, options.req.signal ?? undefined)
+  const signal = options.req.signal ?? undefined
 
   try {
-    const response = await withPublicReadDiagnostics(options.payload, options.req.headers, admitted)
-    return withPublicCacheHeaders(response)
+    return await admitPublicWork(
+      'ingress',
+      async () => {
+        const limit = await checkPublicReadRateLimit(options.req.headers, options.scope)
+        if (!limit.allowed) return publicReadRateLimitResponse(limit.retryAfterSeconds)
+
+        const work = SCOPE_WORK[options.scope]
+        const admitted =
+          work === 'route' || work === 'none' ? handle : () => admitPublicWork(work, handle, signal)
+
+        const response = await withPublicReadDiagnostics(options.payload, options.req.headers, admitted)
+        return withPublicCacheHeaders(response)
+      },
+      signal,
+    )
   } catch (error) {
     if (error instanceof AdmissionRefused) return overloadedResponse(error)
     throw error

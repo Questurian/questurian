@@ -170,7 +170,7 @@ export class AdmissionGate {
 // The process's gates.
 // ---------------------------------------------------------------------------
 
-export type PublicWorkClass = 'assembly' | 'query'
+export type PublicWorkClass = 'assembly' | 'query' | 'ingress' | 'private'
 
 function readPositiveInt(name: string, fallback: number): number {
   const raw = process.env[name]?.trim()
@@ -189,18 +189,37 @@ function readPositiveInt(name: string, fallback: number): number {
  *   later than a reader waits anyway.
  * - `query` (search, feeds, indexes, author pages): 8 at once, each one to
  *   three connections. Queue 32, wait 1.5 s.
+ * - `ingress` (every public read, before anything slow): 64 at once. This one
+ *   is not about the database. The assembly and query gates sit *after* the
+ *   rate limiter, which is a Redis call — so when Redis is slow or
+ *   half-open, every arriving request waits on it and nothing bounds how many
+ *   of those there are. Commands have deadlines, but a deadline caps one
+ *   command, not the number of requests holding one. The ingress gate is the
+ *   thing that can say no while the dependency behind it is still deciding.
+ *   It is deliberately generous: it exists to stop unbounded growth, not to
+ *   shape traffic. It also covers `navigation`, which had no gate at all.
+ * - `private` (signed-in identity and bookmark reads): 16 at once, so
+ *   session traffic has a budget of its own and cannot be starved by a
+ *   public burst or starve it. Anonymous identity never reaches this gate —
+ *   it does no database or Redis work and must stay free.
  *
- * Identity, payments and editorial writes never pass through these gates.
- * Every value is an env override, because the right number belongs to the
- * platform: re-measure there and set it.
+ * Payments and editorial writes never pass through any of these. Every value
+ * is an env override, because the right number belongs to the platform:
+ * re-measure there and set it.
  */
+const GATE_DEFAULTS: Record<PublicWorkClass, { prefix: string; limit: number; maxQueue: number; maxWaitMs: number }> = {
+  assembly: { prefix: 'PUBLIC_ASSEMBLY', limit: 2, maxQueue: 8, maxWaitMs: 1_500 },
+  query: { prefix: 'PUBLIC_QUERY', limit: 8, maxQueue: 32, maxWaitMs: 1_500 },
+  ingress: { prefix: 'PUBLIC_INGRESS', limit: 64, maxQueue: 128, maxWaitMs: 1_000 },
+  private: { prefix: 'PRIVATE_READ', limit: 16, maxQueue: 64, maxWaitMs: 1_500 },
+}
+
 function gateOptions(kind: PublicWorkClass): AdmissionOptions {
-  const prefix = kind === 'assembly' ? 'PUBLIC_ASSEMBLY' : 'PUBLIC_QUERY'
-  const defaults = kind === 'assembly' ? { limit: 2, maxQueue: 8 } : { limit: 8, maxQueue: 32 }
+  const defaults = GATE_DEFAULTS[kind]
   return {
-    limit: readPositiveInt(`${prefix}_CONCURRENCY`, defaults.limit),
-    maxQueue: readPositiveInt(`${prefix}_QUEUE`, defaults.maxQueue),
-    maxWaitMs: readPositiveInt(`${prefix}_QUEUE_MS`, 1_500),
+    limit: readPositiveInt(`${defaults.prefix}_CONCURRENCY`, defaults.limit),
+    maxQueue: readPositiveInt(`${defaults.prefix}_QUEUE`, defaults.maxQueue),
+    maxWaitMs: readPositiveInt(`${defaults.prefix}_QUEUE_MS`, defaults.maxWaitMs),
   }
 }
 
@@ -214,7 +233,12 @@ export function admissionGate(kind: PublicWorkClass): AdmissionGate {
 }
 
 export function admissionStats(): Record<PublicWorkClass, AdmissionStats> {
-  return { assembly: admissionGate('assembly').stats(), query: admissionGate('query').stats() }
+  return {
+    assembly: admissionGate('assembly').stats(),
+    query: admissionGate('query').stats(),
+    ingress: admissionGate('ingress').stats(),
+    private: admissionGate('private').stats(),
+  }
 }
 
 /** Test seam: forget the process's gates so options are re-read. */

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 
 import { APP_CONFIG } from '@/shared/config'
 import { redisSecondaryStorage } from '@/features/visitor-auth/lib/redis-secondary-storage'
+import { CircuitBreaker } from './circuit-breaker'
 
 /**
  * The fixed-window counter shared by every rate limiter in the app.
@@ -80,12 +81,27 @@ function incrementLocalCounter(key: string, windowSeconds: number): CounterResul
   }
 }
 
+/**
+ * How long a caller waits to discover Redis is down.
+ *
+ * Commands already have a deadline, which bounds one command and nothing
+ * else. With a one-second deadline and campaign arrival rates, a blackholed
+ * Redis means every request in the process is waiting a full second to be
+ * told what the previous hundred already found out. After five consecutive
+ * failures this stops waiting and answers immediately, with one probe every
+ * five seconds to notice recovery (`circuit-breaker.ts`).
+ *
+ * What a failure *means* is unchanged and still belongs to the caller: public
+ * read limits fail open, payments fail closed. This only changes the wait.
+ */
+export const redisBreaker = new CircuitBreaker('redis', { failureThreshold: 5, openMs: 5_000 })
+
 export async function incrementCounter(
   key: string,
   windowSeconds: number
 ): Promise<CounterResult> {
   if (APP_CONFIG.redis.url) {
-    return redisSecondaryStorage.incrementWithExpiry(key, windowSeconds)
+    return redisBreaker.run(() => redisSecondaryStorage.incrementWithExpiry(key, windowSeconds))
   }
 
   if (APP_CONFIG.isProduction) {
