@@ -30,6 +30,31 @@ import { checkPublicReadRateLimit } from '@/shared/http/public-read-rate-limit'
 export const ANONYMOUS_MAX_LIMIT = 100
 export const ANONYMOUS_MAX_DEPTH = 2
 
+/**
+ * The route wrapper (`mount-bounds.ts`) already charged this request to the
+ * caller's `payloadApi` bucket. It marks the request it hands Payload so this
+ * hook does not charge it again — one logical request, one token.
+ *
+ * The mark is a per-process random value, and the route deletes any incoming
+ * copy before setting its own, so a caller cannot send it to skip the limit.
+ * Without the mark (a regenerated route file, a mount nobody wrapped) the hook
+ * charges as before: defence in depth, not a second budget.
+ */
+const COUNTED_HEADER = 'x-questura-mount-counted'
+const store = globalThis as unknown as { __questuraMountCountedMark?: string }
+
+function countedMark(): string {
+  return (store.__questuraMountCountedMark ??= crypto.randomUUID())
+}
+
+export function markRouteCounted(headers: Headers): void {
+  headers.set(COUNTED_HEADER, countedMark())
+}
+
+function routeCounted(headers: Headers | undefined): boolean {
+  return headers?.get(COUNTED_HEADER) === countedMark()
+}
+
 type ReadArgs = { limit?: number; depth?: number; pagination?: boolean }
 
 function isExternalAnonymous(req: { payloadAPI?: string; user?: unknown } | undefined): boolean {
@@ -54,6 +79,7 @@ export const boundAnonymousReads: CollectionBeforeOperationHook = async ({ args,
 
   // The same per-IP limiter as the public reads, in its own bucket. Fails
   // open with the rest of them if Redis is down; the clamp below still holds.
+  if (routeCounted(req.headers)) return clampAnonymousRead(args as ReadArgs) as typeof args
   const limit = await checkPublicReadRateLimit(req.headers, 'payloadApi')
   if (!limit.allowed) throw new APIError('Too many requests. Please try again shortly.', 429)
 

@@ -6,7 +6,9 @@ vi.mock('@/shared/http/public-read-rate-limit', () => ({
   checkPublicReadRateLimit: limiter.check,
 }))
 
-const { anonymousApiBoundsPlugin, boundAnonymousReads, clampAnonymousRead } = await import('./anonymous-api-bounds')
+const { anonymousApiBoundsPlugin, boundAnonymousReads, clampAnonymousRead, markRouteCounted } = await import(
+  './anonymous-api-bounds'
+)
 
 type HookArgs = Parameters<typeof boundAnonymousReads>[0]
 
@@ -52,6 +54,22 @@ describe('boundAnonymousReads', () => {
     limiter.check.mockResolvedValue({ allowed: false, retryAfterSeconds: 30 })
     await expect(call({ limit: 1 }, { payloadAPI: 'REST' })).rejects.toMatchObject({ status: 429 })
     expect(limiter.check).toHaveBeenCalledWith(expect.any(Headers), 'payloadApi')
+  })
+})
+
+// One logical request, one token: the route wrapper already charged it.
+describe('a request the route already counted', () => {
+  it('is clamped without being charged a second time', async () => {
+    const headers = new Headers()
+    markRouteCounted(headers)
+    await expect(call({ limit: 1000 }, { payloadAPI: 'REST', headers })).resolves.toMatchObject({ limit: 100 })
+    expect(limiter.check).not.toHaveBeenCalled()
+  })
+
+  it('is charged when the mark is a guess', async () => {
+    const headers = new Headers({ 'x-questura-mount-counted': 'guess' })
+    await call({ limit: 1 }, { payloadAPI: 'REST', headers })
+    expect(limiter.check).toHaveBeenCalledTimes(1)
   })
 })
 

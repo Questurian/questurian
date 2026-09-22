@@ -1,4 +1,6 @@
-import { declaredProcessCount, previousGenerationPerProcess, transientPeakConnections } from './fleet-manifest'
+import { readBoundedInt } from '@/shared/config/env-int'
+
+import { declaredProcessCount, PROCESS_LIMITS, previousGeneration, rolloutPeak, type PreviousGeneration } from './fleet-manifest'
 import { looksTransactionPooled } from './pooled-uri'
 
 /**
@@ -74,25 +76,7 @@ const MAX_POOL_SIZE = 200
 /** Headroom for `psql`, a migration, a backup — work no pool accounts for. */
 export const DEFAULT_RESERVED_CONNECTIONS = 5
 
-type IntRead = { value: number | null; problem: string | null }
-
-/**
- * A whole number in range, or a problem naming the variable. `null` value with
- * no problem means "not set".
- */
-function readInt(env: Env, name: string, min: number, max: number): IntRead {
-  const raw = env[name]?.trim()
-  if (!raw) return { value: null, problem: null }
-
-  if (!/^\d+$/.test(raw)) {
-    return { value: null, problem: `${name} must be a whole number, got "${raw}".` }
-  }
-  const value = Number(raw)
-  if (value < min || value > max) {
-    return { value: null, problem: `${name} must be between ${min} and ${max}, got ${value}.` }
-  }
-  return { value, problem: null }
-}
+const readInt = readBoundedInt
 
 /**
  * The pool sizes every pool constructor uses. An invalid override falls back
@@ -142,6 +126,13 @@ export type PoolBudget = {
   problems: string[]
   /** The previous release's per-process ceiling, when it differs from this one's. */
   previousPerProcess: number
+  /** The generation a rollout replaces: sizes, count and how it was declared. */
+  previous: Pick<PreviousGeneration, 'sizes' | 'processCount' | 'source'>
+  /**
+   * The rollout state behind each line's demand, so an operator can reconcile
+   * what `pg_stat_activity` shows with what this budget allowed for.
+   */
+  peak: { oldProcesses: number; newProcesses: number }
 }
 
 export function poolBudget(
@@ -174,7 +165,12 @@ export function poolBudget(
   // states both, they have to agree (fleet-manifest.ts).
   const declared = declaredProcessCount(env)
   problems.push(...declared.problems)
-  const explicitProcessCount = take('APP_PROCESS_COUNT', 1, 10_000, declared.processes === null)
+  const explicitProcessCount = take(
+    'APP_PROCESS_COUNT',
+    PROCESS_LIMITS.processes.min,
+    PROCESS_LIMITS.processes.max,
+    declared.processes === null,
+  )
   const processCount = declared.processes ?? explicitProcessCount
   const rolloutSurge = take('APP_ROLLOUT_SURGE', 0, 10_000, true)
   const jobProcessCount = take('APP_JOB_PROCESS_COUNT', 0, 1_000, false)
@@ -205,36 +201,65 @@ export function poolBudget(
   // The rollout's two generations are summed separately. The old one uses the
   // pool sizes it was deployed with, not this release's — and the deploy that
   // changes a pool size is exactly the deploy where both are alive at once.
-  const previousPerProcess = previousGenerationPerProcess(env, sizes)
-  problems.push(...previousPerProcess.problems)
-  const heterogeneous = previousPerProcess.perProcess !== perProcess
+  const previous = previousGeneration(env, sizes)
+  problems.push(...previous.problems)
+  const heterogeneous =
+    previous.perProcess !== perProcess || (previous.processCount ?? counts.processCount) !== counts.processCount
+  const oldProcesses = previous.processCount ?? counts.processCount
+
+  const peakOf = (currentPerProcess: number, previousPerProcess: number) =>
+    rolloutPeak({
+      newProcesses: counts.processCount,
+      oldProcesses,
+      surge: counts.rolloutSurge,
+      currentPerProcess,
+      previousPerProcess,
+    })
+  // A job started by the old release can outlive its deploy, so a job process
+  // is counted at the larger generation's size.
+  const jobs = (currentPerProcess: number, previousPerProcess: number) =>
+    counts.jobProcessCount * Math.max(currentPerProcess, previousPerProcess)
+
+  let peakState: RolloutState
 
   if (topology === 'direct') {
-    const demand = transientPeakConnections(env, {
-      servingProcesses: counts.processCount,
-      rolloutSurge: counts.rolloutSurge,
-      jobProcesses: counts.jobProcessCount,
-      reserved: counts.reserved,
-    })
+    const peak = peakOf(perProcess, previous.perProcess)
+    peakState = { oldProcesses: peak.oldProcesses, newProcesses: peak.newProcesses }
     lines.push(
       line(
         heterogeneous
-          ? 'backends: this release\'s processes + the previous release\'s surge + the reserve'
+          ? 'backends: the worst rollout state of both releases + jobs + the reserve'
           : 'backends: every pool of every process, plus the reserve',
-        demand,
+        peak.demand + jobs(perProcess, previous.perProcess) + counts.reserved,
         maxConnections,
       ),
     )
   } else {
     const poolerClients = take('DATABASE_POOLER_MAX_CLIENTS', 1, 1_000_000, true)
     const poolerBackends = take('DATABASE_POOLER_POOL_SIZE', 1, 100_000, true)
-    // Payload, Better Auth and the boot guard all connect through DATABASE_URI.
+    // Payload, Better Auth and the boot guard all connect through DATABASE_URI;
+    // the advisory-lock pool bypasses the pooler. Each side takes its own worst
+    // rollout state, because the state that maximises one need not maximise
+    // the other.
     const pooledPerProcess = sizes.payload + sizes.visitorAuth + sizes.startup
-    lines.push(line('pooler clients: pooled pools of every process', pooledPerProcess * processes, poolerClients))
+    const pooled = peakOf(pooledPerProcess, previous.pooledPerProcess)
+    const direct = peakOf(sizes.advisoryLock, previous.directPerProcess)
+    peakState = { oldProcesses: pooled.oldProcesses, newProcesses: pooled.newProcesses }
+
     lines.push(
       line(
-        'backends: pooler pool + direct advisory-lock pools + reserve',
-        (poolerBackends ?? 0) + sizes.advisoryLock * processes + counts.reserved,
+        'pooler clients: pooled pools of every process in the worst rollout state, plus jobs',
+        pooled.demand + jobs(pooledPerProcess, previous.pooledPerProcess),
+        poolerClients,
+      ),
+    )
+    lines.push(
+      line(
+        'backends: pooler pool + direct advisory-lock pools in the worst rollout state + jobs + reserve',
+        (poolerBackends ?? 0) +
+          direct.demand +
+          jobs(sizes.advisoryLock, previous.directPerProcess) +
+          counts.reserved,
         poolerBackends === null ? null : maxConnections,
       ),
     )
@@ -251,9 +276,13 @@ export function poolBudget(
     lines,
     exceedsAllowance: lines.some((entry) => entry.fits === false),
     problems,
-    previousPerProcess: previousPerProcess.perProcess,
+    previousPerProcess: previous.perProcess,
+    previous: { sizes: previous.sizes, processCount: previous.processCount, source: previous.source },
+    peak: peakState,
   }
 }
+
+type RolloutState = { oldProcesses: number; newProcesses: number }
 
 export function describePoolBudget(budget: PoolBudget = poolBudget()): string {
   const { sizes } = budget
@@ -263,6 +292,12 @@ export function describePoolBudget(budget: PoolBudget = poolBudget()): string {
   const processes =
     `${budget.processes} processes (${budget.processCount} serving + ${budget.rolloutSurge} rollout surge + ` +
     `${budget.jobProcessCount} jobs) × ${budget.perProcess} (${breakdown})`
+  const previous =
+    budget.previous.source === 'same-as-this-release' && budget.previous.processCount === null
+      ? ''
+      : `; previous release ${budget.previous.processCount ?? budget.processCount} processes × ` +
+        `${budget.previousPerProcess} (${budget.previous.source}); worst rollout state ` +
+        `${budget.peak.oldProcesses} old + ${budget.peak.newProcesses} new`
   const lines = budget.lines
     .map((entry) =>
       entry.allowed === null
@@ -271,5 +306,5 @@ export function describePoolBudget(budget: PoolBudget = poolBudget()): string {
     )
     .join('; ')
 
-  return `${budget.topology} topology, ${processes}; ${lines}`
+  return `${budget.topology} topology, ${processes}${previous}; ${lines}`
 }

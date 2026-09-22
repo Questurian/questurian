@@ -16,13 +16,23 @@
  * view, and a migration killed halfway is worse than a slow one.
  */
 
-function readMs(name: string, fallback: number): number {
-  const raw = process.env[name]
+type Env = Record<string, string | undefined>
+
+function readMs(env: Env, name: string, fallback: number): number {
+  const raw = env[name]
   if (raw === undefined || raw.trim() === '') return fallback
 
   const value = Number(raw)
   return Number.isFinite(value) && value >= 0 ? Math.floor(value) : fallback
 }
+
+/** The variables these budgets read, so a validator can report the unparseable ones. */
+export const TIMEOUT_ENV = [
+  'PG_STATEMENT_TIMEOUT_MS',
+  'PG_LOCK_TIMEOUT_MS',
+  'PG_IDLE_IN_TRANSACTION_TIMEOUT_MS',
+  'PG_ADVISORY_LOCK_WAIT_MS',
+] as const
 
 export type DatabaseTimeouts = {
   statementMs: number
@@ -37,11 +47,11 @@ export type DatabaseTimeouts = {
  * measured public read spends about 50ms in SQL — and short enough that a
  * pathological one releases its connection while the site is still up.
  */
-export function servingTimeouts(): DatabaseTimeouts {
+export function servingTimeouts(env: Env = process.env): DatabaseTimeouts {
   return {
-    statementMs: readMs('PG_STATEMENT_TIMEOUT_MS', 15_000),
-    lockMs: readMs('PG_LOCK_TIMEOUT_MS', 5_000),
-    idleInTransactionMs: readMs('PG_IDLE_IN_TRANSACTION_TIMEOUT_MS', 30_000),
+    statementMs: readMs(env, 'PG_STATEMENT_TIMEOUT_MS', 15_000),
+    lockMs: readMs(env, 'PG_LOCK_TIMEOUT_MS', 5_000),
+    idleInTransactionMs: readMs(env, 'PG_IDLE_IN_TRANSACTION_TIMEOUT_MS', 30_000),
   }
 }
 
@@ -54,11 +64,11 @@ export function servingTimeouts(): DatabaseTimeouts {
  * process dies. The lock pool runs nothing but lock and unlock, so a statement
  * budget here bounds waiting and only waiting.
  */
-export function advisoryLockTimeouts(): DatabaseTimeouts {
+export function advisoryLockTimeouts(env: Env = process.env): DatabaseTimeouts {
   return {
-    statementMs: readMs('PG_ADVISORY_LOCK_WAIT_MS', 30_000),
+    statementMs: readMs(env, 'PG_ADVISORY_LOCK_WAIT_MS', 30_000),
     lockMs: 0,
-    idleInTransactionMs: readMs('PG_IDLE_IN_TRANSACTION_TIMEOUT_MS', 30_000),
+    idleInTransactionMs: readMs(env, 'PG_IDLE_IN_TRANSACTION_TIMEOUT_MS', 30_000),
   }
 }
 
