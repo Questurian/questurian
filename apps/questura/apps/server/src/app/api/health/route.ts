@@ -1,34 +1,37 @@
 /**
  * Health Check Endpoint
  *
- * Returns server health status, database connection, and system info
- * Used for monitoring and load balancer health checks
+ * Returns server health status, database connection, and system info.
+ * Used for monitoring and load balancer health checks.
+ *
+ * The database probe is **sampled**, not run per request. This route is the
+ * one a platform polls hardest, and it used to issue a fresh query every
+ * call from every instance — so a database under pressure got a health-check
+ * storm on top of the pressure, at the moment it could least afford one. The
+ * result is cached for `PROBE_TTL_MS` and the response says how old it is, so
+ * a reader can tell a current answer from a recent one.
+ *
+ * For a readiness check that costs nothing at all, use `/api/health/ready`.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getPayload } from 'payload'
-import config from '@/payload.config'
+import { sampledDatabaseProbe } from '@/shared/observability/health-probe'
+import { readinessState } from '@/shared/observability/readiness'
 import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 
 export async function GET(req: NextRequest) {
-  const startTime = Date.now()
   const corsHeaders = getCorsHeaders(req)
+  const probe = await sampledDatabaseProbe()
+  const readiness = readinessState()
 
-  try {
-    // Check database connection
-    const payload = await getPayload({ config })
-
-    // Simple query to verify DB is responsive
-    await payload.find({
-      collection: 'users',
-      limit: 1,
-      depth: 0,
-    })
-
-    const responseTime = Date.now() - startTime
+  if (probe.ok) {
+    const responseTime = probe.responseTimeMs
 
     return NextResponse.json({
       status: 'healthy',
+      ready: readiness.ready,
+      degraded: readiness.degraded,
+      probeAgeMs: Date.now() - probe.at,
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       environment: process.env.NODE_ENV || 'development',
@@ -46,25 +49,25 @@ export async function GET(req: NextRequest) {
           total: `${Math.round(process.memoryUsage().heapTotal / 1024 / 1024)}MB`,
         },
       },
-    }, { headers: corsHeaders })
-  } catch (error) {
-    const responseTime = Date.now() - startTime
-
-    return NextResponse.json(
-      {
-        status: 'unhealthy',
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development',
-        releaseSha: process.env.QUESTURA_RELEASE_SHA || 'unknown',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        database: {
-          status: 'disconnected',
-          responseTime: `${responseTime}ms`,
-        },
-      },
-      { status: 503, headers: corsHeaders }
-    )
+    }, { headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
   }
+
+  return NextResponse.json(
+    {
+      status: 'unhealthy',
+      ready: readiness.ready,
+      probeAgeMs: Date.now() - probe.at,
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      releaseSha: process.env.QUESTURA_RELEASE_SHA || 'unknown',
+      error: probe.error ?? 'Unknown error',
+      database: {
+        status: 'disconnected',
+        responseTime: `${probe.responseTimeMs}ms`,
+      },
+    },
+    { status: 503, headers: { ...corsHeaders, 'Cache-Control': 'no-store' } }
+  )
 }
 
 export async function OPTIONS(req: NextRequest) {

@@ -1,6 +1,7 @@
 import { logger } from '@/shared/utils/logger'
 
-import { drainRefreshJobs, type WorkerPool } from './worker'
+import { runDrain } from './lifecycle'
+import { claimingStopped, type WorkerPool } from './worker'
 
 /**
  * Drain this process's own recent enqueues shortly after they commit.
@@ -13,7 +14,9 @@ import { drainRefreshJobs, type WorkerPool } from './worker'
  * (`/api/internal/refresh-jobs`, `pnpm refresh:jobs drain`).
  *
  * One pending drain per process; timers are unref'd so a CLI script that
- * enqueues can still exit.
+ * enqueues can still exit. Every start goes through `runDrain`, which is what
+ * keeps this timer, the periodic timer, the HTTP endpoint and the CLI from
+ * running two drains in one process at once (`lifecycle.ts`).
  */
 
 const DELAYS_MS = [500, 3_000]
@@ -25,6 +28,9 @@ function poolFrom(payload: unknown): WorkerPool | undefined {
 }
 
 export function scheduleDrain(payload: unknown): void {
+  // A process on its way out does not start new work.
+  if (claimingStopped()) return
+
   const current = (state.__questuraRefreshDrain ??= { scheduled: false })
   if (current.scheduled) return
   const pool = poolFrom(payload)
@@ -33,7 +39,7 @@ export function scheduleDrain(payload: unknown): void {
 
   let step = 0
   const run = () => {
-    drainRefreshJobs(pool)
+    runDrain(pool)
       .catch((error) => {
         logger.warn('Refresh outbox drain failed; the scheduled worker will retry', {
           error: error instanceof Error ? error.message : String(error),

@@ -15,6 +15,7 @@ vi.mock('@/shared/utils/cors', () => ({
 }))
 
 const { GET } = await import('./route')
+const { resetHealthProbe, PROBE_TTL_MS } = await import('@/shared/observability/health-probe')
 const request = { headers: new Headers() } as NextRequest
 
 describe('GET /api/health', () => {
@@ -22,6 +23,9 @@ describe('GET /api/health', () => {
     vi.stubEnv('QUESTURA_RELEASE_SHA', '')
     find.mockReset()
     find.mockResolvedValue({ docs: [] })
+    // The probe is sampled across requests, so each test starts from no
+    // cached answer.
+    resetHealthProbe()
   })
 
   afterEach(() => {
@@ -59,5 +63,26 @@ describe('GET /api/health', () => {
   it('uses an explicit unknown sentinel outside release deployments', async () => {
     const response = await GET(request)
     await expect(response.json()).resolves.toMatchObject({ releaseSha: 'unknown' })
+  })
+
+  // The failure this sampling exists to prevent: a platform polling every
+  // instance turns a database outage into an outage plus a poll storm, with
+  // each check holding a request open for a connection timeout.
+  it('does not query the database once per request', async () => {
+    await Promise.all([GET(request), GET(request), GET(request), GET(request)])
+    expect(find).toHaveBeenCalledTimes(1)
+  })
+
+  it('says how old the sampled answer is, so a reader can tell current from recent', async () => {
+    const first = await (await GET(request)).json()
+    const second = await (await GET(request)).json()
+
+    expect(first.probeAgeMs).toBeLessThanOrEqual(PROBE_TTL_MS)
+    expect(second.probeAgeMs).toBeGreaterThanOrEqual(first.probeAgeMs)
+  })
+
+  it('never lets a health answer be cached by anything in front of it', async () => {
+    const response = await GET(request)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
   })
 })

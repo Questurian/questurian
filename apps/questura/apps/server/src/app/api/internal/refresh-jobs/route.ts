@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import config from '@/payload.config'
+import { runDrain, workerHealth } from '@/features/refresh-outbox/lifecycle'
 import {
-  drainRefreshJobs,
   listFailedRefreshJobs,
   refreshJobStats,
   replayFailedRefreshJobs,
@@ -14,7 +14,12 @@ import {
 /**
  * The refresh outbox's operator surface (features/refresh-outbox).
  *
- * GET   → counts, oldest due age, the most recent failed jobs.
+ * GET   → counts, oldest due age, oldest live claim, expired claims, this
+ *         process's worker health, and the most recent failed jobs. Counts
+ *         alone cannot tell "nothing to do" from "nothing has run": a backlog
+ *         with a worker that last succeeded an hour ago is a different
+ *         incident from the same backlog with a worker succeeding every
+ *         minute, and `pending: 400` looks identical in both.
  * POST  → `?action=drain` (default) does due jobs now — the endpoint a
  *         platform scheduler calls every minute; `?action=replay` requeues
  *         failed jobs.
@@ -51,7 +56,11 @@ export async function GET(req: NextRequest) {
 
   const db = await pool()
   return NextResponse.json(
-    { stats: await refreshJobStats(db), failed: await listFailedRefreshJobs(db, 20) },
+    {
+      stats: await refreshJobStats(db),
+      worker: workerHealth(),
+      failed: await listFailedRefreshJobs(db, 20),
+    },
     { headers: NO_STORE },
   )
 }
@@ -72,8 +81,13 @@ export async function POST(req: NextRequest) {
   // in one claim, which leased ninety-odd of them for a minute before the
   // worker had started any — invisible to every other drain, and reclaimed
   // elsewhere if the lease ran out mid-work (features/refresh-outbox/worker.ts).
+  //
+  // Through `runDrain`, so a scheduler calling this every minute cannot give
+  // one process two concurrent drains alongside its own periodic timer. When
+  // a drain is already running, this joins it and reports its real result
+  // rather than starting a second (features/refresh-outbox/lifecycle.ts).
   return NextResponse.json(
-    { drained: await drainRefreshJobs(db, { maxJobs: 100, concurrency: 4 }) },
+    { drained: await runDrain(db, { maxJobs: 100, concurrency: 4 }), worker: workerHealth() },
     { headers: NO_STORE },
   )
 }
