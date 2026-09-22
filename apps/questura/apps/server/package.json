@@ -49,7 +49,8 @@
     "readiness": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/cli.ts",
     "readiness:publish": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/publish-e2e.ts",
     "readiness:collect": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/collect.ts",
-    "readiness:fleet": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/fleet-rehearsal.ts"
+    "readiness:fleet": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/fleet-rehearsal.ts",
+    "readiness:restore": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/restore-rehearsal.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.79.1",
