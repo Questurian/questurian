@@ -1,7 +1,14 @@
+// @vitest-environment node
+//
+// Real connections, real timers, real `fetch`. The default jsdom environment
+// replaces enough of the platform that `AbortSignal.timeout()` is not the
+// AbortSignal its `fetch` accepts — which fails the delivery under test for a
+// reason that has nothing to do with the code.
 import type { Client, Pool } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import {
+  createSandboxSchema,
   createSandboxDatabase,
   REFRESH_JOBS_DDL,
   sandboxAvailable,
@@ -26,6 +33,9 @@ import {
  * does.
  */
 
+/** This file's private schema, so a parallel test file cannot truncate under it. */
+const SCHEMA = 'readiness_sandbox'
+
 const available = await sandboxAvailableOrCreate()
 
 async function sandboxAvailableOrCreate(): Promise<boolean> {
@@ -43,10 +53,11 @@ describe.skipIf(!available)('readiness sandbox: two real connections', () => {
   let observer: Client
 
   beforeAll(async () => {
-    pool = sandboxPool(4)
+    await createSandboxSchema(SCHEMA)
+    pool = sandboxPool(4, SCHEMA)
     await pool.query(REFRESH_JOBS_DDL)
     await pool.query('TRUNCATE refresh_jobs RESTART IDENTITY')
-    observer = await sandboxClient()
+    observer = await sandboxClient(SCHEMA)
   })
 
   afterAll(async () => {
@@ -55,7 +66,7 @@ describe.skipIf(!available)('readiness sandbox: two real connections', () => {
   })
 
   it('hides an uncommitted obligation from another connection, and shows it after commit', async () => {
-    const writer = await sandboxClient()
+    const writer = await sandboxClient(SCHEMA)
     try {
       await writer.query('BEGIN')
       await writer.query(
@@ -80,7 +91,7 @@ describe.skipIf(!available)('readiness sandbox: two real connections', () => {
   })
 
   it('loses the obligation when the writing transaction rolls back', async () => {
-    const writer = await sandboxClient()
+    const writer = await sandboxClient(SCHEMA)
     try {
       await writer.query('BEGIN')
       await writer.query(

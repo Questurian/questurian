@@ -86,9 +86,20 @@ export async function dropSandboxDatabase(): Promise<void> {
 /**
  * A pool shaped like the one the worker is handed in production: `query` with
  * positional parameters, nothing else. Callers close it.
+ *
+ * `schema` puts this pool's `search_path` in its own namespace. Vitest runs
+ * test files in parallel, and two files truncating the same `refresh_jobs`
+ * between each other's assertions is a flake that looks exactly like a
+ * concurrency bug — which is unhelpful in a suite whose subject is
+ * concurrency bugs. One schema per file, and the isolation is the database's
+ * rather than a naming convention nobody enforces.
  */
-export function sandboxPool(max = 4): Pool {
-  return new Pool({ connectionString: sandboxDatabaseUri(), max })
+export function sandboxPool(max = 4, schema?: string): Pool {
+  return new Pool({
+    connectionString: sandboxDatabaseUri(),
+    max,
+    ...(schema ? { options: `-c search_path=${schema}` } : {}),
+  })
 }
 
 /**
@@ -96,10 +107,24 @@ export function sandboxPool(max = 4): Pool {
  * another connection looks at the same rows. This is the whole point of the
  * harness: two connections, or the concurrency claim is not being tested.
  */
-export async function sandboxClient(): Promise<Client> {
-  const client = new Client({ connectionString: sandboxDatabaseUri() })
+export async function sandboxClient(schema?: string): Promise<Client> {
+  const client = new Client({
+    connectionString: sandboxDatabaseUri(),
+    ...(schema ? { options: `-c search_path=${schema}` } : {}),
+  })
   await client.connect()
   return client
+}
+
+/** Create (or reuse) a private schema for one test file. */
+export async function createSandboxSchema(name: string): Promise<void> {
+  const pool = new Pool({ connectionString: sandboxDatabaseUri(), max: 1 })
+  try {
+    // `name` is a literal in the calling test file, never user input.
+    await pool.query(`CREATE SCHEMA IF NOT EXISTS "${name}"`)
+  } finally {
+    await pool.end()
+  }
 }
 
 /**
