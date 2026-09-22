@@ -21,6 +21,11 @@ export default defineConfig({
       // The load harness's pure modules. Registered deliberately: everything
       // else under scripts/ is operational and has no unit tests.
       'scripts/measure/**/*.test.ts',
+      // The readiness sandbox's pure modules: preflight refusals, manifest
+      // shape, workload expectations. The integration tests beside them skip
+      // themselves when no disposable Postgres is reachable, so CI stays
+      // green without pretending it ran them.
+      'scripts/readiness/**/*.test.ts',
     ],
   },
 })
