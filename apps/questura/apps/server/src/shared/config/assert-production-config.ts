@@ -8,6 +8,7 @@ import { TRUSTED_PROXY_NAMES } from './trusted-proxy'
 import { clientBaseUrl, revalidationDisconnected, revalidationSecret } from '@/features/public-revalidation/revalidation/env'
 import { looksTransactionPooled } from '@/shared/database/pooled-uri'
 import { describePoolBudget, poolBudget } from '@/shared/database/pool-budget'
+import { fleetManifestProblems } from '@/shared/database/fleet-manifest'
 
 /**
  * Fail fast on a production boot that is still carrying development defaults.
@@ -307,6 +308,14 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
   // `FATAL: sorry, too many clients already` on whichever pool asks next. So
   // production states every number the answer depends on, and the answer has
   // to fit.
+  // What the deployment claims about itself, checked for the ways a claim can
+  // be true and useless: containers counted as processes, a rollout assumed
+  // homogeneous, a pooler on an unrecognised hostname, a gate setting that is
+  // configured and means "no gate". See shared/database/fleet-manifest.ts.
+  for (const problem of fleetManifestProblems()) {
+    problems.push(`Fleet manifest: ${problem}`)
+  }
+
   const budget = poolBudget()
   for (const problem of budget.problems) {
     problems.push(`Connection budget: ${problem}`)

@@ -37,6 +37,7 @@ import { Bookmarks } from './features/bookmarks'
 import { StripeWebhookEvents } from './features/payments/collections/StripeWebhookEvents'
 import { APP_CONFIG, APP_URLS } from './shared/config'
 import { RefreshJobs } from './features/refresh-outbox/collection'
+import { applicationName } from './shared/database/fleet-manifest'
 import { poolSizes } from './shared/database/pool-budget'
 import { anonymousApiBoundsPlugin } from './shared/payload/anonymous-api-bounds'
 import { poolTimeoutOptions, servingTimeouts } from './shared/database/timeouts'
@@ -67,6 +68,11 @@ export default buildConfig({
     push: false,
     pool: {
       connectionString: APP_CONFIG.database.uri,
+      // Named so `pg_stat_activity` can say which pool of which release
+      // opened a connection. A budget that says 41 per process cannot be
+      // checked against a database that reports 300 connections all called
+      // `node` (shared/database/fleet-manifest.ts).
+      application_name: applicationName('payload'),
       // Sized in one place with every other pool, so the budget check adds
       // up the numbers that are actually used (shared/database/pool-budget.ts).
       max: poolSizes().payload,

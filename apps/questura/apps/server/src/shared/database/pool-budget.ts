@@ -1,3 +1,4 @@
+import { declaredProcessCount, previousGenerationPerProcess, transientPeakConnections } from './fleet-manifest'
 import { looksTransactionPooled } from './pooled-uri'
 
 /**
@@ -139,6 +140,8 @@ export type PoolBudget = {
   exceedsAllowance: boolean
   /** Invalid values, and (in production) missing ones. Each names its variable. */
   problems: string[]
+  /** The previous release's per-process ceiling, when it differs from this one's. */
+  previousPerProcess: number
 }
 
 export function poolBudget(
@@ -165,7 +168,14 @@ export function poolBudget(
   const sizes = poolSizes(env)
 
   const maxConnections = take('DATABASE_MAX_CONNECTIONS', 1, 100_000, true)
-  const processCount = take('APP_PROCESS_COUNT', 1, 10_000, true)
+
+  // Processes, not containers. A replica running two Node processes holds two
+  // sets of pools, and a deployment may state it either way — but if it
+  // states both, they have to agree (fleet-manifest.ts).
+  const declared = declaredProcessCount(env)
+  problems.push(...declared.problems)
+  const explicitProcessCount = take('APP_PROCESS_COUNT', 1, 10_000, declared.processes === null)
+  const processCount = declared.processes ?? explicitProcessCount
   const rolloutSurge = take('APP_ROLLOUT_SURGE', 0, 10_000, true)
   const jobProcessCount = take('APP_JOB_PROCESS_COUNT', 0, 1_000, false)
   const reserved = take('DATABASE_RESERVED_CONNECTIONS', 0, 10_000, false)
@@ -192,9 +202,28 @@ export function poolBudget(
 
   const lines: BudgetLine[] = []
 
+  // The rollout's two generations are summed separately. The old one uses the
+  // pool sizes it was deployed with, not this release's — and the deploy that
+  // changes a pool size is exactly the deploy where both are alive at once.
+  const previousPerProcess = previousGenerationPerProcess(env, sizes)
+  problems.push(...previousPerProcess.problems)
+  const heterogeneous = previousPerProcess.perProcess !== perProcess
+
   if (topology === 'direct') {
+    const demand = transientPeakConnections(env, {
+      servingProcesses: counts.processCount,
+      rolloutSurge: counts.rolloutSurge,
+      jobProcesses: counts.jobProcessCount,
+      reserved: counts.reserved,
+    })
     lines.push(
-      line('backends: every pool of every process, plus the reserve', perProcess * processes + counts.reserved, maxConnections),
+      line(
+        heterogeneous
+          ? 'backends: this release\'s processes + the previous release\'s surge + the reserve'
+          : 'backends: every pool of every process, plus the reserve',
+        demand,
+        maxConnections,
+      ),
     )
   } else {
     const poolerClients = take('DATABASE_POOLER_MAX_CLIENTS', 1, 1_000_000, true)
@@ -222,6 +251,7 @@ export function poolBudget(
     lines,
     exceedsAllowance: lines.some((entry) => entry.fits === false),
     problems,
+    previousPerProcess: previousPerProcess.perProcess,
   }
 }
 

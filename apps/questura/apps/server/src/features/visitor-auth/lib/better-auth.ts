@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth'
+import { applicationName } from '@/shared/database/fleet-manifest'
 import { poolSizes } from '@/shared/database/pool-budget'
 import { poolTimeoutOptions, servingTimeouts } from '@/shared/database/timeouts'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
@@ -56,6 +57,9 @@ const googleProvider =
  */
 export const visitorAuthPool = new Pool({
   connectionString: databaseUrl,
+  // See shared/database/fleet-manifest.ts: observed connections have to be
+  // reconcilable with the pools that were supposed to open them.
+  application_name: applicationName('visitorAuth'),
   max: poolSizes().visitorAuth,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
