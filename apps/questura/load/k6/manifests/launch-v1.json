@@ -1,0 +1,1025 @@
+{
+  "version": "launch-v1",
+  "seed": 20260922,
+  "counts": {
+    "articles": {
+      "published": 26,
+      "member": 7,
+      "drafts": 2
+    },
+    "maps": {
+      "published": 12,
+      "member": 0,
+      "drafts": 1
+    },
+    "itineraries": {
+      "published": 12,
+      "member": 4,
+      "drafts": 1
+    },
+    "publishedTotal": 50
+  },
+  "pieces": [
+    {
+      "type": "articles",
+      "index": 0,
+      "id": 1,
+      "slug": "launch-article-00",
+      "path": "/zz-launch/harbor/food-and-drink/launch-article-00",
+      "city": "harbor",
+      "access": "member",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-00",
+        "body": "BODY-ART-00-R1",
+        "member": "MEMBERONLY-ART-00"
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 1,
+      "id": 2,
+      "slug": "launch-article-01",
+      "path": "/zz-launch/old-quarter/neighbourhoods/launch-article-01",
+      "city": "old-quarter",
+      "access": "member",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-01",
+        "body": "BODY-ART-01-R1",
+        "member": "MEMBERONLY-ART-01"
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 2,
+      "id": 3,
+      "slug": "launch-article-02",
+      "path": "/zz-launch/river-bend/culture/launch-article-02",
+      "city": "river-bend",
+      "access": "member",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-02",
+        "body": "BODY-ART-02-R1",
+        "member": "MEMBERONLY-ART-02"
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 3,
+      "id": 4,
+      "slug": "launch-article-03",
+      "path": "/zz-launch/hillside/food-and-drink/launch-article-03",
+      "city": "hillside",
+      "access": "member",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-03",
+        "body": "BODY-ART-03-R1",
+        "member": "MEMBERONLY-ART-03"
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 4,
+      "id": 5,
+      "slug": "launch-article-04",
+      "path": "/zz-launch/harbor/neighbourhoods/launch-article-04",
+      "city": "harbor",
+      "access": "member",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-04",
+        "body": "BODY-ART-04-R1",
+        "member": "MEMBERONLY-ART-04"
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 5,
+      "id": 6,
+      "slug": "launch-article-05",
+      "path": "/zz-launch/old-quarter/culture/launch-article-05",
+      "city": "old-quarter",
+      "access": "member",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-05",
+        "body": "BODY-ART-05-R1",
+        "member": "MEMBERONLY-ART-05"
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 6,
+      "id": 7,
+      "slug": "launch-article-06",
+      "path": "/zz-launch/river-bend/food-and-drink/launch-article-06",
+      "city": "river-bend",
+      "access": "member",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-06",
+        "body": "BODY-ART-06-R1",
+        "member": "MEMBERONLY-ART-06"
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 7,
+      "id": 8,
+      "slug": "launch-article-07",
+      "path": "/zz-launch/hillside/neighbourhoods/launch-article-07",
+      "city": "hillside",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-07",
+        "body": "BODY-ART-07-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 8,
+      "id": 9,
+      "slug": "launch-article-08",
+      "path": "/zz-launch/harbor/culture/launch-article-08",
+      "city": "harbor",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-08",
+        "body": "BODY-ART-08-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 9,
+      "id": 10,
+      "slug": "launch-article-09",
+      "path": "/zz-launch/old-quarter/food-and-drink/launch-article-09",
+      "city": "old-quarter",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-09",
+        "body": "BODY-ART-09-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 10,
+      "id": 11,
+      "slug": "launch-article-10",
+      "path": "/zz-launch/river-bend/neighbourhoods/launch-article-10",
+      "city": "river-bend",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-10",
+        "body": "BODY-ART-10-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 11,
+      "id": 12,
+      "slug": "launch-article-11",
+      "path": "/zz-launch/hillside/culture/launch-article-11",
+      "city": "hillside",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-11",
+        "body": "BODY-ART-11-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 12,
+      "id": 13,
+      "slug": "launch-article-12",
+      "path": "/zz-launch/harbor/food-and-drink/launch-article-12",
+      "city": "harbor",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-12",
+        "body": "BODY-ART-12-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 13,
+      "id": 14,
+      "slug": "launch-article-13",
+      "path": "/zz-launch/old-quarter/neighbourhoods/launch-article-13",
+      "city": "old-quarter",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-13",
+        "body": "BODY-ART-13-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 14,
+      "id": 15,
+      "slug": "launch-article-14",
+      "path": "/zz-launch/river-bend/culture/launch-article-14",
+      "city": "river-bend",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-14",
+        "body": "BODY-ART-14-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 15,
+      "id": 16,
+      "slug": "launch-article-15",
+      "path": "/zz-launch/hillside/food-and-drink/launch-article-15",
+      "city": "hillside",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-15",
+        "body": "BODY-ART-15-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 16,
+      "id": 17,
+      "slug": "launch-article-16",
+      "path": "/zz-launch/harbor/neighbourhoods/launch-article-16",
+      "city": "harbor",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-16",
+        "body": "BODY-ART-16-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 17,
+      "id": 18,
+      "slug": "launch-article-17",
+      "path": "/zz-launch/old-quarter/culture/launch-article-17",
+      "city": "old-quarter",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-17",
+        "body": "BODY-ART-17-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 18,
+      "id": 19,
+      "slug": "launch-article-18",
+      "path": "/zz-launch/river-bend/food-and-drink/launch-article-18",
+      "city": "river-bend",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-18",
+        "body": "BODY-ART-18-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 19,
+      "id": 20,
+      "slug": "launch-article-19",
+      "path": "/zz-launch/hillside/neighbourhoods/launch-article-19",
+      "city": "hillside",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-19",
+        "body": "BODY-ART-19-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 20,
+      "id": 21,
+      "slug": "launch-article-20",
+      "path": "/zz-launch/harbor/culture/launch-article-20",
+      "city": "harbor",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-20",
+        "body": "BODY-ART-20-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 21,
+      "id": 22,
+      "slug": "launch-article-21",
+      "path": "/zz-launch/old-quarter/food-and-drink/launch-article-21",
+      "city": "old-quarter",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-21",
+        "body": "BODY-ART-21-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 22,
+      "id": 23,
+      "slug": "launch-article-22",
+      "path": "/zz-launch/river-bend/neighbourhoods/launch-article-22",
+      "city": "river-bend",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-22",
+        "body": "BODY-ART-22-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 23,
+      "id": 24,
+      "slug": "launch-article-23",
+      "path": "/zz-launch/hillside/culture/launch-article-23",
+      "city": "hillside",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-23",
+        "body": "BODY-ART-23-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 24,
+      "id": 25,
+      "slug": "launch-article-24",
+      "path": "/zz-launch/harbor/food-and-drink/launch-article-24",
+      "city": "harbor",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-24",
+        "body": "BODY-ART-24-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 25,
+      "id": 26,
+      "slug": "launch-article-25",
+      "path": "/zz-launch/old-quarter/neighbourhoods/launch-article-25",
+      "city": "old-quarter",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ART-25",
+        "body": "BODY-ART-25-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 26,
+      "id": 27,
+      "slug": "launch-article-26",
+      "path": null,
+      "city": "river-bend",
+      "access": "free",
+      "status": "draft",
+      "markers": {
+        "title": "LM-ART-26",
+        "body": "BODY-ART-26-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "articles",
+      "index": 27,
+      "id": 28,
+      "slug": "launch-article-27",
+      "path": null,
+      "city": "hillside",
+      "access": "free",
+      "status": "draft",
+      "markers": {
+        "title": "LM-ART-27",
+        "body": "BODY-ART-27-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "maps",
+      "index": 0,
+      "id": 1,
+      "slug": "launch-map-00",
+      "path": "/zz-launch/harbor/maps/launch-map-00",
+      "city": "harbor",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-MAP-00",
+        "body": "BODY-MAP-00-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "maps",
+      "index": 1,
+      "id": 2,
+      "slug": "launch-map-01",
+      "path": "/zz-launch/old-quarter/maps/launch-map-01",
+      "city": "old-quarter",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-MAP-01",
+        "body": "BODY-MAP-01-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "maps",
+      "index": 2,
+      "id": 3,
+      "slug": "launch-map-02",
+      "path": "/zz-launch/river-bend/maps/launch-map-02",
+      "city": "river-bend",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-MAP-02",
+        "body": "BODY-MAP-02-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "maps",
+      "index": 3,
+      "id": 4,
+      "slug": "launch-map-03",
+      "path": "/zz-launch/hillside/maps/launch-map-03",
+      "city": "hillside",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-MAP-03",
+        "body": "BODY-MAP-03-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "maps",
+      "index": 4,
+      "id": 5,
+      "slug": "launch-map-04",
+      "path": "/zz-launch/harbor/maps/launch-map-04",
+      "city": "harbor",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-MAP-04",
+        "body": "BODY-MAP-04-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "maps",
+      "index": 5,
+      "id": 6,
+      "slug": "launch-map-05",
+      "path": "/zz-launch/old-quarter/maps/launch-map-05",
+      "city": "old-quarter",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-MAP-05",
+        "body": "BODY-MAP-05-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "maps",
+      "index": 6,
+      "id": 7,
+      "slug": "launch-map-06",
+      "path": "/zz-launch/river-bend/maps/launch-map-06",
+      "city": "river-bend",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-MAP-06",
+        "body": "BODY-MAP-06-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "maps",
+      "index": 7,
+      "id": 8,
+      "slug": "launch-map-07",
+      "path": "/zz-launch/hillside/maps/launch-map-07",
+      "city": "hillside",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-MAP-07",
+        "body": "BODY-MAP-07-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "maps",
+      "index": 8,
+      "id": 9,
+      "slug": "launch-map-08",
+      "path": "/zz-launch/harbor/maps/launch-map-08",
+      "city": "harbor",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-MAP-08",
+        "body": "BODY-MAP-08-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "maps",
+      "index": 9,
+      "id": 10,
+      "slug": "launch-map-09",
+      "path": "/zz-launch/old-quarter/maps/launch-map-09",
+      "city": "old-quarter",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-MAP-09",
+        "body": "BODY-MAP-09-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "maps",
+      "index": 10,
+      "id": 11,
+      "slug": "launch-map-10",
+      "path": "/zz-launch/river-bend/maps/launch-map-10",
+      "city": "river-bend",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-MAP-10",
+        "body": "BODY-MAP-10-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "maps",
+      "index": 11,
+      "id": 12,
+      "slug": "launch-map-11",
+      "path": "/zz-launch/hillside/maps/launch-map-11",
+      "city": "hillside",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-MAP-11",
+        "body": "BODY-MAP-11-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "maps",
+      "index": 12,
+      "id": 13,
+      "slug": "launch-map-12",
+      "path": "/zz-launch/harbor/maps/launch-map-12",
+      "city": "harbor",
+      "access": "free",
+      "status": "draft",
+      "markers": {
+        "title": "LM-MAP-12",
+        "body": "BODY-MAP-12-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "itineraries",
+      "index": 0,
+      "id": 1,
+      "slug": "launch-itinerary-00",
+      "path": "/zz-launch/harbor/itineraries/launch-itinerary-00",
+      "city": "harbor",
+      "access": "member",
+      "status": "published",
+      "markers": {
+        "title": "LM-ITN-00",
+        "body": "BODY-ITN-00-R1",
+        "member": "MEMBERONLY-ITN-00"
+      },
+      "revision": 1
+    },
+    {
+      "type": "itineraries",
+      "index": 1,
+      "id": 2,
+      "slug": "launch-itinerary-01",
+      "path": "/zz-launch/old-quarter/itineraries/launch-itinerary-01",
+      "city": "old-quarter",
+      "access": "member",
+      "status": "published",
+      "markers": {
+        "title": "LM-ITN-01",
+        "body": "BODY-ITN-01-R1",
+        "member": "MEMBERONLY-ITN-01"
+      },
+      "revision": 1
+    },
+    {
+      "type": "itineraries",
+      "index": 2,
+      "id": 3,
+      "slug": "launch-itinerary-02",
+      "path": "/zz-launch/river-bend/itineraries/launch-itinerary-02",
+      "city": "river-bend",
+      "access": "member",
+      "status": "published",
+      "markers": {
+        "title": "LM-ITN-02",
+        "body": "BODY-ITN-02-R1",
+        "member": "MEMBERONLY-ITN-02"
+      },
+      "revision": 1
+    },
+    {
+      "type": "itineraries",
+      "index": 3,
+      "id": 4,
+      "slug": "launch-itinerary-03",
+      "path": "/zz-launch/hillside/itineraries/launch-itinerary-03",
+      "city": "hillside",
+      "access": "member",
+      "status": "published",
+      "markers": {
+        "title": "LM-ITN-03",
+        "body": "BODY-ITN-03-R1",
+        "member": "MEMBERONLY-ITN-03"
+      },
+      "revision": 1
+    },
+    {
+      "type": "itineraries",
+      "index": 4,
+      "id": 5,
+      "slug": "launch-itinerary-04",
+      "path": "/zz-launch/harbor/itineraries/launch-itinerary-04",
+      "city": "harbor",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ITN-04",
+        "body": "BODY-ITN-04-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "itineraries",
+      "index": 5,
+      "id": 6,
+      "slug": "launch-itinerary-05",
+      "path": "/zz-launch/old-quarter/itineraries/launch-itinerary-05",
+      "city": "old-quarter",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ITN-05",
+        "body": "BODY-ITN-05-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "itineraries",
+      "index": 6,
+      "id": 7,
+      "slug": "launch-itinerary-06",
+      "path": "/zz-launch/river-bend/itineraries/launch-itinerary-06",
+      "city": "river-bend",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ITN-06",
+        "body": "BODY-ITN-06-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "itineraries",
+      "index": 7,
+      "id": 8,
+      "slug": "launch-itinerary-07",
+      "path": "/zz-launch/hillside/itineraries/launch-itinerary-07",
+      "city": "hillside",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ITN-07",
+        "body": "BODY-ITN-07-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "itineraries",
+      "index": 8,
+      "id": 9,
+      "slug": "launch-itinerary-08",
+      "path": "/zz-launch/harbor/itineraries/launch-itinerary-08",
+      "city": "harbor",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ITN-08",
+        "body": "BODY-ITN-08-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "itineraries",
+      "index": 9,
+      "id": 10,
+      "slug": "launch-itinerary-09",
+      "path": "/zz-launch/old-quarter/itineraries/launch-itinerary-09",
+      "city": "old-quarter",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ITN-09",
+        "body": "BODY-ITN-09-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "itineraries",
+      "index": 10,
+      "id": 11,
+      "slug": "launch-itinerary-10",
+      "path": "/zz-launch/river-bend/itineraries/launch-itinerary-10",
+      "city": "river-bend",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ITN-10",
+        "body": "BODY-ITN-10-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "itineraries",
+      "index": 11,
+      "id": 12,
+      "slug": "launch-itinerary-11",
+      "path": "/zz-launch/hillside/itineraries/launch-itinerary-11",
+      "city": "hillside",
+      "access": "free",
+      "status": "published",
+      "markers": {
+        "title": "LM-ITN-11",
+        "body": "BODY-ITN-11-R1",
+        "member": null
+      },
+      "revision": 1
+    },
+    {
+      "type": "itineraries",
+      "index": 12,
+      "id": 13,
+      "slug": "launch-itinerary-12",
+      "path": "/zz-launch/harbor/itineraries/launch-itinerary-12",
+      "city": "harbor",
+      "access": "free",
+      "status": "draft",
+      "markers": {
+        "title": "LM-ITN-12",
+        "body": "BODY-ITN-12-R1",
+        "member": null
+      },
+      "revision": 1
+    }
+  ],
+  "retired": {
+    "type": "articles",
+    "id": 29,
+    "slug": "launch-retired-01",
+    "path": "/zz-launch/harbor/food-and-drink/launch-retired-01",
+    "titleMarker": "LM-RETIRED-01"
+  },
+  "missingPaths": [
+    "/zz-launch/harbor/articles/launch-does-not-exist",
+    "/zz-launch/nowhere"
+  ],
+  "cities": [
+    {
+      "slug": "harbor",
+      "path": "/zz-launch/harbor"
+    },
+    {
+      "slug": "old-quarter",
+      "path": "/zz-launch/old-quarter"
+    },
+    {
+      "slug": "river-bend",
+      "path": "/zz-launch/river-bend"
+    },
+    {
+      "slug": "hillside",
+      "path": "/zz-launch/hillside"
+    }
+  ],
+  "authors": [
+    {
+      "id": 1,
+      "slug": "mara-quill",
+      "path": "/authors/mara-quill"
+    },
+    {
+      "id": 2,
+      "slug": "tomas-reyes",
+      "path": "/authors/tomas-reyes"
+    },
+    {
+      "id": 3,
+      "slug": "ines-park",
+      "path": "/authors/ines-park"
+    },
+    {
+      "id": 4,
+      "slug": "readiness-admin",
+      "path": "/authors/readiness-admin"
+    }
+  ],
+  "searches": [
+    {
+      "q": "zzqqnomatch",
+      "expect": "none"
+    },
+    {
+      "q": "LM-ART-07",
+      "expect": "one",
+      "expectedPaths": [
+        "/zz-launch/hillside/neighbourhoods/launch-article-07"
+      ]
+    },
+    {
+      "q": "Harbor",
+      "expect": "many"
+    }
+  ],
+  "identities": [
+    {
+      "label": "member-a",
+      "email": "member-a@example.com",
+      "expect": {
+        "authenticated": true,
+        "member": true
+      },
+      "bookmarks": [
+        {
+          "targetType": "articles",
+          "targetId": 11
+        },
+        {
+          "targetType": "articles",
+          "targetId": 12
+        },
+        {
+          "targetType": "articles",
+          "targetId": 1
+        },
+        {
+          "targetType": "articles",
+          "targetId": 29
+        }
+      ]
+    },
+    {
+      "label": "member-b",
+      "email": "member-b@example.com",
+      "expect": {
+        "authenticated": true,
+        "member": true
+      },
+      "bookmarks": [
+        {
+          "targetType": "articles",
+          "targetId": 14
+        },
+        {
+          "targetType": "articles",
+          "targetId": 15
+        },
+        {
+          "targetType": "itineraries",
+          "targetId": 1
+        }
+      ]
+    },
+    {
+      "label": "nonmember",
+      "email": "nonmember@example.com",
+      "expect": {
+        "authenticated": true,
+        "member": false
+      },
+      "bookmarks": []
+    },
+    {
+      "label": "expired",
+      "email": "expired@example.com",
+      "expect": {
+        "authenticated": false,
+        "member": false
+      },
+      "bookmarks": []
+    }
+  ],
+  "mediaOrigin": "http://127.0.0.1:3190"
+}

@@ -38,12 +38,44 @@ Defaults, all overridable, all still checked by preflight:
 
 Child processes get `sandboxEnv()`, which **deletes** those variables rather
 than blanking them: an empty string still satisfies some `?? ''` reads, while
-an absent variable makes the feature that needs it refuse.
+an absent variable makes the feature that needs it refuse. The production
+apps started by `apps.ts` are different: `next` loads `.env*` itself and would
+refill a deleted name, so there every name the files define is blanked.
 
 The manifest (`docs/capacity/runs/readiness-sandbox.json`) records the source
 SHA, a fingerprint of the uncommitted diff when the tree is dirty, Node and
 platform, dataset identity, seed, ports and what cleanup owns. Connection
 strings are stored with credentials stripped.
+
+### The full stack, from a clean checkout (surge plan L00/L01)
+
+```bash
+cd apps/questura/apps/server
+pnpm readiness bootstrap                     # schema fixture + payload migrate; no developer database
+pnpm readiness:launch -- seed                # the ~50-article launch corpus and synthetic readers
+pnpm readiness:stack -- up --build           # Redis 6390, media 3190, Stripe stub 3191, backend 4100, client 3100
+pnpm readiness:routes                        # 114 real-route checks: identity, isolation, credential matrix
+pnpm readiness:stack -- down                 # stops only what `up` started
+```
+
+After a reseed, rebuild the client (`up --build-client`): its pages are
+pre-rendered from the backend at build time.
+
+- **Isolation is enforced**: every sandbox process loads
+  `scripts/readiness/deny-outbound.cjs` (non-loopback connections fail and are
+  logged to the run's `outbound.log`); every `.env*` name the harness does not
+  set is blanked (`sandbox-env.ts`); processes bind 127.0.0.1; a dedicated
+  Redis is used because Better Auth's session keys ignore `REDIS_KEY_PREFIX`.
+- **Browser origins** are `http://app.readiness.localhost:3100` and
+  `http://api.readiness.localhost:4100` — loopback by definition, a secure
+  context in browsers, and accepted by the production origin guard without
+  relaxing it.
+- **State** (pids, generated secrets, logs) lives in
+  `$TMPDIR/questura-readiness/`, mode 0700, never in the repository.
+- **Expected values** live in `load/k6/manifests/launch-v1.json`; scripts read
+  it rather than repeating markers.
+
+Evidence and findings: `runs/2026-09-22-surge-L00-L03-sandbox-and-routes.md`.
 
 ### Integration tests
 

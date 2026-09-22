@@ -10,14 +10,18 @@
  * `.env` put there.
  *
  * So the environment is built here, once, from scratch rather than by
- * deleting names out of `process.env`. `next start` still loads `.env` itself,
- * which is why every dangerous name is set to an explicit placeholder instead
- * of left unset.
+ * deleting names out of `process.env`. `next start` still loads `.env` itself
+ * and fills in anything unset, so every name those files define and this list
+ * does not is set to the empty string (`sandbox-env.ts`), and every child
+ * loads the loopback-only socket guard (`deny-outbound.cjs`).
  */
 
 import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { connect } from 'node:net'
 import { resolve } from 'node:path'
+
+import { neutraliseDotenv, withOutboundGuard } from './sandbox-env'
 
 export type AppPorts = { backend: number; client: number }
 
@@ -33,6 +37,22 @@ export type AppSettings = {
   dbStatsSecret: string
   /** The identity the collector reports for the backend process. */
   instanceId: string
+  /**
+   * Origins a real browser uses. Absent: the `.invalid` placeholders, fine
+   * for server-to-server harnesses. Present: `*.readiness.localhost` names,
+   * which browsers resolve to loopback and treat as secure contexts, and
+   * which the production origin guard accepts because they are not
+   * `localhost` itself — the guard is not relaxed to make this work.
+   */
+  browser?: { clientOrigin: string; backendOrigin: string }
+  /** Shared render token (32+ chars), generated per run. */
+  renderToken?: string
+  /** Where sandbox children append refused outbound attempts. */
+  outboundLog?: string
+  /** Run the refresh worker in-process at this interval. Default 0: the harness drains. */
+  workerIntervalMs?: number
+  /** The loopback Stripe stub (`stripe-stub.ts`). Without it, Stripe calls are refused at the socket. */
+  stripeStubUrl?: string
 }
 
 export const backendUrl = (settings: AppSettings): string => `http://127.0.0.1:${settings.ports.backend}`
@@ -41,6 +61,12 @@ export const clientUrl = (settings: AppSettings): string => `http://127.0.0.1:${
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
 export function backendEnv(settings: AppSettings): NodeJS.ProcessEnv {
+  const env = backendEnvDeclared(settings)
+  return withOutboundGuard(neutraliseDotenv(env, SERVER_DIR()).env, settings.outboundLog)
+}
+
+function backendEnvDeclared(settings: AppSettings): NodeJS.ProcessEnv {
+  const origins = settings.browser
   return {
     PATH: process.env.PATH,
     HOME: process.env.HOME,
@@ -51,11 +77,13 @@ export function backendEnv(settings: AppSettings): NodeJS.ProcessEnv {
     DATABASE_URI_UNPOOLED: settings.databaseUri,
     REDIS_URL: settings.redisUri,
 
-    // Production refuses localhost for these two, so they are placeholders
-    // that resolve to nothing. No rehearsal follows them.
-    NEXT_PUBLIC_APP_URL: 'https://readiness-client.invalid',
-    BACKEND_URL_LOCAL: 'https://readiness-server.invalid',
-    CORS_ALLOWED_ORIGINS: 'https://readiness-client.invalid',
+    // Production refuses localhost for these, so a server-to-server run uses
+    // placeholders that resolve to nothing; a browser run uses
+    // `*.readiness.localhost` names (see `AppSettings.browser`).
+    NEXT_PUBLIC_APP_URL: origins?.clientOrigin ?? 'https://readiness-client.invalid',
+    BACKEND_URL_LOCAL: origins?.backendOrigin ?? 'https://readiness-server.invalid',
+    CORS_ALLOWED_ORIGINS: origins?.clientOrigin ?? 'https://readiness-client.invalid',
+    ...(settings.renderToken ? { QUESTURA_RENDER_TOKEN: settings.renderToken } : {}),
 
     TRUSTED_PROXY: 'cloudflare',
     PAYLOAD_COOKIE_DOMAIN: 'host-only',
@@ -67,12 +95,15 @@ export function backendEnv(settings: AppSettings): NodeJS.ProcessEnv {
     QUESTURA_REVALIDATION_SECRET: settings.revalidationSecret,
     // The harness drains. A background worker would race it and make every
     // "after the publish" observation ambiguous.
-    REFRESH_WORKER_INTERVAL_MS: '0',
+    REFRESH_WORKER_INTERVAL_MS: String(settings.workerIntervalMs ?? 0),
 
     STRIPE_SECRET_KEY: 'sk_readiness_placeholder_not_a_key',
     STRIPE_WEBHOOK_SECRET: 'whsec_readiness_placeholder',
-    STRIPE_PRICE_ID: 'price_readiness_placeholder',
-    STRIPE_PRICE_ID_MONTHLY: 'price_readiness_placeholder',
+    STRIPE_PRICE_ID: 'price_readiness_monthly',
+    STRIPE_PRICE_ID_MONTHLY: 'price_readiness_monthly',
+    STRIPE_PRICE_ID_YEARLY: 'price_readiness_yearly',
+    READINESS_SANDBOX: '1',
+    ...(settings.stripeStubUrl ? { READINESS_STRIPE_STUB_URL: settings.stripeStubUrl } : {}),
 
     DATABASE_MAX_CONNECTIONS: '100',
     APP_PROCESS_COUNT: '1',
@@ -88,17 +119,32 @@ export function backendEnv(settings: AppSettings): NodeJS.ProcessEnv {
   }
 }
 
-export function clientEnv(settings: AppSettings): NodeJS.ProcessEnv {
-  return {
+/**
+ * The client. `NEXT_PUBLIC_*` values are inlined at build time, so the build
+ * and the start must receive the same environment — both come from here.
+ * Everything `.env*` would add (a Maps browser key, the image CDN origin, a
+ * Stripe publishable key) is neutralised, so a readiness build cannot ship a
+ * paid key to the browser it runs.
+ */
+export function clientEnv(settings: AppSettings, options: { build?: boolean } = {}): NodeJS.ProcessEnv {
+  const origins = settings.browser
+  const env: NodeJS.ProcessEnv = {
     PATH: process.env.PATH,
     HOME: process.env.HOME,
     NODE_ENV: 'production',
     NEXT_DIST_DIR: settings.dist,
-    NEXT_PUBLIC_BACKEND_URL: backendUrl(settings),
+    NEXT_TELEMETRY_DISABLED: '1',
+    NEXT_PUBLIC_BACKEND_URL: origins?.backendOrigin ?? backendUrl(settings),
     BACKEND_URL_LOCAL: backendUrl(settings),
-    NEXT_PUBLIC_APP_URL: clientUrl(settings),
+    NEXT_PUBLIC_APP_URL: origins?.clientOrigin ?? clientUrl(settings),
+    NEXT_PUBLIC_FRONTEND_URL: origins?.clientOrigin ?? clientUrl(settings),
     QUESTURA_REVALIDATION_SECRET: settings.revalidationSecret,
+    ...(settings.renderToken ? { QUESTURA_RENDER_TOKEN: settings.renderToken } : {}),
   }
+  // `next/font/google` downloads its fonts during the build; that is the one
+  // outbound request a readiness process may make, and only while building.
+  const allow = options.build ? ['fonts.googleapis.com', 'fonts.gstatic.com'] : []
+  return withOutboundGuard(neutraliseDotenv(env, CLIENT_DIR()).env, settings.outboundLog, allow)
 }
 
 export const SERVER_DIR = (): string => resolve(process.cwd())
@@ -119,6 +165,20 @@ export function assertBuilt(dist: string): void {
   }
 }
 
+/** True when anything at all accepts a TCP connection on the port — HTTP or not. */
+export function portListening(port: number, host = '127.0.0.1'): Promise<boolean> {
+  return new Promise((done) => {
+    const socket = connect({ host, port })
+    const finish = (value: boolean) => {
+      socket.destroy()
+      done(value)
+    }
+    socket.once('connect', () => finish(true))
+    socket.once('error', () => finish(false))
+    socket.setTimeout(1_000, () => finish(false))
+  })
+}
+
 /**
  * Refuse to start when something already answers on a port.
  *
@@ -129,9 +189,9 @@ export function assertBuilt(dist: string): void {
  */
 export async function assertPortsFree(ports: number[]): Promise<void> {
   for (const port of ports) {
-    const taken = await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(1_500) })
-      .then(() => true)
-      .catch(() => false)
+    // A TCP probe, not an HTTP one: a Redis or a half-started server on the
+    // port does not answer HTTP and would otherwise look free.
+    const taken = (await portListening(port)) || (await portListening(port, '::1'))
     if (taken) {
       throw new Error(
         `Port ${port} is already serving. Stop it first — this harness has to own its ports:\n` +
@@ -142,7 +202,10 @@ export async function assertPortsFree(ports: number[]): Promise<void> {
 }
 
 export function startApp(name: string, cwd: string, port: number, env: NodeJS.ProcessEnv): ChildProcess {
-  const child = spawn('node_modules/.bin/next', ['start', '-p', String(port)], {
+  // Bound to loopback explicitly. `next start` listens on every interface by
+  // default, and "the harness only talks to 127.0.0.1" is not the same as
+  // "nothing else can reach it".
+  const child = spawn('node_modules/.bin/next', ['start', '-p', String(port), '-H', '127.0.0.1'], {
     cwd,
     env: { ...env, PORT: String(port) },
     stdio: ['ignore', 'pipe', 'pipe'],
