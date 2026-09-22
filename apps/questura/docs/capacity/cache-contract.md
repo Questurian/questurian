@@ -79,8 +79,10 @@ Everything about the cache **in front of** the render:
   there in a way local tests cannot show;
 - HTML/RSC/cookie/tracking variants staying separate, and `Set-Cookie` never
   being shared;
-- a negative cache clearing on first publish;
-- an access change not being served from a warm regional cache.
+- a negative cache clearing on first publish **at the edge** (the Node
+  frontend does clear it — `runs/2026-09-22-L05-frontend-cache.md`);
+- an access change not being served from a warm **regional** cache (locally
+  it is not served from a warm one — same run).
 
 None of it can be claimed from a Mac. It is H03.
 

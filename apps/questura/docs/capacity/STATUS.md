@@ -49,18 +49,18 @@ implemented and merged. Full state, evidence and what is still owed:
 | L00 disposable sandbox | implemented locally | `runs/readiness-sandbox.json` |
 | L01 publication atomicity | implemented locally | `runs/2026-09-22-L05-publish-end-to-end.md` |
 | L02 worker fencing (+ migration) | implemented locally | `runs/2026-09-22-L02-worker-fencing.md` |
-| L03 bounded fan-out | implemented locally; large-corpus memory not measured | unit tests |
+| L03 bounded fan-out | implemented and **measured** | unit tests + `runs/2026-09-22-L03-fanout-memory.md` (6/6) |
 | L04 worker lifecycle and readiness | implemented locally | `runs/2026-09-22-L14-readiness-baseline.md` |
-| L05 publish chain end to end | implemented locally; **frontend page cache owed** | `runs/2026-09-22-L05-publish-end-to-end.md` |
+| L05 publish chain end to end | implemented locally, **both halves** | `runs/2026-09-22-L05-publish-end-to-end.md` + `runs/2026-09-22-L05-frontend-cache.md` (12/12) |
 | L06 mount bounds, anonymous GraphQL closed | implemented locally | `runs/2026-09-22-L14-readiness-baseline.md` |
 | L07 ingress stage, Redis breaker, private budget | implemented locally | same |
 | L08 cache freshness contract | implemented locally; full-route limit is H03 | `cache-contract.md` |
 | L09 Cloudflare adapter | implemented locally; Worker built and previewed | `runs/2026-09-22-L09-cloudflare-adapter.md` |
 | L10 fleet contract | implemented locally | `pnpm test:int` |
 | L11 per-instance evidence | implemented locally | `runs/2026-09-22-L14-readiness-baseline.md` |
-| L12 multi-process rehearsal | implemented locally; **serving-process half owed** | `runs/2026-09-22-L12-fleet-rehearsal.md` |
+| L12 multi-process rehearsal | implemented locally, **both halves** | `runs/2026-09-22-L12-fleet-rehearsal.md` + `runs/2026-09-22-L12-serving-fleet.md` (10/10) |
 | L13 proof gates that can fail | implemented locally | `runs/2026-09-22-L13-negative-controls.md` |
-| L14 local baseline | implemented locally; corpus is 25 articles | `runs/2026-09-22-L14-readiness-baseline.md` |
+| L14 local baseline | corpus built (8,000 articles / 200 cities); load still owed | `runs/2026-09-22-L14-readiness-baseline.md` + `runs/2026-09-22-L14-corpus-baseline.md` (6/6) |
 | L15 restore and handoff | implemented locally | `pnpm readiness:restore` 10/10 |
 
 **Still not "verified on target".** Every number above is from a Mac.
