@@ -1,0 +1,73 @@
+// Wrangler configuration for Questura Client on Cloudflare Workers, via the
+// OpenNext adapter (ADR-0014).
+//
+// The resource ids below are LOCAL PREVIEW placeholders. `opennextjs-cloudflare
+// preview` emulates every binding with Miniflare and creates nothing in a
+// Cloudflare account. Before a real `deploy`, each <PLACEHOLDER> becomes a
+// provisioned resource (H01) and the secrets at the bottom get set with
+// `wrangler secret put`.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "questura-client",
+
+  // Pinned to the date this configuration was written against, not "today":
+  // the compatibility date is what stops a platform change arriving as a
+  // behaviour change in a release nobody touched.
+  "compatibility_date": "2026-09-22",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  // The worker calls itself for the revalidation queue. Must match "name".
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "questura-client" }],
+
+  // --- Cache components (opennext.js.org/cloudflare/caching) ---------------
+  // All four are required. See open-next.config.ts for why.
+
+  "r2_buckets": [{ "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "questura-incremental-cache" }],
+
+  "d1_databases": [
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
+      "database_name": "questura-tag-cache",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [
+      { "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" },
+      { "name": "NEXT_CACHE_DO_PURGE", "class_name": "BucketCachePurge" }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["DOQueueHandler", "BucketCachePurge"]
+    }
+  ],
+
+  "images": { "binding": "IMAGES" },
+
+  "vars": {
+    // Public, non-secret. The backend origin this frontend renders from.
+    "NEXT_PUBLIC_BACKEND_URL": "http://127.0.0.1:4100"
+  }
+
+  // --- Secrets, set with `wrangler secret put`, never in this file ---------
+  //
+  //   QUESTURA_REVALIDATION_SECRET  the backend presents this on
+  //                                 POST /api/revalidate. Must match the
+  //                                 backend's value or every publication is
+  //                                 a 401 the outbox retries forever.
+  //   QUESTURA_RENDER_TOKEN         identifies this frontend's server-side
+  //                                 reads to the backend's render bucket.
+  //                                 Server-only: never NEXT_PUBLIC_.
+  //   CLOUDFLARE_API_TOKEN          cache purge only. Cache Purge permission
+  //   CLOUDFLARE_ZONE_ID            on this zone and nothing else.
+}

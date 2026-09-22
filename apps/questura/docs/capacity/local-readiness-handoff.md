@@ -23,7 +23,7 @@ launch approval, and nothing here is a capacity claim.**
 | L06 mount bounds | locally verified | live probes in `runs/2026-09-22-L14-readiness-baseline.md` |
 | L07 aggregate bounds | locally verified | unit tests + `ingress.admitted 99 / private.admitted 0` live |
 | L08 cache contract | locally verified, narrowed | `cache-contract.md`; the full-route cache limit is H03 |
-| L09 Cloudflare adapter | **blocked on tooling** | `apps/client/cloudflare/README.md` |
+| L09 Cloudflare adapter | **locally verified** (dependency approved 22 Sep) | `runs/2026-09-22-L09-cloudflare-adapter.md` |
 | L10 fleet contract | locally verified | 53 database tests |
 | L11 per-instance evidence | locally verified | live `db-stats` sample in the L14 run |
 | L12 multi-process | **locally verified, one half owed** | `runs/2026-09-22-L12-fleet-rehearsal.md` |
@@ -85,7 +85,19 @@ config reachable from it. Tests, typecheck and lint were all green. A
 the tag cache `revalidateTag` resolves to nothing; without cache purge it
 updates the incremental cache while the CDN serves the old page. Either way
 the refresh queue drains clean and the site stays stale — the exact failure
-L01 removed from the backend, one layer up.
+L01 removed from the backend, one layer up. Declaring the binding is not
+enough; `cachePurge` must be wired in `open-next.config.ts` too, and a
+configuration with the binding and no override builds, starts, serves and
+does not purge.
+
+**5. Next 15.4.11 pins the Cloudflare adapter at 1.18.1.** Adapter 1.19.0
+raises its Next floor to 15.5.15 and `@latest` wants 15.5.24. Both pins are
+exact so a routine install cannot cross that boundary silently. Going further
+means a Next minor upgrade across both apps — a separate decision.
+
+**6. The adapter build collides with `pnpm dev`.** The client dev server
+writes turbopack artifacts into `.next`; the adapter bundles from `.next` and
+ignores `NEXT_DIST_DIR`. Build in a git worktree, or stop the dev server.
 
 ## What is owed locally, and what it would take
 
@@ -93,7 +105,6 @@ L01 removed from the backend, one layer up.
 |---|---|
 | **L05 frontend cache half** | Two production-mode processes (client + server). Whether `revalidateTag` produces the new page, whether a negative cache clears on first publish, whether an access change stops a warm cache serving a member body. On Cloudflare this is a *different* cache, so the local version is a lower bound on the question, not an answer. |
 | **L12 serving half** | Two serving processes behind a loopback proxy: routing fairness, skewed routing, a rolling release under HTTP traffic, termination grace, and Redis counters shared while local gates stay per process. |
-| **L09 adapter build** | One approved `pnpm add`. Everything else is written. |
 | **L14 representative corpus** | Deterministic small/medium/large corpora, valid-session load, publish-during-load, browser assets, sustained fault recovery. The 25-article copy is a regression baseline, not a workload. |
 | **L03 fan-out memory** | Target discovery measured against a synthetic author with thousands of articles. |
 
@@ -128,12 +139,17 @@ and recovery targets, none of which this work decided.
 
 The next thing that needs a human decision, in order:
 
-1. **Approve `@opennextjs/cloudflare`** (L09) — one `pnpm add`, then the
-   Worker build and a local preview become real evidence instead of a plan.
-2. **Confirm the L01 publication policy** — editors will now occasionally see
-   a save fail that previously appeared to succeed. That is the point, and it
-   is still a product decision.
+1. ~~Approve `@opennextjs/cloudflare`~~ — **done 22 September.** The Worker
+   builds, serves the real site locally, and completes a full cache hit →
+   publish → new content cycle. `runs/2026-09-22-L09-cloudflare-adapter.md`.
+2. ~~Confirm the L01 publication policy~~ — **confirmed 22 September.** Saves
+   fail loudly when the refresh obligation cannot be written.
 3. **Decide the fallback trade in `cache-contract.md`** — whether a cold
    Workers isolate failing loudly is acceptable, or whether curated pages need
-   shared fallback storage. It should be decided from hosted numbers.
-4. Then, and only then, H01.
+   shared fallback storage. Still open, and it should be decided from hosted
+   numbers rather than from the fact that the storage product exists. It
+   blocks nothing today.
+4. **H01: provision the target.** This is now the next real step — an R2
+   bucket, a D1 database, the Durable Objects and a Cloudflare API token
+   scoped to Cache Purge, plus Railway and Neon. Every placeholder is named in
+   `apps/client/wrangler.jsonc` and `apps/client/cloudflare/README.md`.

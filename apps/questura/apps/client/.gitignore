@@ -19,6 +19,14 @@
 /.next-*/
 /out/
 
+# Cloudflare adapter (ADR-0014). `.open-next/` is build output; `.dev.vars`
+# holds the local preview's secrets and must never be committed — the real
+# ones are set with `wrangler secret put`.
+/.open-next/
+/.wrangler/
+.dev.vars
+.dev.vars.*
+
 # production
 /build
 
