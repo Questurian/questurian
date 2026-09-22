@@ -1,5 +1,10 @@
 # Questura soft-production deployment
 
+> **Next deploy (after PR #622) needs three new lines in
+> `~/questura/config/server.env`** or the server exits at boot:
+> `DATABASE_MAX_CONNECTIONS=100`, `APP_PROCESS_COUNT=1`, `APP_ROLLOUT_SURGE=0`.
+> Why and how to check the number: the "connection budget" paragraph below.
+
 ## What this environment is, and what it is not
 
 This Linux laptop serves the live domains, but it is **not the production

@@ -12,6 +12,9 @@ below is a real blocker — the site is not launchable with any of them open.
 ## 0. Choose the platform first
 
 Six of the seven items resolve from one decision, so make it before starting.
+Owner's leaning (2026-09-21): frontend on Cloudflare (not Vercel), backend on
+Railway, Postgres on Neon, Redis on Railway. What that changes:
+`docs/capacity/cap07-platform-readiness.md` §1a.
 `TRUSTED_PROXY` (item 2) only recognises `cloudflare`, `vercel`, `netlify` and
 `fly` (`src/shared/config/trusted-proxy.ts`); anything else needs its header
 added there, deliberately, with the reasoning that file already sets out.

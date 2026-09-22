@@ -6,7 +6,7 @@ Questura Server owns the revalidation signal because it is the production source
 
 Revalidation is tag-first with optional explicit paths. Fetches for public content pages are tagged by their data dependencies, while path revalidation is reserved for route-level changes such as article slug or canonical path changes, deleted content, and other cases where a URL must be regenerated or removed.
 
-Questura Client's production target is Vercel so the public site can rely on first-class Next.js ISR, tag/path revalidation, CDN caching, durable ISR storage, and globally consistent cache purging. Questura Server may run on the platform that best fits Payload and supporting processes, provided it can call Questura Client's revalidation endpoint.
+*Superseded on 2026-09-21 by ADR-0014: the frontend target is Cloudflare, not Vercel. The requirements below still hold; on Cloudflare, OpenNext provides them.* Questura Client's production target was Vercel so the public site could rely on first-class Next.js ISR, tag/path revalidation, CDN caching, durable ISR storage, and globally consistent cache purging. Questura Server may run on the platform that best fits Payload and supporting processes, provided it can call Questura Client's revalidation endpoint.
 
 Questura Client separates indexed public content routes from user-specific routes at the route-group shell level. Public content pages live under a cacheable shell, while account, auth, payment, membership, and other user-specific flows remain under a dynamic shell; shared UI such as the navbar may hydrate auth/member controls client-side after the cached HTML is served.
 

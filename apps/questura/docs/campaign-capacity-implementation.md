@@ -22,7 +22,7 @@ Target workload: 6,000 active readers, 8,500 stretch, plus independent arrival-r
 ## Non-negotiable constraints
 
 - Default execution is Mac localhost: client 3000, server 4000. Use production builds for performance evidence; pnpm dev only for ordinary development. Inspect build scripts first: server build generates Payload types. Do not overwrite an existing developer session or mix dev-build results with production metrics.
-- Linux laptop is temporary and parked. No laptop-specific infrastructure project. Final scale proof belongs on selected production-class serverless platform; frontend target is already Vercel in ADR-0003, backend provider remains undecided.
+- Linux laptop is temporary and parked. No laptop-specific infrastructure project. Final scale proof belongs on selected production-class serverless platform; frontend target is Cloudflare (ADR-0014, which replaced the Vercel intent in ADR-0003); intended stack: Railway backend, Neon Postgres, Redis on Railway (cap07-platform-readiness.md §1a).
 - Never set Payload push:true. Follow AGENTS.md schema/migration workflow, destructive-SQL review and row-count safeguards. No existing data may be destroyed to simplify this project.
 - No live Stripe mutations, purchases, checkout, email delivery, external resources, deployments, new downloaded tools or skills without authorization required by AGENTS.md. Propose k6 installation if absent; do not install silently. Existing payment fixtures may support local handler tests; do not invent test-mode proof of live behavior.
 - Preserve private no-store responses, server-authoritative entitlements, advertised membership prices and intentional nav copy. A client session hint is UI optimization only. Never trust caller-supplied identity/IP headers or put private data in shared HTML.
@@ -103,7 +103,7 @@ Gate: crash after content commit, duplicate delivery, failed delivery, old updat
 
 Depends on workload measurements from CAP-01–05. External execution requires user authorization.
 
-Decisions needed: backend provider/plan/region; monthly and daily spike budget; max instances/pooler limits; campaign URL set; recovery-time and acceptable-data-loss targets. Frontend Vercel intent already exists. No need to reopen it without new evidence.
+Decisions needed: backend provider/plan/region; monthly and daily spike budget; max instances/pooler limits; campaign URL set; recovery-time and acceptable-data-loss targets. Frontend is Cloudflare, not Vercel (owner, 2026-09-21; ADR-0014). Backend Railway, Postgres Neon, Redis on Railway are the owner's leaning.
 
 Choose managed Postgres/Redis near backend; validate session advisory locks use direct connection. Set real shared cache, provider quotas and bounded scaling. Schedule existing reconciliation and CAP-06 worker. Configure portable error/latency, pool-wait, backlog and spend alerts. Prove backups by restore; prove release rollback. Complete existing serverless launch checklist without changing intentional laptop pricing during preparation.
 
