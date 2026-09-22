@@ -1,6 +1,6 @@
 # CAP-07 — platform, recovery and cost readiness
 
-**Status: blocked on owner decisions.** Nothing here has been provisioned,
+**Status: stack chosen in principle (2026-09-21, §1a); D3–D6 still open.** Nothing here has been provisioned,
 bought or deployed. This file turns the decisions into a short list, gives a
 recommendation for each, and records every setting and procedure the code
 now depends on, so the platform work is configuration rather than discovery.
@@ -9,12 +9,56 @@ now depends on, so the platform work is configuration rather than discovery.
 
 | # | Decision | Why it blocks | Recommendation |
 |---|---|---|---|
-| D1 | Backend provider, plan, region | Every limit below is per platform | A long-lived container platform (fixed small fleet with an autoscale cap) in the same region as the database, rather than per-request functions. The admission gates and pool budgets are per process; per-request functions multiply both and push the database behind a pooler at every scale. Frontend stays on Vercel (ADR-0003). |
-| D2 | Managed Postgres and Redis (and whether a pooler is used) | Sets `DATABASE_MAX_CONNECTIONS` and the pooler values | Postgres in the backend's region with point-in-time recovery; Redis in the same region. With a long-lived fleet of ≤ 6 instances a direct connection fits (below); a pooler becomes necessary past that. |
+| D1 | Backend provider, plan, region | Every limit below is per platform | A long-lived container platform (fixed small fleet with an autoscale cap) in the same region as the database, rather than per-request functions. The admission gates and pool budgets are per process; per-request functions multiply both and push the database behind a pooler at every scale. **Owner leaning: Railway** (see §1a). Frontend is Cloudflare, not Vercel (ADR-0014). |
+| D2 | Managed Postgres and Redis (and whether a pooler is used) | Sets `DATABASE_MAX_CONNECTIONS` and the pooler values | Postgres in the backend's region with point-in-time recovery; Redis in the same region. With a long-lived fleet of ≤ 6 instances a direct connection fits (below); a pooler becomes necessary past that. **Owner leaning: Neon; Redis picked below (§1a).** |
 | D3 | Monthly budget and tolerated one-day spike | Autoscale caps and spend alerts need a number | Set before the first campaign; alerts at 50/80/100% of the daily spike figure. |
 | D4 | Maximum instances | Makes the per-process gates a total bound | Start at 4 serving + 1 surge; raise only with a re-run of CAP-08 rows 3–4. |
 | D5 | First campaign landing URLs | Prewarm list and the proof's URL mix | Fill `docs/capacity/campaign-urls.txt`. |
 | D6 | Recovery-time and acceptable-data-loss targets | Chooses backup/PITR tier | e.g. RTO 1 h, RPO 5 min (PITR). |
+
+## 1a. Intended stack (owner, 2026-09-21)
+
+Not provisioned. The owner's leaning, recorded so the next session does not
+re-ask and does not plan for Vercel.
+
+| Part | Where | Notes |
+|---|---|---|
+| Questura Client | **Cloudflare** (Workers via the OpenNext adapter; owner said "Pages") | Chosen over Vercel on cost. ADR-0014. |
+| Questura Server | **Railway** | A long-lived container, which is what D1 recommends. The admission gates and pool budget work as designed. |
+| Postgres | **Neon** | Same region as the Railway service. |
+| Redis | **Railway Redis, in the same Railway project** | Our pick. Private network, sub-millisecond, priced by usage rather than per command. Every session check and rate limit is a Redis call, so per-command pricing (Upstash) grows with traffic, and a cross-provider hop adds latency to every request. Losing it is survivable by design: public reads fail open, payments fail closed (§6.3). Move to a managed HA Redis only if the §6.3 rehearsal says otherwise. |
+| Images | Bunny (unchanged) | Out of scope for now. |
+
+What this choice changes. Each item has to be settled at provisioning:
+
+1. **The frontend's ISR needs setting up on Cloudflare.** OpenNext needs an
+   incremental cache (R2/KV), a tag cache and a revalidation queue before
+   `revalidateTag` purges anything. The old `next-on-pages` path has no ISR.
+   CAP-08 must prove the purge, since a cache-HIT header doesn't prove it.
+2. **Last-good fallback gets weaker** (`apps/client/src/lib/cache/lastGood.ts`).
+   It lives in process memory, and Workers isolates are short-lived and many,
+   so a backend 503 during revalidation is more likely to reach a reader.
+   Before launch, decide whether to back it with KV/R2 or accept that.
+3. **`TRUSTED_PROXY` has no `railway` entry.** Railway's forwarded-IP
+   behaviour is only described on community forums, not in official docs
+   (the `X-Real-IP` value reportedly becomes the CDN edge when its CDN is on).
+   Either put Cloudflare in front of the API host (`TRUSTED_PROXY=cloudflare`)
+   and make the `*.up.railway.app` origin unreachable, or confirm Railway's
+   header from official docs and add it the way `trusted-proxy.ts` requires.
+   Production refuses to boot until one of these is done.
+4. **Neon:** turn off scale-to-zero on the production branch. Railway is
+   long-lived, so use the **direct (unpooled) endpoint**, the "direct
+   topology" in §2. Set `DATABASE_MAX_CONNECTIONS` from `SHOW max_connections`
+   on the chosen compute size, because Neon ties it to compute size. Pick a
+   size that fits the §2 number, or shrink the pools. The payment advisory
+   locks need a direct connection either way (`DATABASE_URI_UNPOOLED` if
+   pooled). Neon's history window is the PITR tier for D6.
+5. **Cookies:** frontend and API must share the parent domain
+   (`questurian.com`). A `*.pages.dev` / `*.workers.dev` / `*.up.railway.app`
+   host cannot carry the session cookie. `session-cookie.ts` already rejects
+   the first two.
+6. **Schedulers (§4):** a Railway cron service or a Cloudflare Cron Trigger
+   can make the two calls. Either works.
 
 ## 2. Connection budget worked for the recommendation
 

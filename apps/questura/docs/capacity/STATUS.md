@@ -4,6 +4,23 @@ Execution contract: [`../campaign-capacity-implementation.md`](../campaign-capac
 Scenarios and rationale: [`../campaign-capacity-plan-2026-09-21.html`](../campaign-capacity-plan-2026-09-21.html).
 How to measure: [`README.md`](README.md).
 
+> **Before the parked laptop's next deploy:** add these three lines to
+> `~/questura/config/server.env`, or the new release refuses to boot and the
+> healthcheck fails (details: `infra/softprod/README.md`, "connection budget"):
+>
+> ```
+> DATABASE_MAX_CONNECTIONS=100
+> APP_PROCESS_COUNT=1
+> APP_ROLLOUT_SURGE=0
+> ```
+>
+> Check the real limit first with `SHOW max_connections`. The deploy script
+> already runs the CAP-06 migration.
+
+> **Intended platform (owner, 2026-09-21):** frontend on Cloudflare (**not
+> Vercel**), backend on Railway, Postgres on Neon, Redis on Railway. Not
+> provisioned. What it changes: `cap07-platform-readiness.md` §1a, ADR-0014.
+
 Statuses: planned · in progress · implemented locally · verified on target · blocked · verified existing.
 **Nothing below is "verified on target".** Every number is from a Mac, a local
 production build and the local dataset (25 articles, 18 published; 5 authors;
@@ -18,7 +35,7 @@ find bottlenecks and price the code; they do not say what a platform can carry.
 | CAP-04 Cache correctness, route coverage | implemented locally; shared-CDN proof owed to CAP-07/08 | `public-surface.md`, `runs/2026-09-21-cap04-*` |
 | CAP-05 Cold query amplification | implemented locally | `runs/2026-09-21-cap05-*` |
 | CAP-06 Durable refresh, safe startup | implemented locally; platform scheduler owed to CAP-07 | `pnpm verify:refresh-outbox` |
-| CAP-07 Platform, recovery, cost | blocked: awaiting owner decisions D1–D6; everything else prepared | `cap07-platform-readiness.md` |
+| CAP-07 Platform, recovery, cost | blocked: stack chosen in principle (§1a); D3–D6 open; nothing provisioned | `cap07-platform-readiness.md` |
 | CAP-08 Capacity proof | blocked: needs CAP-07 target; scripts ready and smoke-run locally | `cap08-proof-matrix.md`, `load/k6/` |
 
 Starting SHA: `d948bcfb` (main, 2026-09-21).
@@ -466,10 +483,10 @@ platform is unmeasured until CAP-08 runs.
 
 ## Next action
 
-Owner: decide D1–D6 in `cap07-platform-readiness.md` and approve provisioning
-plus a spend-capped load test. Then: configure the platform from §3–§4 of that
+Owner: D1/D2 are settled in principle (Cloudflare / Railway / Neon / Railway
+Redis). Still open: D3 budget, D4 max instances, D5 campaign URLs, D6 recovery
+targets. Then approve provisioning plus a spend-capped load test, and settle
+the six items in §1a. Then: configure the platform from §3–§4 of that
 file, run the rehearsals in §6, and run the CAP-08 matrix row by row.
 
-Before the parked laptop's next deploy: add `DATABASE_MAX_CONNECTIONS=100`,
-`APP_PROCESS_COUNT=1`, `APP_ROLLOUT_SURGE=0` to `~/questura/config/server.env`
-(see `infra/softprod/README.md`), or the new release will refuse to boot.
+Before the parked laptop's next deploy: see the box at the top of this file.
