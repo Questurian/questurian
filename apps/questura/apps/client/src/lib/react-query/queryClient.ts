@@ -5,6 +5,8 @@
 
 import { QueryClient } from '@tanstack/react-query';
 
+import { retryDecision } from '@/lib/api/request-policy';
+
 /**
  * Note: The default queryFn that previously called user/me has been removed.
  * Each query hook now provides its own queryFn via useQuery().
@@ -22,18 +24,16 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       // Refetch when network reconnects
       refetchOnReconnect: true,
-      // Retry failed requests up to 3 times
-      retry: (failureCount, error) => {
-        // Don't retry on auth errors (401/403)
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('401') || errorMessage.includes('403')) {
-          return false;
-        }
-        // Retry up to 3 times for other errors
-        return failureCount < 3;
+      // One policy for every read (`lib/api/request-policy.ts`): at most three
+      // attempts, full-jitter backoff so readers who failed together do not
+      // return together, a valid Retry-After honoured, and no retry of 4xx
+      // (other than 408/429), challenge pages or cancellations. Classified by
+      // status and category, not by whether a message contains "401".
+      retry: (failureCount, error) => retryDecision(error, failureCount + 1, 0).retry,
+      retryDelay: (failureCount, error) => {
+        const decision = retryDecision(error, failureCount + 1, 0);
+        return decision.retry ? decision.delayMs : 0;
       },
-      // Exponential backoff for retries
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
     mutations: {
       // Don't retry failed mutations - auth should fail fast

@@ -1,49 +1,27 @@
 /**
  * API error types and error classification helpers.
+ *
+ * `APIError` is `RequestError` (`request-policy.ts`): every failure carries a
+ * status, a category and any `Retry-After`, so callers branch on those rather
+ * than on message text.
  */
 
-/**
- * Custom error class for API errors that includes status code.
- */
-export class APIError extends Error {
-  constructor(
-    public status: number,
-    message: string
-  ) {
-    super(message);
-    this.name = 'APIError';
-  }
-}
+import { isTemporaryFailure, RequestError } from './request-policy';
+
+export { RequestError as APIError } from './request-policy';
+export type { RequestErrorCategory } from './request-policy';
 
 /**
- * Detect if an error is a service unavailability error.
- * Returns true if the error indicates the backend service is down.
+ * True when the backend could not answer — network failure, timeout, a
+ * challenge page, overload or a server error — as opposed to answering "no".
  */
 export function isServiceUnavailableError(error: unknown): boolean {
+  if (error instanceof RequestError) return isTemporaryFailure(error);
+
+  // Errors thrown by something other than `apiRequest` (a bare fetch).
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
-
-    if (
-      message.includes('failed to fetch') ||
-      message.includes('connection refused') ||
-      message.includes('network error') ||
-      message.includes('timeout')
-    ) {
-      return true;
-    }
-
-    if (
-      message.includes('500') ||
-      message.includes('502') ||
-      message.includes('503') ||
-      message.includes('504')
-    ) {
-      return true;
-    }
-
-    if (message.includes('invalid json response')) {
-      return true;
-    }
+    return message.includes('failed to fetch') || message.includes('network error') || message.includes('timeout');
   }
 
   return false;

@@ -19,12 +19,24 @@ export function GatedBodySkeleton() {
   )
 }
 
-export function GatedLoadError({ onRetry }: { onRetry: () => void }) {
+/**
+ * `reason="access"`: we could not find out who is reading (overload, network,
+ * a challenge page). Deliberately not the paywall notice and not a sign-in
+ * prompt — neither is true yet, and a paying reader must not be told they
+ * have not paid because the site was busy.
+ */
+export function GatedLoadError({ onRetry, reason = 'body' }: { onRetry: () => void; reason?: 'body' | 'access' }) {
   return (
     <div role="alert" className="rounded-lg border border-foreground/12 px-6 py-10 text-center">
       <p className="text-sm text-foreground/70">
-        We couldn&rsquo;t load the rest of this. Your membership is fine &mdash; this is a loading
-        problem.
+        {reason === 'access' ? (
+          <>We couldn&rsquo;t check your access just now. This is a temporary problem on our side.</>
+        ) : (
+          <>
+            We couldn&rsquo;t load the rest of this. Your membership is fine &mdash; this is a loading
+            problem.
+          </>
+        )}
       </p>
       <button
         type="button"

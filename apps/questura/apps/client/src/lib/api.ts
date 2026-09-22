@@ -4,6 +4,14 @@
  */
 
 export { APIError, isServiceUnavailableError } from './api/api-errors';
+export {
+  isTemporaryFailure,
+  isUnauthenticated,
+  parseRetryAfter,
+  RequestError,
+  retryDecision,
+} from './api/request-policy';
+export type { RequestErrorCategory, RetryDecision } from './api/request-policy';
 export { getBackendUrl, getApiHeaders } from './api/api-config';
 export { apiRequest } from './api/api-client';
 export { get, post, put, del } from './api/api-methods';

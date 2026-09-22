@@ -77,5 +77,7 @@ export function useBookmarkCount() {
     void ensureLoaded();
   }, [ensureLoaded]);
 
-  return { count, isLoading: status !== 'ready' };
+  // `error` is not loading: the count is unknown, and saying "loading" forever
+  // would hide that. The account page shows no count rather than a wrong one.
+  return { count, isLoading: status === 'idle' || status === 'loading', isUnknown: status === 'error' };
 }

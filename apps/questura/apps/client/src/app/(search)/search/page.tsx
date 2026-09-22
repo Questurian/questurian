@@ -5,6 +5,7 @@ import { ArrowUpRight, Search } from 'lucide-react'
 import { LocationContentList } from '@/features/search/components/LocationContentList'
 import {
   fetchLocationContent,
+  isSearchUnavailable,
   searchArticles,
   type ArticleSearchResponse,
   type LocationContentResponse,
@@ -54,12 +55,18 @@ export default async function SearchPage({ searchParams }: Props) {
   let content: LocationContentResponse | null = null
   let articleResults: ArticleSearchResponse | null = null
   let noResults = false
+  let unavailable = false
 
   if (location) {
     content = await fetchLocationContent(location, page)
   } else if (query) {
-    articleResults = await searchArticles(query, page)
-    noResults = !articleResults || articleResults.totalDocs === 0
+    const answer = await searchArticles(query, page)
+    if (isSearchUnavailable(answer)) {
+      unavailable = true
+    } else {
+      articleResults = answer
+      noResults = !articleResults || articleResults.totalDocs === 0
+    }
   }
 
   const locationPageHref = content
@@ -121,8 +128,23 @@ export default async function SearchPage({ searchParams }: Props) {
               emptyMessage={`No results for "${articleResults.q}".`}
             />
           </>
+        ) : unavailable ? (
+          <div role="alert" data-search-state="unavailable">
+            <p className="text-[15px] leading-7 text-foreground/70">
+              Search is busy right now, so we couldn&rsquo;t check for “{query}”. This is a
+              temporary problem on our side.
+            </p>
+            <Link
+              href={searchHref(query, page)}
+              className="mt-4 inline-block text-[15px] leading-7 text-accent underline underline-offset-4"
+            >
+              Try again
+            </Link>
+          </div>
         ) : noResults ? (
-          <p className="text-[15px] leading-7 text-foreground/60">No results for “{query}”.</p>
+          <p className="text-[15px] leading-7 text-foreground/60" data-search-state="empty">
+            No results for “{query}”.
+          </p>
         ) : null}
       </div>
     </section>

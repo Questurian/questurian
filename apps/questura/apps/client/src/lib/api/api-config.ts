@@ -11,12 +11,14 @@ export function getBackendUrl(): string {
 }
 
 /**
- * Get common headers for API requests.
+ * Common headers for an API request.
+ *
+ * `Content-Type: application/json` only when there is a body. On a bodyless
+ * cross-origin GET it served no purpose and made every `/api/me`, refs and
+ * member-body read a non-simple request, so the browser sent a CORS preflight
+ * (`OPTIONS`) first — an extra round trip per read, doubled during exactly the
+ * burst the backend is trying to absorb. CORS policy itself is unchanged.
  */
-export function getApiHeaders(): HeadersInit {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-
-  return headers;
+export function getApiHeaders(init: { body?: unknown } = {}): HeadersInit {
+  return init.body === undefined || init.body === null ? {} : { 'Content-Type': 'application/json' };
 }
