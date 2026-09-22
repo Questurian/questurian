@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { DEFAULT_FALLBACK_WINDOW_MS, LastGood, validatedAtFrom } from './lastGood.ts'
+import { accountedBytes, DEFAULT_FALLBACK_WINDOW_MS, LastGood, validatedAtFrom } from './lastGood.ts'
 
 const fail = () => Promise.reject(new Error('Failed to fetch city homepage: 503'))
 
@@ -123,6 +123,99 @@ test('evicts on bytes as well as entries', async () => {
   assert.ok(store.stats().bytes <= 4_500)
   assert.ok(store.size < 3)
   await assert.rejects(() => store.read('a', fail), /503/)
+})
+
+// Discovery finding 9: maxBytes=100 kept a 1,000-character string and
+// reported 1,002 bytes — after evicting everything else to make room.
+test('refuses an oversize singleton without evicting anything', async () => {
+  const store = new LastGood(100, 60_000, () => 0, 100)
+  await store.read('small', fresh({ p: 'ok' }))
+  await store.read('huge', fresh('x'.repeat(1_000)))
+
+  assert.equal(store.stats().bytes <= 100, true)
+  assert.equal(store.stats().refused, 1)
+  // The useful small entry survived; the huge one is not a fallback.
+  assert.deepEqual(await store.read('small', fail), { p: 'ok' })
+  await assert.rejects(() => store.read('huge', fail), /503/)
+})
+
+test('drops a key whose newer answer is too large, rather than serving the older one', async () => {
+  const store = new LastGood(100, 60_000, () => 0, 100)
+  await store.read('lima', fresh({ page: 'v1' }))
+  await store.read('lima', fresh({ page: 'v2'.repeat(100) }))
+
+  // v1 is older than what the origin last said; it must not come back.
+  await assert.rejects(() => store.read('lima', fail), /503/)
+  assert.equal(store.stats().bytes, 0)
+})
+
+test('never exceeds the ceiling while making room', async () => {
+  const store = new LastGood(100, 60_000, () => 0, 100)
+  for (let i = 0; i < 20; i += 1) {
+    await store.read(`k${i}`, fresh({ v: 'y'.repeat(10 + (i % 5) * 10) }))
+    assert.ok(store.stats().bytes <= 100, `after k${i}: ${store.stats().bytes}`)
+  }
+})
+
+test('counts UTF-8 bytes, not string length', () => {
+  // "é" is one UTF-16 unit and two UTF-8 bytes; "😀" is two units and four bytes.
+  assert.equal(accountedBytes('é'), 4)
+  assert.equal(accountedBytes('😀'), 6)
+  assert.equal(accountedBytes({ a: 'x' }), 9)
+})
+
+test('a multibyte value that fits by length but not by bytes is refused', async () => {
+  const store = new LastGood(100, 60_000, () => 0, 100)
+  // 60 characters, 120 UTF-8 bytes.
+  await store.read('lima', fresh('é'.repeat(60)))
+  assert.equal(store.stats().refused, 1)
+  assert.equal(store.size, 0)
+})
+
+test('treats an unserialisable value as uncacheable, not free', async () => {
+  const store = new LastGood(100, 60_000, () => 0, 100)
+  const cyclic = { page: 'v1' }
+  cyclic.self = cyclic
+  const value = await store.read('lima', fresh(cyclic))
+
+  assert.equal(value, cyclic) // the reader still gets its answer
+  assert.equal(store.size, 0)
+  assert.equal(store.stats().refused, 1)
+  assert.equal(accountedBytes(10n), null)
+})
+
+test('respects entries and bytes together', async () => {
+  const store = new LastGood(2, 60_000, () => 0, 1_000)
+  for (const key of ['a', 'b', 'c']) await store.read(key, fresh({ key }))
+  assert.equal(store.size, 2)
+  await assert.rejects(() => store.read('a', fail), /503/)
+})
+
+test('serves exactly at the window boundary and not one millisecond past it', async () => {
+  let now = 0
+  const store = new LastGood(10, 1_000, () => now, 1_000)
+  await store.read('lima', fresh({ page: 'v1' }, 0))
+  now = 1_000
+  assert.deepEqual(await store.read('lima', fail), { page: 'v1' })
+  now = 1_001
+  await assert.rejects(() => store.read('lima', fail), /503/)
+})
+
+test('repeated fallbacks do not extend the window', async () => {
+  let now = 0
+  const store = new LastGood(10, 1_000, () => now, 1_000)
+  await store.read('lima', fresh({ page: 'v1' }, 0))
+  for (now = 100; now <= 1_000; now += 100) await store.read('lima', fail)
+  now = 1_001
+  await assert.rejects(() => store.read('lima', fail), /503/)
+})
+
+test('a 404 evicts, and a later outage does not resurrect the page', async () => {
+  const store = new LastGood(10, 60_000, () => 0, 1_000)
+  await store.read('lima', fresh({ page: 'v1' }))
+  await store.read('lima', fresh(null))
+  await assert.rejects(() => store.read('lima', fail), /503/)
+  assert.equal(store.stats().bytes, 0)
 })
 
 test('reports its own size, so the number is observable rather than assumed', async () => {

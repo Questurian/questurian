@@ -49,6 +49,25 @@
  * response is tens of kilobytes and a large one is far more, so an entry
  * count alone bounds nothing a process actually has.
  *
+ * ## What "bytes" means, and why it is a hard ceiling
+ *
+ * The unit is the **UTF-8 length of the value's JSON** — what the value
+ * would cost to send, not what it costs on the V8 heap (strings are stored as
+ * one or two bytes per code unit, objects carry overhead, and nothing here
+ * can measure that). It is an accounting unit, stated as one, and it is never
+ * exceeded:
+ *
+ *  - A value larger than the whole budget is **refused before anything is
+ *    evicted** — it could never fit, and evicting every useful small entry to
+ *    make room for it would trade many fallbacks for none. (Before this, one
+ *    oversized value evicted everything else and was then kept anyway, over
+ *    the ceiling: a 1,000-character string held in a 100-byte store.)
+ *  - A value that cannot be serialised is uncacheable, not free.
+ *  - When a key's new answer is refused, the **old entry for that key is
+ *    evicted too**. The origin has since answered with something newer; a
+ *    fallback older than that answer would be serving content the origin has
+ *    already replaced.
+ *
  * Per process: a fresh serverless instance has nothing to fall back on and
  * fails loudly instead.
  *
@@ -100,11 +119,19 @@ export function validatedAtFrom(response: { headers: { get(name: string): string
   return Math.min(now, issuedAt - ageMs);
 }
 
-function sizeOf(value: unknown): number {
+const utf8 = new TextEncoder();
+
+/**
+ * The value's accounting size in UTF-8 bytes, or `null` when it cannot be
+ * serialised (a cycle, a BigInt) or serialises to nothing (`undefined`, a
+ * function) — either way there is nothing to count, so it is not cached.
+ */
+export function accountedBytes(value: unknown): number | null {
   try {
-    return JSON.stringify(value)?.length ?? 0;
+    const json = JSON.stringify(value);
+    return typeof json === "string" ? utf8.encode(json).byteLength : null;
   } catch {
-    return 0;
+    return null;
   }
 }
 
@@ -116,6 +143,7 @@ export class LastGood {
   private readonly now: () => number;
   private bytes = 0;
   private servedCount = 0;
+  private refusedCount = 0;
 
   // Plain fields rather than parameter properties: node's type stripping,
   // which runs this file's tests, does not support those.
@@ -167,7 +195,15 @@ export class LastGood {
 
   /** Provenance, for the metrics endpoint and for tests. */
   stats() {
-    return { entries: this.entries.size, bytes: this.bytes, served: this.servedCount, maxAgeMs: this.maxAgeMs };
+    return {
+      entries: this.entries.size,
+      bytes: this.bytes,
+      maxBytes: this.maxBytes,
+      served: this.servedCount,
+      /** Values too large for the whole budget, or unserialisable, that were not kept. */
+      refused: this.refusedCount,
+      maxAgeMs: this.maxAgeMs,
+    };
   }
 
   private forget(key: string) {
@@ -178,17 +214,25 @@ export class LastGood {
   }
 
   private remember(key: string, value: unknown, validatedAt: number) {
+    // The key's previous answer is superseded whatever happens next: either
+    // replaced below, or — if this answer is refused — dropped, because a
+    // fallback older than the origin's latest answer is not a fallback.
     this.forget(key);
 
-    const bytes = sizeOf(value);
-    this.entries.set(key, { value, validatedAt, bytes });
-    this.bytes += bytes;
+    const bytes = accountedBytes(value);
+    if (bytes === null || bytes > this.maxBytes) {
+      this.refusedCount += 1;
+      return;
+    }
 
-    while (this.entries.size > this.maxEntries || this.bytes > this.maxBytes) {
+    // Make room first, oldest first, so the ceiling holds at every moment.
+    while (this.entries.size > 0 && (this.entries.size >= this.maxEntries || this.bytes + bytes > this.maxBytes)) {
       const oldest = this.entries.keys().next().value;
       if (oldest === undefined) break;
-      if (oldest === key && this.entries.size === 1) break;
       this.forget(oldest);
     }
+
+    this.entries.set(key, { value, validatedAt, bytes });
+    this.bytes += bytes;
   }
 }

@@ -170,13 +170,23 @@ export class AdmissionGate {
 // The process's gates.
 // ---------------------------------------------------------------------------
 
-export type PublicWorkClass = 'assembly' | 'query' | 'ingress' | 'private'
+export type PublicWorkClass = 'assembly' | 'query' | 'ingress' | 'private' | 'credential' | 'staff'
 
-function readPositiveInt(name: string, fallback: number): number {
+/**
+ * A whole number at or above `min`, or the default.
+ *
+ * The queue may be zero — "refuse rather than wait" is a real policy — so a
+ * declared `0` is honoured there. Concurrency and wait may not: a gate that
+ * admits nothing, or a wait of nothing, is a typo, not a policy. An invalid
+ * value keeps the default here so a pool is never built from `NaN`, and
+ * `fleet-manifest.ts` reports it, which production turns into a refused boot.
+ */
+function readGateInt(name: string, fallback: number, min: number): number {
   const raw = process.env[name]?.trim()
   if (!raw) return fallback
+  if (!/^\d+$/.test(raw)) return fallback
   const value = Number(raw)
-  return Number.isInteger(value) && value > 0 ? value : fallback
+  return value >= min ? value : fallback
 }
 
 /**
@@ -207,19 +217,30 @@ function readPositiveInt(name: string, fallback: number): number {
  * is an env override, because the right number belongs to the platform:
  * re-measure there and set it.
  */
-const GATE_DEFAULTS: Record<PublicWorkClass, { prefix: string; limit: number; maxQueue: number; maxWaitMs: number }> = {
-  assembly: { prefix: 'PUBLIC_ASSEMBLY', limit: 2, maxQueue: 8, maxWaitMs: 1_500 },
-  query: { prefix: 'PUBLIC_QUERY', limit: 8, maxQueue: 32, maxWaitMs: 1_500 },
-  ingress: { prefix: 'PUBLIC_INGRESS', limit: 64, maxQueue: 128, maxWaitMs: 1_000 },
-  private: { prefix: 'PRIVATE_READ', limit: 16, maxQueue: 64, maxWaitMs: 1_500 },
+export const GATE_DEFAULTS: Record<
+  PublicWorkClass,
+  { prefix: string; what: string; limit: number; maxQueue: number; maxWaitMs: number }
+> = {
+  assembly: { prefix: 'PUBLIC_ASSEMBLY', what: 'curated page assembly', limit: 2, maxQueue: 8, maxWaitMs: 1_500 },
+  query: { prefix: 'PUBLIC_QUERY', what: 'public queries', limit: 8, maxQueue: 32, maxWaitMs: 1_500 },
+  ingress: { prefix: 'PUBLIC_INGRESS', what: 'public ingress', limit: 64, maxQueue: 128, maxWaitMs: 1_000 },
+  private: { prefix: 'PRIVATE_READ', what: 'signed-in reads', limit: 16, maxQueue: 64, maxWaitMs: 1_500 },
+  // Proving who a Payload-mount caller is. An API key is one indexed query and
+  // a JWT is CPU; either way a flood of made-up credentials is bounded here
+  // and cannot take the public query gate's slots (mount-bounds.ts).
+  credential: { prefix: 'MOUNT_CREDENTIAL', what: 'credential checks', limit: 8, maxQueue: 32, maxWaitMs: 1_000 },
+  // Verified staff and service reads of the Payload mount. Generous — the
+  // writer and Location Manager read up to 200 rows at depth 2 — but finite:
+  // a valid key is not a licence for unbounded work.
+  staff: { prefix: 'MOUNT_STAFF', what: 'staff and service reads', limit: 16, maxQueue: 64, maxWaitMs: 5_000 },
 }
 
-function gateOptions(kind: PublicWorkClass): AdmissionOptions {
+export function gateOptions(kind: PublicWorkClass): AdmissionOptions {
   const defaults = GATE_DEFAULTS[kind]
   return {
-    limit: readPositiveInt(`${defaults.prefix}_CONCURRENCY`, defaults.limit),
-    maxQueue: readPositiveInt(`${defaults.prefix}_QUEUE`, defaults.maxQueue),
-    maxWaitMs: readPositiveInt(`${defaults.prefix}_QUEUE_MS`, defaults.maxWaitMs),
+    limit: readGateInt(`${defaults.prefix}_CONCURRENCY`, defaults.limit, 1),
+    maxQueue: readGateInt(`${defaults.prefix}_QUEUE`, defaults.maxQueue, 0),
+    maxWaitMs: readGateInt(`${defaults.prefix}_QUEUE_MS`, defaults.maxWaitMs, 1),
   }
 }
 
@@ -233,12 +254,11 @@ export function admissionGate(kind: PublicWorkClass): AdmissionGate {
 }
 
 export function admissionStats(): Record<PublicWorkClass, AdmissionStats> {
-  return {
-    assembly: admissionGate('assembly').stats(),
-    query: admissionGate('query').stats(),
-    ingress: admissionGate('ingress').stats(),
-    private: admissionGate('private').stats(),
-  }
+  const kinds = Object.keys(GATE_DEFAULTS) as PublicWorkClass[]
+  return Object.fromEntries(kinds.map((kind) => [kind, admissionGate(kind).stats()])) as Record<
+    PublicWorkClass,
+    AdmissionStats
+  >
 }
 
 /** Test seam: forget the process's gates so options are re-read. */

@@ -14,7 +14,9 @@ maximum content age it never was.
 | On backend failure | Served from the last good answer **this process** holds, if the **origin** confirmed it within the last hour. |
 | Age measured from | The origin's `Date` minus `Age`, supplied by the reader — *not* the time this process last handled the value. |
 | Fallback renews freshness? | **No.** Serving a fallback is not the origin confirming anything. |
-| Bound | 500 entries **and** ~32 MB per process, oldest first. |
+| Bound | 500 entries **and** 32 MiB per process, oldest first. **A hard ceiling** in the stated unit. |
+| Byte unit | UTF-8 length of the value's JSON — an accounting unit, not V8 heap bytes. |
+| Oversize or unserialisable value | Refused before anything is evicted; the key's older entry is dropped too (2026-09-22 surge L07). |
 
 **What changed and why.** Every successful read used to reset the clock,
 including one the origin never saw. The backend answers `public, s-maxage=60,
@@ -26,6 +28,23 @@ maximum of nothing.
 Entry count alone was the other half: 500 curated homepages is not a fixed
 amount of memory. A city page response is tens of kilobytes and a large one
 is far more.
+
+**Oversize values (surge plan L07).** The byte bound used to be soft: one
+value larger than the whole budget evicted every other entry and was then
+kept anyway (probe: `maxBytes=100` retained 1,002 bytes). A value that cannot
+fit is now refused without evicting anything, and the ceiling holds at every
+moment. The unit is serialised UTF-8 bytes, stated as such — heap cost is
+larger and is not measured here. When a key's newer answer is refused, its
+older entry goes too: a fallback older than the origin's latest answer would
+serve content the origin has already replaced. `stats().refused` counts these.
+
+**Three clocks, not one.** The fallback *value* window is one hour
+(`DEFAULT_FALLBACK_WINDOW_MS`). The route's `revalidate` is also one hour.
+Next's `expireTime` (`next.config.ts`) is seven days and governs how long a
+stale *rendered page* may be served while it revalidates. A render made from a
+fallback value can be stored in the full-route cache like any other, so the
+age a reader sees is bounded by none of these alone. Tested: the value window
+(`lastGood.test.mjs`). Not tested, and not claimed: a viewer-visible bound.
 
 **The limit this still has.** It bounds the age of the value handed to the
 renderer. It does **not** bound the age of the page a reader sees: Next may
