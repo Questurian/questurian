@@ -69,6 +69,7 @@ export function chunkTarget(
 export async function deliverClientRevalidation(
   target: RevalidationTarget,
   reason: string,
+  options: { signal?: AbortSignal } = {},
 ): Promise<DeliveryOutcome> {
   const tags = unique(target.tags ?? [])
   const paths = unique(target.paths ?? [])
@@ -92,14 +93,24 @@ export async function deliverClientRevalidation(
   // Sequential on purpose. These are invalidations, not reads: firing a
   // hundred at once at the frontend during a large rename is a self-inflicted
   // burst on the machine that is also serving readers.
+  //
+  // The caller's signal bounds the whole delivery, not just one chunk: a job
+  // must finish inside its lease (`refresh-outbox/worker.ts`), and a hundred
+  // chunks each inside their own timeout can still outlive it. Checked
+  // between chunks and passed to each fetch; an abort throws, so the job is
+  // retried in full rather than recorded as delivered.
   for (const [index, chunk] of chunks.entries()) {
+    if (options.signal?.aborted) {
+      throw new Error(`revalidation delivery deadline passed after ${index} of ${chunks.length} chunks`)
+    }
+    const timeout = AbortSignal.timeout(REVALIDATION_TIMEOUT_MS)
     const response = await fetch(`${baseUrl}/api/revalidate`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'x-revalidation-secret': secret,
       },
-      signal: AbortSignal.timeout(REVALIDATION_TIMEOUT_MS),
+      signal: options.signal ? AbortSignal.any([timeout, options.signal]) : timeout,
       body: JSON.stringify(chunk),
     })
 

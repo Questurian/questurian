@@ -30,14 +30,21 @@ import type { RevalidateTarget, SearchIndexTarget } from './enqueue'
  * past. Superseded is reported separately from done, because a counter that
  * conflates them cannot show the problem this fixes.
  *
- * **Claim only what can start now.** The old drain leased fifty jobs for
- * sixty seconds and processed them one at a time. Jobs forty to fifty sat
- * leased — invisible to every other worker — for most of a lease they had not
- * started, and any that had not finished when the lease expired were
- * reclaimed elsewhere while this process was still working on them. Now a
- * drain claims a batch the size of its concurrency, works it, and claims
- * again if there is time left inside a deadline comfortably shorter than the
- * lease.
+ * **Claim only what can start now.** A lease is a promise to start *now*.
+ * The first drain leased fifty jobs and worked them one at a time; the second
+ * leased four and still worked them one at a time (discovery finding 8) — so
+ * the fourth job spent its lease waiting behind three slow deliveries, could
+ * expire unstarted, and was reclaimed elsewhere while this process was about
+ * to start it. Now each of `concurrency` slots claims **one** job, works it,
+ * and only then claims the next. No job is leased before a slot is free to
+ * run it, and `concurrency` is the number of jobs genuinely in flight.
+ *
+ * **Every job has a deadline inside its lease.** A job claimed just in time
+ * has the whole lease; `JOB_DEADLINE_MS` aborts its delivery (between chunks
+ * and inside a chunk's fetch) with time left to record the failure, so a slow
+ * frontend turns into a retry by this worker rather than a silent reclaim by
+ * another. The drain stops *claiming* at `DRAIN_DEADLINE_MS`; a job claimed
+ * just before that still finishes or aborts inside its own lease.
  *
  * Delivery is at-least-once and is never promised otherwise: revalidation is
  * idempotent, so a duplicate delivery costs a wasted request, and a *missed*
@@ -55,8 +62,21 @@ export const CLAIM_MS = 60_000
 export const RETENTION_DAYS = 7
 const MAX_BACKOFF_MS = 60 * 60 * 1000
 
-/** Jobs worked at once by one drain. Also the size of a single claim. */
-export const DEFAULT_CONCURRENCY = 4
+/**
+ * Jobs worked at once by one drain. One, serially, by default: background
+ * work shares the serving pool and the frontend that is also serving readers,
+ * and fifty launch articles do not produce a backlog that needs more. A
+ * caller may ask for more; each extra slot is a real worker that claims just
+ * in time, not a bigger batch.
+ */
+export const DEFAULT_CONCURRENCY = 1
+/**
+ * How long one job may run. A job claimed just in time holds the full lease,
+ * so this leaves fifteen seconds of it to write the outcome. Delivery that
+ * would outlive the lease is aborted and retried by this worker instead of
+ * being reclaimed by another while it is still running.
+ */
+export const JOB_DEADLINE_MS = CLAIM_MS - 15_000
 /**
  * How long one drain may keep claiming. Half the lease: a job claimed at the
  * deadline still has the other half of its lease to finish in.
@@ -84,8 +104,16 @@ export type DrainResult = {
   failed: number
   /** Finished work that a newer change or another worker had moved past. */
   superseded: number
-  /** True when the drain stopped on its deadline or job cap with work left. */
+  /** True when the drain stopped on its deadline, job cap or shutdown rather than an empty queue. */
   stoppedEarly: boolean
+  /**
+   * Deliveries that happened but whose completion no longer matched — the
+   * claim had been superseded or reclaimed. At-least-once delivery made
+   * visible: each is one request the frontend received twice.
+   */
+  duplicateDeliveries: number
+  /** Longest single job, claim to recorded outcome, in milliseconds. */
+  maxJobMs: number
 }
 
 /** 30 s, 1 min, 2 min … capped at an hour, with up to 20% jitter. */
@@ -160,7 +188,12 @@ export function claimingStopped(): boolean {
   return lifecycle.__questuraRefreshStopping === true
 }
 
-async function process(pool: WorkerPool, row: Row, claimToken: string): Promise<'done' | 'superseded'> {
+async function process(
+  pool: WorkerPool,
+  row: Row,
+  claimToken: string,
+  signal: AbortSignal,
+): Promise<'done' | 'superseded'> {
   if (row.kind === 'search-index') {
     const target = row.target as SearchIndexTarget
     const outcome = await refreshSearchDocumentFenced(pool, target.type as SearchTypeKey, target.id, {
@@ -171,13 +204,17 @@ async function process(pool: WorkerPool, row: Row, claimToken: string): Promise<
   }
 
   const target = row.target as RevalidateTarget
-  await deliverClientRevalidation({ tags: target.tags ?? [], paths: target.paths ?? [] }, row.reason ?? 'refresh-job')
+  await deliverClientRevalidation({ tags: target.tags ?? [], paths: target.paths ?? [] }, row.reason ?? 'refresh-job', {
+    signal,
+  })
   return 'done'
 }
 
 export type DrainOptions = {
-  /** Jobs claimed and worked at once. */
+  /** Jobs worked at once, each claimed just before it starts. */
   concurrency?: number
+  /** Per-job deadline; defaults to `JOB_DEADLINE_MS`. */
+  jobDeadlineMs?: number
   /** Jobs this drain will work in total. */
   maxJobs?: number
   /** Wall clock after which the drain stops claiming. */
@@ -192,60 +229,86 @@ export async function drainRefreshJobs(pool: WorkerPool, options: DrainOptions =
   const concurrency = Math.max(1, options.concurrency ?? DEFAULT_CONCURRENCY)
   const maxJobs = Math.max(1, options.maxJobs ?? options.limit ?? DEFAULT_MAX_JOBS)
   const deadline = now() + Math.max(1, options.maxMs ?? DRAIN_DEADLINE_MS)
+  const jobDeadlineMs = Math.max(1, Math.min(options.jobDeadlineMs ?? JOB_DEADLINE_MS, JOB_DEADLINE_MS))
 
-  const result: DrainResult = { claimed: 0, done: 0, retried: 0, failed: 0, superseded: 0, stoppedEarly: false }
-
-  while (result.claimed < maxJobs) {
-    if (claimingStopped()) {
-      result.stoppedEarly = true
-      break
-    }
-    if (now() >= deadline) {
-      result.stoppedEarly = true
-      break
-    }
-
-    const batch = Math.min(concurrency, maxJobs - result.claimed)
-    const claimToken = randomUUID()
-    const claimed = await pool.query(CLAIM_SQL, [batch, String(CLAIM_MS), claimToken])
-    const rows = claimed.rows as Row[]
-    if (rows.length === 0) break
-
-    result.claimed += rows.length
-
-    for (const row of rows) {
-      try {
-        const outcome = await process(pool, row, claimToken)
-        if (outcome === 'superseded') {
-          result.superseded += 1
-          continue
-        }
-        const finished = await pool.query(DONE_SQL, [row.id, claimToken])
-        // Zero rows means the claim was no longer ours — a newer change
-        // landed, or the lease expired and somebody else took it. Not done.
-        if ((finished.rowCount ?? 0) > 0) result.done += 1
-        else result.superseded += 1
-      } catch (error) {
-        const attempts = Number(row.attempts)
-        const message = error instanceof Error ? error.message : String(error)
-        const retry = await pool.query(RETRY_SQL, [
-          row.id,
-          String(backoffMs(attempts)),
-          MAX_ATTEMPTS,
-          message.slice(0, 2000),
-          claimToken,
-        ])
-        const status = (retry.rows[0] as { status?: string } | undefined)?.status
-        if (status === 'failed') result.failed += 1
-        else if (status) result.retried += 1
-        else result.superseded += 1
-      }
-    }
-
-    // A short batch means the queue is empty; claiming again would be a
-    // wasted round trip.
-    if (rows.length < batch) break
+  const result: DrainResult = {
+    claimed: 0,
+    done: 0,
+    retried: 0,
+    failed: 0,
+    superseded: 0,
+    stoppedEarly: false,
+    duplicateDeliveries: 0,
+    maxJobMs: 0,
   }
+  // Places reserved by slots about to claim, so the cap holds across slots.
+  let reserved = 0
+  let empty = false
+
+  const work = async (row: Row, claimToken: string) => {
+    const started = Date.now()
+    try {
+      const outcome = await process(pool, row, claimToken, AbortSignal.timeout(jobDeadlineMs))
+      if (outcome === 'superseded') {
+        result.superseded += 1
+        return
+      }
+      const finished = await pool.query(DONE_SQL, [row.id, claimToken])
+      // Zero rows means the claim was no longer ours — a newer change
+      // landed, or the lease expired and somebody else took it. Not done,
+      // and the delivery that just happened was a duplicate.
+      if ((finished.rowCount ?? 0) > 0) result.done += 1
+      else {
+        result.superseded += 1
+        if (row.kind === 'revalidate') result.duplicateDeliveries += 1
+      }
+    } catch (error) {
+      const attempts = Number(row.attempts)
+      const message = error instanceof Error ? error.message : String(error)
+      const retry = await pool.query(RETRY_SQL, [
+        row.id,
+        String(backoffMs(attempts)),
+        MAX_ATTEMPTS,
+        message.slice(0, 2000),
+        claimToken,
+      ])
+      const status = (retry.rows[0] as { status?: string } | undefined)?.status
+      if (status === 'failed') result.failed += 1
+      else if (status) result.retried += 1
+      else result.superseded += 1
+    } finally {
+      result.maxJobMs = Math.max(result.maxJobMs, Date.now() - started)
+    }
+  }
+
+  const slot = async () => {
+    for (;;) {
+      if (empty) return
+      if (claimingStopped() || now() >= deadline || reserved >= maxJobs) {
+        result.stoppedEarly = true
+        return
+      }
+
+      reserved += 1
+      // One job, claimed at the moment this slot is free to start it.
+      const claimToken = randomUUID()
+      const claimed = await pool.query(CLAIM_SQL, [1, String(CLAIM_MS), claimToken])
+      const row = (claimed.rows as Row[])[0]
+      if (!row) {
+        reserved -= 1
+        empty = true
+        return
+      }
+
+      result.claimed += 1
+      await work(row, claimToken)
+    }
+  }
+
+  await Promise.all(Array.from({ length: concurrency }, () => slot()))
+
+  // An empty queue is not "stopped early", whichever slot noticed first.
+  if (empty) result.stoppedEarly = false
 
   await pool.query(PRUNE_SQL, [String(RETENTION_DAYS)])
   return result
