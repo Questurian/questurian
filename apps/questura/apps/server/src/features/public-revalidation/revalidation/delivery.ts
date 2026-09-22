@@ -15,6 +15,23 @@ import type { RevalidationTarget } from './types'
 
 export type DeliveryOutcome = 'delivered' | 'skipped-disconnected'
 
+/**
+ * The frontend refuses a request carrying more than a hundred tags or a
+ * hundred paths (`apps/client/src/app/api/revalidate/route.ts`). The backend
+ * sent the whole target in one request and treated the resulting 400 as a
+ * delivery failure, so a large fan-out — an author with a few hundred
+ * published articles renaming their slug — retried eight times and then sat
+ * in `failed`, with none of its pages refreshed.
+ *
+ * Chunking is the fix, and it is deliberately not truncation. Every chunk
+ * must be acknowledged before the job is done; a chunk that fails throws, the
+ * job stays pending, and the retry replays *all* of them. Replaying an
+ * already-delivered chunk costs one wasted request, because revalidation is
+ * idempotent — whereas dropping the remainder costs a page nobody will ever
+ * refresh again.
+ */
+export const MAX_TARGETS_PER_REQUEST = 100
+
 export class RevalidationUnconfigured extends Error {
   constructor(missing: string) {
     super(
@@ -23,6 +40,30 @@ export class RevalidationUnconfigured extends Error {
     )
     this.name = 'RevalidationUnconfigured'
   }
+}
+
+/**
+ * Split a target into requests the frontend will accept.
+ *
+ * Deterministic: the same target always produces the same chunks in the same
+ * order, so a replay after a partial failure repeats identical requests
+ * rather than a differently-sliced set.
+ */
+export function chunkTarget(
+  tags: string[],
+  paths: string[],
+  size = MAX_TARGETS_PER_REQUEST,
+): Array<{ tags: string[]; paths: string[] }> {
+  const chunks: Array<{ tags: string[]; paths: string[] }> = []
+
+  for (let index = 0; index < tags.length; index += size) {
+    chunks.push({ tags: tags.slice(index, index + size), paths: [] })
+  }
+  for (let index = 0; index < paths.length; index += size) {
+    chunks.push({ tags: [], paths: paths.slice(index, index + size) })
+  }
+
+  return chunks.length > 0 ? chunks : [{ tags: [], paths: [] }]
 }
 
 export async function deliverClientRevalidation(
@@ -46,19 +87,29 @@ export async function deliverClientRevalidation(
     throw new RevalidationUnconfigured(!baseUrl ? 'the frontend URL' : 'the revalidation secret')
   }
 
-  const response = await fetch(`${baseUrl}/api/revalidate`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-revalidation-secret': secret,
-    },
-    signal: AbortSignal.timeout(REVALIDATION_TIMEOUT_MS),
-    body: JSON.stringify({ tags, paths }),
-  })
+  const chunks = chunkTarget(tags, paths)
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => '')
-    throw new Error(`frontend revalidate answered ${response.status}: ${body.slice(0, 200)}`)
+  // Sequential on purpose. These are invalidations, not reads: firing a
+  // hundred at once at the frontend during a large rename is a self-inflicted
+  // burst on the machine that is also serving readers.
+  for (const [index, chunk] of chunks.entries()) {
+    const response = await fetch(`${baseUrl}/api/revalidate`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-revalidation-secret': secret,
+      },
+      signal: AbortSignal.timeout(REVALIDATION_TIMEOUT_MS),
+      body: JSON.stringify(chunk),
+    })
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '')
+      throw new Error(
+        `frontend revalidate answered ${response.status} on chunk ${index + 1} of ${chunks.length}: ` +
+          body.slice(0, 200),
+      )
+    }
   }
 
   return 'delivered'
