@@ -4,6 +4,7 @@ import { Pool, type PoolClient } from 'pg'
 import type { getPayload } from 'payload'
 import { APP_CONFIG } from '@/shared/config'
 import { advisoryLockTimeouts, poolTimeoutOptions } from '@/shared/database/timeouts'
+import { applicationName } from '@/shared/database/fleet-manifest'
 import { poolSizes } from '@/shared/database/pool-budget'
 import { looksTransactionPooled } from '@/shared/database/pooled-uri'
 import { logger } from './logger'
@@ -105,6 +106,11 @@ function getLockPool(): Pool | null {
   if (!globalForLocks.advisoryLockPool) {
     const pool = new Pool({
       connectionString,
+      // See shared/database/fleet-manifest.ts. This pool is the one that
+      // bypasses a pooler, so being able to count it separately in
+      // `pg_stat_activity` is the difference between checking the budget and
+      // believing it.
+      application_name: applicationName('advisoryLock'),
       max: poolSizes().advisoryLock,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000, // Fail fast instead of hanging forever
