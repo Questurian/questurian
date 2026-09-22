@@ -62,12 +62,33 @@ export async function searchLocations(q: string): Promise<LocationSearchItem[]> 
   return data.items
 }
 
+/**
+ * A search that could not be answered — overload, a rate limit, a network
+ * failure — as opposed to one that found nothing. The page must say
+ * "temporarily unavailable", never "No results": telling a reader there is
+ * nothing about Lima because the backend was busy is a wrong answer, not a
+ * degraded one (discovery finding 5).
+ */
+export type SearchUnavailable = { unavailable: true; status: number }
+
+export function isSearchUnavailable(value: unknown): value is SearchUnavailable {
+  return typeof value === 'object' && value !== null && (value as SearchUnavailable).unavailable === true
+}
+
+/**
+ * Server-side only: called from the search page's render. It sends the
+ * render token (`renderHeaders`, a non-`NEXT_PUBLIC_` variable, so a browser
+ * bundle has nothing to send) so every reader's search does not land in one
+ * shared per-IP bucket behind the frontend's egress address. Only a 200 is
+ * written to Next's data cache, so a 429 or 503 is never served later as a
+ * cached empty result.
+ */
 export async function searchArticles(
   q: string,
   page = 1,
   lang = DEFAULT_LOCALE,
   pageSize?: number,
-): Promise<ArticleSearchResponse | null> {
+): Promise<ArticleSearchResponse | SearchUnavailable | null> {
   const trimmed = q.trim()
   if (trimmed.length < 2) return null
 
@@ -78,11 +99,20 @@ export async function searchArticles(
   if (pageSize) params.set('pageSize', String(pageSize))
 
   const url = `${config.backendUrl}/api/public/articles/search?${params.toString()}`
-  const res = await fetch(url, { next: { revalidate: 300 } })
+  let res: Response
+  try {
+    res = await fetch(url, { headers: renderHeaders(), next: { revalidate: 300 }, signal: AbortSignal.timeout(8_000) })
+  } catch {
+    return { unavailable: true, status: 0 }
+  }
 
-  if (!res.ok) return null
+  if (!res.ok) return { unavailable: true, status: res.status }
 
-  return res.json() as Promise<ArticleSearchResponse>
+  try {
+    return (await res.json()) as ArticleSearchResponse
+  } catch {
+    return { unavailable: true, status: res.status }
+  }
 }
 
 /**

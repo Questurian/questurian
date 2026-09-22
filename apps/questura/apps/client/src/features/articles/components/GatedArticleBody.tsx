@@ -45,6 +45,10 @@ export function GatedArticleBody({ articleId, gate, path, lang }: GatedArticleBo
     return <PaywallNotice gate={gate} returnTo={path} />
   }
 
+  if (phase === 'unverified') {
+    return <GatedLoadError onRetry={retry} reason="access" />
+  }
+
   if (phase === 'loading') {
     return <GatedBodySkeleton />
   }

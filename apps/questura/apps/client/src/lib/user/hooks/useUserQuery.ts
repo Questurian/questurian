@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { APIError, get, isServiceUnavailableError, post } from '@/lib/api';
+import { isServiceUnavailableError, isUnauthenticated, post, retryDecision } from '@/lib/api';
 import { queryKeys } from '@/lib/react-query';
+import { identityStore } from '@/lib/user/currentIdentity';
+import { IdentitySuperseded } from '@/lib/user/identity';
 import type { CurrentPrincipalResponse, User } from '@/lib/user/types';
 
 function principalToUser(response: CurrentPrincipalResponse): User | null {
@@ -25,9 +27,20 @@ function principalToUser(response: CurrentPrincipalResponse): User | null {
   };
 }
 
-async function getCurrentUser(): Promise<User | null> {
-  const response = await get<CurrentPrincipalResponse>('/api/me');
-  return principalToUser(response);
+/**
+ * Through the shared identity store: a lookup already in flight (the gated
+ * body asking at the same moment) is joined, not repeated. `maxAgeMs` is small
+ * — React Query's own `staleTime` decides when the navbar re-asks.
+ */
+async function getCurrentUser(options: { maxAgeMs?: number } = {}): Promise<User | null> {
+  const response = await identityStore.read({ maxAgeMs: options.maxAgeMs ?? 1_000 });
+  return principalToUser(response as unknown as CurrentPrincipalResponse);
+}
+
+/** After sign-in or sign-up: forget the previous reader, then ask fresh. */
+async function getUserAfterSessionChange(): Promise<User | null> {
+  identityStore.invalidate();
+  return getCurrentUser({ maxAgeMs: 0 });
 }
 
 export function useUserQuery() {
@@ -37,18 +50,21 @@ export function useUserQuery() {
       try {
         return await getCurrentUser();
       } catch (error) {
-        if (error instanceof APIError && (error.status === 401 || error.status === 403)) {
-          return null;
-        }
-
+        // Only an explicit 401 means "no session". A 403 challenge page, a
+        // 429 or a 503 means the question was not answered — the query stays
+        // in error rather than showing a signed-in reader as signed out.
+        if (isUnauthenticated(error)) return null;
         throw error;
       }
     },
-    retry: (failureCount, error) => {
-      if (error instanceof APIError && error.status >= 400 && error.status < 500) {
-        return false;
-      }
-      return failureCount < 3;
+    // Finite, jittered, and Retry-After aware (`request-policy.ts`). The
+    // reader changing mid-lookup is not a failure: ask again at once.
+    retry: (failureCount, error) =>
+      error instanceof IdentitySuperseded || retryDecision(error, failureCount + 1, 0).retry,
+    retryDelay: (failureCount, error) => {
+      if (error instanceof IdentitySuperseded) return 0;
+      const decision = retryDecision(error, failureCount + 1, 0);
+      return decision.retry ? decision.delayMs : 0;
     },
     staleTime: 2 * 60 * 1000,
     refetchOnMount: (query) => query.isStale(),
@@ -89,7 +105,7 @@ export function useLoginMutation() {
           email: variables.email,
           password: variables.password,
         });
-        const user = await getCurrentUser();
+        const user = await getUserAfterSessionChange();
         if (!user) throw new Error('Sign in succeeded but no session was returned.');
         return { user };
       } catch (error) {
@@ -118,6 +134,7 @@ export function useLogoutMutation() {
       }
     },
     onSettled: () => {
+      identityStore.invalidate();
       queryClient.clear();
       window.location.href = '/';
     },
@@ -148,7 +165,7 @@ export function useSignupMutation() {
           name,
           callbackURL,
         });
-        const user = await getCurrentUser();
+        const user = await getUserAfterSessionChange();
         return {
           message: 'Account created. Check your email to verify before checkout or paid access.',
           user: user ?? undefined,

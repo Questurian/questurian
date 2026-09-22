@@ -5,10 +5,11 @@
 import { apiRequest } from './api-client';
 
 /**
- * Make a GET request.
+ * Make a GET request. `signal` cancels it; a cancelled read is reported as
+ * `aborted`, never as a failure of identity.
  */
-export async function get<T = unknown>(endpoint: string): Promise<T> {
-  return apiRequest<T>(endpoint, { method: 'GET' });
+export async function get<T = unknown>(endpoint: string, options: { signal?: AbortSignal } = {}): Promise<T> {
+  return apiRequest<T>(endpoint, { method: 'GET', signal: options.signal });
 }
 
 /**

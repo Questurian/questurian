@@ -133,6 +133,8 @@ export function ItineraryArticleLayout({
             locked && gate ? (
               phase === 'identifying' || phase === 'anonymous' ? (
                 <PaywallNotice gate={gate} returnTo={path ?? '/'} />
+              ) : phase === 'unverified' ? (
+                <GatedLoadError onRetry={retry} reason="access" />
               ) : phase === 'loading' ? (
                 <GatedBodySkeleton />
               ) : phase === 'failed' ? (
