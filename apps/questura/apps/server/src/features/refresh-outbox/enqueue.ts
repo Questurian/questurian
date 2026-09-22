@@ -20,6 +20,10 @@ import { scheduleDrain } from './drain-soon'
  *
  * Both now throw. A publication that cannot record what it owes is a
  * publication that did not happen.
+ *
+ * A conflicting insert also bumps `generation`, which is how a worker already
+ * running the previous version of this job finds out it has been overtaken
+ * (`worker.ts`).
  */
 
 export type RefreshJobKind = 'revalidate' | 'search-index'
@@ -131,8 +135,8 @@ export async function enqueueRefreshJob(
   await db.execute(sql`SAVEPOINT refresh_outbox`)
   try {
     await db.execute(sql`
-    INSERT INTO refresh_jobs (kind, dedupe_key, target, reason, status, attempts, next_attempt_at, updated_at, created_at)
-    VALUES (${job.kind}, ${job.dedupeKey}, ${target}::jsonb, ${job.reason}, 'pending', 0, now(), now(), now())
+    INSERT INTO refresh_jobs (kind, dedupe_key, target, reason, status, attempts, generation, next_attempt_at, updated_at, created_at)
+    VALUES (${job.kind}, ${job.dedupeKey}, ${target}::jsonb, ${job.reason}, 'pending', 0, 1, now(), now(), now())
     ON CONFLICT (dedupe_key) DO UPDATE SET
       -- Parenthesised on purpose: \`->\` and \`||\` share a precedence level and
       -- associate left, so without them this concatenated whole objects and
@@ -147,8 +151,13 @@ export async function enqueueRefreshJob(
       reason = EXCLUDED.reason,
       status = 'pending',
       attempts = 0,
+      -- A newer change is a newer generation. A worker still holding the
+      -- previous one can no longer complete this row: its completion checks
+      -- generation against claimed_generation and finds it moved (worker.ts).
+      generation = refresh_jobs.generation + 1,
       next_attempt_at = now(),
       locked_until = NULL,
+      claim_token = NULL,
       last_error = NULL,
       completed_at = NULL,
       updated_at = now()

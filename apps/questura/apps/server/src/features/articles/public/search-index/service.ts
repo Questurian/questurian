@@ -62,6 +62,86 @@ export async function refreshSearchDocument(
   }
 }
 
+/**
+ * The same refresh, but only if this worker still owns the job.
+ *
+ * Protecting the outbox row alone was not enough. Two workers can both be
+ * holding the same job — the first one's lease expired, the second reclaimed
+ * it — and the loser's *side effect* is the damage: it re-derives the search
+ * row from whatever it read and writes it after the winner already wrote the
+ * current one. The document is then searchable as a version that no longer
+ * exists, and the outbox says everything is done.
+ *
+ * So the ownership check and the write happen in one transaction, with the
+ * job row locked for its duration. `SELECT … FOR UPDATE` on the job blocks a
+ * concurrent enqueue's `ON CONFLICT DO UPDATE` on that key, which is what
+ * stops a newer change landing between "I still own this" and the write.
+ *
+ * The lock is held for two fast statements against one table. It is never
+ * held across an HTTP request — revalidation jobs deliberately do not take
+ * it, because holding a database transaction open while waiting on the
+ * frontend is how one slow frontend becomes a database incident.
+ */
+export type SearchJobFence = { jobId: number; claimToken: string }
+
+const FENCE_SQL = `
+  SELECT claim_token, generation, claimed_generation
+  FROM refresh_jobs WHERE id = $1 FOR UPDATE
+`
+
+function stillOwned(row: unknown, claimToken: string): boolean {
+  const job = row as { claim_token?: string | null; generation?: unknown; claimed_generation?: unknown } | undefined
+  if (!job) return false
+  if (job.claim_token !== claimToken) return false
+  return Number(job.generation) === Number(job.claimed_generation)
+}
+
+export async function refreshSearchDocumentFenced(
+  pool: SearchIndexPool,
+  type: SearchTypeKey,
+  id: number | string,
+  fence: SearchJobFence,
+): Promise<'written' | 'superseded'> {
+  const docId = Number(id)
+  if (!Number.isInteger(docId)) return 'written'
+
+  // Without a dedicated connection there is no transaction to hold the lock
+  // in, so the check is best-effort and says so. Production always has one;
+  // this branch exists for the test pools.
+  if (!pool.connect) {
+    const check = await pool.query(`SELECT claim_token, generation, claimed_generation FROM refresh_jobs WHERE id = $1`, [
+      fence.jobId,
+    ])
+    if (!stillOwned(check.rows[0], fence.claimToken)) return 'superseded'
+    await pool.query(DELETE_SEARCH_DOCUMENT_SQL, [type, docId])
+    await pool.query(INSERT_SEARCH_DOCUMENT_SQL, [type, docId])
+    return 'written'
+  }
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const check = await client.query(FENCE_SQL, [fence.jobId])
+    if (!stillOwned(check.rows[0], fence.claimToken)) {
+      await client.query('ROLLBACK')
+      return 'superseded'
+    }
+    await client.query(DELETE_SEARCH_DOCUMENT_SQL, [type, docId])
+    await client.query(INSERT_SEARCH_DOCUMENT_SQL, [type, docId])
+    await client.query('COMMIT')
+    return 'written'
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK')
+    } catch {
+      // See refreshSearchDocument.
+    }
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
 /** Drop one document's row without trying to rebuild it. For deletes. */
 export async function removeSearchDocument(
   pool: SearchIndexPool,

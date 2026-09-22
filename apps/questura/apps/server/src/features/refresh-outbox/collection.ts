@@ -73,6 +73,28 @@ export const RefreshJobs: CollectionConfig = {
       defaultValue: 0,
     },
     {
+      // Bumped every time a newer change lands on this key. A worker records
+      // the generation it claimed; a completion whose generation is no longer
+      // current is discarded rather than allowed to mark newer work done.
+      name: 'generation',
+      type: 'number',
+      required: true,
+      defaultValue: 1,
+    },
+    {
+      // The fence. `id + status = 'running'` was not enough: once a lease
+      // expired and a second worker reclaimed the row, the first worker's
+      // completion still matched and marked the second worker's job done.
+      // A per-claim token means only the worker that holds the claim can
+      // finish it.
+      name: 'claimToken',
+      type: 'text',
+    },
+    {
+      name: 'claimedGeneration',
+      type: 'number',
+    },
+    {
       name: 'nextAttemptAt',
       type: 'date',
       required: true,

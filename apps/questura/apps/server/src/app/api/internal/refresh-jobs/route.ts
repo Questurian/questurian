@@ -68,5 +68,12 @@ export async function POST(req: NextRequest) {
   if (action !== 'drain') {
     return NextResponse.json({ message: `Unknown action "${action}".` }, { status: 400, headers: NO_STORE })
   }
-  return NextResponse.json({ drained: await drainRefreshJobs(db, { limit: 100 }) }, { headers: NO_STORE })
+  // Bounded by jobs *and* wall clock. The old call asked for a hundred jobs
+  // in one claim, which leased ninety-odd of them for a minute before the
+  // worker had started any — invisible to every other drain, and reclaimed
+  // elsewhere if the lease ran out mid-work (features/refresh-outbox/worker.ts).
+  return NextResponse.json(
+    { drained: await drainRefreshJobs(db, { maxJobs: 100, concurrency: 4 }) },
+    { headers: NO_STORE },
+  )
 }

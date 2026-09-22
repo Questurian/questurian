@@ -10,6 +10,14 @@
  * at an address that refuses connections, so a revalidate job fails and
  * retries; search jobs use an id that does not exist, so they succeed without
  * changing the index.
+ *
+ * **What this cannot show.** Everything here shares one connection inside one
+ * transaction, so it cannot see commit visibility, a second worker, a crash,
+ * or a claim being stolen — the whole subject of the fencing work. Those live
+ * in `scripts/readiness/*.integration.test.ts`, which uses separate real
+ * connections against a disposable database. This script stays because it is
+ * a fast check that the SQL parses and merges correctly against the real
+ * schema; it is not evidence of concurrency behaviour.
  */
 
 import 'dotenv/config'
@@ -42,7 +50,11 @@ async function main() {
       return client.query(sql, params)
     },
   }
-  const req = { payload: { db: { drizzle, pool } } }
+  // The enqueue requires a resolvable transaction: an obligation written
+  // anywhere but the mutation's own session is not attached to it
+  // (features/refresh-outbox/enqueue.ts). Here everything shares one
+  // connection, so the session is that connection.
+  const req = { transactionID: 'verify', payload: { db: { drizzle, pool, sessions: { verify: { db: drizzle } } } } }
   const rows = async (key: string) =>
     (await client.query('SELECT status, attempts::int AS attempts, target, next_attempt_at > now() AS later FROM refresh_jobs WHERE dedupe_key = $1', [key])).rows
 
