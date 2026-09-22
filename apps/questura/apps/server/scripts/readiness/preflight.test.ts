@@ -79,7 +79,7 @@ describe('readiness preflight', () => {
 
 describe('sandbox environment', () => {
   it('defaults to the sandbox, not to development', () => {
-    const resolved = sandboxSettings({ USER: 'alan' } as NodeJS.ProcessEnv)
+    const resolved = sandboxSettings({ USER: 'alan' } as unknown as NodeJS.ProcessEnv)
     expect(resolved.databaseUri).toContain('/questura_readiness')
     expect(resolved.frontendUrl).toBe('http://127.0.0.1:3100')
     expect(resolved.backendUrl).toBe('http://127.0.0.1:4100')
@@ -91,7 +91,7 @@ describe('sandbox environment', () => {
   it('removes paid-service credentials from a child process rather than blanking them', () => {
     process.env.STRIPE_SECRET_KEY = 'sk_live_should_never_reach_a_child'
     try {
-      const env = sandboxEnv(sandboxSettings({ USER: 'alan' } as NodeJS.ProcessEnv))
+      const env = sandboxEnv(sandboxSettings({ USER: 'alan' } as unknown as NodeJS.ProcessEnv))
       expect('STRIPE_SECRET_KEY' in env).toBe(false)
       expect(env.DATABASE_URI).toContain('questura_readiness')
       expect(env.READINESS_SANDBOX).toBe('1')

@@ -5,6 +5,7 @@ import {
   validateCookieDomain,
 } from './session-cookie'
 import { TRUSTED_PROXY_NAMES } from './trusted-proxy'
+import { clientBaseUrl, revalidationDisconnected, revalidationSecret } from '@/features/public-revalidation/revalidation/env'
 import { looksTransactionPooled } from '@/shared/database/pooled-uri'
 import { describePoolBudget, poolBudget } from '@/shared/database/pool-budget'
 
@@ -246,6 +247,50 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
     problems.push(
       'DATABASE_URI_UNPOOLED also looks transaction-pooled — advisory locks need a ' +
         'direct connection, not a second pooled one.'
+    )
+  }
+
+  // Publishing is only durable if the thing it is durable *towards* exists.
+  //
+  // Delivery with no destination or no secret used to return quietly and the
+  // worker marked the job done, so a deployment that lost one variable would
+  // drain its queue clean while every public page stayed stale. That is now a
+  // failure at delivery time, which makes it a retry loop rather than silent
+  // data loss — and a retry loop is still an outage, so the variables are
+  // required here where the boot can refuse instead.
+  if (!clientBaseUrl()) {
+    problems.push(
+      'No frontend revalidation destination — set QUESTURA_CLIENT_URL (or NEXT_PUBLIC_FRONTEND_URL). ' +
+        'Without it every publication would queue a refresh nobody can deliver.'
+    )
+  }
+
+  if (!revalidationSecret()) {
+    problems.push(
+      'QUESTURA_REVALIDATION_SECRET is not set — the frontend would answer 401 to every refresh, ' +
+        'so published changes would never reach readers.'
+    )
+  }
+
+  if (revalidationDisconnected()) {
+    problems.push(
+      'REFRESH_DISCONNECTED is set — that is a development convenience that reports every refresh as ' +
+        'skipped. In production it means publishing silently does nothing.'
+    )
+  }
+
+  // `REFRESH_OUTBOX=off` looks like a safe revert to the previous behaviour.
+  // It is not: it returns publishing to inline best-effort work that runs
+  // inside the save's transaction, can read uncommitted content, and loses
+  // the refresh entirely on any failure with nothing recorded to repair. It
+  // is an emergency mode with known data loss, so it has to be acknowledged
+  // by name rather than reached by flipping one variable.
+  if (process.env.REFRESH_OUTBOX === 'off' && !process.env.REFRESH_OUTBOX_DEGRADED_ACK?.trim()) {
+    problems.push(
+      'REFRESH_OUTBOX=off is a degraded emergency mode, not a rollback: refreshes become inline and ' +
+        'best-effort, and a failed one is lost with nothing recorded to repair it. Set ' +
+        'REFRESH_OUTBOX_DEGRADED_ACK to the reason and the date if that is really intended, and ' +
+        'rebuild the search index and purge the CDN afterwards.'
     )
   }
 
