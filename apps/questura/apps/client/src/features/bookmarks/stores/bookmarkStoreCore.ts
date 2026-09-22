@@ -1,9 +1,9 @@
-import { createStore } from 'zustand/vanilla'
-
 /**
- * The bookmark store's logic, free of the network and of React so node:test
- * can drive it (`bookmarkStoreCore.test.mjs`). `bookmarkStore.ts` binds it to
- * the real services and to the page's identity store.
+ * The bookmark store's logic, free of the network, React and every package
+ * so node:test can drive it with no install (`bookmarkStoreCore.test.mjs`;
+ * the CI client job runs dependency-free). `bookmarkStore.ts` binds it to the
+ * real services, the page's identity store, and zustand's `useStore`, which
+ * accepts any store with this `getState`/`subscribe`/`getInitialState` shape.
  *
  * Three rules this exists to keep (discovery finding 7):
  *
@@ -66,13 +66,50 @@ export type BookmarkCoreDeps<Ref> = {
   isUnauthorized: (error: unknown) => boolean
 }
 
-export function createBookmarkStore<Ref>(deps: BookmarkCoreDeps<Ref>) {
+type Listener<S> = (state: S, previous: S) => void
+type SetState<S> = (partial: Partial<S> | ((state: S) => Partial<S>)) => void
+
+/** The subset of a zustand vanilla store that `useStore` reads. */
+export type CoreStore<S> = {
+  getState: () => S
+  getInitialState: () => S
+  setState: SetState<S>
+  subscribe: (listener: Listener<S>) => () => void
+}
+
+function createCoreStore<S>(initializer: (set: SetState<S>, get: () => S) => S): CoreStore<S> {
+  const listeners = new Set<Listener<S>>()
+  let state: S
+  const get = () => state
+  const set: SetState<S> = (partial) => {
+    const next = typeof partial === 'function' ? partial(state) : partial
+    if (!next || Object.keys(next).length === 0) return
+    const previous = state
+    state = { ...state, ...next }
+    for (const listener of listeners) listener(state, previous)
+  }
+  state = initializer(set, get)
+  const initial = state
+  return {
+    getState: get,
+    getInitialState: () => initial,
+    setState: set,
+    subscribe: (listener) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
+  }
+}
+
+export function createBookmarkStore<Ref>(deps: BookmarkCoreDeps<Ref>): CoreStore<BookmarkCoreState<Ref>> {
   let loading: { generation: number; promise: Promise<void> } | null = null
   // Whether any control has asked for refs on this page. A reader change
   // re-reads only if something is showing bookmark state.
   let wanted = false
 
-  return createStore<BookmarkCoreState<Ref>>()((set, get) => {
+  return createCoreStore<BookmarkCoreState<Ref>>((set, get) => {
     const load = (): Promise<void> => {
       const generation = get().generation
       if (loading && loading.generation === generation) return loading.promise
