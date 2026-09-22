@@ -16,8 +16,8 @@
 import 'dotenv/config'
 import { Pool } from 'pg'
 
+import { runDrain, workerHealth } from '../src/features/refresh-outbox/lifecycle'
 import {
-  drainRefreshJobs,
   listFailedRefreshJobs,
   refreshJobStats,
   replayFailedRefreshJobs,
@@ -31,15 +31,15 @@ async function main() {
   const pool = new Pool({ connectionString, max: 2, connectionTimeoutMillis: 10_000 })
   try {
     if (command === 'stats') {
-      console.log(JSON.stringify(await refreshJobStats(pool), null, 2))
+      console.log(JSON.stringify({ stats: await refreshJobStats(pool), worker: workerHealth() }, null, 2))
     } else if (command === 'drain') {
-      const total = { claimed: 0, done: 0, retried: 0, failed: 0 }
+      const total = { claimed: 0, done: 0, retried: 0, failed: 0, superseded: 0 }
       for (let round = 0; round < 100; round += 1) {
-        const result = await drainRefreshJobs(pool, { maxJobs: 100, concurrency: 4 })
+        const result = await runDrain(pool, { maxJobs: 100, concurrency: 4 })
         for (const key of Object.keys(total) as Array<keyof typeof total>) total[key] += result[key]
         if (result.claimed === 0) break
       }
-      console.log(JSON.stringify(total))
+      console.log(JSON.stringify({ ...total, worker: workerHealth() }))
       if (total.failed > 0) process.exitCode = 2
     } else if (command === 'failed') {
       console.log(JSON.stringify(await listFailedRefreshJobs(pool), null, 2))
