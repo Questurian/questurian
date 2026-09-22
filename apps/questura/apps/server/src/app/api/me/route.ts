@@ -3,6 +3,8 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 
+import { AdmissionRefused } from '@/shared/http/admission'
+import { admitPublicWork, overloadedResponse } from '@/shared/http/public-read'
 import { forbiddenOriginResponse, getPrivateCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { getCurrentPrincipal } from '@/features/visitor-auth/lib/current-principal'
 import { visitorAuthPool } from '@/features/visitor-auth/lib/better-auth'
@@ -22,6 +24,14 @@ import {
  * declared rather than inferred so the property survives a refactor.
  */
 export const dynamic = 'force-dynamic'
+
+/**
+ * Better Auth's cookie prefix (`features/visitor-auth/lib/better-auth.ts`).
+ * Matched on presence only: whether the cookie is *valid* is the session
+ * lookup's job, and asking that question here would be the database work this
+ * check exists to avoid.
+ */
+const SESSION_COOKIE = /questura_visitor/
 
 export async function GET(req: NextRequest) {
   const corsHeaders = getPrivateCorsHeaders(req)
@@ -46,7 +56,31 @@ export async function GET(req: NextRequest) {
     countPoolStatements(visitorAuthPool)
     countPoolStatements((await getPayload({ config })).db?.pool)
   }
-  const { result: principal, report } = await withRequestReport(() => getCurrentPrincipal(req.headers))
+  // A signed-in identity is a session lookup and two queries; an anonymous
+  // one is neither, and must stay that way (CAP-03). So the budget applies to
+  // the expensive half only: a caller with no session cookie never reaches
+  // the gate, and a public burst cannot starve signed-in readers of the
+  // budget they were promised — or be starved by them.
+  const signedIn = SESSION_COOKIE.test(req.headers.get('cookie') ?? '')
+
+  let principal: Awaited<ReturnType<typeof getCurrentPrincipal>>
+  let report: Awaited<ReturnType<typeof withRequestReport>>['report']
+  try {
+    const outcome = signedIn
+      ? await admitPublicWork('private', () => withRequestReport(() => getCurrentPrincipal(req.headers)), req.signal ?? undefined)
+      : await withRequestReport(() => getCurrentPrincipal(req.headers))
+    principal = outcome.result
+    report = outcome.report
+  } catch (error) {
+    // Still private, still `no-store`, still retryable — a refusal here must
+    // not become something a cache can hold or a client treats as a logout.
+    if (error instanceof AdmissionRefused) {
+      const refused = overloadedResponse(error)
+      for (const [name, value] of Object.entries(corsHeaders)) refused.headers.set(name, value)
+      return refused
+    }
+    throw error
+  }
 
   const response = NextResponse.json(principal, { headers: corsHeaders })
   if (diagnostics) {

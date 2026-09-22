@@ -29,6 +29,36 @@ success and `private, no-store` on errors and overload.
 `/api/me` and `/api/account/bookmarks/refs`: identity, private `no-store`,
 no gate by design (CAP-03: anonymous calls do no database work).
 
+### Aggregate bounds (L07, 2026-09-22)
+
+Every scope above — including `navigation`, which has no work gate — now
+passes through an **ingress** gate *before* the rate limiter. The ordering is
+the point: the limiter is a Redis call. It fails open when Redis is
+unavailable, which is right, but "fails open" describes the answer, not the
+wait. A half-open Redis answers slowly, so every arriving request sits in the
+limiter until its command deadline, and nothing bounded how many requests
+could be sitting there. A deadline caps one command; it says nothing about
+how many requests are holding one.
+
+| Gate | Default | Env |
+|---|---|---|
+| `ingress` (every public read) | 64 active, 128 queued, 1 s wait | `PUBLIC_INGRESS_*` |
+| `assembly` (curated pages) | 2 active, 8 queued, 1.5 s | `PUBLIC_ASSEMBLY_*` |
+| `query` (search, feeds, indexes) | 8 active, 32 queued, 1.5 s | `PUBLIC_QUERY_*` |
+| `private` (signed-in `/api/me`) | 16 active, 64 queued, 1.5 s | `PRIVATE_READ_*` |
+
+`private` applies to `/api/me` **only when a session cookie is present**. An
+anonymous identity check still does no database or Redis work and never
+reaches the gate (CAP-03). A refusal there stays `no-store` and retryable, so
+it can never be read as a logout.
+
+Redis calls from the shared rate-limit counter run behind a circuit breaker
+(`shared/lib/circuit-breaker.ts`): five consecutive failures and calls fail
+immediately for five seconds, with one probe to notice recovery. What a
+failure *means* is unchanged — public reads fail open, payments fail closed —
+only the wait changes. Stripe webhooks do not use the public limiter and are
+untouched.
+
 ## Payload's own mounts (`/api/<collection>`, `/api/graphql`)
 
 Anonymous REST reads succeeded for: `media-assets`, `media-sets`,
@@ -44,7 +74,32 @@ events.
 **271 MB in 1.3 s**, anonymous. `single-type-listicles?limit=100&depth=10` →
 8.7 s, then 500. No rate limit, no bound.
 
-**Now** (`apps/server/src/shared/payload/anonymous-api-bounds.ts`): anonymous
+**L06 (2026-09-22)** closed three gaps the per-collection hook could not
+reach, at the route instead (`shared/payload/mount-bounds.ts`):
+
+- **Globals.** The `beforeOperation` plugin decorates collections.
+  `/api/globals/main-homepage` is anonymously readable and took `depth` from
+  the query string, so it was unbounded by exactly the mechanism that bounds
+  everything else. The route clamps `depth`, `limit` and `pagination` in the
+  URL before Payload parses it, which covers collections and globals alike.
+- **The request, as opposed to the read.** A hook admits nothing. Anonymous
+  GET now holds a `query` admission slot for the whole request — released
+  when the SQL has finished, not when the hook returned — so the mount cannot
+  hold the Payload pool while `/api/public/*` queues behind it.
+- **GraphQL is closed to anonymous callers.** One POST can carry many aliased
+  root fields, fragments and relationship selections, so a per-read clamp
+  bounds each read and not the request. Nothing in this repository calls
+  `/api/graphql` — not the client, not the writer, not Location Manager,
+  which syncs over REST — so a real cost limiter would be expensive machinery
+  for a surface with no consumer. Anonymous gets 401; a request carrying a
+  credential goes to Payload, which authenticates it properly. **If a public
+  GraphQL consumer ever appears, `mount-bounds.ts` is the file to reopen, and
+  the cost limiter becomes worth building at that point.**
+
+The generated route files are designed to be overwritten, so the guard is a
+test: `mount-bounds.test.ts` fails if a regeneration drops either wrapper.
+
+**Still** (`apps/server/src/shared/payload/anonymous-api-bounds.ts`): anonymous
 REST/GraphQL reads are rate limited (`payloadApi`, 120/min per IP), clamped to
 `limit ≤ 100`, `depth ≤ 2`, pagination forced on. Signed-in staff and service
 accounts (admin, writer, Location Manager — they use `limit` up to 200) and
