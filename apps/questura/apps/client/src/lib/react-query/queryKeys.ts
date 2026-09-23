@@ -7,6 +7,7 @@ export const queryKeys = {
   // User/Auth queries
   user: ['user'] as const,
   userMe: () => [...queryKeys.user, 'me'] as const,
+  authMethods: () => [...queryKeys.user, 'auth-methods'] as const,
 
   // Account queries
   account: ['account'] as const,

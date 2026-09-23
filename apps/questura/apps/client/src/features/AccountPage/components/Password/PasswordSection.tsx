@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User } from '@/lib/user/types';
+import type { AuthMethods } from '@/lib/user/types';
 import { useRouter } from 'next/navigation';
 import { useAddPasswordMutation } from '@/features/AccountPage/hooks/useAccountMutations';
 import PasswordStrengthIndicator from '@/features/Auth/components/PasswordStrengthIndicator';
@@ -67,13 +67,13 @@ function AccountPasswordInput({
 }
 
 interface PasswordSectionProps {
-  user: User | null;
+  methods: AuthMethods | undefined;
   passwordSuccess?: string | null;
   passwordError?: string | null;
   onClearPasswordMessages?: () => void;
 }
 
-export function PasswordSection({ user, passwordSuccess, passwordError, onClearPasswordMessages }: PasswordSectionProps) {
+export function PasswordSection({ methods, passwordSuccess, passwordError, onClearPasswordMessages }: PasswordSectionProps) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [password, setPassword] = useState('');
@@ -141,7 +141,7 @@ export function PasswordSection({ user, passwordSuccess, passwordError, onClearP
     );
   };
 
-  const isOAuthOnly = user?.authProvider !== 'local' && user?.authProvider !== 'dual';
+  const isOAuthOnly = methods?.authProvider !== 'local' && methods?.authProvider !== 'dual';
 
   return (
     <div className="mt-5 pt-5 border-t border-[#d7d4ce] 480:mt-6 480:pt-6 768:mt-8 768:pt-8">

@@ -34,7 +34,7 @@ vi.mock('./visitor-profile', () => ({
   ensureVisitorProfileForAuthUser: mocks.ensureVisitorProfileForAuthUser,
 }))
 
-import { getCurrentPrincipal, requireVisitorPrincipal } from './current-principal'
+import { getCurrentAuthMethods, getCurrentPrincipal, requireVisitorPrincipal } from './current-principal'
 
 describe('Current principal', () => {
   beforeEach(() => {
@@ -61,8 +61,44 @@ describe('Current principal', () => {
 
     expect(mocks.getSession).toHaveBeenCalledTimes(1)
     expect(mocks.listUserAccounts).not.toHaveBeenCalled()
+    expect(result.principal?.id).toBe('visitor_1')
+  })
+
+  // Every gate and every /api/me resolves a principal; only the account page
+  // needs sign-in methods. The accounts query is one statement those callers
+  // no longer pay.
+  it('makes no accounts query when resolving a principal', async () => {
+    mocks.getSession.mockResolvedValue({
+      user: { id: 'visitor_1', email: 'v@example.com', emailVerified: true, name: 'V' },
+    })
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({ id: 1, firstName: 'V', lastName: '' })
+
+    const cookie = new Headers({ cookie: 'questura_visitor.session_token=x.y' })
+    await getCurrentPrincipal(cookie)
+    await requireVisitorPrincipal(cookie, { requireVerified: true })
+
+    expect(mocks.findAccounts).not.toHaveBeenCalled()
+    expect(mocks.listUserAccounts).not.toHaveBeenCalled()
+  })
+
+  it('reads sign-in methods with one session lookup and the accounts query', async () => {
+    mocks.getSession.mockResolvedValue({
+      user: { id: 'visitor_1', email: 'v@example.com', emailVerified: true, name: 'V' },
+    })
+    mocks.findAccounts.mockResolvedValue([{ providerId: 'credential' }])
+
+    const methods = await getCurrentAuthMethods(new Headers({ cookie: 'questura_visitor.session_token=x.y' }))
+
+    expect(methods).toEqual({ hasLocalPassword: true, hasGoogleOAuth: false, authProvider: 'local' })
+    expect(mocks.getSession).toHaveBeenCalledTimes(1)
     expect(mocks.findAccounts).toHaveBeenCalledWith('visitor_1')
-    expect(result.principal?.authProvider).toBe('local')
+    expect(mocks.listUserAccounts).not.toHaveBeenCalled()
+    expect(mocks.findVisitorProfileByAuthUserId).not.toHaveBeenCalled()
+  })
+
+  it('has no sign-in methods for an anonymous caller', async () => {
+    expect(await getCurrentAuthMethods(new Headers())).toBeNull()
+    expect(mocks.findAccounts).not.toHaveBeenCalled()
   })
 
   it('does no account or profile work for an anonymous caller', async () => {
@@ -74,7 +110,7 @@ describe('Current principal', () => {
     expect(mocks.ensureVisitorProfileForAuthUser).not.toHaveBeenCalled()
   })
 
-  it('returns a Visitor principal and auth methods from a BetterAuth session', async () => {
+  it('returns a Visitor principal from a BetterAuth session', async () => {
     mocks.getSession.mockResolvedValue({
       user: {
         id: 'visitor_123',
@@ -107,9 +143,6 @@ describe('Current principal', () => {
         id: 'visitor_123',
         email: 'visitor@example.com',
         emailVerified: true,
-        hasLocalPassword: true,
-        hasGoogleOAuth: true,
-        authProvider: 'dual',
         profileId: 10,
         firstName: 'Ada',
         lastName: 'Lovelace',

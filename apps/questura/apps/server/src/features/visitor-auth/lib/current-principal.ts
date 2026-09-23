@@ -1,5 +1,5 @@
 import { getVisitorAuthMethodsForUser } from './account-query'
-import type { AuthProvider } from './account-query'
+import type { VisitorAuthMethods } from './account-query'
 import { visitorAuth } from './better-auth'
 import { deriveVisitorMembership } from './membership-entitlement'
 import type { MembershipSource } from './membership-entitlement'
@@ -10,9 +10,6 @@ export type VisitorPrincipal = {
   id: string
   email: string
   emailVerified: boolean
-  hasLocalPassword: boolean
-  hasGoogleOAuth: boolean
-  authProvider: AuthProvider
   profileId: string | number | null
   firstName: string
   lastName: string
@@ -24,6 +21,13 @@ export type VisitorPrincipal = {
     cancelAtPeriodEnd: boolean
   }
 }
+
+/**
+ * Sign-in methods are not part of the principal. Every gate and every
+ * `/api/me` resolves a principal, and only the account page needs to know how
+ * the reader signs in, so the accounts query is paid there alone
+ * (`getCurrentAuthMethods`, served by `/api/account/auth-methods`).
+ */
 
 /**
  * Per ADR-0004 the public current-principal view covers Visitor auth only; Payload Staff auth is
@@ -50,13 +54,7 @@ async function resolveVisitorPrincipal(headers: Headers): Promise<VisitorPrincip
 
   if (visitorSession?.user) {
     const user = visitorSession.user
-    // One session lookup per request: the accounts query takes the user id
-    // this lookup already produced rather than resolving the session again.
-    // The profile and the accounts are independent, so they run together.
-    const [foundProfile, authMethods] = await Promise.all([
-      findVisitorProfileByAuthUserId(user.id),
-      getVisitorAuthMethodsForUser(user.id),
-    ])
+    const foundProfile = await findVisitorProfileByAuthUserId(user.id)
     const profile =
       foundProfile ??
       (await ensureVisitorProfileForAuthUser({
@@ -70,7 +68,6 @@ async function resolveVisitorPrincipal(headers: Headers): Promise<VisitorPrincip
       id: visitorSession.user.id,
       email: visitorSession.user.email,
       emailVerified: Boolean(visitorSession.user.emailVerified),
-      ...authMethods,
       profileId: profile?.id ?? null,
       firstName: profile?.firstName ?? '',
       lastName: profile?.lastName ?? '',
@@ -90,6 +87,17 @@ export async function getCurrentPrincipal(headers: Headers): Promise<VisitorPrin
     authenticated: true,
     principal: visitor,
   }
+}
+
+/**
+ * How the signed-in reader signs in, or null for no session. One session
+ * lookup, then the accounts query with the user id it produced — never
+ * `listUserAccounts({ headers })`, which would resolve the session again.
+ */
+export async function getCurrentAuthMethods(headers: Headers): Promise<VisitorAuthMethods | null> {
+  const visitorSession = await visitorAuth.api.getSession({ headers })
+  if (!visitorSession?.user) return null
+  return getVisitorAuthMethodsForUser(visitorSession.user.id)
 }
 
 export async function requireCurrentPrincipal(headers: Headers) {

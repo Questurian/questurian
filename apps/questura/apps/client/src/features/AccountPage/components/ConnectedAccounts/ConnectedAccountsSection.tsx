@@ -1,8 +1,9 @@
-import { User } from '@/lib/user/types';
+import type { AuthMethods, User } from '@/lib/user/types';
 import { accountActionLinkClassName, accountGuidanceClassName } from '../account.styles';
 
 interface ConnectedAccountsSectionProps {
   user: User | null;
+  methods: AuthMethods | undefined;
   onLinkGoogle: () => void;
   onUnlinkGoogle: () => void;
   success?: string | null;
@@ -10,9 +11,9 @@ interface ConnectedAccountsSectionProps {
   onClearMessages?: () => void;
 }
 
-export function ConnectedAccountsSection({ user, onLinkGoogle, onUnlinkGoogle, success, error, onClearMessages }: ConnectedAccountsSectionProps) {
-  const hasGoogleAuth = user?.authProvider === 'google' || user?.authProvider === 'dual';
-  const canUnlinkGoogle = Boolean(user?.hasLocalPassword);
+export function ConnectedAccountsSection({ user, methods, onLinkGoogle, onUnlinkGoogle, success, error, onClearMessages }: ConnectedAccountsSectionProps) {
+  const hasGoogleAuth = methods?.authProvider === 'google' || methods?.authProvider === 'dual';
+  const canUnlinkGoogle = Boolean(methods?.hasLocalPassword);
 
   return (
     <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-4 480:p-6 768:p-8">

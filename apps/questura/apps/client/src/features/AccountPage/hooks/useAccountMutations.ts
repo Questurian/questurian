@@ -50,8 +50,8 @@ export function useAddPasswordMutation() {
       }
     },
     onSuccess: () => {
-      // Invalidate user query to refetch updated auth methods
-      queryClient.invalidateQueries({ queryKey: queryKeys.userMe() });
+      // A sign-in method changed.
+      queryClient.invalidateQueries({ queryKey: queryKeys.authMethods() });
     },
   });
 }
@@ -130,8 +130,8 @@ export function useUnlinkGoogleMutation() {
       }
     },
     onSuccess: () => {
-      // Invalidate user query to refetch updated auth methods
-      queryClient.invalidateQueries({ queryKey: queryKeys.userMe() });
+      // A sign-in method changed.
+      queryClient.invalidateQueries({ queryKey: queryKeys.authMethods() });
     },
   });
 }
