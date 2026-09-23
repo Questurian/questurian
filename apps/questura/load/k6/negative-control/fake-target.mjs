@@ -27,9 +27,62 @@ function pageHeaders(extra = {}) {
   return { 'content-type': 'text/html', 'cache-control': 'public, s-maxage=3600', ...extra }
 }
 
+const BOOTED_AT = Date.now()
+const BOOT_ID = new Date(BOOTED_AT).toISOString()
+
+/**
+ * The backend's per-instance telemetry (`/api/internal/db-stats`), faked so
+ * the supervisor's resource and telemetry rules can be shown to fire:
+ *
+ *   queue-growth      pool waiters climb steadily and never drain
+ *   benign-spike      a short burst of waiters that drains to zero
+ *   telemetry-missing the endpoint fails
+ *   unknown-instance  the endpoint answers as a different process
+ */
+function dbStats(res) {
+  const elapsedS = (Date.now() - BOOTED_AT) / 1000
+  if (FAULT === 'telemetry-missing') {
+    res.writeHead(500, { 'content-type': 'application/json' })
+    res.end('{}')
+    return
+  }
+  let waiting = 0
+  if (FAULT === 'queue-growth') waiting = Math.floor(elapsedS * 3)
+  if (FAULT === 'benign-spike') waiting = elapsedS > 2 && elapsedS < 4 ? 8 : 0
+  res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+  res.end(
+    JSON.stringify({
+      takenAt: new Date().toISOString(),
+      instance: { id: FAULT === 'unknown-instance' ? 'stranger' : 'fake-1', startedAt: BOOT_ID },
+      payloadPool: { total: 10, idle: 0, waiting },
+      visitorAuthPool: { total: 5, idle: 5, waiting: 0 },
+      admission: { query: { queued: 0 } },
+    }),
+  )
+}
+
 const server = createServer((req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`)
   const path = url.pathname
+
+  if (path === '/api/internal/db-stats') {
+    dbStats(res)
+    return
+  }
+
+  if (FAULT === 'slow') {
+    setTimeout(() => {
+      res.writeHead(200, pageHeaders())
+      res.end(RIGHT_PAGE)
+    }, 2_000)
+    return
+  }
+
+  if (FAULT === 'all-503') {
+    res.writeHead(503, { 'retry-after': '1', 'cache-control': 'no-store' })
+    res.end('busy')
+    return
+  }
 
   if (path === '/api/me') {
     const signedIn = Boolean(req.headers.cookie)

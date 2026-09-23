@@ -11,6 +11,7 @@
 // No network beyond loopback, no k6 cloud, nothing billed.
 
 import { spawn } from 'node:child_process'
+import { readFileSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
@@ -115,6 +116,83 @@ for (const [label, env, script] of PREFLIGHT) {
 }
 target.kill('SIGTERM')
 await sleep(100)
+
+// ---------------------------------------------------------------------------
+// Supervisor controls (surge plan L08): each stop reason must fire for the
+// reason it names — exact exit code — and stop within a bounded time. One
+// benign control must NOT stop.
+// ---------------------------------------------------------------------------
+
+function runSupervised(env) {
+  return new Promise((done) => {
+    const started = Date.now()
+    const summary = resolve(here, `.summary-${process.pid}.json`)
+    const child = spawn(process.execPath, [resolve(here, '..', 'supervise.mjs'), resolve(here, 'probe-supervised.js'), '--', '--quiet'], {
+      env: {
+        ...process.env,
+        WORKLOAD: WORKLOAD_PATH,
+        TELEMETRY_INSTANCES: `fake-1=http://127.0.0.1:${PORT}/api/internal/db-stats`,
+        ABORT_GRACE_MS: '5000',
+        ABORT_TELEMETRY_GAP_MS: '2000',
+        ABORT_QUEUE_SUSTAIN_MS: '3000',
+        TELEMETRY_INTERVAL_MS: '500',
+        ABORT_MIN_SAMPLES: '50',
+        SUPERVISOR_SUMMARY: summary,
+        ...env,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    let output = ''
+    child.stdout.on('data', (chunk) => (output += chunk))
+    child.stderr.on('data', (chunk) => (output += chunk))
+    child.on('exit', (code) => {
+      let parsed = null
+      try {
+        parsed = JSON.parse(readFileSync(summary, 'utf8'))
+      } catch {
+        // No summary: the settings were refused before a run existed.
+      }
+      rmSync(summary, { force: true })
+      done({ code: code ?? 1, output, elapsedMs: Date.now() - started, summary: parsed })
+    })
+  })
+}
+
+const SUPERVISED = [
+  // [label, fault, env, expected exit, reason fragment]
+  ['wrong 200 body', 'wrong-content', {}, 91, 'wrong_content'],
+  ['leaked member marker', 'member-body-to-anonymous', {}, 91, 'privacy'],
+  ['identity that lies', 'identity-lies', { PROBE_SIGNED_IN: '1' }, 91, 'identity'],
+  ['private response marked cacheable', 'private-is-cacheable', {}, 91, 'cache_policy'],
+  ['refusal without Retry-After', 'refusal-without-retry-after', {}, 91, 'refusal_policy'],
+  ['queue growth on the instance', 'queue-growth', {}, 92, 'queue'],
+  ['telemetry that stops answering', 'telemetry-missing', {}, 93, 'no telemetry'],
+  ['telemetry from a stranger', 'unknown-instance', {}, 93, 'answered as stranger'],
+  ['invalid abort setting', 'none', { ABORT_FAILURE_RATE: 'abc' }, 64, null],
+  ['all-503 claimed as capacity', 'all-503', { RUN_KIND: 'capacity', SUCCESS_FLOOR_RPS: '5', PROBE_DURATION: '6s', ABORT_FAILURE_RATE: '1' }, 97, 'below the declared floor'],
+  ['generator saturation', 'slow', { RUN_KIND: 'capacity', SUCCESS_FLOOR_RPS: '1', PROBE_RATE: '30', PROBE_VUS: '2' }, 95, 'dropped'],
+  ['benign short spike (must not stop)', 'benign-spike', { PROBE_DURATION: '8s' }, 0, null],
+]
+
+process.stdout.write('\nSupervisor stops (exact reason, bounded stop):\n')
+for (const [label, fault, env, expectedCode, fragment] of SUPERVISED) {
+  const target = await startTarget(fault)
+  const { code, output, summary } = await runSupervised(env)
+  target.kill('SIGTERM')
+  await sleep(100)
+
+  const reason = summary && summary.stop ? summary.stop.reason : ''
+  const reasonOk = fragment === null || reason.includes(fragment) || output.includes(fragment)
+  const stopLatency = summary ? summary.stopLatencyMs : null
+  const boundedOk = stopLatency === null || stopLatency < 5_000 + 5_000
+  const ok = code === expectedCode && reasonOk && boundedOk
+  results.push({ fault: `supervisor: ${label}`, expected: String(expectedCode), actual: String(code), ok })
+  process.stdout.write(
+    `${ok ? '  ok  ' : ' FAIL '} ${label.padEnd(36)} exit ${code} (want ${expectedCode})` +
+      `${stopLatency !== null ? `, stopped ${stopLatency}ms after the decision` : ''}${reason ? ` — ${reason}` : ''}\n`,
+  )
+  if (!ok) process.stdout.write(output.split('\n').slice(-15).join('\n') + '\n')
+}
 
 const broken = results.filter((result) => !result.ok)
 process.stdout.write(`\n${results.length - broken.length}/${results.length} negative controls behaved as required.\n`)

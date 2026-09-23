@@ -99,21 +99,46 @@ This replaces checks that accepted any HTML, any 200/307/308 and any boolean
 identity — all three of which are true of a backend serving the wrong
 article to the wrong reader.
 
-### The rolling-window stop
+### The stop controller (surge plan L08)
 
-k6 thresholds are cumulative over the whole run, so the matrix's "1% for 60
-seconds" could not be expressed: an hour of healthy traffic dilutes a sharp
-failure until the abort never fires. `gates()` now says it is cumulative, and
-`supervise.mjs` is the real window:
+k6 thresholds are cumulative over the whole run, and they cannot see a wrong
+page that answered 200, a queue growing inside the server, or telemetry that
+went quiet. `supervise.mjs` is the stop controller; its rules live in
+`supervisor/policy.mjs` (unit-tested in `supervisor/policy.test.mjs`).
 
 ```bash
-node load/k6/supervise.mjs cold-heavy.js -- --vus 10
+TELEMETRY_INSTANCES=readiness-stack-backend=http://127.0.0.1:4100/api/internal/db-stats \
+DB_STATS_SECRET=<from the stack state> RUN_KIND=capacity SUCCESS_FLOOR_RPS=10 \
+WORKLOAD=$PWD/load/k6/workloads/launch-local.json SESSIONS_FILE=<pnpm readiness:sessions> \
+node load/k6/supervise.mjs load/k6/launch-journeys.js -- -e RATE=15
 ```
 
-It reads k6's streamed JSON, keeps a sixty-second window of outcomes, and
-kills the run (exit 90) when the window's failure rate crosses the limit with
-`ABORT_MIN_SAMPLES` behind it. It also stops on a doubling pool-wait and on a
-wall clock. Use it for anything billed.
+| Exit | Stop reason |
+|---|---|
+| 64 | a setting refused before anything starts (every abort parameter is validated) |
+| 90 | rolling-window HTTP failure rate (not in `containment` runs, which expect refusals) |
+| 91 | correctness: `questura_correctness{class}` — wrong 200 body, leaked member marker, false identity, a cacheable private response, a refusal without `Retry-After` |
+| 92 | sustained queue growth on **one** instance (pools + every gate queue), never a fleet average; a drain to zero clears its history |
+| 93 | telemetry missing, stale, from an undeclared endpoint, answering as a different instance, duplicated, or an instance restarted |
+| 94 | wall-clock or request budget spent |
+| 95 | the generator dropped arrivals (capacity and containment runs) |
+| 97 | a `capacity` run ended below its declared successful-throughput floor — an all-503 run cannot pass |
+
+Telemetry is polled from each declared instance directly, never through a
+balancer. Run kinds: `correctness` (default, no capacity claim), `capacity`
+(open arrivals, success floor required), `containment` (deliberate overload:
+refusals reported separately, correctness and resources still stop it). The
+summary (`SUPERVISOR_SUMMARY`) keeps offered, successful and refused counts
+and fractions apart. k6 is stopped with SIGINT, then SIGKILL after
+`ABORT_GRACE_MS`.
+
+The launch workload (`workloads/launch-local.json`) is generated from the
+corpus manifest by `lib/build-launch-workload.mjs`; sessions come from
+`pnpm readiness:sessions` (a 0600 file in the stack's state directory, never
+committed). `launch-journeys.js` models browser-informed visits (free and
+gated landings, repeat visits, search, saved items, bookmark writes, sign-in)
+with exact identity, bookmark and member-body checks, distinct sessions and a
+synthetic client address per VU.
 
 ### Negative controls
 
@@ -122,7 +147,14 @@ node load/k6/negative-control/run.mjs
 ```
 
 Starts a loopback target in each fault mode and requires k6 to exit nonzero.
-Sixteen controls: eight response faults (wrong content, wrong redirect,
+Twenty-eight controls. The twelve supervisor controls run the supervisor
+itself against a target broken one way at a time and require the exact exit
+code, the matching reason and a bounded stop: wrong 200 body, leaked member
+marker, lying identity, cacheable private response, refusal without
+`Retry-After` (all 91), queue growth (92), missing telemetry and a stranger
+answering (93), an invalid abort setting (64), an all-503 run claimed as
+capacity (97), a saturated generator (95) — and a benign short spike that must
+**not** stop the run. The original sixteen: eight response faults (wrong content, wrong redirect,
 identity that lies, a member's body served to an anonymous reader, a
 cacheable private response, a cacheable response carrying `Set-Cookie`, a
 throttled reader) and eight settings that must be refused before load starts

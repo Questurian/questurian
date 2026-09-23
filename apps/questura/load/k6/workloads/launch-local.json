@@ -1,0 +1,1154 @@
+{
+  "version": 2,
+  "name": "launch-v1-local",
+  "source": "load/k6/manifests/launch-v1.json",
+  "client": "http://127.0.0.1:3100",
+  "backend": "http://127.0.0.1:4100",
+  "origin": "http://app.readiness.localhost:3100",
+  "pages": [
+    {
+      "path": "/zz-launch/harbor",
+      "kind": "landing",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "Reading harbor"
+        ],
+        "excludes": [
+          "MEMBERONLY-ART-00",
+          "MEMBERONLY-ART-01",
+          "MEMBERONLY-ART-02",
+          "MEMBERONLY-ART-03",
+          "MEMBERONLY-ART-04",
+          "MEMBERONLY-ART-05",
+          "MEMBERONLY-ART-06",
+          "MEMBERONLY-ITN-00",
+          "MEMBERONLY-ITN-01",
+          "MEMBERONLY-ITN-02",
+          "MEMBERONLY-ITN-03"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter",
+      "kind": "landing",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "Reading old-quarter"
+        ],
+        "excludes": [
+          "MEMBERONLY-ART-00",
+          "MEMBERONLY-ART-01",
+          "MEMBERONLY-ART-02",
+          "MEMBERONLY-ART-03",
+          "MEMBERONLY-ART-04",
+          "MEMBERONLY-ART-05",
+          "MEMBERONLY-ART-06",
+          "MEMBERONLY-ITN-00",
+          "MEMBERONLY-ITN-01",
+          "MEMBERONLY-ITN-02",
+          "MEMBERONLY-ITN-03"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/river-bend",
+      "kind": "landing",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "Reading river-bend"
+        ],
+        "excludes": [
+          "MEMBERONLY-ART-00",
+          "MEMBERONLY-ART-01",
+          "MEMBERONLY-ART-02",
+          "MEMBERONLY-ART-03",
+          "MEMBERONLY-ART-04",
+          "MEMBERONLY-ART-05",
+          "MEMBERONLY-ART-06",
+          "MEMBERONLY-ITN-00",
+          "MEMBERONLY-ITN-01",
+          "MEMBERONLY-ITN-02",
+          "MEMBERONLY-ITN-03"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/hillside",
+      "kind": "landing",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "Reading hillside"
+        ],
+        "excludes": [
+          "MEMBERONLY-ART-00",
+          "MEMBERONLY-ART-01",
+          "MEMBERONLY-ART-02",
+          "MEMBERONLY-ART-03",
+          "MEMBERONLY-ART-04",
+          "MEMBERONLY-ART-05",
+          "MEMBERONLY-ART-06",
+          "MEMBERONLY-ITN-00",
+          "MEMBERONLY-ITN-01",
+          "MEMBERONLY-ITN-02",
+          "MEMBERONLY-ITN-03"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/food-and-drink/launch-article-00",
+      "kind": "article",
+      "type": "articles",
+      "id": 1,
+      "access": "member",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-00",
+          "BODY-ART-00-R1"
+        ],
+        "excludes": [
+          "MEMBERONLY-ART-00"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter/neighbourhoods/launch-article-01",
+      "kind": "article",
+      "type": "articles",
+      "id": 2,
+      "access": "member",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-01",
+          "BODY-ART-01-R1"
+        ],
+        "excludes": [
+          "MEMBERONLY-ART-01"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/river-bend/culture/launch-article-02",
+      "kind": "article",
+      "type": "articles",
+      "id": 3,
+      "access": "member",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-02",
+          "BODY-ART-02-R1"
+        ],
+        "excludes": [
+          "MEMBERONLY-ART-02"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/hillside/food-and-drink/launch-article-03",
+      "kind": "article",
+      "type": "articles",
+      "id": 4,
+      "access": "member",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-03",
+          "BODY-ART-03-R1"
+        ],
+        "excludes": [
+          "MEMBERONLY-ART-03"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/neighbourhoods/launch-article-04",
+      "kind": "article",
+      "type": "articles",
+      "id": 5,
+      "access": "member",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-04",
+          "BODY-ART-04-R1"
+        ],
+        "excludes": [
+          "MEMBERONLY-ART-04"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter/culture/launch-article-05",
+      "kind": "article",
+      "type": "articles",
+      "id": 6,
+      "access": "member",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-05",
+          "BODY-ART-05-R1"
+        ],
+        "excludes": [
+          "MEMBERONLY-ART-05"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/river-bend/food-and-drink/launch-article-06",
+      "kind": "article",
+      "type": "articles",
+      "id": 7,
+      "access": "member",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-06",
+          "BODY-ART-06-R1"
+        ],
+        "excludes": [
+          "MEMBERONLY-ART-06"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/hillside/neighbourhoods/launch-article-07",
+      "kind": "article",
+      "type": "articles",
+      "id": 8,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-07",
+          "BODY-ART-07-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/culture/launch-article-08",
+      "kind": "article",
+      "type": "articles",
+      "id": 9,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-08",
+          "BODY-ART-08-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter/food-and-drink/launch-article-09",
+      "kind": "article",
+      "type": "articles",
+      "id": 10,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-09",
+          "BODY-ART-09-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/river-bend/neighbourhoods/launch-article-10",
+      "kind": "article",
+      "type": "articles",
+      "id": 11,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-10",
+          "BODY-ART-10-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/hillside/culture/launch-article-11",
+      "kind": "article",
+      "type": "articles",
+      "id": 12,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-11",
+          "BODY-ART-11-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/food-and-drink/launch-article-12",
+      "kind": "article",
+      "type": "articles",
+      "id": 13,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-12",
+          "BODY-ART-12-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter/neighbourhoods/launch-article-13",
+      "kind": "article",
+      "type": "articles",
+      "id": 14,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-13",
+          "BODY-ART-13-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/river-bend/culture/launch-article-14",
+      "kind": "article",
+      "type": "articles",
+      "id": 15,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-14",
+          "BODY-ART-14-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/hillside/food-and-drink/launch-article-15",
+      "kind": "article",
+      "type": "articles",
+      "id": 16,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-15",
+          "BODY-ART-15-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/neighbourhoods/launch-article-16",
+      "kind": "article",
+      "type": "articles",
+      "id": 17,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-16",
+          "BODY-ART-16-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter/culture/launch-article-17",
+      "kind": "article",
+      "type": "articles",
+      "id": 18,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-17",
+          "BODY-ART-17-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/river-bend/food-and-drink/launch-article-18",
+      "kind": "article",
+      "type": "articles",
+      "id": 19,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-18",
+          "BODY-ART-18-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/hillside/neighbourhoods/launch-article-19",
+      "kind": "article",
+      "type": "articles",
+      "id": 20,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-19",
+          "BODY-ART-19-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/culture/launch-article-20",
+      "kind": "article",
+      "type": "articles",
+      "id": 21,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-20",
+          "BODY-ART-20-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter/food-and-drink/launch-article-21",
+      "kind": "article",
+      "type": "articles",
+      "id": 22,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-21",
+          "BODY-ART-21-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/river-bend/neighbourhoods/launch-article-22",
+      "kind": "article",
+      "type": "articles",
+      "id": 23,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-22",
+          "BODY-ART-22-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/hillside/culture/launch-article-23",
+      "kind": "article",
+      "type": "articles",
+      "id": 24,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-23",
+          "BODY-ART-23-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/food-and-drink/launch-article-24",
+      "kind": "article",
+      "type": "articles",
+      "id": 25,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-24",
+          "BODY-ART-24-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter/neighbourhoods/launch-article-25",
+      "kind": "article",
+      "type": "articles",
+      "id": 26,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ART-25",
+          "BODY-ART-25-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/maps/launch-map-00",
+      "kind": "article",
+      "type": "maps",
+      "id": 1,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-MAP-00",
+          "BODY-MAP-00-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter/maps/launch-map-01",
+      "kind": "article",
+      "type": "maps",
+      "id": 2,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-MAP-01",
+          "BODY-MAP-01-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/river-bend/maps/launch-map-02",
+      "kind": "article",
+      "type": "maps",
+      "id": 3,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-MAP-02",
+          "BODY-MAP-02-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/hillside/maps/launch-map-03",
+      "kind": "article",
+      "type": "maps",
+      "id": 4,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-MAP-03",
+          "BODY-MAP-03-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/maps/launch-map-04",
+      "kind": "article",
+      "type": "maps",
+      "id": 5,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-MAP-04",
+          "BODY-MAP-04-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter/maps/launch-map-05",
+      "kind": "article",
+      "type": "maps",
+      "id": 6,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-MAP-05",
+          "BODY-MAP-05-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/river-bend/maps/launch-map-06",
+      "kind": "article",
+      "type": "maps",
+      "id": 7,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-MAP-06",
+          "BODY-MAP-06-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/hillside/maps/launch-map-07",
+      "kind": "article",
+      "type": "maps",
+      "id": 8,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-MAP-07",
+          "BODY-MAP-07-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/maps/launch-map-08",
+      "kind": "article",
+      "type": "maps",
+      "id": 9,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-MAP-08",
+          "BODY-MAP-08-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter/maps/launch-map-09",
+      "kind": "article",
+      "type": "maps",
+      "id": 10,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-MAP-09",
+          "BODY-MAP-09-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/river-bend/maps/launch-map-10",
+      "kind": "article",
+      "type": "maps",
+      "id": 11,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-MAP-10",
+          "BODY-MAP-10-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/hillside/maps/launch-map-11",
+      "kind": "article",
+      "type": "maps",
+      "id": 12,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-MAP-11",
+          "BODY-MAP-11-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/itineraries/launch-itinerary-00",
+      "kind": "article",
+      "type": "itineraries",
+      "id": 1,
+      "access": "member",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ITN-00",
+          "BODY-ITN-00-R1"
+        ],
+        "excludes": [
+          "MEMBERONLY-ITN-00"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter/itineraries/launch-itinerary-01",
+      "kind": "article",
+      "type": "itineraries",
+      "id": 2,
+      "access": "member",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ITN-01",
+          "BODY-ITN-01-R1"
+        ],
+        "excludes": [
+          "MEMBERONLY-ITN-01"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/river-bend/itineraries/launch-itinerary-02",
+      "kind": "article",
+      "type": "itineraries",
+      "id": 3,
+      "access": "member",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ITN-02",
+          "BODY-ITN-02-R1"
+        ],
+        "excludes": [
+          "MEMBERONLY-ITN-02"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/hillside/itineraries/launch-itinerary-03",
+      "kind": "article",
+      "type": "itineraries",
+      "id": 4,
+      "access": "member",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ITN-03",
+          "BODY-ITN-03-R1"
+        ],
+        "excludes": [
+          "MEMBERONLY-ITN-03"
+        ],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/itineraries/launch-itinerary-04",
+      "kind": "article",
+      "type": "itineraries",
+      "id": 5,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ITN-04",
+          "BODY-ITN-04-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter/itineraries/launch-itinerary-05",
+      "kind": "article",
+      "type": "itineraries",
+      "id": 6,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ITN-05",
+          "BODY-ITN-05-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/river-bend/itineraries/launch-itinerary-06",
+      "kind": "article",
+      "type": "itineraries",
+      "id": 7,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ITN-06",
+          "BODY-ITN-06-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/hillside/itineraries/launch-itinerary-07",
+      "kind": "article",
+      "type": "itineraries",
+      "id": 8,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ITN-07",
+          "BODY-ITN-07-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/itineraries/launch-itinerary-08",
+      "kind": "article",
+      "type": "itineraries",
+      "id": 9,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ITN-08",
+          "BODY-ITN-08-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/old-quarter/itineraries/launch-itinerary-09",
+      "kind": "article",
+      "type": "itineraries",
+      "id": 10,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ITN-09",
+          "BODY-ITN-09-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/river-bend/itineraries/launch-itinerary-10",
+      "kind": "article",
+      "type": "itineraries",
+      "id": 11,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ITN-10",
+          "BODY-ITN-10-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/hillside/itineraries/launch-itinerary-11",
+      "kind": "article",
+      "type": "itineraries",
+      "id": 12,
+      "access": "free",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "LM-ITN-11",
+          "BODY-ITN-11-R1"
+        ],
+        "excludes": [],
+        "cacheable": true
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/articles/launch-does-not-exist",
+      "kind": "missing",
+      "expect": {
+        "status": 404
+      }
+    },
+    {
+      "path": "/zz-launch/nowhere",
+      "kind": "missing",
+      "expect": {
+        "status": 404
+      }
+    },
+    {
+      "path": "/zz-launch/harbor/food-and-drink/launch-retired-01",
+      "kind": "missing",
+      "expect": {
+        "status": 404
+      }
+    },
+    {
+      "path": "/search?q=zzqqnomatch",
+      "kind": "search",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "data-search-state=\"empty\""
+        ],
+        "cacheable": false
+      }
+    },
+    {
+      "path": "/search?q=LM-ART-07",
+      "kind": "search",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "/zz-launch/hillside/neighbourhoods/launch-article-07"
+        ],
+        "excludes": [
+          "data-search-state=\"unavailable\""
+        ],
+        "cacheable": false
+      }
+    },
+    {
+      "path": "/search?q=Harbor",
+      "kind": "search",
+      "expect": {
+        "status": 200,
+        "contains": [
+          "results"
+        ],
+        "excludes": [
+          "data-search-state=\"unavailable\""
+        ],
+        "cacheable": false
+      }
+    }
+  ],
+  "cold": [
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fharbor%2Ffood-and-drink%2Flaunch-article-00&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fold-quarter%2Fneighbourhoods%2Flaunch-article-01&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Friver-bend%2Fculture%2Flaunch-article-02&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fhillside%2Ffood-and-drink%2Flaunch-article-03&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fharbor%2Fneighbourhoods%2Flaunch-article-04&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fold-quarter%2Fculture%2Flaunch-article-05&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Friver-bend%2Ffood-and-drink%2Flaunch-article-06&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fhillside%2Fneighbourhoods%2Flaunch-article-07&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fharbor%2Fculture%2Flaunch-article-08&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fold-quarter%2Ffood-and-drink%2Flaunch-article-09&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Friver-bend%2Fneighbourhoods%2Flaunch-article-10&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fhillside%2Fculture%2Flaunch-article-11&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fharbor%2Ffood-and-drink%2Flaunch-article-12&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fold-quarter%2Fneighbourhoods%2Flaunch-article-13&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Friver-bend%2Fculture%2Flaunch-article-14&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fhillside%2Ffood-and-drink%2Flaunch-article-15&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fharbor%2Fneighbourhoods%2Flaunch-article-16&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fold-quarter%2Fculture%2Flaunch-article-17&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Friver-bend%2Ffood-and-drink%2Flaunch-article-18&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fhillside%2Fneighbourhoods%2Flaunch-article-19&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fharbor%2Fculture%2Flaunch-article-20&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fold-quarter%2Ffood-and-drink%2Flaunch-article-21&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Friver-bend%2Fneighbourhoods%2Flaunch-article-22&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fhillside%2Fculture%2Flaunch-article-23&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fharbor%2Ffood-and-drink%2Flaunch-article-24&lang=en",
+    "/api/public/articles/by-canonical-path?path=%2Fzz-launch%2Fold-quarter%2Fneighbourhoods%2Flaunch-article-25&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=harbor&slug=launch-map-00&type=maps&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=old-quarter&slug=launch-map-01&type=maps&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=river-bend&slug=launch-map-02&type=maps&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=hillside&slug=launch-map-03&type=maps&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=harbor&slug=launch-map-04&type=maps&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=old-quarter&slug=launch-map-05&type=maps&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=river-bend&slug=launch-map-06&type=maps&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=hillside&slug=launch-map-07&type=maps&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=harbor&slug=launch-map-08&type=maps&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=old-quarter&slug=launch-map-09&type=maps&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=river-bend&slug=launch-map-10&type=maps&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=hillside&slug=launch-map-11&type=maps&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=harbor&slug=launch-itinerary-00&type=itineraries&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=old-quarter&slug=launch-itinerary-01&type=itineraries&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=river-bend&slug=launch-itinerary-02&type=itineraries&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=hillside&slug=launch-itinerary-03&type=itineraries&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=harbor&slug=launch-itinerary-04&type=itineraries&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=old-quarter&slug=launch-itinerary-05&type=itineraries&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=river-bend&slug=launch-itinerary-06&type=itineraries&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=hillside&slug=launch-itinerary-07&type=itineraries&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=harbor&slug=launch-itinerary-08&type=itineraries&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=old-quarter&slug=launch-itinerary-09&type=itineraries&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=river-bend&slug=launch-itinerary-10&type=itineraries&lang=en",
+    "/api/public/articles/by-id?scope=city&country=zz-launch&city=hillside&slug=launch-itinerary-11&type=itineraries&lang=en"
+  ],
+  "gated": [
+    {
+      "type": "articles",
+      "id": 1,
+      "path": "/zz-launch/harbor/food-and-drink/launch-article-00",
+      "member": "MEMBERONLY-ART-00"
+    },
+    {
+      "type": "articles",
+      "id": 2,
+      "path": "/zz-launch/old-quarter/neighbourhoods/launch-article-01",
+      "member": "MEMBERONLY-ART-01"
+    },
+    {
+      "type": "articles",
+      "id": 3,
+      "path": "/zz-launch/river-bend/culture/launch-article-02",
+      "member": "MEMBERONLY-ART-02"
+    },
+    {
+      "type": "articles",
+      "id": 4,
+      "path": "/zz-launch/hillside/food-and-drink/launch-article-03",
+      "member": "MEMBERONLY-ART-03"
+    },
+    {
+      "type": "articles",
+      "id": 5,
+      "path": "/zz-launch/harbor/neighbourhoods/launch-article-04",
+      "member": "MEMBERONLY-ART-04"
+    },
+    {
+      "type": "articles",
+      "id": 6,
+      "path": "/zz-launch/old-quarter/culture/launch-article-05",
+      "member": "MEMBERONLY-ART-05"
+    },
+    {
+      "type": "articles",
+      "id": 7,
+      "path": "/zz-launch/river-bend/food-and-drink/launch-article-06",
+      "member": "MEMBERONLY-ART-06"
+    },
+    {
+      "type": "itineraries",
+      "id": 1,
+      "path": "/zz-launch/harbor/itineraries/launch-itinerary-00",
+      "member": "MEMBERONLY-ITN-00"
+    },
+    {
+      "type": "itineraries",
+      "id": 2,
+      "path": "/zz-launch/old-quarter/itineraries/launch-itinerary-01",
+      "member": "MEMBERONLY-ITN-01"
+    },
+    {
+      "type": "itineraries",
+      "id": 3,
+      "path": "/zz-launch/river-bend/itineraries/launch-itinerary-02",
+      "member": "MEMBERONLY-ITN-02"
+    },
+    {
+      "type": "itineraries",
+      "id": 4,
+      "path": "/zz-launch/hillside/itineraries/launch-itinerary-03",
+      "member": "MEMBERONLY-ITN-03"
+    }
+  ],
+  "identities": {
+    "anonymous": {
+      "authenticated": false
+    },
+    "member-a": {
+      "authenticated": true,
+      "email": "member-a@example.com",
+      "member": true
+    },
+    "member-b": {
+      "authenticated": true,
+      "email": "member-b@example.com",
+      "member": true
+    },
+    "nonmember": {
+      "authenticated": true,
+      "email": "nonmember@example.com",
+      "member": false
+    },
+    "expired": {
+      "authenticated": false
+    }
+  },
+  "bookmarks": {
+    "member-a": [
+      "articles:1",
+      "articles:11",
+      "articles:12",
+      "articles:29"
+    ],
+    "member-b": [
+      "articles:14",
+      "articles:15",
+      "itineraries:1"
+    ],
+    "nonmember": [],
+    "expired": []
+  },
+  "identity": {
+    "anonymous": {
+      "authenticated": false
+    },
+    "signedIn": {
+      "authenticated": true
+    }
+  }
+}

@@ -32,7 +32,18 @@ function parse() {
   } catch (error) {
     fail(`${__ENV.WORKLOAD} is not valid JSON (${error.message})`)
   }
-  if (parsed.version !== 1) fail(`unsupported version ${parsed.version}; this harness reads version 1`)
+  // Version 2 adds exact identities, bookmark sets, gated pieces and
+  // searches (surge plan L08); version 1 manifests still load.
+  if (parsed.version !== 1 && parsed.version !== 2) fail(`unsupported version ${parsed.version}; this harness reads versions 1 and 2`)
+  if (parsed.version === 2) {
+    for (const [label, identity] of Object.entries(parsed.identities || {})) {
+      if (typeof identity.authenticated !== 'boolean') fail(`identity ${label} must say whether it is authenticated`)
+      if (identity.authenticated && !identity.email) fail(`identity ${label} is authenticated but names no email`)
+    }
+    for (const piece of parsed.gated || []) {
+      if (!piece.id || !piece.type || !piece.member) fail('every gated piece needs an id, a type and a member marker')
+    }
+  }
   if (!parsed.name) fail('needs a name, so a report can say which workload produced it')
   if (!Array.isArray(parsed.pages) || parsed.pages.length === 0) fail('needs at least one page')
 

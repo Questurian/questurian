@@ -1,79 +1,72 @@
 #!/usr/bin/env node
-// The rolling-window stop that k6 thresholds cannot express.
+// The stop controller k6 thresholds cannot be (surge plan L08).
 //
-// The proof matrix asks for "stop once unexpected errors pass 1% for 60
-// seconds". A k6 threshold is evaluated over the whole run so far, so
-// `rate<0.01 delayAbortEval=60s` actually means "stop once *total* failures
-// since the start exceed 1%". Those differ in the direction that matters: an
-// hour of healthy traffic dilutes a sharp failure so far that the cumulative
-// rate never crosses 1%, and the run keeps escalating into a backend that is
-// already broken. On a billed run that is money spent proving nothing.
+// k6 thresholds are cumulative over the whole run, so "stop once failures
+// pass 1%" really means "once total failures since the start pass 1%": an
+// hour of healthy traffic dilutes a sharp failure and the run escalates into
+// a broken backend. They also cannot see a wrong-but-200 page, a growing
+// queue inside the server, or a telemetry feed that went quiet. A run that
+// cannot be stopped for those reasons cannot be trusted to spend a budget.
 //
-// So k6 runs under this supervisor, which reads the streamed JSON metrics,
-// keeps a sixty-second window of request outcomes, and kills the run when the
-// window's failure rate crosses the limit with enough samples to mean
-// something. It also stops on a growing connection-pool wait and on a wall
-// clock, because "it did not fail, it just never finished" is the other way a
-// run wastes a budget.
+// So k6 runs under this supervisor, which:
 //
-//   node supervise.mjs cold-heavy.js -- --vus 10
+//  - validates every stop setting before anything starts (exit 64);
+//  - reads k6's JSON metric stream: HTTP outcomes into a rolling window,
+//    `questura_correctness` (tagged by class) as an immediate stop,
+//    `dropped_iterations` as generator saturation;
+//  - polls each declared backend instance's `/api/internal/db-stats`
+//    directly — never through a balancer that could hide half the fleet —
+//    and applies the queue-growth, missing-telemetry and restart rules per
+//    instance, never to a fleet average;
+//  - stops k6 with SIGINT, then SIGKILL after a grace period, and reports
+//    one reason and one exit code (`supervisor/policy.mjs` lists them);
+//  - writes a bounded JSON summary (`SUPERVISOR_SUMMARY`) with offered,
+//    successful and refused counts and fractions, kept separate.
 //
-// Exit codes: k6's own, or 90 when the supervisor stopped the run.
+//   TELEMETRY_INSTANCES=backend-1=http://127.0.0.1:4100/api/internal/db-stats \
+//   DB_STATS_SECRET=... RUN_KIND=capacity SUCCESS_FLOOR_RPS=20 \
+//   node supervise.mjs launch-journeys.js -- -e RATE=30
+//
+// Run kinds: `correctness` (default; closed or open, no capacity claim),
+// `capacity` (open arrivals, dropped arrivals and a missed success floor
+// fail it), `containment` (deliberate overload: refusals are expected and
+// reported, correctness and resource rules still stop it).
 
 import { spawn } from 'node:child_process'
+import { writeFileSync } from 'node:fs'
 import { createInterface } from 'node:readline'
 
-const WINDOW_MS = Number(process.env.ABORT_WINDOW_MS ?? 60_000)
-const LIMIT = Number(process.env.ABORT_FAILURE_RATE ?? 0.01)
-const MIN_SAMPLES = Number(process.env.ABORT_MIN_SAMPLES ?? 200)
-const MAX_RUN_MS = Number(process.env.ABORT_MAX_RUN_MS ?? 3 * 60 * 60 * 1000)
-const SUPERVISOR_EXIT = 90
+import { createPolicy, EXIT, readSettings } from './supervisor/policy.mjs'
 
+const { settings, problems } = readSettings(process.env)
 const [script, ...rest] = process.argv.slice(2)
-if (!script) {
-  console.error('usage: node supervise.mjs <k6-script.js> [-- k6 args...]')
-  process.exit(2)
+if (!script) problems.push('usage: node supervise.mjs <k6-script.js> [-- k6 args...]')
+if (problems.length > 0) {
+  console.error(`[supervise] refusing to start:\n  - ${problems.join('\n  - ')}`)
+  process.exit(EXIT.config)
 }
 const k6Args = rest[0] === '--' ? rest.slice(1) : rest
 
-/** Outcomes in the window: [timestampMs, failed ? 1 : 0]. */
-const window = []
-/** Pool waiters in the window: [timestampMs, waiting]. */
-const poolWaiting = []
-let stopped = null
+const startedAt = Date.now()
+const policy = createPolicy(settings, startedAt)
+let stopping = false
+let stoppedAt = null
 
-function observe(atMs, failed) {
-  window.push([atMs, failed ? 1 : 0])
-  const cutoff = atMs - WINDOW_MS
-  while (window.length && window[0][0] < cutoff) window.shift()
-
-  if (window.length < MIN_SAMPLES) return
-  const failures = window.reduce((total, entry) => total + entry[1], 0)
-  const rate = failures / window.length
-  if (rate > LIMIT) {
-    stop(
-      `failure rate ${(rate * 100).toFixed(2)}% over the last ${WINDOW_MS / 1000}s ` +
-        `(${failures}/${window.length} requests) exceeds ${(LIMIT * 100).toFixed(2)}%`,
-    )
-  }
-}
-
-function stop(reason) {
-  if (stopped) return
-  stopped = reason
-  console.error(`\n[supervise] stopping the run: ${reason}`)
+function halt(decision) {
+  if (!decision || stopping) return
+  stopping = true
+  stoppedAt = Date.now()
+  console.error(`\n[supervise] stopping the run (${decision.code}): ${decision.reason}`)
   k6.kill('SIGINT')
-  // k6 drains on SIGINT; if it does not, take it down rather than keep paying.
-  setTimeout(() => k6.kill('SIGKILL'), 20_000).unref()
+  setTimeout(() => {
+    if (k6.exitCode === null) k6.kill('SIGKILL')
+  }, settings.ABORT_GRACE_MS).unref()
 }
 
 const k6 = spawn('k6', ['run', '--out', 'json=-', ...k6Args, script], {
   stdio: ['inherit', 'pipe', 'inherit'],
   env: process.env,
 })
-
-const deadline = setTimeout(() => stop(`wall clock exceeded ${MAX_RUN_MS / 1000}s`), MAX_RUN_MS)
-deadline.unref()
 
 createInterface({ input: k6.stdout }).on('line', (line) => {
   if (!line.startsWith('{')) return
@@ -84,28 +77,59 @@ createInterface({ input: k6.stdout }).on('line', (line) => {
     return
   }
   if (event.type !== 'Point' || !event.data) return
+  const at = Date.parse(event.data.time)
+  const tags = event.data.tags || {}
 
   if (event.metric === 'http_req_failed') {
-    observe(Date.parse(event.data.time), event.data.value === 1)
-    return
-  }
-
-  // A pool that is queueing and not draining is a failure the response codes
-  // have not caught up with yet.
-  if (event.metric === 'questura_pool_waiting' && event.data.value > 0) {
-    poolWaiting.push([Date.parse(event.data.time), event.data.value])
-    const cutoff = Date.parse(event.data.time) - WINDOW_MS
-    while (poolWaiting.length && poolWaiting[0][0] < cutoff) poolWaiting.shift()
-    const rising = poolWaiting.length > 10 && poolWaiting[poolWaiting.length - 1][1] > poolWaiting[0][1] * 2
-    if (rising) stop('connection-pool waiters doubled within the window and are still rising')
+    halt(policy.http(at, event.data.value === 1, Number(tags.status)))
+  } else if (event.metric === 'questura_correctness' && event.data.value > 0) {
+    halt(policy.correctness(at, tags.class || 'unclassified', event.data.value))
+  } else if (event.metric === 'dropped_iterations' && event.data.value > 0) {
+    halt(policy.dropped(at, event.data.value))
   }
 })
 
+// Per-instance telemetry, fetched directly from each process.
+const secret = process.env.DB_STATS_SECRET || ''
+async function poll(instance) {
+  try {
+    const response = await fetch(instance.url, {
+      headers: secret ? { authorization: `Bearer ${secret}` } : {},
+      signal: AbortSignal.timeout(Math.max(500, settings.TELEMETRY_INTERVAL_MS)),
+    })
+    if (!response.ok) return // counted as missing by the gap rule
+    halt(policy.sample(Date.now(), instance.id, await response.json()))
+  } catch {
+    // Unreachable or unparseable: the gap rule decides when that matters.
+  }
+}
+const poller = setInterval(() => {
+  for (const instance of settings.instances) void poll(instance)
+}, settings.TELEMETRY_INTERVAL_MS)
+const ticker = setInterval(() => halt(policy.tick(Date.now())), 250)
+
 k6.on('exit', (code, signal) => {
-  clearTimeout(deadline)
-  if (stopped) {
-    console.error(`[supervise] run stopped by the supervisor: ${stopped}`)
-    process.exit(SUPERVISOR_EXIT)
+  clearInterval(poller)
+  clearInterval(ticker)
+  const now = Date.now()
+  const floor = stopping ? null : policy.finish(now)
+  const summary = {
+    ...policy.summary(now),
+    k6Exit: code ?? (signal ? `signal ${signal}` : null),
+    stopLatencyMs: stoppedAt ? now - stoppedAt : null,
+    settings: Object.fromEntries(Object.entries(settings).filter(([name]) => name !== 'instances')),
+    instancesDeclared: settings.instances.map((instance) => instance.id),
+  }
+  if (process.env.SUPERVISOR_SUMMARY) writeFileSync(process.env.SUPERVISOR_SUMMARY, JSON.stringify(summary, null, 2) + '\n')
+
+  const decision = policy.state.stop
+  if (decision) {
+    console.error(`[supervise] run stopped (${decision.code}): ${decision.reason}`)
+    process.exit(decision.code)
+  }
+  if (floor) {
+    console.error(`[supervise] ${floor.reason}`)
+    process.exit(floor.code)
   }
   process.exit(code ?? (signal ? 1 : 0))
 })

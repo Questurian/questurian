@@ -23,7 +23,10 @@ import { WORKLOAD } from './workload.js'
 
 export const CLIENT_URL = requiredUrl('CLIENT_URL', WORKLOAD && WORKLOAD.client)
 export const BASE_URL = requiredUrl('BASE_URL', WORKLOAD && WORKLOAD.backend)
-export const ORIGIN = __ENV.ORIGIN || CLIENT_URL
+// The Origin a browser on the site sends. The manifest names it because the
+// sandbox's browser origin (`app.readiness.localhost`) is not the loopback
+// address k6 connects to; a wrong Origin is refused as cross-site, correctly.
+export const ORIGIN = __ENV.ORIGIN || (WORKLOAD && WORKLOAD.origin) || CLIENT_URL
 export const SCALE = positiveNumber('SCALE', 1)
 export const TIME_SCALE = positiveNumber('TIME_SCALE', 1)
 
@@ -92,13 +95,22 @@ export function rate(value) {
  */
 export function gates(extra = {}) {
   return {
+    // Availability: every request, refusals included — for a reader, a
+    // throttle is an outage.
     http_req_failed: [
       { threshold: 'rate<0.001', abortOnFail: false },
       // Cumulative since the run started. See supervise.mjs for the window.
       { threshold: 'rate<0.01', abortOnFail: true, delayAbortEval: '60s' },
     ],
-    'http_req_duration{kind:page}': ['p(95)<500'],
-    'http_req_duration{kind:dynamic}': ['p(95)<1000', 'p(99)<2500'],
+    // Latency: successful requests only, by class. A fast 503 averaged with
+    // a slow 200 hides both (surge plan L08). Provisional local regression
+    // thresholds, not product promises.
+    'http_req_duration{kind:page,expected_response:true}': ['p(95)<500'],
+    'http_req_duration{kind:dynamic,expected_response:true}': ['p(95)<1000', 'p(99)<2500'],
+    // Time to first byte, apart from the full download.
+    'questura_ttfb{kind:page}': ['p(95)<400'],
+    // A wrong answer is never a latency sample.
+    questura_correctness: ['count<1'],
     checks: ['rate>0.999'],
     dropped_iterations: ['count<1'],
     ...extra,
