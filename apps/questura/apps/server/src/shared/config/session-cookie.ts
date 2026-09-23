@@ -48,17 +48,28 @@ export type SessionCookieConfig = {
  * mistake is easy to make and its symptom — a cookie the browser silently drops
  * — is indistinguishable from the 401 this module exists to prevent. A
  * single-label suffix like `com` is already rejected as a single-label host.
+ *
+ * Every entry is on the Public Suffix List (checked 2026-09-23). Add a host
+ * only after finding it there: a name that is *not* a public suffix, listed
+ * here, makes `registrableDomain` call two same-site hosts cross-site.
  */
 const SHARED_PUBLIC_SUFFIXES = new Set([
+  // Cloudflare: the soft-prod tunnel, and the client's target platform.
   'trycloudflare.com',
-  'cfargotunnel.com',
   'pages.dev',
   'workers.dev',
+  'r2.dev',
+  // Railway: the server's target platform (cap07 §1a). Three labels, which is
+  // why `registrableDomain` matches the longest suffix, not the last two.
+  'up.railway.app',
   'vercel.app',
   'netlify.app',
+  'fly.dev',
+  'onrender.com',
   'github.io',
   'herokuapp.com',
   'ngrok.io',
+  'ngrok.app',
   'ngrok-free.app',
   'co.uk',
   'com.au',
@@ -150,17 +161,28 @@ export function validateCookieDomain(
 }
 
 /**
- * The registrable domain ("site") a host belongs to: the last two labels, or
- * the last three under a shared suffix this module knows (`*.vercel.app`,
- * `*.co.uk`, …). Two hosts are same-site exactly when this matches, and a
- * `SameSite=Lax` cookie only rides a credentialed fetch between same-site
- * hosts. Covers the suffixes above, not the whole Public Suffix List.
+ * The registrable domain ("site") a host belongs to: one label more than the
+ * longest suffix this module knows (`*.up.railway.app`, `*.vercel.app`,
+ * `*.co.uk`, …), or else the last two labels. Two hosts are same-site exactly
+ * when this matches, and a `SameSite=Lax` cookie only rides a credentialed
+ * fetch between same-site hosts. Covers the suffixes above, not the whole
+ * Public Suffix List.
  */
 export function registrableDomain(host: string): string {
   const labels = normalizeHost(host).split('.')
-  if (labels.length <= 2) return labels.join('.')
-  const lastTwo = labels.slice(-2).join('.')
-  return SHARED_PUBLIC_SUFFIXES.has(lastTwo) ? labels.slice(-3).join('.') : lastTwo
+  if (SHARED_PUBLIC_SUFFIXES.has(labels.join('.'))) return labels.join('.')
+
+  // Scanning from the left finds the longest suffix first, so
+  // `api.up.railway.app` is judged under `up.railway.app` and never reaches
+  // the two-label fallback, `railway.app`, which would make every Railway
+  // service one site.
+  for (let i = 0; i < labels.length - 1; i++) {
+    if (SHARED_PUBLIC_SUFFIXES.has(labels.slice(i + 1).join('.'))) {
+      return labels.slice(i).join('.')
+    }
+  }
+
+  return labels.slice(-2).join('.')
 }
 
 /**

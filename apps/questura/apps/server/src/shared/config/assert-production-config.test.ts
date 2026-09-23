@@ -114,6 +114,18 @@ describe('production config assertion', () => {
     expect(collectProductionConfigProblems().join('\n')).toContain('are not the same site')
   })
 
+  // Both on Railway's generated hosts: they share `railway.app`, but
+  // `up.railway.app` is a public suffix, so a browser treats them as two sites.
+  it('refuses a site and API on two Railway-generated hosts', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      NEXT_PUBLIC_APP_URL: 'https://questura-web.up.railway.app',
+      BACKEND_URL_LOCAL: 'https://questura-api.up.railway.app',
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('are not the same site')
+  })
+
   it('accepts sibling hosts of one site, as soft-prod runs them', async () => {
     const { collectProductionConfigProblems } = await load({
       ...VALID_PRODUCTION_ENV,

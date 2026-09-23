@@ -55,8 +55,9 @@ What this choice changes. Each item has to be settled at provisioning:
    pooled). Neon's history window is the PITR tier for D6.
 5. **Cookies:** frontend and API must share the parent domain
    (`questurian.com`). A `*.pages.dev` / `*.workers.dev` / `*.up.railway.app`
-   host cannot carry the session cookie. `session-cookie.ts` already rejects
-   the first two.
+   host cannot carry the session cookie. `session-cookie.ts` rejects all three
+   as a cookie `Domain`, and the boot check refuses a site and API on two
+   `*.up.railway.app` hosts as cross-site.
 6. **Schedulers (§4):** a Railway cron service or a Cloudflare Cron Trigger
    can make the two calls. Either works.
 
