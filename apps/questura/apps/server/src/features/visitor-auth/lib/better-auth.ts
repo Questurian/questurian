@@ -75,7 +75,10 @@ export const visitorAuth = betterAuth({
   trustedOrigins: APP_CONFIG.CORS_ORIGINS,
   secret: process.env.BETTER_AUTH_SECRET || APP_CONFIG.payloadSecret,
   database: visitorAuthPool,
-  secondaryStorage: APP_CONFIG.isProduction ? redisSecondaryStorage : undefined,
+  // Keyed on whether Redis is configured, not on the environment, so a local
+  // run with REDIS_URL exercises the same session path production does.
+  // Production still refuses to boot without REDIS_URL (above).
+  secondaryStorage: APP_CONFIG.redis.url ? redisSecondaryStorage : undefined,
   user: {
     modelName: 'visitor_auth_users',
     changeEmail: {
@@ -156,6 +159,9 @@ export const visitorAuth = betterAuth({
   },
   emailVerification: {
     sendOnSignUp: true,
+    // Inert while `requireEmailVerification` is false: Better Auth only sends
+    // on sign-in when that flag blocks an unverified sign-in. Kept so turning
+    // the flag on also re-sends the link, rather than leaving the reader stuck.
     sendOnSignIn: true,
     autoSignInAfterVerification: true,
     expiresIn: 60 * 60,
@@ -202,7 +208,7 @@ export const visitorAuth = betterAuth({
     enabled: true,
     window: 60,
     max: 100,
-    storage: APP_CONFIG.isProduction ? 'secondary-storage' : 'database',
+    storage: APP_CONFIG.redis.url ? 'secondary-storage' : 'database',
     modelName: 'visitor_auth_rate_limits',
     customRules: {
       '/sign-in/email': { window: 60, max: 10 },
@@ -210,6 +216,9 @@ export const visitorAuth = betterAuth({
       '/request-password-reset': { window: 60, max: 5 },
       '/reset-password': { window: 60, max: 5 },
       '/send-verification-email': { window: 60, max: 3 },
+      '/change-password': { window: 60, max: 5 },
+      '/change-email': { window: 60, max: 3 },
+      '/sign-in/social': { window: 60, max: 10 },
     },
   },
   hooks: {

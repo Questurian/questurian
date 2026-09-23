@@ -1,17 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const counters = vi.hoisted(() => ({ map: new Map<string, number>(), fail: false }))
+const counters = vi.hoisted(() => ({ map: new Map<string, number>(), fail: false, calls: 0 }))
 
 vi.mock('@/shared/lib/rate-limit-counter', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/shared/lib/rate-limit-counter')>()
   return {
     ...actual,
     getClientIp: (headers: Headers) => headers.get('x-forwarded-for') ?? 'unknown',
-    incrementCounter: async (key: string) => {
+    incrementCounters: async (keys: string[]) => {
+      counters.calls += 1
       if (counters.fail) throw new Error('redis down')
-      const count = (counters.map.get(key) ?? 0) + 1
-      counters.map.set(key, count)
-      return { count, ttlSeconds: 42 }
+      return keys.map((key) => {
+        const count = (counters.map.get(key) ?? 0) + 1
+        counters.map.set(key, count)
+        return { count, ttlSeconds: 42 }
+      })
     },
   }
 })
@@ -22,6 +25,7 @@ const { visitorSessionToken } = await import('./session-cookie')
 beforeEach(() => {
   counters.map.clear()
   counters.fail = false
+  counters.calls = 0
 })
 afterEach(() => vi.unstubAllEnvs())
 
@@ -69,6 +73,14 @@ describe('checkSessionTrafficLimit', () => {
       allowed: true,
       degraded: 'counter-unavailable',
     })
+  })
+
+  // Every private request passes through here, so both buckets are one
+  // script: one Redis round trip, not two.
+  it('checks both buckets in one counter call', async () => {
+    await checkSessionTrafficLimit(from('1.1.1.1'), 'tok')
+    expect(counters.calls).toBe(1)
+    expect(counters.map.size).toBe(2)
   })
 
   it('keys on hashes, never the raw token', async () => {

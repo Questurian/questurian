@@ -63,13 +63,10 @@ export const redisSecondaryStorage = {
     await getRedis().del(key)
   },
 
+  // One atomic command (Redis 6.2+; soft-prod runs 7.x). A GET then DEL let
+  // two concurrent callers both read a one-time value before either deleted it.
   async getAndDelete(key: string): Promise<string | null> {
-    const client = getRedis()
-    const value = await client.get(key)
-    if (value !== null) {
-      await client.del(key)
-    }
-    return value
+    return getRedis().getdel(key)
   },
 
   async incrementWithExpiry(
@@ -99,5 +96,44 @@ export const redisSecondaryStorage = {
       count: Number(result[0]),
       ttlSeconds: Number(result[1]),
     }
+  },
+
+  /**
+   * `incrementWithExpiry` for several keys in one round trip, answered in
+   * key order. Used where one request checks more than one bucket (session
+   * and address), so the check is one script rather than one per bucket.
+   */
+  async incrementManyWithExpiry(
+    keys: string[],
+    ttlSeconds: number
+  ): Promise<Array<{ count: number; ttlSeconds: number }>> {
+    const result = await getRedis().eval(
+      `
+        local out = {}
+        for i, key in ipairs(KEYS) do
+          local count = redis.call('INCR', key)
+          local ttl = redis.call('TTL', key)
+          if count == 1 or ttl < 0 then
+            redis.call('EXPIRE', key, ARGV[1])
+            ttl = tonumber(ARGV[1])
+          end
+          out[#out + 1] = count
+          out[#out + 1] = ttl
+        end
+        return out
+      `,
+      keys.length,
+      ...keys,
+      ttlSeconds
+    )
+
+    if (!Array.isArray(result) || result.length !== keys.length * 2) {
+      throw new Error('Redis returned an invalid rate-limit result')
+    }
+
+    return keys.map((_, i) => ({
+      count: Number(result[i * 2]),
+      ttlSeconds: Number(result[i * 2 + 1]),
+    }))
   },
 }
