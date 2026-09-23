@@ -1,0 +1,197 @@
+<title>Payments Live Checks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F5F0E8; --paper:#EFE9DE; --ink:#1F1B16; --muted:#6A6258; --rule:#D9CFBF;
+  --accent:#3B5BDB; --accent-soft:#E3E7F7; --ok:#2E6B45; --ok-soft:#E1EDE3; --warn:#9A5A00; --warn-soft:#F4E6CF;
+  --code:#E6DECF;
+  --display:"Playfair Display",Georgia,"Times New Roman",serif;
+  --body:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --accent-soft:#262C44; --ok:#7CC39A; --ok-soft:#1F2E25; --warn:#E3AE62; --warn-soft:#33281A; --code:#2C2822;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --accent-soft:#262C44; --ok:#7CC39A; --ok-soft:#1F2E25; --warn:#E3AE62; --warn-soft:#33281A; --code:#2C2822;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.6 var(--body)}
+.wrap{max-width:820px;margin:0 auto;padding-inline:16px;padding-block:40px 80px}
+h1{font:600 2.1rem/1.15 var(--display);margin:0 0 8px;text-wrap:balance}
+h2{font:600 1.3rem/1.25 var(--display);margin:0 0 4px;text-wrap:balance}
+p{margin:0}
+.lede{color:var(--muted);max-width:62ch}
+code,kbd{font:500 .82rem/1.4 var(--mono);background:var(--code);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+pre{font:400 .82rem/1.55 var(--mono);background:var(--code);padding:10px 12px;border-radius:4px;overflow-x:auto;margin:8px 0 0}
+pre code{background:none;padding:0}
+.label{font:600 .72rem/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:10px}
+.label::after{content:"";flex:1;height:1px;background:var(--rule)}
+section{display:grid;gap:14px;margin-top:44px}
+.status{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font:600 .75rem/1 var(--body);padding:6px 9px;border-radius:999px;background:var(--paper);color:var(--muted)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.progress{display:flex;align-items:center;gap:12px;margin-top:22px;font:500 .85rem var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{flex:1;height:6px;background:var(--paper);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+.stop{background:var(--warn-soft);border-left:3px solid var(--warn);padding:12px 14px;border-radius:0 4px 4px 0;display:grid;gap:6px}
+.stop strong{color:var(--warn)}
+ol.steps{margin:0;padding-left:20px;display:grid;gap:10px}
+.group{display:grid;gap:2px}
+.group h3{font:600 .95rem/1.3 var(--body);margin:10px 0 4px}
+.check{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--rule)}
+.check:last-child{border-bottom:1px solid var(--rule)}
+.check input{width:18px;height:18px;margin:3px 0 0;accent-color:var(--accent)}
+.check input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.check label{cursor:pointer}
+.check .why{display:block;color:var(--muted);font-size:.86rem;margin-top:2px}
+.check input:checked + label > span:first-child{text-decoration:line-through;text-decoration-color:var(--muted);color:var(--muted)}
+.pr{font:500 .75rem var(--mono);color:var(--accent);white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+.tablewrap{overflow-x:auto}
+th,td{text-align:left;padding:8px 8px 8px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font:600 .72rem var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+td.res{color:var(--ok);font-weight:500;white-space:nowrap}
+a{color:var(--accent)}
+.foot{margin-top:40px;color:var(--muted);font-size:.85rem}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Payments: live checks</h1>
+    <p class="lede"><a href="https://github.com/Questurian/questurian/pull/648">#648</a> and <a href="https://github.com/Questurian/questurian/pull/650">#650</a> changed how all five <code>/api/payments/*</code> routes find the visitor: a smaller principal, and <code>freshSession</code>, which skips the 5-minute cookie cache. The route behaviour and the webhook handling were proven on localhost (<a href="https://github.com/Questurian/questurian/pull/653">#653</a>). What's left needs live Stripe. Live has also been parked since 2026-08-20, so its webhooks have been failing for a month.</p>
+    <div class="status">
+      <span class="chip ok">Payments code audited</span>
+      <span class="chip ok">Local matrix passed</span>
+      <span class="chip warn">Webhooks failing while parked</span>
+      <span class="chip warn">Not deployed</span>
+    </div>
+    <div class="progress"><span id="count">0 of 0 done</span><div class="bar"><i id="fill"></i></div><button id="reset" type="button" style="font:500 .8rem var(--body);background:none;border:1px solid var(--rule);color:var(--muted);border-radius:4px;padding:4px 8px;cursor:pointer">Clear ticks</button></div>
+  </header>
+
+  <section>
+    <div class="label">Before you start</div>
+    <div class="stop">
+      <p><strong>Live Stripe is real money.</strong> Nothing below starts a checkout or changes a subscription. The one optional checkout step waits for the owner to say yes, and even then you stop on Stripe's page and don't pay.</p>
+      <p><strong>Two live members exist</strong> (the live DB has 2 <code>active</code> profiles, latest <code>paid_through_at</code> 2026-09-19). Their renewals kept billing in Stripe while the site was parked. Our copy of their membership state is stale until reconcile runs.</p>
+      <p><strong>Read-only Stripe only:</strong> <code>apps/questura/scripts/stripe-live</code> or the Dashboard. Never the Mac's <code>stripe</code> CLI key.</p>
+      <p><strong>If anything breaks:</strong> <code>apps/questura/infra/softprod/rollback.sh</code> reverts to the previous release.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Go live</div>
+    <h2>Resume, then deploy <code>main</code></h2>
+    <p class="lede">Skip this if you already did it for <a href="visitor-auth.html">visitor-auth.html</a>.</p>
+    <ol class="steps">
+      <li>Resume. On the Linux laptop:
+        <pre><code>bash ~/Projects/questurian/apps/questura/infra/softprod/resume-live.sh</code></pre></li>
+      <li><strong>Expect a reconcile run to start right away.</strong> <code>questura-reconcile.timer</code> is <code>Persistent=true</code> and missed every night since 2026-08-20, so enabling it runs one now. It runs on the <em>old</em> release with apply on (cap 25), and holds <code>deploy.lock</code> for up to 30 minutes. Wait until it's done before you deploy:
+        <pre><code>systemctl --user status questura-reconcile.service --no-pager
+tail -40 ~/questura/reports/reconcile-latest.log</code></pre>
+        If <code>deploy.sh</code> says "another Questura deploy is running", this is why.</li>
+      <li>Deploy:
+        <pre><code>~/questura/deploy.sh</code></pre></li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="label">Test on live</div>
+    <h2>Only live Stripe can answer these</h2>
+
+    <div class="group" data-group>
+      <h3>Webhooks after a month parked</h3>
+      <div class="check"><input type="checkbox" id="p-endpoint"><label for="p-endpoint"><span>The live webhook endpoint is still <code>enabled</code> and sends every handled event</span><span class="why">Stripe emails and then disables an endpoint that keeps failing for days. This one has failed since 2026-08-20. <code>verify:stripe-webhook-events</code> is read-only and reports <code>DISABLED</code> or <code>MISSING</code>:
+        <pre><code>cd ~/questura/current-server
+set -a; . ~/questura/config/server.env; set +a
+pnpm verify:stripe-webhook-events</code></pre>
+        If it's disabled, re-enable it in the Dashboard (Developers → Webhooks). That's a live config change, so ask the owner first.</span></label></div>
+      <div class="check"><input type="checkbox" id="p-reconcile"><label for="p-reconcile"><span>The catch-up reconcile fixed both members. Their <code>paid_through_at</code> now matches Stripe's current period end</span><span class="why">The 2026-09-19 renewals happened while every webhook failed. Stripe stops retrying after about 3 days, so reconcile is now the only thing that repairs our copy. Read the report, then:
+        <pre><code>docker exec questura-postgres psql -U questura -d questura -Atc "select subscription_status, paid_through_at from visitor_profiles where subscription_status &lt;&gt; 'none'"</code></pre>
+        Compare against <code>scripts/stripe-live subscriptions list --status all --limit 10</code> (run on the Mac).</span></label></div>
+      <div class="check"><input type="checkbox" id="p-delivery"><label for="p-delivery"><span>A new event arrives: the next live event after the deploy shows <code>200</code> in the Dashboard's delivery log</span><span class="why">Localhost ran the real captured payloads through the route, but not Stripe's signature over the live endpoint secret. Don't resend old events to force this. Past 30 days a resend runs the handler again (<code>event-retention.ts</code>).</span></label></div>
+    </div>
+
+    <div class="group" data-group>
+      <h3>As a member (one of the two live accounts)</h3>
+      <div class="check"><input type="checkbox" id="p-details"><label for="p-details"><span>Account page, Membership section: status and renewal date match Stripe. Network tab: <code>subscription-details</code> is <code>200</code></span><span class="why">Localhost has no member, so the <code>200</code> path through <code>freshSession</code> and a real Stripe retrieve was never run there. <span class="pr">#650</span></span></label></div>
+      <div class="check"><input type="checkbox" id="p-portal"><label for="p-portal"><span>"Manage billing" opens the Stripe customer portal. Look, change nothing, come back</span><span class="why">Creates a portal session, which costs nothing. Proves <code>create-portal-session</code> with the new principal against the live customer. <span class="pr">#648</span></span></label></div>
+      <div class="check"><input type="checkbox" id="p-nav"><label for="p-nav"><span>Reload any page: Subscribe never shows for this member, and a member article opens in full</span><span class="why">Membership comes from the lean <code>/api/me</code> principal. <span class="pr">#648</span></span></label></div>
+    </div>
+
+    <div class="group" data-group>
+      <h3>As a signed-in non-member</h3>
+      <div class="check"><input type="checkbox" id="p-plans"><label for="p-plans"><span>Pricing page shows $12.99/month and $79.99/year. <code>/api/payments/plans</code> lists both</span><span class="why">The plan list is checked against live prices on each request. A plan that fails the check disappears, and the reason only shows in the server log. Don't "fix" the $0.50 laptop charge (<code>docs/membership-pricing.md</code>).</span></label></div>
+      <div class="check"><input type="checkbox" id="p-checkout"><label for="p-checkout"><span><strong>Only if the owner says yes:</strong> click Subscribe, check Stripe's Checkout page opens with the laptop price, then close it without paying</span><span class="why">This creates a live Checkout Session and maybe a live customer. Nothing is charged unless someone pays. Locally the route was only proven up to the plan check, because the server had no Stripe key. <span class="pr">#650</span></span></label></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">After the checks</div>
+    <h2>Wrap up</h2>
+    <div class="group" data-group>
+      <div class="check"><input type="checkbox" id="p-record"><label for="p-record"><span>Post the results as a comment on <a href="https://github.com/Questurian/questurian/pull/653">#653</a></span><span class="why">One line per group: pass, or what went wrong.</span></label></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Already proven on localhost</div>
+    <h2>No need to redo these</h2>
+    <p class="lede">Run 2026-09-23 on the Linux laptop with <code>scripts/auth-smoke.sh</code> (scratch DB, local Redis on 6380, <code>RESEND_API_KEY</code> and <code>STRIPE_SECRET_KEY</code> empty, so nothing reached Stripe) and the server test suite.</p>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Check</th><th>Result</th><th>PR</th></tr></thead>
+      <tbody>
+        <tr><td>Anonymous: all five routes <code>401</code></td><td class="res">pass</td><td class="pr">#648</td></tr>
+        <tr><td>Signed-in non-member: details <code>404</code>; checkout, portal, cancel, reactivate <code>400</code>, each before any Stripe call except checkout's plan lookup</td><td class="res">pass</td><td class="pr">#648</td></tr>
+        <tr><td>Signed-in cookie from a foreign origin: all five <code>403</code></td><td class="res">pass</td><td class="pr">—</td></tr>
+        <tr><td>Signed-out session replayed with its still-valid cache cookie: <code>/api/me</code> says signed in, all five routes <code>401</code></td><td class="res">as designed</td><td class="pr">#650</td></tr>
+        <tr><td>Expired session: all five <code>401</code></td><td class="res">pass</td><td class="pr">#650</td></tr>
+        <tr><td>Password change on another device: that device's payment routes <code>401</code> at once</td><td class="res">pass</td><td class="pr">#650</td></tr>
+        <tr><td>Nothing in payments reads <code>hasLocalPassword</code>, <code>hasGoogleOAuth</code> or <code>authProvider</code>; the routes use only id, email, names and profile id</td><td class="res">pass</td><td class="pr">#648</td></tr>
+        <tr><td>Every payments route passes <code>freshSession: true</code> (now a test); removing it from one route fails 3 smoke checks</td><td class="res">pass</td><td class="pr">#653</td></tr>
+        <tr><td>Captured lifecycle payloads through the real webhook route: access through dunning and cancel-at-period-end, none after deletion</td><td class="res">pass</td><td class="pr">#653</td></tr>
+        <tr><td>Captured incomplete (3DS) payloads: no access while the first payment is pending, access once it lands</td><td class="res">pass</td><td class="pr">#653</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <p class="foot">Plan: payments pre-deploy review, 2026-09-23. PRs <a href="https://github.com/Questurian/questurian/pull/648">#648</a> · <a href="https://github.com/Questurian/questurian/pull/650">#650</a> · <a href="https://github.com/Questurian/questurian/pull/653">#653</a>. Ticks are saved in this browser only.</p>
+</div>
+
+<script>
+(function(){
+  var KEY='payments-live-checks';
+  var boxes=[].slice.call(document.querySelectorAll('.check input[type=checkbox]'));
+  var saved={};
+  try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){saved={}}
+  function update(){
+    var done=boxes.filter(function(b){return b.checked}).length;
+    document.getElementById('count').textContent=done+' of '+boxes.length+' done';
+    document.getElementById('fill').style.width=(boxes.length?done/boxes.length*100:0)+'%';
+  }
+  boxes.forEach(function(b){
+    b.checked=!!saved[b.id];
+    b.addEventListener('change',function(){
+      saved[b.id]=b.checked;
+      try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}
+      update();
+    });
+  });
+  document.getElementById('reset').addEventListener('click',function(){
+    boxes.forEach(function(b){b.checked=false});saved={};
+    try{localStorage.removeItem(KEY)}catch(e){}
+    update();
+  });
+  update();
+})();
+</script>

@@ -6,21 +6,25 @@
 # Signs up a throwaway user (qa-smoke-…@example.com), signs in a second
 # session, then checks /api/me, /api/account/auth-methods, sessions in Postgres,
 # a local Redis flush, password change revoking the other session on a payment
-# route, the change-password rate limit, and sign-out.
+# route, the change-password rate limit, and sign-out. It also runs the five
+# /api/payments/* routes for an anonymous caller, a signed-in non-member, a
+# foreign origin, a signed-out (revoked) session and an expired one.
 #
 # It refuses to run unless the server it talks to is using:
 #   - REDIS_URL on 127.0.0.1:6380 (the local-only Redis, infra/local/compose.yml)
 #   - DATABASE_URI on 127.0.0.1:5432 (the scratch database)
 #   - an empty RESEND_API_KEY (sign-up mails a verification link otherwise)
-#   - no live Stripe key
+#   - an empty STRIPE_SECRET_KEY (so no route it calls can reach Stripe, in
+#     either mode: test mode proves nothing about live, AGENTS.md)
 # Values are read the way Next resolves them for the process listening on the
 # server port: its own environment first (an empty value counts), then
 # .env.development.local, .env.local, .env.development, .env in its directory.
 #
 # It flushes the local Redis container (questura-local-redis) and nothing else.
 # Port 6379 on the Linux laptop is the LIVE questura-redis: never touched here.
-# Nothing here calls Stripe: the payment route it uses (subscription-details)
-# answers 401/404 before any Stripe call for a user with no subscription.
+# With no Stripe key, checkout's plan lookup fails closed (400) after the auth
+# check, and the other four routes answer before any Stripe call for a user
+# with no subscription.
 #
 # Docs: apps/questura/docs/local-vs-live.md ("Auth smoke test").
 set -uo pipefail
@@ -95,8 +99,8 @@ STRIPE_SECRET_KEY=$(server_env STRIPE_SECRET_KEY) || STRIPE_SECRET_KEY=
   || refuse "server DATABASE_URI must be the scratch database on 127.0.0.1:5432"
 [[ -z $RESEND_API_KEY ]] \
   || refuse "server RESEND_API_KEY is set, so sign-up would send a real email. Restart the server with RESEND_API_KEY= (see docs/local-vs-live.md)"
-[[ $STRIPE_SECRET_KEY != sk_live_* && $STRIPE_SECRET_KEY != rk_live_* ]] \
-  || refuse "server has a live Stripe key"
+[[ -z $STRIPE_SECRET_KEY ]] \
+  || refuse "server STRIPE_SECRET_KEY is set. Restart the server with STRIPE_SECRET_KEY= (see docs/local-vs-live.md)"
 
 [[ $(docker port "$LOCAL_REDIS_CONTAINER" 6379/tcp 2>/dev/null) == "127.0.0.1:6380" ]] \
   || refuse "container $LOCAL_REDIS_CONTAINER is not published on 127.0.0.1:6380 (docker compose -f infra/local/compose.yml up -d)"
@@ -105,7 +109,7 @@ env_name=$(curl -fsS "$SERVER/api/health" | jq -r .environment) || refuse "$SERV
 [[ $env_name == development ]] || refuse "server reports environment '$env_name', expected development"
 
 echo "auth-smoke: server pid $PID in $SERVER_DIR"
-echo "auth-smoke: redis 127.0.0.1:6380 ($LOCAL_REDIS_CONTAINER), db 127.0.0.1:5432, email off"
+echo "auth-smoke: redis 127.0.0.1:6380 ($LOCAL_REDIS_CONTAINER), db 127.0.0.1:5432, email and Stripe off"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -132,7 +136,7 @@ req() {
   local jar=$1 method=$2 path=$3 data=${4:-}
   local args=(-sS -o "$WORK/body" -w '%{http_code}' -X "$method"
     -b "$jar" -c "$jar"
-    -H "Origin: $ORIGIN" -H "X-Forwarded-For: $FAKE_IP")
+    -H "Origin: ${REQ_ORIGIN:-$ORIGIN}" -H "X-Forwarded-For: $FAKE_IP")
   [[ -n $data ]] && args+=(-H 'Content-Type: application/json' --data "$data")
   STATUS=$(curl "${args[@]}" "$SERVER$path") || STATUS=000
   BODY=$(cat "$WORK/body" 2>/dev/null)
@@ -143,6 +147,29 @@ cookie() { awk -F'\t' -v n="$2" 'NF >= 7 && $6 == n { v = $7 } END { print v }' 
 sql() { psql "$DATABASE_URI" -XAtqc "$1"; }
 
 redis() { docker exec "$LOCAL_REDIS_CONTAINER" redis-cli "$@"; }
+
+PAYMENT_ROUTES=(
+  "GET /api/payments/subscription-details"
+  "POST /api/payments/create-checkout-session"
+  "POST /api/payments/create-portal-session"
+  "POST /api/payments/cancel-subscription"
+  "POST /api/payments/reactivate-subscription"
+)
+
+# payment_matrix LABEL JAR EXPECTED... : one expected status per route above.
+payment_matrix() {
+  local label=$1 jar=$2 i route
+  shift 2
+  for i in "${!PAYMENT_ROUTES[@]}"; do
+    route=${PAYMENT_ROUTES[$i]}
+    if [[ ${route% *} == POST ]]; then req "$jar" POST "${route#* }" '{}'; else req "$jar" GET "${route#* }"; fi
+    if [[ $STATUS == "${@:i+1:1}" ]]; then
+      pass "$label: ${route#* } $STATUS $(jq -r '.error // empty' <<<"$BODY" 2>/dev/null)"
+    else
+      fail "$label: ${route#* } $STATUS (expected ${@:i+1:1}) $BODY"
+    fi
+  done
+}
 
 A=$WORK/a.jar; B=$WORK/b.jar
 : > "$A"; : > "$B"
@@ -190,6 +217,17 @@ if [[ $STATUS == 200 && $(jq -c '[.hasLocalPassword, .hasGoogleOAuth]' <<<"$BODY
 else
   fail "/api/account/auth-methods: $STATUS $BODY"
 fi
+
+# ---------------------------------------------------------------------------
+step "2b. Payment routes: anonymous, signed-in non-member, foreign origin"
+# ---------------------------------------------------------------------------
+NOBODY=$WORK/nobody.jar
+: > "$NOBODY"
+payment_matrix anonymous "$NOBODY" 401 401 401 401 401
+# Non-member, no Stripe customer: past the auth check, refused on billing state.
+# Checkout's 400 is the plan lookup failing closed with no Stripe key.
+payment_matrix "non-member" "$A" 404 400 400 400 400
+REQ_ORIGIN=https://evil.example payment_matrix "foreign origin" "$A" 403 403 403 403 403
 
 # ---------------------------------------------------------------------------
 step "3. Sessions are in Postgres; flush the local Redis; still signed in"
@@ -259,6 +297,7 @@ fi
 step "6. Sign out"
 # ---------------------------------------------------------------------------
 TOKEN_A=$(cookie "$A" questura_visitor.session_token)
+cp "$A" "$WORK/a-signed-out.jar"
 req "$A" POST /api/visitor-auth/sign-out '{}'
 [[ $STATUS == 200 ]] && pass "sign-out 200" || fail "sign-out $STATUS: $BODY"
 
@@ -271,6 +310,29 @@ replay=$(curl -sS -H "Origin: $ORIGIN" -H "Cookie: questura_visitor.session_toke
 
 rows=$(sql "select count(*) from visitor_auth_sessions where \"userId\" = '${USER_ID//\'/}'")
 [[ $rows == 0 ]] && pass "no session rows left for the user" || fail "$rows session rows left for the user"
+
+# The signed-out browser still holds a signed session_data cookie that the
+# cookie cache would trust for up to five minutes. Payment routes must not.
+REVOKED=$WORK/a-signed-out.jar
+req "$REVOKED" GET /api/me
+info "revoked session /api/me authenticated=$(jq -r .authenticated <<<"$BODY") (cookie cache)"
+payment_matrix revoked "$REVOKED" 401 401 401 401 401
+
+# ---------------------------------------------------------------------------
+step "6b. Expired session"
+# ---------------------------------------------------------------------------
+C=$WORK/c.jar
+: > "$C"
+req "$C" POST /api/visitor-auth/sign-in/email \
+  "$(jq -nc --arg e "$EMAIL" --arg p "$PASS2" '{email: $e, password: $p}')"
+[[ $STATUS == 200 ]] && pass "sign-in (session C) with the new password" || fail "sign-in C $STATUS: $BODY"
+TOKEN_C=$(cookie "$C" questura_visitor.session_token)
+sql "update visitor_auth_sessions set \"expiresAt\" = now() - interval '1 minute' where token = '${TOKEN_C%%.*}'" >/dev/null
+redis FLUSHALL >/dev/null
+pass "session C expired in Postgres, local Redis flushed so the store reads it"
+req "$C" GET /api/me
+info "expired session /api/me authenticated=$(jq -r .authenticated <<<"$BODY") (cookie cache)"
+payment_matrix expired "$C" 401 401 401 401 401
 
 # ---------------------------------------------------------------------------
 step "7. No email left the machine"

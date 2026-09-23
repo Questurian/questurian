@@ -62,11 +62,16 @@ It signs up a throwaway `qa-smoke-…@example.com` user, signs in a second
 session, and checks `/api/me`, `/api/account/auth-methods`, the session rows
 in Postgres, a flush of the local Redis, a password change (the other
 session's payment route answers 401 at once), the change-password limit
-(5 a minute, then 429) and sign-out. It exits non-zero on any failure.
+(5 a minute, then 429) and sign-out. It also calls the five `/api/payments/*`
+routes as an anonymous caller (401), a signed-in non-member (404/400), a
+foreign origin (403), a signed-out session and an expired one (401 even though
+their `/api/me` still says signed in from the five-minute cookie cache). It
+exits non-zero on any failure.
 
 It refuses to run unless the server on port 4000 uses `REDIS_URL` on
-`127.0.0.1:6380`, `DATABASE_URI` on `127.0.0.1:5432`, and an **empty**
-`RESEND_API_KEY` (sign-up mails a verification link otherwise). It reads these
+`127.0.0.1:6380`, `DATABASE_URI` on `127.0.0.1:5432`, an **empty**
+`RESEND_API_KEY` (sign-up mails a verification link otherwise) and an **empty**
+`STRIPE_SECRET_KEY` (so nothing it calls reaches Stripe in either mode). It reads these
 the way Next does for the running process: its environment first, then the
 `.env*` files. So start the server with email and Stripe blanked instead of
 editing `.env`:
@@ -76,8 +81,9 @@ env RESEND_API_KEY= STRIPE_SECRET_KEY= pnpm --dir apps/server dev
 ```
 
 (In the desktop app that is the `questura-server-offline` launch config.)
-The script flushes only the `questura-local-redis` container, never port 6379,
-and calls no Stripe endpoint. Test users stay in the scratch database.
+The script flushes only the `questura-local-redis` container, never port 6379.
+With no Stripe key, checkout's plan lookup fails closed (400) after the auth
+check. Test users stay in the scratch database.
 
 ## Park live (public domains go down)
 
