@@ -233,8 +233,9 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
 
   if (!(process.env.STRIPE_WEBHOOK_SECRET?.trim())) {
     problems.push(
-      'STRIPE_WEBHOOK_SECRET is not set — every webhook delivery would 400 and ' +
-        'paid visitors would never be marked members.'
+      'STRIPE_WEBHOOK_SECRET is not set — the webhook route refuses every delivery ' +
+        '(an empty key would verify signatures anyone can make), so paid visitors ' +
+        'would never be marked members.'
     )
   }
 
