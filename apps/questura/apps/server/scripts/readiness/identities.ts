@@ -1,5 +1,7 @@
 import { connect } from 'node:net'
 
+import { Pool } from 'pg'
+
 import type { LaunchManifest } from './launch-corpus'
 import { SYNTHETIC_PASSWORD } from './launch-corpus'
 
@@ -10,10 +12,15 @@ import { SYNTHETIC_PASSWORD } from './launch-corpus'
  * Each identity signs in through `POST /api/visitor-auth/sign-in/email` on
  * the running sandbox backend: real password verification, a real signed
  * session cookie, real rate limits. Nothing mocks `/api/me`. The expired
- * identity signs in and then has its session removed from the session store
- * — in production mode Better Auth keeps sessions in Redis with a TTL, and an
- * expired session is exactly an absent key — so its cookie is well-formed and
- * correctly signed and still proves nobody.
+ * identity signs in and then has its session expired the way time would do
+ * it: the stored `expiresAt` moves into the past, and the Redis copy (whose
+ * TTL would have lapsed at the same moment) is removed. Its cookie is
+ * well-formed and correctly signed and still proves nobody.
+ *
+ * Deleting only the Redis key used to be enough. Since sessions are also
+ * stored in Postgres (`storeSessionInDatabase`), a Redis miss falls back to
+ * the table, deliberately, so a Redis flush signs nobody out. Removing the
+ * key alone now models a Redis flush, not an expiry.
  *
  * Session keys are the bare token: Better Auth's secondary storage does not
  * apply `REDIS_KEY_PREFIX`. That is why the sandbox runs its own Redis on
@@ -75,23 +82,40 @@ function redisCommand(redisUrl: string, parts: string[]): Promise<string> {
   })
 }
 
-/** Expire a session the way its TTL would: the store forgets it. */
-export async function expireSession(redisUrl: string, cookie: string): Promise<void> {
+export type SessionStores = { redisUrl: string; databaseUri: string }
+
+/** Expire a session the way time would: past `expiresAt`, Redis copy gone. */
+export async function expireSession(stores: SessionStores, cookie: string): Promise<void> {
   const value = decodeURIComponent(cookie.slice(cookie.indexOf('=') + 1))
   const token = value.split('.')[0]!
-  const answer = await redisCommand(redisUrl, ['DEL', token])
+
+  if (new URL(stores.databaseUri).pathname !== '/questura_readiness') {
+    throw new Error('Refusing to touch a database that is not the sandbox’s own.')
+  }
+  const pool = new Pool({ connectionString: stores.databaseUri, max: 1 })
+  try {
+    const updated = await pool.query(
+      `UPDATE visitor_auth_sessions SET "expiresAt" = now() - interval '1 minute' WHERE token = $1`,
+      [token],
+    )
+    if (updated.rowCount !== 1) throw new Error('The expired identity’s session was not in the sessions table.')
+  } finally {
+    await pool.end()
+  }
+
+  const answer = await redisCommand(stores.redisUrl, ['DEL', token])
   if (!answer.startsWith(':1')) throw new Error('The expired identity’s session was not in the session store.')
 }
 
 export async function signInAll(
   manifest: Pick<LaunchManifest, 'identities'>,
-  options: { backend: string; origin: string; redisUrl: string },
+  options: { backend: string; origin: string } & SessionStores,
 ): Promise<SessionJar> {
   const jar: SessionJar = new Map()
   for (const [index, identity] of manifest.identities.entries()) {
     const cookie = await signIn(options.backend, options.origin, identity.email, `192.0.2.${10 + index}`)
     jar.set(identity.label, cookie)
-    if (identity.label === 'expired') await expireSession(options.redisUrl, cookie)
+    if (identity.label === 'expired') await expireSession(options, cookie)
   }
   return jar
 }
@@ -112,7 +136,7 @@ export function redact(cookie: string | undefined): string {
  */
 export async function signInMany(
   manifest: Pick<LaunchManifest, 'identities'>,
-  options: { backend: string; origin: string; redisUrl: string; perIdentity: number },
+  options: { backend: string; origin: string; perIdentity: number } & SessionStores,
 ): Promise<Record<string, string[]>> {
   const sessions: Record<string, string[]> = {}
   let address = 0
@@ -123,7 +147,7 @@ export async function signInMany(
       address += 1
       const client = `198.51.100.${(address % 250) + 1}`
       const cookie = await signIn(options.backend, options.origin, identity.email, client)
-      if (identity.label === 'expired') await expireSession(options.redisUrl, cookie)
+      if (identity.label === 'expired') await expireSession(options, cookie)
       sessions[identity.label]!.push(cookie)
     }
   }
