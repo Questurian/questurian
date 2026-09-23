@@ -109,6 +109,16 @@ async function readBodyWithinCap(req: NextRequest): Promise<BodyRead> {
 }
 
 export async function POST(req: NextRequest) {
+  // An empty secret is an empty HMAC key, which anyone can sign with: Stripe's
+  // `constructEvent` accepts such a signature. Production refuses to boot
+  // without the secret (`assert-production-config.ts`); this is the second
+  // lock, for every process that boot check does not cover. 503 so Stripe
+  // retries once the secret is set.
+  if (!APP_CONFIG.stripe.webhookSecret) {
+    logger.error('Stripe webhook refused: STRIPE_WEBHOOK_SECRET is not configured')
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 })
+  }
+
   const read = await readBodyWithinCap(req)
 
   if (!read.ok) {
