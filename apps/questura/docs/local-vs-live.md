@@ -77,7 +77,7 @@ ssh linux-laptop '~/questura/deploy.sh'
 
 Check the real domains, not localhost. Checkout on live is a real charge.
 
-While live is up, run everything open in `docs/live-checks/`: that folder
+While live is up, run everything open in `live-checks/` (top level of `apps/questura`): that folder
 collects the checks merged work is still waiting on.
 
 ## Git
