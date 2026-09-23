@@ -114,15 +114,11 @@ names the single header the app will believe about a caller's IP. Get it
 wrong and every rate limit either applies to the whole internet as one
 caller, or can be bypassed with a forged header.
 
-Railway's forwarded-IP behaviour is documented on community forums, not in
-Railway's own docs. So there are two acceptable routes:
-
-- **Recommended:** put Cloudflare in front of the API hostname, set
-  `TRUSTED_PROXY=cloudflare`, and make the `*.up.railway.app` origin
-  unreachable from outside. Then the header is one Cloudflare sets and
-  Cloudflare's docs describe.
-- Or confirm Railway's header from official documentation and add it to
-  `trusted-proxy.ts` the way that file requires.
+Railway's docs name `X-Real-IP` as the client address but do not say a
+caller-sent one is overwritten, and a custom domain on Railway is reachable at
+Railway's edge without passing Cloudflare. The options and the recommendation
+(Cloudflare in front, origin locked by a shared-secret header) are in
+`docs/adr/0016-api-origin-identity-on-railway.md`. Pick one there first.
 
 Do not guess, and do not set it to something permissive to get past the boot
 check.
@@ -143,10 +139,24 @@ the committed chain, and it is why `readiness copy-from` exists.
 
 **10. Set the environment.**
 
-Required — boot refuses without these:
+The full list, with every optional variable, is
+`infra/railway/server.env.template`. Fill a copy, never commit it, and check
+it before the first deploy:
+
+```bash
+pnpm --dir apps/questura/apps/server env:check path/to/filled.env
+```
+
+It runs the production boot check against that file alone, and it also
+refuses leftover placeholders, test-mode Stripe keys, loopback database or
+Redis hosts, sandbox variables, and one secret reused in two roles.
+
+Required. Boot refuses without these:
 
 | Variable | Value |
 |---|---|
+| `NEXT_PUBLIC_APP_URL` | the site origin |
+| `BACKEND_URL_LOCAL` | the API's own public origin (same registrable domain as the site) |
 | `DATABASE_URI` | Neon direct endpoint |
 | `DATABASE_URI_UNPOOLED` | Neon direct endpoint (see step 4) |
 | `DATABASE_MAX_CONNECTIONS` | the number from step 3 |
@@ -154,10 +164,15 @@ Required — boot refuses without these:
 | `APP_ROLLOUT_SURGE` | extra instances alive during a deploy (1 is fine) |
 | `TRUSTED_PROXY` | from step 8 |
 | `REDIS_URL` | Railway Redis private URL |
-| `QUESTURA_CLIENT_URL` | the frontend origin — where publications are delivered |
+| `QUESTURA_CLIENT_URL` | the frontend origin, where publications are delivered |
 | `QUESTURA_REVALIDATION_SECRET` | generate one now; Cloudflare gets the same value in step 16 |
 | `PAYLOAD_SECRET` | a fresh 64-character secret, not the laptop's |
-| `BETTER_AUTH_SECRET` | a fresh one |
+| `BETTER_AUTH_SECRET` | a fresh one, not `PAYLOAD_SECRET` |
+| `PAYLOAD_COOKIE_DOMAIN` | step 11 |
+| `PAYLOAD_COOKIE_REQUIRED_HOSTS` | step 11 |
+| `STRIPE_SECRET_KEY` | live restricted key |
+| `STRIPE_WEBHOOK_SECRET` | signing secret of the endpoint for this host |
+| `STRIPE_PRICE_ID_MONTHLY` | the catalog monthly price |
 
 Worth setting at the same time:
 
@@ -173,8 +188,8 @@ Worth setting at the same time:
 The frontend and the API must both sit under `questurian.com` — for example
 `questurian.com` and `api.questurian.com`. A `*.up.railway.app` or
 `*.workers.dev` host cannot carry the session cookie, and `session-cookie.ts`
-already rejects two of those outright. Set `COOKIE_DOMAIN` and
-`REQUIRED_HOSTS` accordingly.
+rejects all three as a cookie domain. Set `PAYLOAD_COOKIE_DOMAIN` and
+`PAYLOAD_COOKIE_REQUIRED_HOSTS` accordingly.
 
 ---
 
