@@ -100,6 +100,31 @@ describe('production config assertion', () => {
     expect(collectProductionConfigProblems().join('\n')).toContain('NEXT_PUBLIC_APP_URL is not set')
   })
 
+  // The visitor session cookie is SameSite=Lax: a site and API on different
+  // registrable domains boot fine and sign every reader out on every page.
+  it.each([
+    ['https://questura-api.vercel.app'],
+    ['https://api.questurian.net'],
+  ])('refuses an API on another site (%s)', async (backend) => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      BACKEND_URL_LOCAL: backend,
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('are not the same site')
+  })
+
+  it('accepts sibling hosts of one site, as soft-prod runs them', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      NEXT_PUBLIC_APP_URL: 'https://www.questurian.com',
+      BACKEND_URL_LOCAL: 'https://cms.questurian.com',
+      PAYLOAD_COOKIE_REQUIRED_HOSTS: 'cms.questurian.com,www.questurian.com',
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).not.toContain('are not the same site')
+  })
+
   it('rejects a production boot with no backend url', async () => {
     const { collectProductionConfigProblems } = await load({
       ...VALID_PRODUCTION_ENV,

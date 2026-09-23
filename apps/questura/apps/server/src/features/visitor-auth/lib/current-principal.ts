@@ -49,8 +49,23 @@ function unauthenticated(): VisitorPrincipalResult {
   }
 }
 
-async function resolveVisitorPrincipal(headers: Headers): Promise<VisitorPrincipal | null> {
-  const visitorSession = await visitorAuth.api.getSession({ headers })
+type PrincipalOptions = {
+  /**
+   * Skip the five-minute session cookie cache and check the session store, so
+   * a session revoked on another device is refused at once. For routes that
+   * move money or change a subscription.
+   */
+  freshSession?: boolean
+}
+
+async function resolveVisitorPrincipal(
+  headers: Headers,
+  options: PrincipalOptions = {},
+): Promise<VisitorPrincipal | null> {
+  const visitorSession = await visitorAuth.api.getSession({
+    headers,
+    ...(options.freshSession ? { query: { disableCookieCache: true } } : {}),
+  })
 
   if (visitorSession?.user) {
     const user = visitorSession.user
@@ -78,8 +93,11 @@ async function resolveVisitorPrincipal(headers: Headers): Promise<VisitorPrincip
   return null
 }
 
-export async function getCurrentPrincipal(headers: Headers): Promise<VisitorPrincipalResult> {
-  const visitor = await resolveVisitorPrincipal(headers)
+export async function getCurrentPrincipal(
+  headers: Headers,
+  options: PrincipalOptions = {},
+): Promise<VisitorPrincipalResult> {
+  const visitor = await resolveVisitorPrincipal(headers, options)
 
   if (!visitor) return unauthenticated()
 
@@ -100,8 +118,8 @@ export async function getCurrentAuthMethods(headers: Headers): Promise<VisitorAu
   return getVisitorAuthMethodsForUser(visitorSession.user.id)
 }
 
-export async function requireCurrentPrincipal(headers: Headers) {
-  const result = await getCurrentPrincipal(headers)
+export async function requireCurrentPrincipal(headers: Headers, options: PrincipalOptions = {}) {
+  const result = await getCurrentPrincipal(headers, options)
   if (!result.authenticated || !result.principal) {
     return { result, principal: null, error: 'Authentication required', status: 401 as const }
   }
@@ -109,8 +127,11 @@ export async function requireCurrentPrincipal(headers: Headers) {
   return { result, principal: result.principal, error: null, status: 200 as const }
 }
 
-export async function requireVisitorPrincipal(headers: Headers, options: { requireVerified?: boolean } = {}) {
-  const current = await requireCurrentPrincipal(headers)
+export async function requireVisitorPrincipal(
+  headers: Headers,
+  options: { requireVerified?: boolean } & PrincipalOptions = {},
+) {
+  const current = await requireCurrentPrincipal(headers, { freshSession: options.freshSession })
   if (current.error || !current.principal) return current
 
   if (options.requireVerified && !current.principal.emailVerified) {
