@@ -2,6 +2,7 @@ import { get } from '@/lib/api'
 import type { CurrentPrincipalResponse } from '@/lib/user/types'
 
 import { IdentityStore, type IdentityResponse } from './identity'
+import { hintFromResponse, writeHint } from './identityHint'
 
 /**
  * The page's one identity store (`identity.ts`). The navbar's React Query
@@ -14,6 +15,8 @@ import { IdentityStore, type IdentityResponse } from './identity'
  */
 export const identityStore = new IdentityStore({
   fetcher: () => get<CurrentPrincipalResponse>('/api/me') as Promise<IdentityResponse>,
+  // Every answer refreshes the navbar's pre-paint hint (`identityHint.ts`).
+  onAnswer: (value) => writeHint(hintFromResponse(value)),
 })
 
 /** Reuse window for consumers mounting just after another resolved the same page's identity. */

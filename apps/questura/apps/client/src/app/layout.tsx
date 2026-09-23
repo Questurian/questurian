@@ -9,6 +9,7 @@ import "./globals.css";
 import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
 import { IMAGE_CDN_ORIGIN } from "@/lib/media/imageCdnOrigin";
 import { NavigationFeedback } from "@/components/navigation/NavigationFeedback";
+import { IDENTITY_HINT_SCRIPT } from "@/lib/user/identityHint";
 
 /*
  * Only the families every route renders belong here: next/font preloads a
@@ -39,7 +40,13 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang={DEFAULT_LOCALE} style={{ colorScheme: 'light' }}>
+    // The pre-paint hint below sets `data-identity` before React hydrates.
+    <html lang={DEFAULT_LOCALE} style={{ colorScheme: 'light' }} suppressHydrationWarning>
+      <head>
+        {/* Before first paint: which navbar controls this reader will get
+            (lib/user/identityHint.ts). Must run ahead of the body. */}
+        <script dangerouslySetInnerHTML={{ __html: IDENTITY_HINT_SCRIPT }} />
+      </head>
       {/* Every photo on the site is served from the image CDN, so a cold visit
           otherwise pays DNS + TLS against a second origin before the first
           image byte moves. Next hoists a plain <link> in JSX into <head>. */}

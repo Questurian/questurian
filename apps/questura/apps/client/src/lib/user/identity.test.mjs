@@ -86,3 +86,25 @@ test('identity states', () => {
   assert.equal(identityFromResponse(A).member, true)
   assert.equal(identityFromResponse(B).member, false)
 })
+
+test('onAnswer hears each published answer, not failures or superseded lookups', async () => {
+  const heard = []
+  let next = () => Promise.resolve(A)
+  let now = 0
+  const store = new IdentityStore({ fetcher: () => next(), now: () => (now += 1), onAnswer: (value) => heard.push(value.principal?.id ?? 'anon') })
+
+  await store.read()
+  next = () => Promise.reject(Object.assign(new Error('busy'), { status: 503 }))
+  await assert.rejects(store.read(), /busy/)
+
+  const slow = deferred()
+  next = () => slow.promise
+  const pending = store.read()
+  store.invalidate()
+  slow.resolve(B)
+  await assert.rejects(pending, IdentitySuperseded)
+
+  next = () => Promise.resolve({ authenticated: false, principal: null })
+  await store.read()
+  assert.deepEqual(heard, ['user-a', 'anon'])
+})

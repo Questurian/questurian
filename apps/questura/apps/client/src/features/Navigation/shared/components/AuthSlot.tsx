@@ -29,10 +29,12 @@ interface AuthSlotProps {
  * Before this the slot had no width at all while loading, and the Subscribe
  * button jumped 58.7px to the left the moment "Sign in" arrived.
  *
- * Still visible, and not fixable here: a signed-in member sees the Subscribe
- * button for one beat before it is removed, because membership is only known
- * once the same request answers. Reserving its 234px for everyone would be a
- * worse trade.
+ * While loading, the slot holds "Sign in" marked `nav-signin` + `data-pending`,
+ * so an anonymous reader gets it in the same frame as Subscribe. A reader this
+ * browser last saw signed in has `<html data-identity>` set by the pre-paint
+ * hint (`lib/user/identityHint.ts`), and foundations.css hides the pending
+ * control — visibility, not display, so the reserved width stays. Once
+ * `/api/me` answers the marker is gone and React alone decides.
  */
 export default function AuthSlot({
   loading,
@@ -46,7 +48,9 @@ export default function AuthSlot({
       // Keep these two widths in step with UserIcon's own sizing.
       className="inline-flex h-8 min-w-[58px] shrink-0 items-center justify-end 480:h-10 480:min-w-[68px]"
     >
-      {loading ? null : isAuthenticated ? (
+      {loading ? (
+        <SignInButton className={`nav-signin ${signInClassName}`} pending />
+      ) : isAuthenticated ? (
         <UserIcon buttonClassName={userIconClassName} isMember={isMember} />
       ) : (
         <SignInButton className={signInClassName} />

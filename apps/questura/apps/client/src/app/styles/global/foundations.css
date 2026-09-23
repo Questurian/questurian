@@ -207,3 +207,14 @@ html[data-navigating] .nav-feedback {
     opacity: 1;
   }
 }
+
+/* Navbar pre-paint identity hint (lib/user/identityHint.ts). Before /api/me
+   answers, both navbars render Sign in and Subscribe marked `data-pending`;
+   the inline <head> script sets `html[data-identity]` from the last answer
+   this browser saw. Visibility, not display, so the reserved width stays.
+   The marker is dropped once the answer lands, and React alone decides. */
+html[data-identity="user"] .nav-signin[data-pending],
+html[data-identity="member"] .nav-signin[data-pending],
+html[data-identity="member"] .nav-subscribe[data-pending] {
+  visibility: hidden;
+}

@@ -5,6 +5,7 @@ import { isServiceUnavailableError, isUnauthenticated, post, retryDecision } fro
 import { queryKeys } from '@/lib/react-query';
 import { identityStore } from '@/lib/user/currentIdentity';
 import { IdentitySuperseded } from '@/lib/user/identity';
+import { writeHint } from '@/lib/user/identityHint';
 import type { CurrentPrincipalResponse, User } from '@/lib/user/types';
 
 function principalToUser(response: CurrentPrincipalResponse): User | null {
@@ -53,7 +54,10 @@ export function useUserQuery() {
         // Only an explicit 401 means "no session". A 403 challenge page, a
         // 429 or a 503 means the question was not answered — the query stays
         // in error rather than showing a signed-in reader as signed out.
-        if (isUnauthenticated(error)) return null;
+        if (isUnauthenticated(error)) {
+          writeHint('anon');
+          return null;
+        }
         throw error;
       }
     },
@@ -134,6 +138,7 @@ export function useLogoutMutation() {
       }
     },
     onSettled: () => {
+      writeHint('anon');
       identityStore.invalidate();
       queryClient.clear();
       window.location.href = '/';

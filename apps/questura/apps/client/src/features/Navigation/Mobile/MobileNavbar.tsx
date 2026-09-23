@@ -31,9 +31,14 @@ export default function MobileNavbar() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2 max-[379.98px]:gap-2.5">
-          {/* Public purchase link must not wait for the session request. */}
+          {/* Public purchase link must not wait for the session request.
+              While pending, the pre-paint hint hides it for members. */}
           {(loading || shouldShowSubscribe) ? (
-            <Link href="/join" className="flex h-8 items-center max-[379.98px]:h-auto">
+            <Link
+              href="/join"
+              className="nav-subscribe flex h-8 items-center max-[379.98px]:h-auto"
+              data-pending={loading || undefined}
+            >
               <SubscribeButton />
             </Link>
           ) : null}

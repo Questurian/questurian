@@ -3,9 +3,11 @@ import { useLoginModalStore } from "@/lib/stores/loginModalStore";
 interface SignInButtonProps {
   onClick?: () => void;
   className?: string;
+  /** Rendered before `/api/me` answers; the pre-paint hint may hide it (AuthSlot). */
+  pending?: boolean;
 }
 
-export default function SignInButton({ onClick, className = "" }: SignInButtonProps) {
+export default function SignInButton({ onClick, className = "", pending = false }: SignInButtonProps) {
   const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
   const handleClick = () => {
     if (onClick) {
@@ -19,6 +21,7 @@ export default function SignInButton({ onClick, className = "" }: SignInButtonPr
   return (
     <button
       onClick={handleClick}
+      data-pending={pending || undefined}
       className={`
         /* Base styles */
         cursor-pointer
