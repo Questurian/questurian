@@ -34,6 +34,7 @@ vi.mock('@/features/visitor-auth/lib/better-auth', () => ({
 vi.mock('@/shared/config', () => ({
   APP_CONFIG: {
     CORS_ORIGINS: ['http://localhost:3000'],
+    trustedProxy: { name: 'cloudflare', header: 'cf-connecting-ip' },
   },
   APP_URLS: {
     frontend: 'http://localhost:3000',
@@ -96,6 +97,63 @@ describe('Visitor auth route', () => {
     expect(response.status).toBe(500)
     expect(response.headers.get('access-control-allow-origin')).toBe('http://localhost:3000')
     expect(response.headers.get('access-control-allow-credentials')).toBe('true')
+  })
+
+  // Better Auth counts callers by `x-questura-client-ip`. The route writes it
+  // from the proxy header on every request, so a caller cannot choose it, and
+  // it is always an address — never absent, which would make Better Auth skip
+  // its limiter in production.
+  describe('client identity handed to Better Auth', () => {
+    async function identitySeenBy(headers: Record<string, string>) {
+      await POST(
+        new Request('http://localhost:4000/api/visitor-auth/sign-in/email', {
+          method: 'POST',
+          headers: { origin: 'http://localhost:3000', ...headers },
+          body: JSON.stringify({ email: 'reader@example.com', password: 'x' }),
+        }) as any,
+      )
+      const request = mocks.postHandler.mock.calls[0]![0] as Request
+      return { identity: request.headers.get('x-questura-client-ip'), request }
+    }
+
+    it('is the proxy-reported address', async () => {
+      const { identity } = await identitySeenBy({ 'cf-connecting-ip': '192.0.2.9' })
+      expect(identity).toBe('192.0.2.9')
+    })
+
+    it('overwrites a value the caller sent', async () => {
+      const { identity } = await identitySeenBy({
+        'cf-connecting-ip': '192.0.2.9',
+        'x-questura-client-ip': '203.0.113.1',
+      })
+      expect(identity).toBe('192.0.2.9')
+    })
+
+    it('is one address per IPv6 /64', async () => {
+      const { identity } = await identitySeenBy({ 'cf-connecting-ip': '2001:db8:1:2::77' })
+      expect(identity).toBe('2001:db8:1:2::')
+    })
+
+    it.each([
+      ['no proxy header', {}],
+      ['a junk proxy header', { 'cf-connecting-ip': 'not-an-ip' }],
+      ['only a forged x-forwarded-for', { 'x-forwarded-for': '203.0.113.5' }],
+      ['a forged identity and no proxy header', { 'x-questura-client-ip': '203.0.113.6' }],
+    ])('is the shared unidentified address with %s', async (_label, headers) => {
+      const { identity } = await identitySeenBy(headers)
+      expect(identity).toBe('0.0.0.0')
+    })
+
+    it('keeps the request body and cookies intact', async () => {
+      const { request } = await identitySeenBy({
+        'cf-connecting-ip': '192.0.2.9',
+        cookie: 'questura_visitor.session_token=abc',
+      })
+      await expect(request.json()).resolves.toEqual({ email: 'reader@example.com', password: 'x' })
+      expect(request.headers.get('cookie')).toBe('questura_visitor.session_token=abc')
+      expect(request.method).toBe('POST')
+      expect(new URL(request.url).pathname).toBe('/api/visitor-auth/sign-in/email')
+    })
   })
 
   // Better Auth limits requests per address and path; nothing bounded how many

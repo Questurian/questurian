@@ -2,6 +2,7 @@ import { toNextJsHandler } from 'better-auth/next-js'
 import type { NextRequest } from 'next/server'
 
 import { visitorAuth } from '@/features/visitor-auth/lib/better-auth'
+import { withClientIdentity } from '@/features/visitor-auth/lib/client-identity'
 import { AdmissionRefused } from '@/shared/http/admission'
 import { admitPublicWork, overloadedResponse } from '@/shared/http/public-read'
 import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
@@ -20,6 +21,10 @@ const handlers = toNextJsHandler(visitorAuth)
  * refusal is a no-store 503 with `Retry-After`, never a half-written session.
  * Callback and provider contracts are unchanged — the handler that runs is
  * Better Auth's, untouched, once admitted.
+ *
+ * Better Auth is told who is calling by `withClientIdentity`, never by a
+ * header the caller wrote; `client-identity.ts` has the production gap that
+ * closes.
  */
 async function withCors(req: NextRequest, handler: (request: Request) => Promise<Response>) {
   let response: Response
@@ -27,7 +32,7 @@ async function withCors(req: NextRequest, handler: (request: Request) => Promise
   try {
     response = await admitPublicWork(
       'ingress',
-      () => admitPublicWork('auth', () => handler(req), req.signal ?? undefined),
+      () => admitPublicWork('auth', () => handler(withClientIdentity(req)), req.signal ?? undefined),
       req.signal ?? undefined,
     )
   } catch (error) {
