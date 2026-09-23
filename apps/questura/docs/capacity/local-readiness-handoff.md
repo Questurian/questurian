@@ -170,6 +170,23 @@ New since this series. Production refuses to boot without the required ones.
 | `BOOT_FAIL_FAST` | optional | crash instead of retrying initialisation |
 | `REFRESH_WORKER_SECRET` | for a scheduler | `POST /api/internal/refresh-jobs` |
 
+Added by the surge series (2026-09-22, PRs #636–#643; see
+[`surge-local-handoff.md`](surge-local-handoff.md)). All optional; every value
+is validated, and production refuses to boot on an invalid one.
+
+| Variable | Default | What it decides |
+|---|---|---|
+| `MOUNT_CREDENTIAL_CONCURRENCY` / `_QUEUE` / `_QUEUE_MS` | 8 / 32 / 1000 | verifying credentials presented to Payload's REST and GraphQL mounts |
+| `MOUNT_STAFF_CONCURRENCY` / `_QUEUE` / `_QUEUE_MS` | 16 / 64 / 5000 | verified staff and service-account reads of the mounts |
+| `VISITOR_AUTH_CONCURRENCY` / `_QUEUE` / `_QUEUE_MS` | 4 / 64 / 3000 | Better Auth routes and set-password (password hashing) |
+| `SESSION_TRAFFIC_PER_SESSION` | 120/min | pre-auth guard per session token (fails open) |
+| `SESSION_TRAFFIC_PER_IP` | 1200/min | pre-auth guard per address (fails open) |
+| `APP_PREVIOUS_PROCESS_COUNT` | = this release | old-generation serving processes during a rollout (scale-downs) |
+| `APP_PREVIOUS_POOL_PAYLOAD_MAX` / `_VISITOR_AUTH_MAX` / `_ADVISORY_LOCK_MAX` | = this release | the old generation's pool sizes, exact behind a pooler |
+
+Any gate's `_QUEUE` may now be `0` (refuse rather than wait); `_CONCURRENCY`
+and `_QUEUE_MS` of `0` are refused instead of silently replaced.
+
 ## The hosted gates, unchanged and unchecked
 
 H01 provision · H02 ingress and cookies · H03 cache semantics · H04 fleet and

@@ -208,10 +208,14 @@ function readGateInt(name: string, fallback: number, min: number): number {
  *   thing that can say no while the dependency behind it is still deciding.
  *   It is deliberately generous: it exists to stop unbounded growth, not to
  *   shape traffic. It also covers `navigation`, which had no gate at all.
- * - `private` (signed-in identity and bookmark reads): 16 at once, so
- *   session traffic has a budget of its own and cannot be starved by a
- *   public burst or starve it. Anonymous identity never reaches this gate —
- *   it does no database or Redis work and must stay free.
+ * - `private` (every session-bearing account route: identity, bookmark refs,
+ *   list and writes, the member body): 16 at once, so session traffic has a
+ *   budget of its own and cannot be starved by a public burst or starve it.
+ *   A caller with no session cookie never reaches this gate — it does no
+ *   database or Redis work and must stay free (`private-route.ts`).
+ * - `credential`, `staff`: verifying a credential presented to Payload's
+ *   mounts, and verified staff/service reads of them (`mount-bounds.ts`).
+ * - `auth`: Better Auth's routes and set-password — password hashing.
  *
  * Payments and editorial writes never pass through any of these. Every value
  * is an env override, because the right number belongs to the platform:

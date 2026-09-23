@@ -3,6 +3,8 @@
 How to measure what Questura can absorb. The plan and the tickets are in
 [`../campaign-capacity-implementation.md`](../campaign-capacity-implementation.md);
 progress is in [`STATUS.md`](STATUS.md); evidence goes in [`runs/`](runs/).
+The surge-hardening series (2026-09-22) and its status by discovery finding:
+[`surge-local-handoff.md`](surge-local-handoff.md).
 
 **Local numbers are local.** A Mac run proves the harness works, finds
 regressions and prices the code in statements and reads. It does not say
