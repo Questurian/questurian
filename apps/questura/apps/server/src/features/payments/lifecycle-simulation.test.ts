@@ -98,7 +98,9 @@ const fakeStripe = {
       const out = clone(sub) as unknown as Record<string, unknown>
       // Expansion is meaningful: `latestInvoiceWasPaid` returns null (unknown)
       // for a string, and that difference decides entitlement on a cancel.
-      if (opts?.expand?.includes('latest_invoice') && sub.latest_invoice) {
+      // A captured replay can name an invoice the fixture never saw; that stays
+      // an id, which the code under test reads as "unknown".
+      if (opts?.expand?.includes('latest_invoice') && sub.latest_invoice && store.invoices.has(sub.latest_invoice)) {
         out.latest_invoice = clone(store.invoices.get(sub.latest_invoice))
       }
       return out
@@ -269,6 +271,8 @@ vi.mock('@/shared/config', () => ({
 import { headers as nextHeaders } from 'next/headers'
 import { POST as webhookRoute } from '@/app/api/payments/webhooks/stripe/route'
 import { deriveVisitorMembership } from '@/features/visitor-auth/lib/membership-entitlement'
+import lifecycleFixture from './__fixtures__/membership-lifecycle.events.json'
+import incompleteFixture from './__fixtures__/membership-incomplete.events.json'
 
 // ---------------------------------------------------------------------------
 // Harness
@@ -1105,5 +1109,96 @@ describe('unusual subscription shapes', () => {
     expect(entitled()).toBe(false)
     db['visitor-profiles'][0].paidThroughAt = new Date(Date.now() + 60_000).toISOString()
     expect(entitled()).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Captured payloads
+// ---------------------------------------------------------------------------
+
+type CapturedEvent = { id: string; type: string; created: number; data: { object: any } }
+type CapturedFixture = { customerId: string; events: CapturedEvent[] }
+
+/**
+ * Sends a captured fixture through the real route, event by event, and records
+ * entitlement after each one.
+ *
+ * Every scenario above delivers payloads this file built. These are the ones
+ * Stripe actually sent (test mode, `__fixtures__/*.events.json`), so a field a
+ * handler reads that real payloads spell differently fails here and nowhere
+ * else. The handlers refetch the subscription (ADR-0008), so the fake Stripe
+ * serves what a refetch would have seen: the last captured snapshot from the
+ * same second or earlier (a paid invoice and the subscription turning active
+ * share a second, in either order). The clock
+ * is the subscription's own: its period start, or when it ended — the lifecycle
+ * run used a test clock, so Stripe's time is months ahead of `event.created`.
+ */
+async function replayCaptured(fixture: CapturedFixture) {
+  const subEvents = fixture.events.filter((e) => e.data.object.object === 'subscription')
+  const sub0 = subEvents[0]!.data.object
+  db['visitor-profiles'][0] = {
+    ...db['visitor-profiles'][0],
+    authUserId: sub0.metadata.visitorAuthUserId,
+    stripeCustomerId: fixture.customerId,
+  } as Row
+
+  const steps: Array<{ type: string; status: number; entitled: boolean }> = []
+  vi.useFakeTimers({ toFake: ['Date'] })
+  try {
+    for (const event of fixture.events) {
+      const sub = (subEvents.filter((e) => e.created <= event.created).at(-1) ?? subEvents[0]!).data.object
+      store.subs.set(sub.id, structuredClone(sub))
+      if (event.data.object.object === 'invoice') {
+        store.invoices.set(event.data.object.id, structuredClone(event.data.object))
+      }
+      vi.setSystemTime(((sub.ended_at ?? sub.items.data[0].current_period_start) + 60) * 1000)
+
+      const req = new Request('https://cms.test/api/payments/webhooks/stripe', {
+        method: 'POST',
+        headers: { 'stripe-signature': 'sig' },
+        body: JSON.stringify(event),
+      })
+      ;(nextHeaders as unknown as { mockResolvedValue: (v: unknown) => void })
+        .mockResolvedValue(new Map([['stripe-signature', 'sig']]))
+      const res = await webhookRoute(req as never)
+      steps.push({ type: event.type, status: res.status, entitled: entitled() })
+    }
+  } finally {
+    vi.useRealTimers()
+  }
+  return steps
+}
+
+describe('captured Stripe payloads through the real route', () => {
+  it('F1: the lifecycle run grants, holds through dunning and cancel-at-period-end, and ends on deletion', async () => {
+    const steps = await replayCaptured(lifecycleFixture as CapturedFixture)
+
+    expect(steps.every((step) => step.status === 200)).toBe(true)
+    expect(steps.map((step) => [step.type, step.entitled])).toEqual([
+      ['invoice.payment_succeeded', true],
+      ['customer.subscription.created', true],
+      ['customer.subscription.updated', true],
+      ['customer.subscription.updated', true], // past_due: inside the dunning grace
+      ['invoice.payment_failed', true],
+      ['invoice.payment_succeeded', true],
+      ['customer.subscription.updated', true],
+      ['customer.subscription.updated', true], // cancel_at_period_end: paid to the period end
+      ['customer.subscription.deleted', false],
+    ])
+    expect(profile().stripeSubscriptionId).toBe(lifecycleFixture.subscriptionId)
+    expect(profile().subscriptionStatus).toBe('cancelled')
+  })
+
+  it('F2: the incomplete run grants nothing while the first payment is pending, then grants', async () => {
+    const steps = await replayCaptured(incompleteFixture as CapturedFixture)
+
+    expect(steps.every((step) => step.status === 200)).toBe(true)
+    expect(steps.map((step) => [step.type, step.entitled])).toEqual([
+      ['customer.subscription.created', false],
+      ['invoice.payment_succeeded', true],
+      ['customer.subscription.updated', true],
+    ])
+    expect(profile().stripeSubscriptionId).toBe(incompleteFixture.subscriptionId)
+    expect(profile().subscriptionStatus).toBe('active')
   })
 })

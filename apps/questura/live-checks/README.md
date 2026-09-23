@@ -16,6 +16,7 @@ code; confirm it on the live domain".
 | File | What | PRs | Added |
 |---|---|---|---|
 | [visitor-auth.html](visitor-auth.html) | Sign-in cookies, Safari, navbar, Google, password email, sessions in the DB | #646–#650 | 2026-09-23 |
+| [payments.html](payments.html) | Webhook endpoint after a month parked, reconcile of the two live members, member billing pages, plans | #648, #650, #653 | 2026-09-23 |
 
 ## How to run a live window
 
