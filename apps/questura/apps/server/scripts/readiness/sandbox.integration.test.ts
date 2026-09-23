@@ -9,9 +9,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import {
   createSandboxSchema,
-  createSandboxDatabase,
   REFRESH_JOBS_DDL,
-  sandboxAvailable,
+  sandboxReadyOrSkip,
   sandboxClient,
   sandboxPool,
 } from './database'
@@ -36,17 +35,8 @@ import {
 /** This file's private schema, so a parallel test file cannot truncate under it. */
 const SCHEMA = 'readiness_sandbox'
 
-const available = await sandboxAvailableOrCreate()
+const available = await sandboxReadyOrSkip()
 
-async function sandboxAvailableOrCreate(): Promise<boolean> {
-  if (await sandboxAvailable()) return true
-  try {
-    await createSandboxDatabase()
-    return true
-  } catch {
-    return false
-  }
-}
 
 describe.skipIf(!available)('readiness sandbox: two real connections', () => {
   let pool: Pool

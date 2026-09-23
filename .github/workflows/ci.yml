@@ -116,6 +116,56 @@ jobs:
       - name: The build did not rewrite source
         run: git diff --exit-code -- apps/questura/apps/server/src
 
+  # The readiness integration tests, where a skip is a failure (surge plan
+  # L09). Everything else in CI stays green on a machine with no database, so
+  # these used to skip quietly and a green run said nothing about them. Here a
+  # disposable Postgres and Redis are part of the job, the schema comes from
+  # the committed fixture (no developer dump), the launch corpus is seeded
+  # through Payload's own Local API, and `readiness:required` fails on any
+  # skipped, pending or missing integration test.
+  questura-readiness:
+    name: Questura readiness integrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ['6390:6379']
+    env:
+      READINESS_DATABASE_URI: postgres://postgres:postgres@127.0.0.1:5432/questura_readiness
+      READINESS_REDIS_URL: redis://127.0.0.1:6390
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @questura/server...
+
+      - name: Preflight
+        run: pnpm --dir apps/questura/apps/server readiness check
+
+      - name: Schema from the committed fixture
+        run: pnpm --dir apps/questura/apps/server readiness bootstrap
+
+      - name: Launch corpus
+        run: pnpm --dir apps/questura/apps/server readiness:launch -- seed
+
+      - name: Integration tests (skips fail)
+        run: pnpm --dir apps/questura/apps/server readiness:required
+
   questura-client:
     name: Questura client tests
     runs-on: ubuntu-latest
@@ -134,6 +184,11 @@ jobs:
       # dependency, which is the constraint that keeps the job this cheap.
       - name: Unit tests
         run: pnpm --dir apps/questura/apps/client run test
+
+      # The load supervisor's stop rules (surge plan L08): pure node:test, no
+      # install. The negative controls need k6 and run locally.
+      - name: Load supervisor policy
+        run: node --test apps/questura/load/k6/supervisor/policy.test.mjs
 
   writer-web:
     name: Writer frontend

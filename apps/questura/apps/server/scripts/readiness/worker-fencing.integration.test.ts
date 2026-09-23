@@ -9,10 +9,9 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 
 import { FaultReceiver } from './fault-receiver'
 import {
-  createSandboxDatabase,
   createSandboxSchema,
   REFRESH_JOBS_DDL,
-  sandboxAvailable,
+  sandboxReadyOrSkip,
   sandboxPool,
 } from './database'
 
@@ -32,17 +31,8 @@ import {
 /** This file's private schema, so a parallel test file cannot truncate under it. */
 const SCHEMA = 'readiness_fencing'
 
-const available = await ready()
+const available = await sandboxReadyOrSkip()
 
-async function ready(): Promise<boolean> {
-  if (await sandboxAvailable()) return true
-  try {
-    await createSandboxDatabase()
-    return true
-  } catch {
-    return false
-  }
-}
 
 const SECRET = 'readiness-sandbox-revalidation-secret'
 

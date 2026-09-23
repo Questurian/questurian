@@ -58,6 +58,15 @@ pnpm readiness:routes                        # 114 real-route checks: identity, 
 pnpm readiness:stack -- down                 # stops only what `up` started
 ```
 
+More checks against the running stack (surge plan L09):
+
+```bash
+pnpm readiness:restore       # dump → restore with error-stop → boot → search, owed work, sessions, relations
+pnpm readiness:adapter       # OpenNext build in an isolated worktree, local preview, revision + purge checks
+pnpm readiness:publication   # every affected page converges through permitted states (mutates: reseed after)
+pnpm readiness:required      # the integration tests with READINESS_REQUIRED=1: a skip is a failure
+```
+
 After a reseed, rebuild the client (`up --build-client`): its pages are
 pre-rendered from the backend at build time.
 

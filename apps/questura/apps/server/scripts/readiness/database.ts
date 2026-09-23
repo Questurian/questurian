@@ -52,6 +52,29 @@ export async function sandboxAvailable(): Promise<boolean> {
   return availability
 }
 
+/**
+ * Integration tests call this instead of deciding for themselves whether to
+ * skip. Ordinary runs skip when no disposable Postgres is reachable; with
+ * `READINESS_REQUIRED=1` (the required CI job, `pnpm readiness:required`) an
+ * unreachable database is a failure, because "skipped" must never read as
+ * "passed" where the tests are the point (surge plan L09).
+ */
+export async function sandboxReadyOrSkip(): Promise<boolean> {
+  if (await sandboxAvailable()) return true
+  try {
+    await createSandboxDatabase()
+    availability = null
+    if (await sandboxAvailable()) return true
+  } catch (error) {
+    if (process.env.READINESS_REQUIRED === '1') {
+      throw new Error(`READINESS_REQUIRED=1 and the disposable database is unreachable: ${error instanceof Error ? error.message : error}`)
+    }
+    return false
+  }
+  if (process.env.READINESS_REQUIRED === '1') throw new Error('READINESS_REQUIRED=1 and the disposable database is unreachable.')
+  return false
+}
+
 export async function createSandboxDatabase(): Promise<void> {
   const name = sandboxDatabaseName()
   const admin = new Client({ connectionString: maintenanceUri() })

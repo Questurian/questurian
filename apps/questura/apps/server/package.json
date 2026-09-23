@@ -60,6 +60,9 @@
     "readiness:stack": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/stack.ts",
     "readiness:routes": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/route-checks.ts",
     "readiness:sessions": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/sessions.ts",
+    "readiness:publication": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/publication-checks.ts",
+    "readiness:required": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/required-integrations.ts",
+    "readiness:adapter": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/adapter-smoke.ts",
     "readiness:restore": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/restore-rehearsal.ts"
   },
   "dependencies": {
