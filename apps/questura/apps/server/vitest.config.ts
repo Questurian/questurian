@@ -26,6 +26,8 @@ export default defineConfig({
       // themselves when no disposable Postgres is reachable, so CI stays
       // green without pretending it ran them.
       'scripts/readiness/**/*.test.ts',
+      // The env check the Railway template is held to (launch harness C1).
+      'scripts/env-check/**/*.test.ts',
     ],
   },
 })
