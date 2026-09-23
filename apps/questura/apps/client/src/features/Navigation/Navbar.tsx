@@ -3,6 +3,11 @@
 import DesktopNavbar from "./Desktop/DesktopNavbar";
 import MobileNavbar from "./Mobile/MobileNavbar";
 import { useEffect, useRef } from "react";
+import { primeIdentity } from "@/lib/user/currentIdentity";
+
+// Ask who is reading while the page is still hydrating, not after. The
+// navbar's query joins this request (currentIdentity.ts).
+primeIdentity();
 
 // Scroll distance over which the navbar goes from expanded to collapsed. It is
 // read off the real scroll position: the navbar never consumes input to
