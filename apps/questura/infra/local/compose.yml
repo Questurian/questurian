@@ -1,0 +1,14 @@
+# Local-only Redis for `pnpm dev`. Not the soft-prod data services
+# (infra/softprod/host/compose.yml): a different project, container and port,
+# so a local run never shares Redis with the live laptop's `questura-redis`.
+#
+#   docker compose -f infra/local/compose.yml up -d
+#   REDIS_URL=redis://127.0.0.1:6380   (apps/server/.env)
+name: questura-local
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: questura-local-redis
+    ports:
+      - "127.0.0.1:6380:6379"

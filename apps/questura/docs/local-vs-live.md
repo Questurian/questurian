@@ -29,6 +29,25 @@ Client: `http://localhost:3000`. Server / Payload admin: `http://localhost:4000`
 Env files already point here (`apps/server/.env`, `apps/client/.env.local`).
 Stripe keys on the Mac are empty on purpose — do not paste live keys into them.
 
+### Redis (optional)
+
+With `REDIS_URL` set, the server keeps visitor sessions and Better Auth's rate
+limits in Redis — the same path production takes. Without it, sessions and
+limits stay in Postgres and counters fall back to per-process memory. Use it
+when the change touches sessions or rate limits:
+
+```bash
+docker compose -f infra/local/compose.yml up -d
+```
+
+Then set `REDIS_URL=redis://127.0.0.1:6380` in `apps/server/.env` and restart
+the server. Port 6380 on purpose: on the Linux laptop, 6379 is the live
+`questura-redis` container. Never point local at 6379 there, and never flush it.
+
+While sessions live in Redis only, flushing the local Redis signs everyone
+out. That is expected, and it is the risk the session-durability decision
+addresses.
+
 ## Park live (public domains go down)
 
 Stripe webhooks to the live URL will fail until you resume. That is expected

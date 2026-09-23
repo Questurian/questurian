@@ -111,6 +111,26 @@ export async function incrementCounter(
   return incrementLocalCounter(key, windowSeconds)
 }
 
+/**
+ * Several counters in one Redis round trip, in key order. Same backend rules
+ * as `incrementCounter`: Redis when configured, refused in production
+ * without it, per-process memory only in development.
+ */
+export async function incrementCounters(
+  keys: string[],
+  windowSeconds: number
+): Promise<CounterResult[]> {
+  if (APP_CONFIG.redis.url) {
+    return redisBreaker.run(() => redisSecondaryStorage.incrementManyWithExpiry(keys, windowSeconds))
+  }
+
+  if (APP_CONFIG.isProduction) {
+    throw new RateLimitBackendUnavailableError()
+  }
+
+  return keys.map((key) => incrementLocalCounter(key, windowSeconds))
+}
+
 /** Test seam: drop in-process counters between cases. */
 export function resetLocalCounters(): void {
   localCounters.clear()

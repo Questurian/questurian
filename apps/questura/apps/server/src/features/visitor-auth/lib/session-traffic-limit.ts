@@ -1,4 +1,4 @@
-import { getClientIp, hashIdentifier, incrementCounter } from '@/shared/lib/rate-limit-counter'
+import { getClientIp, hashIdentifier, incrementCounters } from '@/shared/lib/rate-limit-counter'
 import { logger } from '@/shared/utils/logger'
 
 /**
@@ -51,10 +51,8 @@ export async function checkSessionTrafficLimit(headers: Headers, token: string):
   let session
   let ip
   try {
-    ;[session, ip] = await Promise.all([
-      incrementCounter(sessionKey, WINDOW_SECONDS),
-      incrementCounter(ipKey, WINDOW_SECONDS),
-    ])
+    // Both buckets in one script: one Redis round trip per private request.
+    ;[session, ip] = await incrementCounters([sessionKey, ipKey], WINDOW_SECONDS)
   } catch (error) {
     logger.warn('Session traffic limit unavailable; admitting behind the private gate', {
       error: error instanceof Error ? error.message : String(error),
