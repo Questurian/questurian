@@ -280,7 +280,10 @@ async function main(): Promise<void> {
   }
 
   // --- Failed delivery: the client is frozen during a save -----------------------
-  {
+  // Skipped under load (PUBLICATION_SKIP_FREEZE=1): freezing the client also
+  // freezes every reader the load is sending to it, which measures the freeze
+  // rather than publication. It runs on its own in the standalone check.
+  if (process.env.PUBLICATION_SKIP_FREEZE !== '1') {
     const piece = article(14)
     const client = stack.processes.find((entry) => entry.role === 'client')!
     const r2 = piece.markers.body.replace(/-R1$/, '-R2')

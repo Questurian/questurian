@@ -11,8 +11,8 @@
 //   repeat visit   HTML only (identity and refs already held client-side)
 //   search         a submitted search, with results or an explicit empty state
 //   saved items    member refs + the saved-items list
-//   bookmark write signed-in add then delete (bounded share)
-//   sign-in        the real sign-in endpoint (tiny share)
+//   bookmark write signed-in add then delete — its own scenario, WRITE_RATE/s
+//   sign-in        the real sign-in endpoint — its own scenario, SIGNIN_RATE/s
 //
 // Every response is checked exactly (lib/requests.js); every correctness
 // failure is `questura_correctness{class}`, which the supervisor stops on.
@@ -30,22 +30,32 @@ import http from 'k6/http'
 import { check } from 'k6'
 
 import { BASE_URL, ORIGIN, gates, pick } from './lib/config.js'
-import { bookmarkRefs, clientAddress, correctness, identity, memberBody, page } from './lib/requests.js'
+import { bookmarkRefs, clientAddress, identity, memberBody, page } from './lib/requests.js'
 import { WORKLOAD } from './lib/workload.js'
 
 if (!WORKLOAD || WORKLOAD.version !== 2) throw new Error('launch-journeys needs a version 2 workload (node lib/build-launch-workload.mjs)')
 if (!__ENV.SESSIONS_FILE) throw new Error('SESSIONS_FILE is required: run `pnpm readiness:sessions` and pass the path it prints')
 
-const SESSIONS = JSON.parse(open(__ENV.SESSIONS_FILE))
+// `{ label: [cookie, …] }`: several sessions per identity, so the crowd is
+// many readers. Each VU keeps one session per identity for the whole run.
+const POOLS = JSON.parse(open(__ENV.SESSIONS_FILE))
 for (const label of ['member-a', 'member-b', 'nonmember']) {
-  if (!SESSIONS[label]) throw new Error(`SESSIONS_FILE has no session for ${label}`)
+  if (!Array.isArray(POOLS[label]) || POOLS[label].length === 0) throw new Error(`SESSIONS_FILE has no sessions for ${label}`)
 }
+const SESSIONS = new Proxy(
+  {},
+  { get: (_target, label) => (POOLS[label] ? POOLS[label][(typeof __VU === 'number' ? __VU : 0) % POOLS[label].length] : undefined) },
+)
 
-const pages = WORKLOAD.pages
+// EXCLUDE_PATHS: pages another process is deliberately changing during this
+// run (publication under load), so their exact-content checks are not
+// mistaken for a regression.
+const EXCLUDED = new Set((__ENV.EXCLUDE_PATHS || '').split(',').map((path) => path.trim()).filter(Boolean))
+const pages = WORKLOAD.pages.filter((entry) => !EXCLUDED.has(entry.path))
 const free = pages.filter((entry) => entry.kind === 'article' && entry.access === 'free')
 const landings = pages.filter((entry) => entry.kind === 'landing')
 const searches = pages.filter((entry) => entry.kind === 'search')
-const gated = WORKLOAD.gated
+const gated = WORKLOAD.gated.filter((entry) => !EXCLUDED.has(entry.path))
 const gatedPages = pages.filter((entry) => entry.kind === 'article' && entry.access === 'member')
 
 function positive(name, fallback) {
@@ -68,11 +78,21 @@ const STAGES = (__ENV.STAGES || '')
     return { target: Number(target), duration }
   })
 
+// Writes and sign-ins are rare and belong to people, not to a crowd share:
+// scaled with the crowd, one synthetic account's bookmark writes passed the
+// 60/min per-account limit at 20 journeys/s and the limit refused them —
+// correctly. They run as their own fixed, low-rate scenarios instead.
+const WRITE_RATE = Number(__ENV.WRITE_RATE || 0.4)
+const SIGNIN_RATE = Number(__ENV.SIGNIN_RATE || 0.1)
+const RATE_DURATION = __ENV.DURATION || (STAGES.length ? STAGES.reduce((sum, stage) => sum + parseInt(stage.duration, 10) * (stage.duration.endsWith('m') ? 60 : 1), 0) + 's' : '60s')
+
 export const options = {
   scenarios: {
+    writes: { executor: 'constant-arrival-rate', rate: Math.max(1, Math.round(WRITE_RATE * 10)), timeUnit: '10s', duration: RATE_DURATION, preAllocatedVUs: 2, maxVUs: 10, exec: 'bookmarkWrite' },
+    signins: { executor: 'constant-arrival-rate', rate: Math.max(1, Math.round(SIGNIN_RATE * 10)), timeUnit: '10s', duration: RATE_DURATION, preAllocatedVUs: 2, maxVUs: 10, exec: 'signIn' },
     journeys: STAGES.length
-      ? { executor: 'ramping-arrival-rate', startRate: STAGES[0].target, timeUnit: '1s', stages: STAGES, preAllocatedVUs: Math.min(50, MAX_VUS), maxVUs: MAX_VUS }
-      : { executor: 'constant-arrival-rate', rate: RATE, timeUnit: '1s', duration: __ENV.DURATION || '60s', preAllocatedVUs: Math.min(50, MAX_VUS), maxVUs: MAX_VUS },
+      ? { executor: 'ramping-arrival-rate', startRate: STAGES[0].target, timeUnit: '1s', stages: STAGES, preAllocatedVUs: Math.min(Number(__ENV.PRE_VUS || 50), MAX_VUS), maxVUs: MAX_VUS }
+      : { executor: 'constant-arrival-rate', rate: RATE, timeUnit: '1s', duration: __ENV.DURATION || '60s', preAllocatedVUs: Math.min(Number(__ENV.PRE_VUS || 50), MAX_VUS), maxVUs: MAX_VUS },
   },
   thresholds: gates(),
 }
@@ -84,8 +104,6 @@ const JOURNEYS = [
   ['repeat-visit', 12],
   ['search', 8],
   ['saved-items', 8],
-  ['bookmark-write', 4],
-  ['sign-in', 2],
 ]
 const TOTAL = JOURNEYS.reduce((sum, [, weight]) => sum + weight, 0)
 
@@ -162,7 +180,11 @@ export default function () {
     return
   }
 
-  if (journey === 'bookmark-write') {
+}
+
+export function bookmarkWrite() {
+  const tags = { journey: 'bookmark-write' }
+  {
     // Add then remove a bookmark as the signed-in non-member: bookmarks need
     // a session, not a membership, and no other journey checks this reader's
     // exact set — a member's write would race the exact-refs checks and read
@@ -176,10 +198,13 @@ export default function () {
     const remove = http.del(`${BASE_URL}/api/account/bookmarks?targetType=${target.type}&targetId=${target.id}`, null, { headers, tags: writeTags })
     check(add, { 'bookmark add accepted or explicitly limited': (r) => r.status === 200 || r.status === 429 }, writeTags)
     check(remove, { 'bookmark remove accepted or explicitly limited': (r) => r.status === 200 || r.status === 429 }, writeTags)
-    return
   }
+}
 
-  if (journey === 'sign-in') {
+
+export function signIn() {
+  const tags = { journey: 'sign-in' }
+  {
     const response = http.post(
       `${BASE_URL}/api/visitor-auth/sign-in/email`,
       JSON.stringify({ email: WORKLOAD.identities.nonmember.email, password: __ENV.SYNTHETIC_PASSWORD || 'Readiness-Synthetic-2026!' }),
@@ -188,7 +213,9 @@ export default function () {
         tags: { kind: 'dynamic', name: 'sign-in', signed_in: 'false', ...tags },
       },
     )
-    const ok = check(response, { 'sign-in succeeds or is explicitly limited': (r) => r.status === 200 || r.status === 429 || r.status === 503 }, tags)
-    if (!ok) correctness.add(1, { class: 'wrong_content', name: 'sign-in' })
+    // A failed sign-in is an availability failure, not a wrong answer: during
+    // a Redis stall Better Auth cannot write the session and answers 500
+    // (surge L10). Counted by the check and http_req_failed, not as correctness.
+    check(response, { 'sign-in succeeds or is explicitly limited': (r) => r.status === 200 || r.status === 429 || r.status === 503 }, tags)
   }
 }

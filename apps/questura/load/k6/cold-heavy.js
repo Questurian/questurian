@@ -78,7 +78,8 @@ export const options = {
 
 export default function () {
   // A unique query string defeats any shared cache in front of the backend.
-  const path = `${pick(HEAVY_PATHS)}?cold=${__VU}-${__ITER}-${Date.now()}`
+  const base = pick(HEAVY_PATHS)
+  const path = `${base}${base.includes('?') ? '&' : '?'}cold=${__VU}-${__ITER}-${Date.now()}`
   const headers = __ENV.RENDER_TOKEN ? { 'x-questura-render-token': __ENV.RENDER_TOKEN } : {}
   const response = http.get(`${BASE_URL}${path}`, { headers, tags: { kind: 'dynamic', name: 'cold-heavy' } })
   if (response.status === 503 || response.status === 429) refused.add(1)

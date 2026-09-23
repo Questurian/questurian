@@ -54,8 +54,14 @@ function expectationFor(path) {
  * which is how the sandbox runs.
  */
 export function clientAddress() {
+  // A virtual user is not one person: it runs visit after visit. Each VU
+  // cycles through eight addresses so its visits are not all one household —
+  // with one address per VU, member-body reads crossed the 30/min
+  // per-address limit at 160 journeys/s (surge L10; recorded as a finding).
   const vu = typeof __VU === 'number' ? __VU : 0
-  return `198.18.${Math.floor(vu / 250) % 256}.${(vu % 250) + 1}`
+  const iteration = typeof __ITER === 'number' ? __ITER : 0
+  const slot = vu * 8 + (iteration % 8)
+  return `198.18.${Math.floor(slot / 250) % 256}.${(slot % 250) + 1}`
 }
 
 function baseHeaders(extra = {}) {
@@ -146,6 +152,9 @@ export function page(path, name = 'page', options = {}) {
 
   if (expected.cacheable === false) {
     checks[`${name}: is not stored`] = (r) => {
+      // No response at all (a timeout) has no headers to judge; the status
+      // check has already failed it.
+      if (r.status === 0) return true
       const ok = /no-store/i.test(r.headers['Cache-Control'] || '')
       if (!ok) fault('cache_policy', { name })
       return ok

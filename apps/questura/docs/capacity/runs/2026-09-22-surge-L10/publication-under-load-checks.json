@@ -1,0 +1,166 @@
+{
+  "kind": "surge-publication-checks",
+  "takenAt": "2026-09-23T03:59:54.782Z",
+  "source": {
+    "sha": "9fb7cd1bdf6cca945f41fe2ab82ae975f4a07c5b",
+    "dirty": true,
+    "diffFingerprint": "845de991d599f904"
+  },
+  "dataset": "launch-v1",
+  "deadlines": {
+    "pageMs": 45000,
+    "afterFailedDeliveryMs": 90000,
+    "pollMs": 500
+  },
+  "result": {
+    "total": 9,
+    "passed": 9
+  },
+  "scenarios": [
+    {
+      "name": "body revision R1 → R2",
+      "ok": true,
+      "detail": "converged on 1 path(s)",
+      "convergedMs": 587,
+      "observations": 2,
+      "timeline": [
+        {
+          "at": 4,
+          "path": "/zz-launch/river-bend/neighbourhoods/launch-article-10",
+          "status": 200,
+          "state": "old"
+        },
+        {
+          "at": 587,
+          "path": "/zz-launch/river-bend/neighbourhoods/launch-article-10",
+          "status": 200,
+          "state": "new"
+        }
+      ]
+    },
+    {
+      "name": "rename reaches the article page and its city page",
+      "ok": true,
+      "detail": "converged on 2 path(s)",
+      "convergedMs": 72,
+      "observations": 2,
+      "timeline": [
+        {
+          "at": 39,
+          "path": "/zz-launch/harbor/culture/launch-article-08",
+          "status": 200,
+          "state": "new"
+        },
+        {
+          "at": 72,
+          "path": "/zz-launch/harbor",
+          "status": 200,
+          "state": "new"
+        }
+      ]
+    },
+    {
+      "name": "rename reaches search (asynchronous)",
+      "ok": true,
+      "detail": "new title searchable; indexed title is the new one",
+      "convergedMs": 2072,
+      "observations": 0,
+      "timeline": []
+    },
+    {
+      "name": "free → members-only: converges to the paywall, member text never public",
+      "ok": true,
+      "detail": "converged on 1 path(s)",
+      "convergedMs": 49,
+      "observations": 1,
+      "timeline": [
+        {
+          "at": 49,
+          "path": "/zz-launch/harbor/food-and-drink/launch-article-12",
+          "status": 200,
+          "state": "gated"
+        }
+      ]
+    },
+    {
+      "name": "unpublish → 404",
+      "ok": true,
+      "detail": "converged on 1 path(s)",
+      "convergedMs": 34,
+      "observations": 1,
+      "timeline": [
+        {
+          "at": 34,
+          "path": "/zz-launch/harbor/neighbourhoods/launch-article-16",
+          "status": 404,
+          "state": "gone"
+        }
+      ]
+    },
+    {
+      "name": "republish → 200 (a cached 404 does not outlive it)",
+      "ok": true,
+      "detail": "converged on 1 path(s)",
+      "convergedMs": 553,
+      "observations": 2,
+      "timeline": [
+        {
+          "at": 2,
+          "path": "/zz-launch/harbor/neighbourhoods/launch-article-16",
+          "status": 404,
+          "state": "gone"
+        },
+        {
+          "at": 553,
+          "path": "/zz-launch/harbor/neighbourhoods/launch-article-16",
+          "status": 200,
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "name": "slug change: new path serves, old path redirects to it",
+      "ok": true,
+      "detail": "converged on 2 path(s)",
+      "convergedMs": 64,
+      "observations": 2,
+      "timeline": [
+        {
+          "at": 32,
+          "path": "/zz-launch/harbor/culture/launch-article-20-moved",
+          "status": 200,
+          "state": "serving"
+        },
+        {
+          "at": 64,
+          "path": "/zz-launch/harbor/culture/launch-article-20",
+          "status": 308,
+          "state": "redirects"
+        }
+      ]
+    },
+    {
+      "name": "deletion → 404",
+      "ok": true,
+      "detail": "converged on 1 path(s)",
+      "convergedMs": 34,
+      "observations": 1,
+      "timeline": [
+        {
+          "at": 34,
+          "path": "/zz-launch/harbor/food-and-drink/launch-article-24",
+          "status": 404,
+          "state": "gone"
+        }
+      ]
+    },
+    {
+      "name": "the refresh queue drains: nothing owed, nothing failed",
+      "ok": true,
+      "detail": "0 owed, 0 failed",
+      "convergedMs": null,
+      "observations": 0,
+      "timeline": []
+    }
+  ]
+}

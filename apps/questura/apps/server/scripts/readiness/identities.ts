@@ -102,3 +102,30 @@ export function redact(cookie: string | undefined): string {
   const [name] = cookie.split('=')
   return `${name}=<redacted ${cookie.length - (name?.length ?? 0) - 1} chars>`
 }
+
+/**
+ * Many sessions per signed-in identity, each signed in from its own
+ * synthetic address, so a load run is many readers rather than one reader
+ * whose cookie every virtual user shares. Sharing one session made the
+ * per-session guard (120 requests/min) throttle the harness, correctly — one
+ * real reader does not make hundreds of private requests a minute.
+ */
+export async function signInMany(
+  manifest: Pick<LaunchManifest, 'identities'>,
+  options: { backend: string; origin: string; redisUrl: string; perIdentity: number },
+): Promise<Record<string, string[]>> {
+  const sessions: Record<string, string[]> = {}
+  let address = 0
+  for (const identity of manifest.identities) {
+    const count = identity.label === 'expired' ? 1 : options.perIdentity
+    sessions[identity.label] = []
+    for (let index = 0; index < count; index += 1) {
+      address += 1
+      const client = `198.51.100.${(address % 250) + 1}`
+      const cookie = await signIn(options.backend, options.origin, identity.email, client)
+      if (identity.label === 'expired') await expireSession(options.redisUrl, cookie)
+      sessions[identity.label]!.push(cookie)
+    }
+  }
+  return sessions
+}
