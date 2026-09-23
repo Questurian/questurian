@@ -19,9 +19,13 @@ export default function Logo({
 
   return (
     <div className={wrapClass}>
-      <h1
+      {/* The wordmark is a link home, not a heading. It renders in the desktop
+          navbar, the mobile navbar and the footer at once, so an <h1> here put
+          three "Questurian" headings on every page ahead of the real one. A
+          page gets its single <h1> from its own content. */}
+      <span
         className={`
-          font-display text-[#25292d] uppercase font-semibold leading-none m-0 p-0
+          block font-display text-[#25292d] uppercase font-semibold leading-none m-0 p-0
           ${isInline ? "text-left" : ""}
           ${className}
         `}
@@ -40,7 +44,7 @@ export default function Logo({
         }
       >
         Questurian
-      </h1>
+      </span>
       {subtitle ? (
         <p
           className={`
