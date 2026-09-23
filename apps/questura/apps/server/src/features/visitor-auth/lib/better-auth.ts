@@ -12,6 +12,7 @@ import { sendPasswordResetLinkEmail, sendVisitorEmailVerificationLinkEmail } fro
 import { syncStripeCustomerEmail } from '@/payments/lib/customer-linkage'
 import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { normalizeEmail } from '@/shared/lib/normalize-email'
+import { VISITOR_AUTH_CLIENT_IP_HEADER } from './client-identity'
 import { redisSecondaryStorage } from './redis-secondary-storage'
 import { getVisitorPasswordError } from './visitor-password-guard'
 import { ensureVisitorProfileForAuthUser, splitDisplayName, updateVisitorProfileByAuthUserId } from './visitor-profile'
@@ -277,13 +278,12 @@ export const visitorAuth = betterAuth({
     cookiePrefix: 'questura_visitor',
     useSecureCookies: APP_CONFIG.isProduction,
     ipAddress: {
-      // One header, chosen by `TRUSTED_PROXY`, matching `getClientIp`. Better
-      // Auth takes the first header present in this list, so listing several
-      // would let a caller pick which one identifies them. `x-forwarded-for`
-      // remains only as the development fallback, where nothing fronts the app.
-      ipAddressHeaders: APP_CONFIG.trustedProxy.header
-        ? [APP_CONFIG.trustedProxy.header]
-        : ['x-forwarded-for', 'x-real-ip'],
+      // One header, written by the visitor-auth route from `getClientIp` and
+      // overwritten on every request, so Better Auth and our own limiters see
+      // one caller the same way. Reading the proxy header directly let a
+      // request without it skip Better Auth's limiter in production
+      // (`client-identity.ts`).
+      ipAddressHeaders: [VISITOR_AUTH_CLIENT_IP_HEADER],
       disableIpTracking: false,
     },
   },

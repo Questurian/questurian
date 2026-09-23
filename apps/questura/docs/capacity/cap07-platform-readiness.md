@@ -39,13 +39,14 @@ What this choice changes. Each item has to be settled at provisioning:
    It lives in process memory, and Workers isolates are short-lived and many,
    so a backend 503 during revalidation is more likely to reach a reader.
    Before launch, decide whether to back it with KV/R2 or accept that.
-3. **`TRUSTED_PROXY` has no `railway` entry.** Railway's forwarded-IP
-   behaviour is only described on community forums, not in official docs
-   (the `X-Real-IP` value reportedly becomes the CDN edge when its CDN is on).
-   Either put Cloudflare in front of the API host (`TRUSTED_PROXY=cloudflare`)
-   and make the `*.up.railway.app` origin unreachable, or confirm Railway's
-   header from official docs and add it the way `trusted-proxy.ts` requires.
-   Production refuses to boot until one of these is done.
+3. **`TRUSTED_PROXY` has no `railway` entry.** Railway's official docs name
+   `X-Real-IP` as the client address (*Specs & limits*), but do not say a
+   caller-sent one is overwritten. Behind Cloudflare it would be Cloudflare's
+   address anyway. Hiding `*.up.railway.app` is not enough: a custom domain on
+   Railway is reachable at Railway's edge by SNI, bypassing Cloudflare. Options
+   and a recommendation (Cloudflare in front, origin locked by a shared-secret
+   header) are in **ADR-0016**, awaiting the owner's pick. Production refuses
+   to boot until `TRUSTED_PROXY` is set.
 4. **Neon:** turn off scale-to-zero on the production branch. Railway is
    long-lived, so use the **direct (unpooled) endpoint**, the "direct
    topology" in §2. Set `DATABASE_MAX_CONNECTIONS` from `SHOW max_connections`

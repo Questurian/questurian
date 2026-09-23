@@ -185,6 +185,8 @@ describe('shared rate-limit counter', () => {
       expect(getClientIp(new Headers({ 'x-forwarded-for': '203.0.113.77' }))).toBe('unknown')
     })
 
+    // A list is not an address. It used to be kept whole, which made every
+    // distinct list its own bucket; now it is the shared unidentified bucket.
     it('does not split the trusted header, so a comma cannot smuggle an identity', async () => {
       const { getClientIp } = await loadCounter({
         NODE_ENV: 'development',
@@ -192,7 +194,18 @@ describe('shared rate-limit counter', () => {
       })
 
       expect(getClientIp(new Headers({ 'cf-connecting-ip': '203.0.113.77, 192.0.2.1' }))).toBe(
-        '203.0.113.77, 192.0.2.1'
+        'unknown'
+      )
+    })
+
+    it('counts an IPv6 caller per /64', async () => {
+      const { getClientIp } = await loadCounter({
+        NODE_ENV: 'development',
+        TRUSTED_PROXY: 'cloudflare',
+      })
+
+      expect(getClientIp(new Headers({ 'cf-connecting-ip': '2001:db8:5:6::abcd' }))).toBe(
+        '2001:db8:5:6::'
       )
     })
   })

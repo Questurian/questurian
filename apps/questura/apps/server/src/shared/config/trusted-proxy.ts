@@ -34,7 +34,7 @@
  * The proxy must be the only route in. These headers say nothing about a caller
  * who reaches the origin directly, so the origin must not be publicly
  * reachable — today it listens on localhost and only `cloudflared` can reach
- * it.
+ * it. Railway gives no such guarantee: `docs/adr/0016-api-origin-identity-on-railway.md`.
  */
 
 export const TRUSTED_PROXY_HEADERS = {

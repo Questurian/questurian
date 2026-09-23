@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { APP_CONFIG } from '@/shared/config'
 import { redisSecondaryStorage } from '@/features/visitor-auth/lib/redis-secondary-storage'
 import { CircuitBreaker } from './circuit-breaker'
+import { normalizeClientAddress } from './client-address'
 
 /**
  * The fixed-window counter shared by every rate limiter in the app.
@@ -137,6 +138,9 @@ export function resetLocalCounters(): void {
   nextLocalCleanupAt = 0
 }
 
+/** The one bucket every caller shares when no address can be read. */
+export const UNIDENTIFIED_CLIENT = 'unknown'
+
 /**
  * A caller's IP, read from the single header the configured proxy overwrites.
  *
@@ -146,6 +150,11 @@ export function resetLocalCounters(): void {
  * limited. Every limiter in the app was bypassable by rotating that header.
  * `trusted-proxy.ts` explains why the replacement is one configured header and
  * not a search across several.
+ *
+ * The value is then normalized (`client-address.ts`): IPv6 counts per /64,
+ * one address has one spelling, and a value that is not an address counts as
+ * no address. Without that, one IPv6 /64 or a caller at the origin writing
+ * junk into the header got a fresh bucket per request.
  *
  * The `X-Forwarded-For` path survives for development only, where nothing sits
  * in front to spoof past; production cannot boot without `TRUSTED_PROXY`.
@@ -158,10 +167,15 @@ export function getClientIp(headers: Headers): string {
 
   if (trustedHeader) {
     // Deliberately not split on commas: a trusted header carries one address,
-    // and splitting is the habit that created the bypass.
-    return headers.get(trustedHeader)?.trim() || 'unknown'
+    // and splitting is the habit that created the bypass. A list here is not
+    // an address, so it lands in the shared bucket.
+    return normalizeClientAddress(headers.get(trustedHeader) ?? '') ?? UNIDENTIFIED_CLIENT
   }
 
-  const forwardedFor = headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-  return forwardedFor || headers.get('x-real-ip')?.trim() || 'unknown'
+  const forwardedFor = headers.get('x-forwarded-for')?.split(',')[0] ?? ''
+  return (
+    normalizeClientAddress(forwardedFor) ??
+    normalizeClientAddress(headers.get('x-real-ip') ?? '') ??
+    UNIDENTIFIED_CLIENT
+  )
 }
