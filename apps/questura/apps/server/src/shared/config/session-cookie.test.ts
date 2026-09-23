@@ -103,7 +103,19 @@ describe('session cookie domain validation', () => {
     expect(problem).not.toContain('cms.questurian.com')
   })
 
-  it.each(['vercel.app', 'pages.dev', 'trycloudflare.com', 'co.uk'])(
+  // Every host the platform plan (cap07 §1a) can put a service on, plus the
+  // tunnel soft-prod runs behind. Each is an entry on the Public Suffix List.
+  it.each([
+    'up.railway.app',
+    'workers.dev',
+    'pages.dev',
+    'r2.dev',
+    'vercel.app',
+    'fly.dev',
+    'onrender.com',
+    'trycloudflare.com',
+    'co.uk',
+  ])(
     'rejects %s, a public suffix browsers refuse to store',
     (domain) => {
       expect(validateCookieDomain(domain, [`app.${domain}`])).toContain('public suffix')
@@ -167,7 +179,22 @@ describe('registrableDomain', () => {
     ['WWW.Questurian.com.', 'questurian.com'],
     ['questura-api.vercel.app', 'questura-api.vercel.app'],
     ['a.b.example.co.uk', 'example.co.uk'],
+    // Three-label suffix: judged under `up.railway.app`, not `railway.app`.
+    ['questura-api.up.railway.app', 'questura-api.up.railway.app'],
+    ['a.questura-api.up.railway.app', 'questura-api.up.railway.app'],
+    ['questura.alan.workers.dev', 'alan.workers.dev'],
+    // A bare suffix owns no site of its own; it is its own answer.
+    ['up.railway.app', 'up.railway.app'],
   ])('%s → %s', (host, expected) => {
     expect(registrableDomain(host)).toBe(expected)
+  })
+
+  // Railway's generated hosts are separate tenants. Two services there are
+  // cross-site to a browser, so a Lax cookie set by one never rides to the
+  // other — and the boot check must say so rather than wave them through.
+  it('keeps two Railway services on separate sites', () => {
+    expect(registrableDomain('questura-web.up.railway.app')).not.toBe(
+      registrableDomain('questura-api.up.railway.app')
+    )
   })
 })
