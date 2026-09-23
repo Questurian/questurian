@@ -49,6 +49,8 @@ type Listener = (generation: number) => void
 export type IdentityStoreOptions = {
   fetcher: Fetcher
   now?: () => number
+  /** Told about every answer that is published (not failures, not superseded lookups). */
+  onAnswer?: (value: IdentityResponse) => void
 }
 
 export function identityFromResponse(response: IdentityResponse): Identity {
@@ -79,12 +81,14 @@ export class IdentityStore {
   private readonly listeners = new Set<Listener>()
   private readonly fetcher: Fetcher
   private readonly now: () => number
+  private readonly onAnswer: ((value: IdentityResponse) => void) | undefined
   /** Requests actually sent, for tests and the request-count capture. */
   requests = 0
 
   constructor(options: IdentityStoreOptions) {
     this.fetcher = options.fetcher
     this.now = options.now ?? (() => Date.now())
+    this.onAnswer = options.onAnswer
   }
 
   get currentGeneration(): number {
@@ -110,7 +114,10 @@ export class IdentityStore {
       this.requests += 1
       // A failure is never stored: only an answer is.
       const promise = this.fetcher(undefined).then((value) => {
-        if (this.generation === generation) this.last = { generation, at: this.now(), value }
+        if (this.generation === generation) {
+          this.last = { generation, at: this.now(), value }
+          this.onAnswer?.(value)
+        }
         return value
       })
       const started = { generation, promise }

@@ -45,9 +45,14 @@ export default function DesktopNavbar() {
             <Logo />
           </Link>
           <div className="flex items-center justify-self-end gap-4">
-            {/* Public purchase link must not wait for the session request. */}
+            {/* Public purchase link must not wait for the session request.
+                While pending, the pre-paint hint hides it for members. */}
             {(loading || shouldShowSubscribe) ? (
-              <Link href="/join" className="inline-flex items-center">
+              <Link
+                href="/join"
+                className="nav-subscribe inline-flex items-center"
+                data-pending={loading || undefined}
+              >
                 <SubscribeButton />
               </Link>
             ) : null}

@@ -46,10 +46,25 @@ test('the slot reserves the signed-in menu width at both breakpoints', () => {
   assert.match(source, /480:min-w-\[68px\]/, 'AuthSlot dropped its 480 width reservation')
 })
 
-test('the slot still renders nothing until the session request answers', () => {
+test('while loading, the slot shows a pending Sign in the hint can hide', () => {
   const source = read('./shared/components/AuthSlot.tsx')
 
-  // Guessing a control before /api/me answers would show a signed-out button
-  // to a signed-in reader, which is worse than an empty box for one beat.
-  assert.match(source, /loading \? null/, 'AuthSlot now guesses a control while loading')
+  // An empty slot made Sign in lag Subscribe by a whole /api/me round trip.
+  // Now it paints with the page; the pre-paint hint (identityHint.ts) hides
+  // it for a reader this browser last saw signed in.
+  assert.doesNotMatch(source, /loading \? null/, 'AuthSlot renders nothing while loading again')
+  assert.match(source, /<SignInButton[^>]*nav-signin[^>]*pending/, 'AuthSlot dropped the pending Sign in')
+})
+
+test('both navbars mark Subscribe pending while loading, and the CSS hides by hint', () => {
+  for (const [name, path] of NAVBARS) {
+    const source = read(path)
+    assert.match(source, /nav-subscribe/, `${name} dropped the nav-subscribe class`)
+    assert.match(source, /data-pending=\{loading \|\| undefined\}/, `${name} no longer marks Subscribe pending`)
+  }
+
+  const css = read('../../app/styles/global/foundations.css')
+  assert.match(css, /html\[data-identity="member"\] \.nav-subscribe\[data-pending\]/)
+  assert.match(css, /html\[data-identity="user"\] \.nav-signin\[data-pending\]/)
+  assert.match(css, /visibility: hidden/, 'hint must hide with visibility so the slot keeps its width')
 })
