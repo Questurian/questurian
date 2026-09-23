@@ -1,0 +1,359 @@
+<title>Launch Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F5F0E8; --paper:#EFE9DE; --ink:#1F1B16; --muted:#6A6258; --rule:#D9CFBF;
+  --accent:#3B5BDB; --accent-soft:#E3E7F7; --ok:#2E6B45; --ok-soft:#E1EDE3;
+  --warn:#9A5A00; --warn-soft:#F4E6CF; --bad:#A3322A; --bad-soft:#F3DEDA; --code:#E6DECF;
+  --display:"Playfair Display",Georgia,"Times New Roman",serif;
+  --body:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --accent-soft:#262C44; --ok:#7CC39A; --ok-soft:#1F2E25;
+  --warn:#E3AE62; --warn-soft:#33281A; --bad:#EE8C80; --bad-soft:#3A201D; --code:#2C2822;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --accent-soft:#262C44; --ok:#7CC39A; --ok-soft:#1F2E25;
+  --warn:#E3AE62; --warn-soft:#33281A; --bad:#EE8C80; --bad-soft:#3A201D; --code:#2C2822;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.6 var(--body);margin:0}
+.wrap{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:40px 80px}
+h1{font:600 2.2rem/1.12 var(--display);margin:0 0 10px;text-wrap:balance}
+h2{font:600 1.35rem/1.25 var(--display);margin:0;text-wrap:balance}
+h3{font:600 1rem/1.35 var(--body);margin:0}
+p{margin:0}
+ul,ol{margin:0;padding-left:20px;display:grid;gap:6px}
+.lede{color:var(--muted);max-width:64ch}
+code{font:500 .82rem/1.4 var(--mono);background:var(--code);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+pre{font:400 .82rem/1.55 var(--mono);background:var(--code);padding:10px 12px;border-radius:4px;overflow-x:auto;margin:0}
+pre code{background:none;padding:0}
+a{color:var(--accent)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.label{font:600 .72rem/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:10px}
+.label::after{content:"";flex:1;height:1px;background:var(--rule)}
+section{display:grid;gap:14px;margin-top:48px}
+.quote{border-left:3px solid var(--accent);padding:4px 0 4px 14px;color:var(--ink);max-width:64ch;font-style:italic}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:600 .72rem/1 var(--body);padding:5px 8px;border-radius:999px;background:var(--paper);color:var(--muted);white-space:nowrap}
+.p0{background:var(--bad-soft);color:var(--bad)}
+.p1{background:var(--warn-soft);color:var(--warn)}
+.p2{background:var(--paper);color:var(--muted)}
+.now{background:var(--ok-soft);color:var(--ok)}
+.day{background:var(--accent-soft);color:var(--accent)}
+.stop{background:var(--warn-soft);border-left:3px solid var(--warn);padding:12px 14px;border-radius:0 4px 4px 0;display:grid;gap:8px}
+.stop strong{color:var(--warn)}
+.finding{display:grid;gap:4px;padding:12px 0;border-top:1px solid var(--rule)}
+.finding:last-child{border-bottom:1px solid var(--rule)}
+.finding .where{font:500 .78rem var(--mono);color:var(--muted)}
+.tier{display:grid;gap:0}
+.test{display:grid;gap:6px;padding:14px 0;border-top:1px solid var(--rule)}
+.test:last-child{border-bottom:1px solid var(--rule)}
+.test .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 10px}
+.test .id{font:600 .8rem var(--mono);color:var(--accent);min-width:2.4em}
+.test .why{color:var(--muted);font-size:.9rem;max-width:70ch}
+.test .how{font-size:.9rem;max-width:70ch}
+.test .how b{font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+.tablewrap{overflow-x:auto}
+th,td{text-align:left;padding:8px 10px 8px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font:600 .72rem var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+td:first-child{white-space:nowrap}
+.foot{margin-top:44px;color:var(--muted);font-size:.85rem}
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:12px">
+    <h1>Launch test harness: payments and auth first</h1>
+    <p class="lede">Handoff, 2026-09-23. The next agent's job is to build the tests <em>before</em> launch, so that launch day is running them, not writing them. Payments and sign-in come first. While writing them, look for real bugs. Finding one is a success, not a detour.</p>
+    <div class="chips">
+      <span class="chip p0">P0: before any real customer</span>
+      <span class="chip p1">P1: before launch day</span>
+      <span class="chip p2">P2: soon after</span>
+      <span class="chip now">runs locally now</span>
+      <span class="chip day">runs on launch day</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="label">What the owner wants</div>
+    <p class="quote">Deploy straight to the new platform: frontend on Cloudflare, backend on Railway. Before that, set up every test we can, and write the launch-day tests ahead of time. More tests is better. Be creative with coverage, go past industry standard, be a little paranoid. It has to work the first time. Payments matter most, then auth and login. The tests may turn up critical bugs.</p>
+    <p>The owner has plenty of token budget for this. Depth is wanted.</p>
+    <p class="lede">Target stack, already decided: Cloudflare Workers through OpenNext for the client, Railway for the server, Neon Postgres, Railway Redis in the same project. Details and open decisions are in <code>apps/questura/docs/capacity/cap07-platform-readiness.md</code> §1a. Configuration still to redo on the new platform is in <code>apps/questura/docs/serverless-launch-checklist.md</code>. Don't re-ask these or plan for Vercel.</p>
+  </section>
+
+  <section>
+    <div class="label">Rules that bind this work</div>
+    <div class="stop">
+      <p><strong>Live Stripe is real money.</strong> Test mode proves nothing about live. <code>sk_test</code> is only for capturing fixture JSON that gets committed, and you must say so when you use it. Never use the Mac's <code>stripe</code> CLI key. Live reads go through <code>apps/questura/scripts/stripe-live</code>. A real purchase happens only when the owner says yes to that specific one. See <code>AGENTS.md</code>, which overrides the bundled <code>stripe-*</code> skills.</p>
+      <p><strong>New dependencies need the owner's approval.</strong> Playwright, fast-check and Stryker are not installed. Ask before adding them (AGENTS.md: downloading new code).</p>
+      <p><strong>Don't deploy, resume the laptop, or change live config.</strong> The owner decides those.</p>
+      <p><strong>Workflow:</strong> one branch and one PR per piece of work. Wait for green CI, then squash-merge it yourself (owner's standing preference). Use the caveman skill (AGENTS.md). Payload schema changes follow the migration steps in AGENTS.md.</p>
+      <p><strong>Databases:</strong> port 6379 on the Linux laptop is the live Redis. Never point local at it or flush it. The local Redis is 6380 (<code>infra/local/compose.yml</code>). In the last session, the tool's permission checker blocked both a <code>pg_dump</code> of the live DB and reads of the scratch DB. Don't work around that; ask the owner.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Already in place</div>
+    <h2>Build on these, don't rebuild them</h2>
+    <ul>
+      <li><code>apps/questura/scripts/auth-smoke.sh</code>: 56 signed-in checks against the local server. It covers sign-up, two sessions, a Redis flush, password-change revocation, the 429 limit, sign-out, and the five payment routes for anonymous, non-member, foreign-origin, signed-out and expired callers. It refuses unless email and Stripe keys are empty. Documented in <code>docs/local-vs-live.md</code>. PRs #652, #653.</li>
+      <li><code>apps/server/src/app/api/payments/fresh-session.test.ts</code>: every payment route skips the cookie cache.</li>
+      <li><code>apps/server/src/features/payments/lifecycle-simulation.test.ts</code>: about 36 end-to-end webhook scenarios, plus F1/F2, which replay the captured Stripe payloads through the real route.</li>
+      <li>Readiness sandbox, <code>apps/server/scripts/readiness/</code>: disposable Postgres and Redis, production builds, real sign-ins. <code>route-checks.ts</code> has the <code>/api/me</code> identity matrix, <code>stripe-stub.ts</code> is a loopback Stripe that knows two prices, <code>restore-rehearsal.ts</code> rehearses a restore, and <code>adapter-smoke.ts</code> tests the Cloudflare build. Plan: <code>docs/capacity/local-readiness.md</code>.</li>
+      <li>Load and capacity proof: <code>load/k6/</code> and <code>docs/capacity/cap08-proof-matrix.md</code>, rows 1–6. That covers capacity, not correctness. Don't redo it here.</li>
+      <li>Human live checks: <code>apps/questura/live-checks/</code> (<code>release.html</code>, <code>visitor-auth.html</code>, <code>payments.html</code>). Those are for the laptop window. The launch-day suite below is the platform's version.</li>
+    </ul>
+    <p class="lede">What's missing: no browser end-to-end tests at all. The readiness route checks never touch the payment routes. Webhook signature checking has only ever been tested with a mock. No property-based tests or mutation tests. And nothing yet is written against Cloudflare, Railway or Neon specifically.</p>
+  </section>
+
+  <section>
+    <div class="label">Start here</div>
+    <h2>Things already spotted, not yet fixed</h2>
+    <div>
+      <div class="finding">
+        <div class="chips"><span class="chip p0">P0</span></div>
+        <h3><code>up.railway.app</code> is missing from the shared-suffix list</h3>
+        <p class="where">apps/server/src/shared/config/session-cookie.ts — SHARED_PUBLIC_SUFFIXES</p>
+        <p>The list has <code>pages.dev</code>, <code>workers.dev</code> and <code>vercel.app</code>, but not the chosen backend host. A cookie domain or a same-site check involving a Railway default host would be judged by the wrong rule. Add it with a test (cases in <code>session-cookie.test.ts</code>). Check the rest of the list against the Public Suffix List for every host this project might use.</p>
+      </div>
+      <div class="finding">
+        <div class="chips"><span class="chip p0">P0</span></div>
+        <h3>Railway origin versus the trusted proxy header</h3>
+        <p class="where">apps/server/src/shared/config/trusted-proxy.ts · cap07 §1a item 3</p>
+        <p>With <code>TRUSTED_PROXY=cloudflare</code>, anyone who reaches <code>*.up.railway.app</code> directly can write <code>CF-Connecting-IP</code> themselves and get a fresh rate-limit bucket on every request. That's the X-Forwarded-For bypass already verified on live once, back again. You need both a test that proves the origin is unreachable or ignores the header, and a platform decision. Railway has no entry in <code>trusted-proxy.ts</code>.</p>
+      </div>
+      <div class="finding">
+        <div class="chips"><span class="chip p1">P1</span></div>
+        <h3>Webhook signature checking has never run for real</h3>
+        <p class="where">stripe-webhook.route.test.ts mocks constructEvent; lifecycle-simulation replaces it</p>
+        <p>Nothing proves the route hands Stripe the exact raw bytes it received. If a framework or adapter change re-serializes the body, every live webhook fails while every test passes. See test A1.</p>
+      </div>
+      <div class="finding">
+        <div class="chips"><span class="chip p2">P2</span></div>
+        <h3>No <code>livemode</code> check on incoming events</h3>
+        <p>Signatures already separate the modes, since each endpoint has its own secret. Rejecting an event whose <code>livemode</code> disagrees with the key's mode is still a cheap second lock. Decide, test, record.</p>
+      </div>
+      <div class="finding">
+        <div class="chips"><span class="chip p2">P2</span></div>
+        <h3>A revoked session still reads paid content for up to 5 minutes</h3>
+        <p>That's the cookie cache from #650, by design. <code>auth-smoke.sh</code> shows <code>/api/me</code> still says signed in after sign-out or expiry. The member article body uses the same cache. Confirm the owner accepts this for paid content. If they don't, route the article body through <code>freshSession</code> and measure the cost.</p>
+      </div>
+      <div class="finding">
+        <div class="chips"><span class="chip p2">P2</span></div>
+        <h3>The server and client principal types have drifted</h3>
+        <p>The client's <code>VisitorPrincipal.membership.graceUntil</code> exists at runtime but isn't in the server type (<code>current-principal.ts</code>). See test D3.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Tier A · Payments</div>
+    <h2>Money paths</h2>
+    <div class="tier">
+      <div class="test"><div class="head"><span class="id">A1</span><h3>Real webhook signatures through the real route</h3><span class="chip p0">P0</span><span class="chip now">local</span></div>
+        <p class="why">The mocks can't catch a body that was changed before verification. That failure is silent and total.</p>
+        <p class="how"><b>How:</b> sign payloads offline with <code>stripe.webhooks.generateTestHeaderString</code> (no network) and a test secret. Check that a valid signature gets 200. Check that a wrong secret, a flipped body byte, a changed whitespace, an old timestamp (past the tolerance), a missing header and a header with several <code>v1</code> values get refused correctly. Then run the same tests against the OpenNext and Railway builds, not only <code>next dev</code>.</p></div>
+      <div class="test"><div class="head"><span class="id">A2</span><h3>Webhook ordering and duplicates against a real Postgres</h3><span class="chip p0">P0</span><span class="chip now">readiness DB</span></div>
+        <p class="why">The fakes in <code>lifecycle-simulation</code> model locks and uniqueness. Real Postgres decides whether they actually hold.</p>
+        <p class="how"><b>How:</b> a <code>*.integration.test.ts</code> in the readiness harness. Deliver the same event twice concurrently, deliver <code>deleted</code> before <code>updated</code>, and send an event for an unknown customer. Run two customers in parallel and prove the advisory lock separates them but not across customers. Pass: exactly one email, one row, and the right final entitlement.</p></div>
+      <div class="test"><div class="head"><span class="id">A3</span><h3>A captured payload for every handled event</h3><span class="chip p1">P1</span><span class="chip now">local</span></div>
+        <p class="why">Only the subscription and invoice lifecycle has real captured payloads. Refunds, disputes and <code>checkout.session.completed</code> run on payloads we typed ourselves.</p>
+        <p class="how"><b>How:</b> list which events in <code>handled-events.ts</code> have a fixture. Capture the missing ones in test mode as committed fixtures. This is the one allowed use of <code>sk_test</code>; say so in the PR. Replay each through the route, the way F1/F2 do.</p></div>
+      <div class="test"><div class="head"><span class="id">A4</span><h3>Property tests for entitlement</h3><span class="chip p1">P1</span><span class="chip now">local</span></div>
+        <p class="why">Hand-written cases cover the states someone thought of. Random combinations find the ones nobody did.</p>
+        <p class="how"><b>How:</b> generate random status × period dates × cancel flag × grace × revocation × clock position, fed to <code>deriveSubscriptionState</code> and <code>deriveVisitorMembership</code>. Invariants to hold:</p>
+        <ul>
+          <li>never entitled on <code>incomplete</code>, <code>incomplete_expired</code>, or canceled-and-unpaid;</li>
+          <li>never entitled past the paid date plus grace;</li>
+          <li>a refund revocation always wins;</li>
+          <li>entitlement never lands exactly on a boundary.</li>
+        </ul>
+        <p class="how">fast-check needs approval. Without it, a seeded random loop still works.</p></div>
+      <div class="test"><div class="head"><span class="id">A5</span><h3>Checkout guardrails, attacked</h3><span class="chip p0">P0</span><span class="chip now">local</span></div>
+        <p class="how">A table of hostile inputs:</p>
+        <ul>
+          <li><code>returnTo</code>: <code>//evil.com</code>, <code>/\evil.com</code>, <code>%2F%2F</code>, <code>javascript:</code>, look-alike Unicode slashes, very long values, CRLF.</li>
+          <li><code>plan</code>: unknown, array, object.</li>
+          <li><code>referralId</code>: <code>@</code>, newlines, 101 characters.</li>
+          <li>A double click must produce one Checkout Session.</li>
+          <li>A second live subscription must be refused.</li>
+          <li>A price with the wrong interval, currency or amount must be refused. At launch the catalog price replaces the $0.50 laptop price, so test both.</li>
+        </ul>
+        <p class="how">Use the readiness Stripe stub, extended to answer customers and checkout.</p></div>
+      <div class="test"><div class="head"><span class="id">A6</span><h3>Cross-user access and CSRF on the five routes</h3><span class="chip p0">P0</span><span class="chip now">local</span></div>
+        <p class="how">Signed in as A, send <code>subscriptionId</code> / <code>customerId</code> for B in the body and query of every route. They must be ignored.</p>
+        <p class="how">POST attempts that must fail:</p>
+        <ul>
+          <li>a cookie with no <code>Origin</code>;</li>
+          <li><code>Origin: null</code>;</li>
+          <li><code>Content-Type: text/plain</code> (a "simple" request);</li>
+          <li>an origin that shares only a suffix, like <code>www.questurian.com.evil.io</code>.</li>
+        </ul>
+        <p class="how">Extend <code>auth-smoke.sh</code> or <code>route-checks.ts</code>.</p></div>
+      <div class="test"><div class="head"><span class="id">A7</span><h3>Money paths when things fail</h3><span class="chip p1">P1</span><span class="chip now">readiness</span></div>
+        <p class="how">Point the Stripe stub at a hang (no answer), a 500, and a slow 7-second reply.</p>
+        <ul>
+          <li>Routes answer within the 8-second Stripe budget, with no second customer or session.</li>
+          <li>With Redis down, payments fail closed and public reads stay up (cap07 §6.3).</li>
+          <li>With the DB down: a clean 503.</li>
+          <li>A pooled <code>DATABASE_URI</code> with no unpooled one refuses to boot.</li>
+        </ul></div>
+      <div class="test"><div class="head"><span class="id">A8</span><h3>The whole purchase in the sandbox, no Stripe</h3><span class="chip p1">P1</span><span class="chip now">readiness</span></div>
+        <p class="how">Stub checkout returns a URL. A test signs <code>checkout.session.completed</code> with the sandbox secret, then:</p>
+        <ul>
+          <li><code>/api/me</code> reports a member;</li>
+          <li>the member article opens;</li>
+          <li>cancel, then move the clock past the period end;</li>
+          <li>the article locks and Subscribe comes back.</li>
+        </ul>
+        <p class="how">Repeatable in CI.</p></div>
+      <div class="test"><div class="head"><span class="id">A9</span><h3>Launch-day payment suite</h3><span class="chip p0">P0</span><span class="chip day">launch day</span></div>
+        <p class="how">Read-only unless the owner says otherwise. One command against the new origin:</p>
+        <ul>
+          <li><code>verify:stripe-webhook-events</code>: no MISSING, not DISABLED;</li>
+          <li><code>/api/payments/plans</code> lists $12.99 and $79.99 from live prices;</li>
+          <li>the anonymous and foreign-origin matrix from A6;</li>
+          <li>the webhook delivery log shows <code>200</code>;</li>
+          <li>a reconcile dry run shows 0 changes.</li>
+        </ul>
+        <p class="how">Then the first real purchase, only with the owner's yes: a scripted checklist with the expected DB row and <code>/api/me</code> answer at each step, ending in a refund and a revocation check.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Tier B · Auth</div>
+    <h2>Sign-in, sessions, accounts</h2>
+    <div class="tier">
+      <div class="test"><div class="head"><span class="id">B1</span><h3>Browser end-to-end on three engines</h3><span class="chip p0">P0</span><span class="chip now">local</span><span class="chip day">launch day</span></div>
+        <p class="why">No browser test exists. Cookies, redirects and Safari's tracking prevention only show up in a real browser.</p>
+        <p class="how"><b>How:</b> Playwright (needs approval) on Chromium, WebKit and Firefox. Flows: sign up, sign in, sign out, reset password, change email, subscribe up to the Stripe page, and the member article. Locally, read emails from a local mail sink rather than Resend. On launch day, run the same specs against the real domains with a dedicated test account.</p></div>
+      <div class="test"><div class="head"><span class="id">B2</span><h3>Session tampering and cookie mix-ups</h3><span class="chip p0">P0</span><span class="chip now">local</span></div>
+        <ul>
+          <li>Flip one byte of <code>session_data</code>.</li>
+          <li>Pair A's <code>session_data</code> with B's <code>session_token</code>, and the reverse.</li>
+          <li>Replay a cache cookie after the session is revoked (payments must refuse; <code>/api/me</code> behaviour recorded).</li>
+          <li>A cookie signed under a rotated secret must be refused with 401, never 500.</li>
+          <li>Session fixation: a token planted before sign-in must not survive it.</li>
+          <li>Oversized and duplicated cookie headers.</li>
+        </ul></div>
+      <div class="test"><div class="head"><span class="id">B3</span><h3>Enumeration, brute force and limits behind the proxy</h3><span class="chip p0">P0</span><span class="chip now">local</span><span class="chip day">launch day</span></div>
+        <ul>
+          <li>A wrong password and an unknown email give the same status, body, and timing to within noise.</li>
+          <li>Password reset behaves the same for unknown emails.</li>
+          <li>Rotating spoofed <code>X-Forwarded-For</code> or <code>CF-Connecting-IP</code> must not rotate the rate-limit bucket under each <code>TRUSTED_PROXY</code> setting.</li>
+          <li>Every limit in <code>better-auth.ts</code> <code>customRules</code> is hit and returns <code>Retry-After</code>.</li>
+        </ul></div>
+      <div class="test"><div class="head"><span class="id">B4</span><h3>Account linking and staff isolation</h3><span class="chip p1">P1</span><span class="chip now">local</span></div>
+        <ul>
+          <li>Google sign-in on an existing unverified local address must not link. Use a mock OAuth provider locally.</li>
+          <li>A staff email is refused by visitor auth.</li>
+          <li>A Payload admin cookie never makes <code>/api/me</code> signed in.</li>
+          <li>A visitor cookie never opens <code>/admin</code>.</li>
+          <li>An email change needs verification and then updates the Stripe customer's email.</li>
+          <li>Changing email while Google is linked is refused.</li>
+        </ul></div>
+      <div class="test"><div class="head"><span class="id">B5</span><h3>Password rules on the server</h3><span class="chip p1">P1</span><span class="chip now">local</span></div>
+        <p class="how">Call the API directly, not through the UI, on every path that sets a password. Try: 7 characters, 129 characters, missing character classes, Unicode and emoji, leading and trailing spaces, NUL bytes. Sign-in with an older weak password must still work (see <code>visitor-password-guard.ts</code>).</p></div>
+      <div class="test"><div class="head"><span class="id">B6</span><h3>Cookie contract on the real domains</h3><span class="chip p0">P0</span><span class="chip day">launch day</span></div>
+        <ul>
+          <li>The <code>__Secure-</code> prefix, Secure, HttpOnly, SameSite=Lax, and the intended Domain and Path.</li>
+          <li>No <code>Set-Cookie</code> on any response Cloudflare may cache.</li>
+          <li>Private responses carry <code>no-store</code> and <code>Vary: Cookie</code>.</li>
+          <li>The same-site boot check passes for www on Cloudflare and the API on Railway's custom domain.</li>
+        </ul></div>
+      <div class="test"><div class="head"><span class="id">B7</span><h3>Losing Redis on the platform</h3><span class="chip p1">P1</span><span class="chip day">platform, before launch</span></div>
+        <p class="how">Restart Railway Redis while signed-in traffic is running. Sessions survive from Postgres, rate limits follow their documented fail mode, and payments fail closed, then recover without a restart. <code>auth-smoke.sh</code> already proves this locally.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Tier C · Platform</div>
+    <h2>Cloudflare, Railway, Neon</h2>
+    <div class="tier">
+      <div class="test"><div class="head"><span class="id">C1</span><h3>Check the platform's env before the first deploy</h3><span class="chip p0">P0</span><span class="chip now">local</span></div>
+        <p class="why">On 2026-09-23 this check caught the laptop missing three settings the new boot check requires. The same thing will happen on Railway.</p>
+        <p class="how"><b>How:</b> a script that loads a candidate env file, runs <code>collectProductionConfigProblems()</code>, and prints masked messages. The last session ran exactly this ad hoc, so turn it into a committed script. Also add a CI test that every variable the boot check reads appears in the documented Railway env template.</p></div>
+      <div class="test"><div class="head"><span class="id">C2</span><h3>Origin lockdown</h3><span class="chip p0">P0</span><span class="chip day">launch day</span></div>
+        <p class="how">Hit the <code>*.up.railway.app</code> host directly. It must be unreachable, or the forged-header test from B3 must pass there. Also make sure nothing, including an unrelated path, answers from an origin that bypasses the proxy.</p></div>
+      <div class="test"><div class="head"><span class="id">C3</span><h3>The OpenNext build behaves like <code>next start</code></h3><span class="chip p1">P1</span><span class="chip now">local (wrangler preview)</span></div>
+        <p class="how">Run the auth, member-article and pricing specs from B1 against <code>readiness:adapter</code>'s preview. Check that ISR purges on publish via tags and that last-good behaves as intended (cap07 §1a items 1–2). Also check that the client's server-side calls to <code>/api/me</code> are never cached across users.</p></div>
+      <div class="test"><div class="head"><span class="id">C4</span><h3>Neon connections and locks</h3><span class="chip p1">P1</span><span class="chip day">platform, before launch</span></div>
+        <p class="how">Advisory locks use the unpooled endpoint. Scale-to-zero is off. <code>SHOW max_connections</code> fits the budget. During a rolling deploy, count connections against the surge. Run two webhooks for one customer at the same moment and confirm one email.</p></div>
+      <div class="test"><div class="head"><span class="id">C5</span><h3>Schedulers, rollback and restore</h3><span class="chip p1">P1</span><span class="chip day">platform, before launch</span></div>
+        <ul>
+          <li>The refresh-jobs, exchange-rate and nightly reconcile schedules each fire once and log it.</li>
+          <li>Roll back to the previous deploy after migrations, and the old build serves.</li>
+          <li><code>readiness:restore</code> against a Neon branch.</li>
+        </ul></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Tier D · Paranoid extras</div>
+    <h2>Tests for the tests</h2>
+    <div class="tier">
+      <div class="test"><div class="head"><span class="id">D1</span><h3>Mutation testing on payments and auth</h3><span class="chip p1">P1</span><span class="chip now">local</span></div>
+        <p class="why">Coverage says a line ran. Mutation testing says a wrong line would have been caught. A small hand version of this already exposed the missing <code>freshSession</code> test.</p>
+        <p class="how"><b>How:</b> Stryker (needs approval) on <code>features/payments/lib</code>, <code>webhooks/</code>, <code>visitor-auth/lib</code> and <code>shared/config</code>. Every surviving mutant gets a test or a recorded reason.</p></div>
+      <div class="test"><div class="head"><span class="id">D2</span><h3>Fuzz the parsers</h3><span class="chip p1">P1</span><span class="chip now">local</span></div>
+        <p class="how">Targets: <code>safeReturnPath</code>, <code>visitorSessionToken</code>, <code>registrableDomain</code>, <code>isAllowedOrigin</code>, the referral-id pattern, and <code>getClientIp</code>. Use random and adversarial strings, and assert they never throw and never accept a foreign host.</p></div>
+      <div class="test"><div class="head"><span class="id">D3</span><h3>Client and server agree on the shape of the data</h3><span class="chip p2">P2</span><span class="chip now">local</span></div>
+        <p class="how">Check the real <code>/api/me</code>, <code>auth-methods</code>, <code>subscription-details</code> and <code>plans</code> responses against the client's types at runtime, in both directions. This would have flagged <code>graceUntil</code>.</p></div>
+      <div class="test"><div class="head"><span class="id">D4</span><h3>Launch hygiene</h3><span class="chip p2">P2</span><span class="chip day">launch day</span></div>
+        <ul>
+          <li>Security headers: HSTS, frame-ancestors, CSP report-only.</li>
+          <li><code>pnpm audit</code> with a policy.</li>
+          <li>Secret scanning of the repo and the built bundles.</li>
+          <li>A forced server error reaches Sentry, and logs contain no emails.</li>
+        </ul></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Suggested order</div>
+    <h2>First five PRs</h2>
+    <p class="lede">Each one can find bugs on its own. If one does, fix it in that PR or its own PR before moving on.</p>
+    <ol>
+      <li><strong>Railway suffix, and the proxy decision in writing.</strong> Add <code>up.railway.app</code> to the suffix list, plus the forged-header rate-limit test (B3), which runs locally with each <code>TRUSTED_PROXY</code> value.</li>
+      <li><strong>A1 + A6.</strong> Real signatures and the cross-user and CSRF matrix. No new dependencies needed.</li>
+      <li><strong>C1.</strong> The committed env-check script, with the Railway env template.</li>
+      <li><strong>A2 + A8 in the readiness harness.</strong> Real Postgres ordering and duplicates, then the whole purchase with no Stripe.</li>
+      <li><strong>Ask the owner</strong> about Playwright, fast-check and Stryker. Then B1, A4 and D1.</li>
+    </ol>
+    <p>Put launch-day checks in one runner (e.g. <code>pnpm launch:verify -- --client https://www… --api https://api…</code>) that is read-only by default. Human-only steps go in a <code>live-checks/</code>-style page for the new platform.</p>
+  </section>
+
+  <section>
+    <div class="label">For the next agent</div>
+    <h2>Skills and references</h2>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Skill</th><th>When</th></tr></thead>
+      <tbody>
+        <tr><td><code>caveman</code></td><td>At the start. AGENTS.md requires it.</td></tr>
+        <tr><td><code>mattpocock-skills:tdd</code></td><td>Each test tier: red, green, then keep the test.</td></tr>
+        <tr><td><code>diagnose</code></td><td>The moment a test turns up a real bug.</td></tr>
+        <tr><td><code>security-review</code></td><td>Before merging tiers A, B and D.</td></tr>
+        <tr><td><code>stripe-best-practices</code></td><td>For API facts only. AGENTS.md wins wherever the skill says "use test mode".</td></tr>
+        <tr><td><code>code-review</code></td><td>On each PR before merging.</td></tr>
+        <tr><td><code>artifact-design</code></td><td>Before writing any new <code>live-checks</code> page.</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <ul>
+      <li>Context from the last session: PRs #652 (smoke script), #653 (payments review), #654 (release checks), and <code>apps/questura/live-checks/README.md</code>.</li>
+      <li>Payments design: <code>apps/questura/docs/adr/</code> (ADR-0008 entitlement from the paid-through date, ADR-0004 visitor auth split from staff auth) and <code>docs/membership-pricing.md</code>.</li>
+      <li>Capacity and readiness: <code>docs/capacity/STATUS.md</code>, <code>local-readiness.md</code>, <code>cap08-proof-matrix.md</code>.</li>
+    </ul>
+  </section>
+
+  <p class="foot">Written 2026-09-23 from the owner's request, after the pre-live-window pass (#652–#654). No secrets or personal data included.</p>
+</div>
