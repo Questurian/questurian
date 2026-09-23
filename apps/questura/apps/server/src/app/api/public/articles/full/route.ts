@@ -89,7 +89,12 @@ async function readGatedBody(req: NextRequest, corsHeaders: Record<string, strin
   // Outside the try below on purpose: a session store that throws is a
   // temporary failure (`runPrivateWork` answers 503 + Retry-After), not a
   // failed read — and never "signed out".
-  const auth = await requireVisitorPrincipal(req.headers)
+  //
+  // `freshSession`: paid content, so a session revoked on another device
+  // (password change or reset) stops here at once rather than riding the
+  // five-minute cookie cache. Costs one session-store read (Redis) per paid
+  // body; `/api/me` and free reads keep the cache.
+  const auth = await requireVisitorPrincipal(req.headers, { freshSession: true })
   if (auth.error || !auth.principal) {
     return fail(corsHeaders, auth.error ?? 'Authentication required', auth.status)
   }

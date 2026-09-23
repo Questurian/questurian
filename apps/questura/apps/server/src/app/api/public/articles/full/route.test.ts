@@ -126,6 +126,14 @@ describe('GET /api/public/articles/full — refusals', () => {
     expect(find).not.toHaveBeenCalled()
   })
 
+  // A session revoked on another device (password change or reset) must stop
+  // reading paid bodies at once, not after the five-minute cookie cache.
+  it('checks the session store, not the cookie cache', async () => {
+    await GET(request({ type: 'articles', id: '42' }))
+
+    expect(requireVisitorPrincipal).toHaveBeenCalledWith(expect.any(Headers), { freshSession: true })
+  })
+
   it('403s an authenticated reader with no active membership', async () => {
     requireVisitorPrincipal.mockResolvedValue(entitled(false))
 
@@ -141,7 +149,7 @@ describe('GET /api/public/articles/full — refusals', () => {
     // checkout stays open would let someone pay and then be refused.
     await GET(request({ type: 'articles', id: '42' }))
 
-    expect(requireVisitorPrincipal).toHaveBeenCalledWith(expect.any(Headers))
+    expect(requireVisitorPrincipal).toHaveBeenCalledOnce()
     const options = requireVisitorPrincipal.mock.calls[0][1]
     expect(options?.requireVerified).toBeFalsy()
   })
