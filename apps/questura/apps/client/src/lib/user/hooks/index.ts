@@ -11,3 +11,4 @@ export {
 } from './useUserQuery';
 
 export { useAuth } from './useAuth';
+export { useAuthMethods } from './useAuthMethods';

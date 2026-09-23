@@ -5,9 +5,6 @@ export type VisitorPrincipal = {
   id: string;
   email: string;
   emailVerified: boolean;
-  authProvider: 'local' | 'google' | 'dual' | 'unknown';
-  hasLocalPassword: boolean;
-  hasGoogleOAuth: boolean;
   profileId: string | number | null;
   firstName: string;
   lastName: string;
@@ -21,6 +18,13 @@ export type VisitorPrincipal = {
     graceUntil: string | null;
     cancelAtPeriodEnd: boolean;
   };
+};
+
+/** How the reader signs in (`/api/account/auth-methods`). Not part of `/api/me`. */
+export type AuthMethods = {
+  hasLocalPassword: boolean;
+  hasGoogleOAuth: boolean;
+  authProvider: 'local' | 'google' | 'dual' | 'unknown';
 };
 
 /**
@@ -39,9 +43,6 @@ export type CurrentPrincipalResponse = {
  */
 type LegacyUserFields = {
   membershipStatusSummary?: string;
-  authProvider?: string;
-  hasLocalPassword?: boolean;
-  hasGoogleOAuth?: boolean;
   subscriptionStatus?: string;
   subscriptionRenewsAt?: string | null;
   membershipExpiration?: string | null;

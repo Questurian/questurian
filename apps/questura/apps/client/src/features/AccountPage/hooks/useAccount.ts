@@ -57,7 +57,7 @@ export function useAccount() {
               window.removeEventListener('message', handleMessage);
               // Invalidate and refetch user data
               try {
-                await queryClient.invalidateQueries({ queryKey: queryKeys.userMe() });
+                await queryClient.invalidateQueries({ queryKey: queryKeys.authMethods() });
                 setSuccess('Google account linked successfully!');
               } catch {
                 // Still consider it a success even if refetch fails - user data will update on next interaction
@@ -78,7 +78,7 @@ export function useAccount() {
               window.removeEventListener('message', handleMessage);
               // Only invalidate if message wasn't received (fallback for popup close)
               if (!messageReceived) {
-                queryClient.invalidateQueries({ queryKey: queryKeys.userMe() }).catch((error) => {
+                queryClient.invalidateQueries({ queryKey: queryKeys.authMethods() }).catch((error) => {
                   // Log error but don't block - user can still use the app
                   if (process.env.NODE_ENV === 'development') {
                     console.error('Failed to refresh user data after popup close:', error);

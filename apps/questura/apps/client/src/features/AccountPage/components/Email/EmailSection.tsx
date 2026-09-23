@@ -1,15 +1,16 @@
-import { User } from '@/lib/user/types';
+import type { AuthMethods, User } from '@/lib/user/types';
 import { useRouter } from 'next/navigation';
 import { accountActionLinkClassName, accountGuidanceClassName } from '../account.styles';
 
 interface EmailSectionProps {
   user: User | null;
+  methods: AuthMethods | undefined;
 }
 
-export function EmailSection({ user }: EmailSectionProps) {
+export function EmailSection({ user, methods }: EmailSectionProps) {
   const router = useRouter();
-  const hasPassword = user?.hasLocalPassword || user?.authProvider === 'local' || user?.authProvider === 'dual';
-  const canChangeEmail = hasPassword && !user?.hasGoogleOAuth;
+  const hasPassword = methods?.hasLocalPassword || methods?.authProvider === 'local' || methods?.authProvider === 'dual';
+  const canChangeEmail = hasPassword && !methods?.hasGoogleOAuth;
 
   return (
     <div>
@@ -29,7 +30,7 @@ export function EmailSection({ user }: EmailSectionProps) {
               You must add a password to your account before changing your email.
             </p>
           )}
-          {hasPassword && user?.hasGoogleOAuth && (
+          {hasPassword && methods?.hasGoogleOAuth && (
             <p className={accountGuidanceClassName}>
               Disconnect Google before changing your email.
             </p>

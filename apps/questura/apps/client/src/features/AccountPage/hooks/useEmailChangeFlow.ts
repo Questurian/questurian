@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/user/hooks';
+import { useAuth, useAuthMethods } from '@/lib/user/hooks';
 import { useRequestEmailChangeMutation, useVerifyPasswordMutation } from './useEmailChangeMutations';
 import { mapEmailChangeError } from '../services/email-change.service';
 import type { EmailChangeStep } from '../types/email-change.types';
@@ -8,6 +8,7 @@ import type { EmailChangeStep } from '../types/email-change.types';
 export function useEmailChangeFlow() {
   const router = useRouter();
   const { user, loading, isAuthenticated } = useAuth();
+  const { data: methods } = useAuthMethods(isAuthenticated);
 
   const [step, setStep] = useState<EmailChangeStep>('verifyPassword');
   const [password, setPassword] = useState('');
@@ -24,13 +25,13 @@ export function useEmailChangeFlow() {
   }, [loading, isAuthenticated, router]);
 
   useEffect(() => {
-    if (user && !loading) {
-      const hasPassword = user.hasLocalPassword || user.authProvider === 'local' || user.authProvider === 'dual';
-      if (!hasPassword || user.hasGoogleOAuth) {
+    if (methods) {
+      const hasPassword = methods.hasLocalPassword || methods.authProvider === 'local' || methods.authProvider === 'dual';
+      if (!hasPassword || methods.hasGoogleOAuth) {
         router.push('/account');
       }
     }
-  }, [user, loading, router]);
+  }, [methods, router]);
 
   const handleVerifyPassword = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

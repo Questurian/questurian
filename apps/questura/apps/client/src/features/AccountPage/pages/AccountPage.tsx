@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/lib/user/hooks";
+import { useAuth, useAuthMethods } from "@/lib/user/hooks";
 import { useAccount } from "../hooks/useAccount";
 import  LoadingSpinner from "@/components/shared/ui/LoadingSpinner";
 
@@ -17,6 +17,8 @@ function AccountContent() {
   const router = useRouter();
   const searchParams = useSearchParams() ?? new URLSearchParams();
   const { user, loading, isAuthenticated } = useAuth();
+  // Separate from /api/me: only this page needs to know how the reader signs in.
+  const authMethods = useAuthMethods(isAuthenticated);
   const {
     error,
     success,
@@ -49,7 +51,7 @@ function AccountContent() {
     }
   }, [searchParams, setPasswordSuccess, router]);
 
-  if (loading) {
+  if (loading || (isAuthenticated && authMethods.isPending)) {
     return <LoadingSpinner />;
   }
 
@@ -78,10 +80,10 @@ function AccountContent() {
       <section className="px-4 480:px-6 pt-6 480:pt-10 pb-16 768:pt-12 768:pb-20">
         <div className="max-w-2xl mx-auto space-y-4 480:space-y-5 768:space-y-6">
           <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-4 480:p-6 768:p-8">
-            <EmailSection user={user} />
+            <EmailSection user={user} methods={authMethods.data} />
 
             <PasswordSection
-              user={user}
+              methods={authMethods.data}
               passwordSuccess={passwordSuccess}
               passwordError={passwordError}
               onClearPasswordMessages={clearPasswordMessages}
@@ -90,6 +92,7 @@ function AccountContent() {
 
           <ConnectedAccountsSection
             user={user}
+            methods={authMethods.data}
             onLinkGoogle={handleLinkGoogle}
             onUnlinkGoogle={handleUnlinkGoogle}
             success={success}
