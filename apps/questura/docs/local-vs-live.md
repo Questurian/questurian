@@ -44,9 +44,40 @@ Then set `REDIS_URL=redis://127.0.0.1:6380` in `apps/server/.env` and restart
 the server. Port 6380 on purpose: on the Linux laptop, 6379 is the live
 `questura-redis` container. Never point local at 6379 there, and never flush it.
 
-While sessions live in Redis only, flushing the local Redis signs everyone
-out. That is expected, and it is the risk the session-durability decision
-addresses.
+Sessions are also written to Postgres (`storeSessionInDatabase`, #650), so
+flushing the local Redis no longer signs anyone out: lookups fall back to
+`visitor_auth_sessions` until the session next refreshes.
+
+### Auth smoke test
+
+A signed-in check of visitor auth against the local server, in about ten
+seconds. Run it after touching sign-in, sessions, Redis, rate limits or the
+payment routes' auth:
+
+```bash
+scripts/auth-smoke.sh
+```
+
+It signs up a throwaway `qa-smoke-…@example.com` user, signs in a second
+session, and checks `/api/me`, `/api/account/auth-methods`, the session rows
+in Postgres, a flush of the local Redis, a password change (the other
+session's payment route answers 401 at once), the change-password limit
+(5 a minute, then 429) and sign-out. It exits non-zero on any failure.
+
+It refuses to run unless the server on port 4000 uses `REDIS_URL` on
+`127.0.0.1:6380`, `DATABASE_URI` on `127.0.0.1:5432`, and an **empty**
+`RESEND_API_KEY` (sign-up mails a verification link otherwise). It reads these
+the way Next does for the running process: its environment first, then the
+`.env*` files. So start the server with email and Stripe blanked instead of
+editing `.env`:
+
+```bash
+env RESEND_API_KEY= STRIPE_SECRET_KEY= pnpm --dir apps/server dev
+```
+
+(In the desktop app that is the `questura-server-offline` launch config.)
+The script flushes only the `questura-local-redis` container, never port 6379,
+and calls no Stripe endpoint. Test users stay in the scratch database.
 
 ## Park live (public domains go down)
 
