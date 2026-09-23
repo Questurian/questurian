@@ -1,0 +1,212 @@
+<title>Visitor Auth Live Checks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F5F0E8; --paper:#EFE9DE; --ink:#1F1B16; --muted:#6A6258; --rule:#D9CFBF;
+  --accent:#3B5BDB; --accent-soft:#E3E7F7; --ok:#2E6B45; --ok-soft:#E1EDE3; --warn:#9A5A00; --warn-soft:#F4E6CF;
+  --code:#E6DECF;
+  --display:"Playfair Display",Georgia,"Times New Roman",serif;
+  --body:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --accent-soft:#262C44; --ok:#7CC39A; --ok-soft:#1F2E25; --warn:#E3AE62; --warn-soft:#33281A; --code:#2C2822;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --accent-soft:#262C44; --ok:#7CC39A; --ok-soft:#1F2E25; --warn:#E3AE62; --warn-soft:#33281A; --code:#2C2822;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.6 var(--body)}
+.wrap{max-width:820px;margin:0 auto;padding-inline:16px;padding-block:40px 80px}
+h1{font:600 2.1rem/1.15 var(--display);margin:0 0 8px;text-wrap:balance}
+h2{font:600 1.3rem/1.25 var(--display);margin:0 0 4px;text-wrap:balance}
+p{margin:0}
+.lede{color:var(--muted);max-width:62ch}
+code,kbd{font:500 .82rem/1.4 var(--mono);background:var(--code);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+pre{font:400 .82rem/1.55 var(--mono);background:var(--code);padding:10px 12px;border-radius:4px;overflow-x:auto;margin:8px 0 0}
+pre code{background:none;padding:0}
+.label{font:600 .72rem/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:10px}
+.label::after{content:"";flex:1;height:1px;background:var(--rule)}
+section{display:grid;gap:14px;margin-top:44px}
+.status{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font:600 .75rem/1 var(--body);padding:6px 9px;border-radius:999px;background:var(--paper);color:var(--muted)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.progress{display:flex;align-items:center;gap:12px;margin-top:22px;font:500 .85rem var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{flex:1;height:6px;background:var(--paper);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+.stop{background:var(--warn-soft);border-left:3px solid var(--warn);padding:12px 14px;border-radius:0 4px 4px 0;display:grid;gap:6px}
+.stop strong{color:var(--warn)}
+ol.steps{margin:0;padding-left:20px;display:grid;gap:10px}
+.group{display:grid;gap:2px}
+.group h3{font:600 .95rem/1.3 var(--body);margin:10px 0 4px}
+.check{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--rule)}
+.check:last-child{border-bottom:1px solid var(--rule)}
+.check input{width:18px;height:18px;margin:3px 0 0;accent-color:var(--accent)}
+.check input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.check label{cursor:pointer}
+.check .why{display:block;color:var(--muted);font-size:.86rem;margin-top:2px}
+.check input:checked + label > span:first-child{text-decoration:line-through;text-decoration-color:var(--muted);color:var(--muted)}
+.pr{font:500 .75rem var(--mono);color:var(--accent);white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+.tablewrap{overflow-x:auto}
+th,td{text-align:left;padding:8px 8px 8px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font:600 .72rem var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+td.res{color:var(--ok);font-weight:500;white-space:nowrap}
+a{color:var(--accent)}
+.foot{margin-top:40px;color:var(--muted);font-size:.85rem}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Visitor auth: live checks</h1>
+    <p class="lede">Five PRs are merged into <code>main</code> but not deployed yet. Localhost has already proven what it can. This list covers the rest, which only the real site can answer: cookies across <code>www</code> and <code>cms</code>, Safari, Google sign-in and real email.</p>
+    <div class="status">
+      <span class="chip ok">#646–#650 merged</span>
+      <span class="chip ok">Local tests passed</span>
+      <span class="chip warn">Not deployed</span>
+    </div>
+    <div class="progress"><span id="count">0 of 0 done</span><div class="bar"><i id="fill"></i></div><button id="reset" type="button" style="font:500 .8rem var(--body);background:none;border:1px solid var(--rule);color:var(--muted);border-radius:4px;padding:4px 8px;cursor:pointer">Clear ticks</button></div>
+  </header>
+
+  <section>
+    <div class="label">Before you start</div>
+    <div class="stop">
+      <p><strong>Live Stripe is real money.</strong> Don't start a checkout. Viewing the Membership section on the account page is fine.</p>
+      <p><strong>Don't flush the live Redis</strong> (<code>questura-redis</code>, port 6379). Sessions surviving a Redis loss was already proven on the local Redis.</p>
+      <p><strong>If anything breaks:</strong> <code>apps/questura/infra/softprod/rollback.sh</code> reverts to the previous release.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Go live</div>
+    <h2>Turn the site on and deploy <code>main</code></h2>
+    <ol class="steps">
+      <li>Resume the parked services. On the Linux laptop itself:
+        <pre><code>bash ~/Projects/questurian/apps/questura/infra/softprod/resume-live.sh</code></pre>
+        From the Mac: <code>ssh linux-laptop 'bash -s' &lt; apps/questura/infra/softprod/resume-live.sh</code></li>
+      <li>Deploy the merged work (<code>a5864efb</code> or later):
+        <pre><code>~/questura/deploy.sh</code></pre></li>
+      <li>Open <code>https://www.questurian.com</code> and confirm the page loads.</li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="label">Test on live</div>
+    <h2>Only the real site can answer these</h2>
+    <p class="lede">Use a real account you control. For the member checks, use an account that's already a member; don't buy a membership to test.</p>
+
+    <div class="group" data-group>
+      <h3>Server started cleanly</h3>
+      <div class="check"><input type="checkbox" id="c-boot"><label for="c-boot"><span>Deploy finished and the healthcheck passed</span><span class="why">PR 5 added a startup check that refuses to boot if the site and API are on different domains. Live uses <code>www.questurian.com</code> + <code>cms.questurian.com</code>, which should pass. If the server won't start, check the log for "are not the same site". <span class="pr">#650</span></span></label></div>
+    </div>
+
+    <div class="group" data-group>
+      <h3>Sign-in cookies (Chrome)</h3>
+      <div class="check"><input type="checkbox" id="c-cookies"><label for="c-cookies"><span>Sign in on www. In DevTools → Application → Cookies → <code>https://cms.questurian.com</code>, both cookies are there</span><span class="why"><code>__Secure-questura_visitor.session_token</code> and <code>__Secure-questura_visitor.session_data</code>, each Secure, HttpOnly, SameSite=Lax. The second one is the new 5-minute cache. <span class="pr">#650</span></span></label></div>
+      <div class="check"><input type="checkbox" id="c-me"><label for="c-me"><span>Network tab: <code>/api/me</code> answers <code>"authenticated":true</code>, and there's exactly one per page</span><span class="why">If this says false while you're signed in, the cookie isn't reaching <code>cms</code>. That's the failure only live can show. <span class="pr">#647</span></span></label></div>
+      <div class="check"><input type="checkbox" id="c-reload"><label for="c-reload"><span>Reload a few pages; you stay signed in</span></label></div>
+      <div class="check"><input type="checkbox" id="c-signout"><label for="c-signout"><span>Sign out. Both cookies are gone and the navbar shows Sign in</span></label></div>
+    </div>
+
+    <div class="group" data-group>
+      <h3>Safari</h3>
+      <div class="check"><input type="checkbox" id="c-safari"><label for="c-safari"><span>Repeat the four Chrome checks in Safari (desktop, and iPhone if you can)</span><span class="why">Safari is the strictest browser about cookies moving between subdomains.</span></label></div>
+    </div>
+
+    <div class="group" data-group>
+      <h3>Navbar</h3>
+      <div class="check"><input type="checkbox" id="c-anon"><label for="c-anon"><span>Private window, DevTools throttled to "Slow 4G": Sign in and Subscribe appear at the same moment</span><span class="why"><span class="pr">#646</span></span></label></div>
+      <div class="check"><input type="checkbox" id="c-user"><label for="c-user"><span>Signed in (not a member), reload: no "Sign in" flash before your icon appears</span><span class="why">Already checked on localhost with a test account; this confirms it on the real domain. <span class="pr">#646</span></span></label></div>
+      <div class="check"><input type="checkbox" id="c-member"><label for="c-member"><span>Signed in as a member, reload: Subscribe never flashes</span><span class="why">Not tested locally, because the local test account isn't a member. <span class="pr">#646</span></span></label></div>
+      <div class="check"><input type="checkbox" id="c-preconnect"><label for="c-preconnect"><span>Cold load: the connection to <code>cms.questurian.com</code> opens early, before the page finishes loading</span><span class="why">Network tab, "Connection start" on the first request to cms. <span class="pr">#647</span></span></label></div>
+    </div>
+
+    <div class="group" data-group>
+      <h3>Google sign-in</h3>
+      <div class="check"><input type="checkbox" id="c-google"><label for="c-google"><span>Sign in with Google works and lands you signed in</span><span class="why">Google's redirect only works on the real domain. Its new rate limit is 10 a minute. <span class="pr">#649</span></span></label></div>
+      <div class="check"><input type="checkbox" id="c-account-google"><label for="c-account-google"><span>Account page shows Google under Connected accounts. Linking and unlinking updates it without a reload</span><span class="why">This page now loads sign-in methods from <code>/api/account/auth-methods</code>. <span class="pr">#648</span></span></label></div>
+    </div>
+
+    <div class="group" data-group>
+      <h3>Passwords and email</h3>
+      <div class="check"><input type="checkbox" id="c-reset"><label for="c-reset"><span>"Forgot password" email arrives, and the link sets a new password</span><span class="why">Local email was switched off for testing, so real delivery is unchecked.</span></label></div>
+      <div class="check"><input type="checkbox" id="c-2dev"><label for="c-2dev"><span>Two devices: change the password on one, and the other is signed out within 5 minutes</span><span class="why">Proven locally: the other device's payment pages refused it right away, and its other pages followed once the 5-minute cache ran out. On live, just confirm the 5-minute sign-out. <span class="pr">#650</span></span></label></div>
+    </div>
+
+    <div class="group" data-group>
+      <h3>Sessions saved in the database</h3>
+      <div class="check"><input type="checkbox" id="c-dbrow"><label for="c-dbrow"><span>After a sign-in, the live database has a new session row</span><span class="why">This is a read-only count. It proves sessions now survive a Redis loss on live too. <span class="pr">#650</span>
+        <pre><code>docker exec questura-postgres psql -U questura -d questura -Atc "select count(*) from visitor_auth_sessions where \"createdAt\" &gt; now() - interval '1 hour'"</code></pre></span></label></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">After the checks</div>
+    <h2>Wrap up</h2>
+    <div class="group" data-group>
+      <div class="check"><input type="checkbox" id="c-record"><label for="c-record"><span>Post the results as a comment on <a href="https://github.com/Questurian/questurian/pull/650">#650</a></span><span class="why">One line per group above: pass, or what went wrong.</span></label></div>
+      <div class="check"><input type="checkbox" id="c-park"><label for="c-park"><span>Park live again if you're done (optional)</span><span class="why"><code>bash ~/Projects/questurian/apps/questura/infra/softprod/pause-live.sh</code> on the laptop. Keeps releases, config, Postgres and Redis.</span></label></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Already proven on localhost</div>
+    <h2>No need to redo these</h2>
+    <p class="lede">Run 2026-09-23 on the Linux laptop with a throwaway account (<code>qa-localtest-…@example.com</code>, scratch database), a local-only Redis on port 6380, and local email switched off.</p>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Check</th><th>Result</th><th>PR</th></tr></thead>
+      <tbody>
+        <tr><td>Sign-up and sign-in set both cookies (<code>session_token</code>, <code>session_data</code>)</td><td class="res">pass</td><td class="pr">#650</td></tr>
+        <tr><td><code>/api/me</code> signed in; no password or Google details in the reply</td><td class="res">pass</td><td class="pr">#648</td></tr>
+        <tr><td><code>/api/account/auth-methods</code> returns password-only for the test user</td><td class="res">pass</td><td class="pr">#648</td></tr>
+        <tr><td>Two sessions saved to Postgres; Redis wiped; both devices still signed in</td><td class="res">pass</td><td class="pr">#650</td></tr>
+        <tr><td>Password change: other device's payment pages refused at once (401); its <code>/api/me</code> still passes until the cache expires; this device stays signed in</td><td class="res">as designed</td><td class="pr">#650</td></tr>
+        <tr><td>Password-change limit: 5 attempts a minute, the next one gets 429</td><td class="res">pass</td><td class="pr">#649</td></tr>
+        <tr><td><code>/api/me</code> Redis calls: 0 with the cookie cache, 1 without; 2 SQL statements</td><td class="res">measured</td><td class="pr">#650</td></tr>
+        <tr><td>Sign-out ends the session</td><td class="res">pass</td><td class="pr">—</td></tr>
+        <tr><td>Signed-in navbar: early script picks up "user"; no Sign in flash; user icon shows</td><td class="res">pass</td><td class="pr">#646</td></tr>
+        <tr><td>Account page: email, "password enabled", no Google, Free Member; <code>/api/me</code> and <code>auth-methods</code> once each; no console errors</td><td class="res">pass</td><td class="pr">#648</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <p class="foot">Plan: visitor auth audit, 2026-09-23. PRs <a href="https://github.com/Questurian/questurian/pull/646">#646</a> · <a href="https://github.com/Questurian/questurian/pull/647">#647</a> · <a href="https://github.com/Questurian/questurian/pull/648">#648</a> · <a href="https://github.com/Questurian/questurian/pull/649">#649</a> · <a href="https://github.com/Questurian/questurian/pull/650">#650</a>. Ticks are saved in this browser only.</p>
+</div>
+
+<script>
+(function(){
+  var KEY='visitor-auth-live-checks';
+  var boxes=[].slice.call(document.querySelectorAll('.check input[type=checkbox]'));
+  var saved={};
+  try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){saved={}}
+  function update(){
+    var done=boxes.filter(function(b){return b.checked}).length;
+    document.getElementById('count').textContent=done+' of '+boxes.length+' done';
+    document.getElementById('fill').style.width=(boxes.length?done/boxes.length*100:0)+'%';
+  }
+  boxes.forEach(function(b){
+    b.checked=!!saved[b.id];
+    b.addEventListener('change',function(){
+      saved[b.id]=b.checked;
+      try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}
+      update();
+    });
+  });
+  document.getElementById('reset').addEventListener('click',function(){
+    boxes.forEach(function(b){b.checked=false});saved={};
+    try{localStorage.removeItem(KEY)}catch(e){}
+    update();
+  });
+  update();
+})();
+</script>
