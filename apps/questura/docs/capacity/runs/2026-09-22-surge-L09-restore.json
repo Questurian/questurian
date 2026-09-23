@@ -1,0 +1,215 @@
+{
+  "kind": "surge-restore-rehearsal",
+  "takenAt": "2026-09-22T23:28:40.390Z",
+  "source": {
+    "sha": "bcc62aa09c096c6c3c671b4324e4f44708425278",
+    "dirty": true,
+    "diffFingerprint": "814e1da2ee74e57c"
+  },
+  "from": "questura_readiness",
+  "to": "questura_readiness_restore",
+  "restoreMs": 1609,
+  "countsBefore": {
+    "locations": 13,
+    "articles": 29,
+    "maps": 13,
+    "itineraries": 13,
+    "media_assets": 8,
+    "media_sets": 8,
+    "users": 3,
+    "visitors": 4,
+    "visitor_accounts": 4,
+    "visitor_profiles": 4,
+    "bookmarks": 7,
+    "search_rows": 50,
+    "pending_jobs": 1
+  },
+  "countsAfter": {
+    "locations": 13,
+    "articles": 29,
+    "maps": 13,
+    "itineraries": 13,
+    "media_assets": 8,
+    "media_sets": 8,
+    "users": 3,
+    "visitors": 4,
+    "visitor_accounts": 4,
+    "visitor_profiles": 4,
+    "bookmarks": 7,
+    "search_rows": 50,
+    "pending_jobs": 1
+  },
+  "result": {
+    "total": 35,
+    "passed": 35
+  },
+  "checks": [
+    {
+      "ok": true,
+      "label": "a dump with a broken statement is refused, not half-restored",
+      "detail": "psql:/var/folders/jb/yvvz4j055b5___q98why1_8r0000gp/T/questura-restore-Blm8pd/corrupt.sql:13927: ERROR:  syntax error at or near \"THIS\""
+    },
+    {
+      "ok": true,
+      "label": "and the refused restore left nothing behind (single transaction)",
+      "detail": "0 tables"
+    },
+    {
+      "ok": true,
+      "label": "the real dump restores with ON_ERROR_STOP",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "locations survived",
+      "detail": "13 → 13"
+    },
+    {
+      "ok": true,
+      "label": "articles survived",
+      "detail": "29 → 29"
+    },
+    {
+      "ok": true,
+      "label": "maps survived",
+      "detail": "13 → 13"
+    },
+    {
+      "ok": true,
+      "label": "itineraries survived",
+      "detail": "13 → 13"
+    },
+    {
+      "ok": true,
+      "label": "media_assets survived",
+      "detail": "8 → 8"
+    },
+    {
+      "ok": true,
+      "label": "media_sets survived",
+      "detail": "8 → 8"
+    },
+    {
+      "ok": true,
+      "label": "users survived",
+      "detail": "3 → 3"
+    },
+    {
+      "ok": true,
+      "label": "visitors survived",
+      "detail": "4 → 4"
+    },
+    {
+      "ok": true,
+      "label": "visitor_accounts survived",
+      "detail": "4 → 4"
+    },
+    {
+      "ok": true,
+      "label": "visitor_profiles survived",
+      "detail": "4 → 4"
+    },
+    {
+      "ok": true,
+      "label": "bookmarks survived",
+      "detail": "7 → 7"
+    },
+    {
+      "ok": true,
+      "label": "search_rows survived",
+      "detail": "50 → 50"
+    },
+    {
+      "ok": true,
+      "label": "pending_jobs survived",
+      "detail": "1 → 1"
+    },
+    {
+      "ok": true,
+      "label": "the obligation owed at dump time is still owed, generation intact"
+    },
+    {
+      "ok": true,
+      "label": "the backend boots on the restored database"
+    },
+    {
+      "ok": true,
+      "label": "control: with the index emptied, the search gate fails (the fallback answer is not the index)"
+    },
+    {
+      "ok": true,
+      "label": "the search index rebuilds from the restored corpus",
+      "detail": "50 rows for 50 published pieces"
+    },
+    {
+      "ok": true,
+      "label": "a marker search returns exactly the expected piece, from the index"
+    },
+    {
+      "ok": true,
+      "label": "no search row points at an unpublished article",
+      "detail": "0"
+    },
+    {
+      "ok": true,
+      "label": "control: before draining, the \"nothing owed\" gate fails",
+      "detail": "1 owed"
+    },
+    {
+      "ok": true,
+      "label": "after draining, nothing is owed"
+    },
+    {
+      "ok": true,
+      "label": "the obligation owed at dump time was delivered"
+    },
+    {
+      "ok": true,
+      "label": "a public article read carries its title and body markers",
+      "detail": "HTTP 200"
+    },
+    {
+      "ok": true,
+      "label": "member A signs in with the restored password and is exactly member A"
+    },
+    {
+      "ok": true,
+      "label": "the restored member body is served to the restored member"
+    },
+    {
+      "ok": true,
+      "label": "member A’s restored bookmarks are exactly A’s",
+      "detail": "articles:1,articles:11,articles:12,articles:29"
+    },
+    {
+      "ok": true,
+      "label": "every visitor profile has an auth user",
+      "detail": "0 broken"
+    },
+    {
+      "ok": true,
+      "label": "every credential account has an auth user",
+      "detail": "0 broken"
+    },
+    {
+      "ok": true,
+      "label": "every bookmark has a reader",
+      "detail": "0 broken"
+    },
+    {
+      "ok": true,
+      "label": "every bookmark points at a target that exists",
+      "detail": "0 broken"
+    },
+    {
+      "ok": true,
+      "label": "every media-set variant points at an asset that exists",
+      "detail": "0 broken"
+    },
+    {
+      "ok": true,
+      "label": "every published article’s featured image exists",
+      "detail": "0 broken"
+    }
+  ]
+}
