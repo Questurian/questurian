@@ -10,6 +10,7 @@ import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
 import { IMAGE_CDN_ORIGIN } from "@/lib/media/imageCdnOrigin";
 import { NavigationFeedback } from "@/components/navigation/NavigationFeedback";
 import { IDENTITY_HINT_SCRIPT } from "@/lib/user/identityHint";
+import { getBackendUrl } from "@/lib/api/api-config";
 
 /*
  * Only the families every route renders belong here: next/font preloads a
@@ -51,6 +52,10 @@ export default async function RootLayout({
           otherwise pays DNS + TLS against a second origin before the first
           image byte moves. Next hoists a plain <link> in JSX into <head>. */}
       {IMAGE_CDN_ORIGIN ? <link rel="preconnect" href={IMAGE_CDN_ORIGIN} /> : null}
+      {/* Every page asks the API host `/api/me` with credentials. A preconnect
+          in anonymous mode would open a socket the credentialed fetch cannot
+          reuse, so this one says use-credentials. */}
+      <link rel="preconnect" href={new URL(getBackendUrl()).origin} crossOrigin="use-credentials" />
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${editorialSerif.variable} antialiased`}
       >

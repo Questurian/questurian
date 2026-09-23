@@ -24,7 +24,6 @@ export const useAuthSubmit = ({ inModal = false, onSuccess }: UseAuthSubmitOptio
         },
         {
           onSuccess: async (data) => {
-            console.log('[useAuthSubmit] Login successful, user:', data.user.email);
             // Set React Query cache with user data from login response
             // User object contains all subscription/membership data needed
             queryClient.setQueryData(queryKeys.userMe(), data.user);
@@ -79,7 +78,6 @@ export const useAuthSubmit = ({ inModal = false, onSuccess }: UseAuthSubmitOptio
             // If user is present, authentication is complete
             // Cookie is automatically set by backend
             if (data.user) {
-              console.log('[useAuthSubmit] Signup successful, user:', data.user.email);
               // Set React Query cache with user data from signup response
               // User object contains all subscription/membership data needed
               queryClient.setQueryData(queryKeys.userMe(), data.user);

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { isServiceUnavailableError, isUnauthenticated, post, retryDecision } from '@/lib/api';
 import { queryKeys } from '@/lib/react-query';
-import { identityStore } from '@/lib/user/currentIdentity';
+import { identityStore, PRIMED_IDENTITY_MAX_AGE_MS } from '@/lib/user/currentIdentity';
 import { IdentitySuperseded } from '@/lib/user/identity';
 import { writeHint } from '@/lib/user/identityHint';
 import type { CurrentPrincipalResponse, User } from '@/lib/user/types';
@@ -30,11 +30,13 @@ function principalToUser(response: CurrentPrincipalResponse): User | null {
 
 /**
  * Through the shared identity store: a lookup already in flight (the gated
- * body asking at the same moment) is joined, not repeated. `maxAgeMs` is small
- * — React Query's own `staleTime` decides when the navbar re-asks.
+ * body asking at the same moment, or `primeIdentity` from the navbar chunk) is
+ * joined, not repeated. `maxAgeMs` is small — long enough to reuse the primed
+ * answer on a slow hydration, short next to React Query's own `staleTime`,
+ * which decides when the navbar re-asks.
  */
 async function getCurrentUser(options: { maxAgeMs?: number } = {}): Promise<User | null> {
-  const response = await identityStore.read({ maxAgeMs: options.maxAgeMs ?? 1_000 });
+  const response = await identityStore.read({ maxAgeMs: options.maxAgeMs ?? PRIMED_IDENTITY_MAX_AGE_MS });
   return principalToUser(response as unknown as CurrentPrincipalResponse);
 }
 
