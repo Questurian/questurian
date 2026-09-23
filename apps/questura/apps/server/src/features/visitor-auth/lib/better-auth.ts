@@ -100,7 +100,8 @@ export const visitorAuth = betterAuth({
     // five minutes, so most `/api/me` calls skip the session store. The price:
     // a session revoked elsewhere (password change or reset signs out other
     // devices) keeps working for up to five minutes on those devices. Payment
-    // routes opt out and always check the store (`freshSession`).
+    // routes and the paid article body opt out and always check the store
+    // (`freshSession`).
     cookieCache: {
       enabled: true,
       maxAge: 5 * 60,
