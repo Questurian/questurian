@@ -5,7 +5,8 @@
  *
  * Signs every synthetic identity in against the running stack
  * (`identities.ts`) and writes `{ label: cookie }` to
- * `$TMPDIR/questura-readiness/sessions.json`, mode 0600. k6 reads it with
+ * `$TMPDIR/questura-readiness/sessions.json`, mode 0600, as
+ * `{ label: [cookie, …] }` — several sessions per identity. k6 reads it with
  * `SESSIONS_FILE`. The file is never committed, never logged, and dies with
  * the stack (`readiness:stack -- down` removes the state directory's stack
  * record; the file is overwritten on the next run).
@@ -13,7 +14,7 @@
 import { chmodSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { signInAll } from './identities'
+import { signInMany } from './identities'
 import { LAUNCH_MANIFEST_PATH, type LaunchManifest } from './launch-corpus'
 import { assertPreflight } from './preflight'
 import { sandboxSettings } from './sandbox'
@@ -24,13 +25,18 @@ async function main(): Promise<void> {
   const stack = readStackState()
   if (!stack) throw new Error('No stack is running. Start one: pnpm readiness:stack -- up')
   const manifest = JSON.parse(readFileSync(LAUNCH_MANIFEST_PATH, 'utf8')) as LaunchManifest
-  const jar = await signInAll(manifest, {
+  // Several sessions per identity (SESSIONS_PER_IDENTITY, default 20), each a
+  // separate sign-in from its own synthetic address: a crowd, not one reader.
+  const perIdentity = Number(process.env.SESSIONS_PER_IDENTITY ?? 20)
+  if (!Number.isInteger(perIdentity) || perIdentity < 1 || perIdentity > 200) throw new Error('SESSIONS_PER_IDENTITY must be 1–200.')
+  const sessions = await signInMany(manifest, {
     backend: `http://127.0.0.1:${STACK_PORTS.backend}`,
     origin: stack.origins.client,
     redisUrl: `redis://127.0.0.1:${STACK_PORTS.redis}`,
+    perIdentity,
   })
   const path = resolve(STATE_DIR, 'sessions.json')
-  writeFileSync(path, JSON.stringify(Object.fromEntries(jar), null, 2), { mode: 0o600 })
+  writeFileSync(path, JSON.stringify(sessions, null, 2), { mode: 0o600 })
   chmodSync(path, 0o600)
   console.log(path)
 }
