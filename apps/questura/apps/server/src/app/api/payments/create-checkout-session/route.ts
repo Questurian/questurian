@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     // `checkout.session.completed` records it as `billingEmail` whenever it
     // differs from the account address — so a typo stays recoverable without
     // blocking anyone.
-    const authResult = await requireVisitorPrincipal(req.headers)
+    const authResult = await requireVisitorPrincipal(req.headers, { freshSession: true })
 
     if (authResult.error) {
       return NextResponse.json(

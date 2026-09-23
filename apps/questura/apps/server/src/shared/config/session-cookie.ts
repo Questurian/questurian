@@ -150,6 +150,20 @@ export function validateCookieDomain(
 }
 
 /**
+ * The registrable domain ("site") a host belongs to: the last two labels, or
+ * the last three under a shared suffix this module knows (`*.vercel.app`,
+ * `*.co.uk`, …). Two hosts are same-site exactly when this matches, and a
+ * `SameSite=Lax` cookie only rides a credentialed fetch between same-site
+ * hosts. Covers the suffixes above, not the whole Public Suffix List.
+ */
+export function registrableDomain(host: string): string {
+  const labels = normalizeHost(host).split('.')
+  if (labels.length <= 2) return labels.join('.')
+  const lastTwo = labels.slice(-2).join('.')
+  return SHARED_PUBLIC_SUFFIXES.has(lastTwo) ? labels.slice(-3).join('.') : lastTwo
+}
+
+/**
  * The operator hosts that must receive the staff session, as a comma-separated
  * list of bare hostnames. Stated explicitly because Payload cannot infer them:
  * `abw-api.questurian.com` reads `payload-token` server-side and never appears

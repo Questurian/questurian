@@ -2,6 +2,7 @@ import { APP_CONFIG } from './index'
 import {
   HOST_ONLY_COOKIE_DOMAIN,
   readRequiredCookieHosts,
+  registrableDomain,
   validateCookieDomain,
 } from './session-cookie'
 import { TRUSTED_PROXY_NAMES } from './trusted-proxy'
@@ -63,6 +64,25 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
     } catch {
       problems.push(`${name} is not a valid URL (${value}).`)
     }
+  }
+
+  // The visitor session cookie is set by the API host and read back on a
+  // credentialed fetch from the site. It is `SameSite=Lax`, so the browser only
+  // sends it when the two are the same site. Put the API on another registrable
+  // domain (a `*.vercel.app` preview, say) and every reader is silently signed
+  // out on every page, with nothing in the logs. Refuse that boot instead.
+  try {
+    const siteHost = new URL(process.env.NEXT_PUBLIC_APP_URL ?? '').hostname
+    const apiHost = new URL(process.env.BACKEND_URL_LOCAL ?? '').hostname
+    if (!isLocalhost(`http://${siteHost}`) && registrableDomain(siteHost) !== registrableDomain(apiHost)) {
+      problems.push(
+        `NEXT_PUBLIC_APP_URL (${siteHost}) and BACKEND_URL_LOCAL (${apiHost}) are not the same site — ` +
+          'the visitor session cookie would never be sent from the site to the API, so every reader ' +
+          'would appear signed out. Serve both under one registrable domain.'
+      )
+    }
+  } catch {
+    // Missing or invalid URLs are reported by the required-URL check above.
   }
 
   // `CORS_ORIGINS` feeds Payload `cors`, Payload `csrf` and Better Auth

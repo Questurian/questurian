@@ -3,6 +3,7 @@ import {
   HOST_ONLY_COOKIE_DOMAIN,
   readCookieDomain,
   readRequiredCookieHosts,
+  registrableDomain,
   resolveSessionCookieConfig,
   validateCookieDomain,
 } from './session-cookie'
@@ -155,5 +156,18 @@ describe('session cookie config', () => {
 
     expect(config).toEqual({ sameSite: 'Lax', secure: true })
     expect(Object.keys(config)).not.toContain('domain')
+  })
+})
+
+describe('registrableDomain', () => {
+  it.each([
+    ['www.questurian.com', 'questurian.com'],
+    ['cms.questurian.com', 'questurian.com'],
+    ['questurian.com', 'questurian.com'],
+    ['WWW.Questurian.com.', 'questurian.com'],
+    ['questura-api.vercel.app', 'questura-api.vercel.app'],
+    ['a.b.example.co.uk', 'example.co.uk'],
+  ])('%s → %s', (host, expected) => {
+    expect(registrableDomain(host)).toBe(expected)
   })
 })

@@ -90,6 +90,20 @@ export const visitorAuth = betterAuth({
     modelName: 'visitor_auth_sessions',
     expiresIn: 7 * 24 * 60 * 60,
     updateAge: 24 * 60 * 60,
+    // Redis stays the fast path; Postgres keeps the durable copy. Without it a
+    // Redis flush, eviction or provider incident signed every reader out at
+    // once. Better Auth reads Redis first and falls back to the table on a
+    // miss, so the cost is a write at sign-in and refresh, not a read per page.
+    storeSessionInDatabase: true,
+    // A signed copy of the session in the reader's own cookie, trusted for
+    // five minutes, so most `/api/me` calls skip the session store. The price:
+    // a session revoked elsewhere (password change or reset signs out other
+    // devices) keeps working for up to five minutes on those devices. Payment
+    // routes opt out and always check the store (`freshSession`).
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
+    },
   },
   account: {
     modelName: 'visitor_auth_accounts',

@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const authResult = await requireVisitorPrincipal(req.headers)
+    const authResult = await requireVisitorPrincipal(req.headers, { freshSession: true })
 
     if (authResult.error) {
       return NextResponse.json(

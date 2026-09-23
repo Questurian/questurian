@@ -101,6 +101,18 @@ describe('Current principal', () => {
     expect(mocks.findAccounts).not.toHaveBeenCalled()
   })
 
+  // Payment routes must refuse a session revoked on another device at once,
+  // not up to five minutes later when the cookie cache expires.
+  it('bypasses the session cookie cache only when asked for a fresh session', async () => {
+    const headers = new Headers({ cookie: 'questura_visitor.session_token=x.y' })
+
+    await getCurrentPrincipal(headers)
+    await requireVisitorPrincipal(headers, { freshSession: true })
+
+    expect(mocks.getSession.mock.calls[0][0]).toEqual({ headers })
+    expect(mocks.getSession.mock.calls[1][0]).toEqual({ headers, query: { disableCookieCache: true } })
+  })
+
   it('does no account or profile work for an anonymous caller', async () => {
     const result = await getCurrentPrincipal(new Headers())
 
