@@ -5,9 +5,18 @@
 import type { User } from '@/lib/user/types';
 
 /**
- * Validates a redirect path to prevent open redirect vulnerabilities
- * Only allows relative paths starting with /
+ * Validates a redirect path to prevent open redirect vulnerabilities.
+ * Only allows relative paths that stay on this site.
+ *
+ * The value comes from the URL (`?returnTo=`, `?redirect=`), so anyone can
+ * put one in a link to our own sign-in page. Prefix checks alone are not
+ * enough, because browsers repair what they parse: a backslash counts as a
+ * slash and tabs and newlines are dropped. So `/\evil.com` and `/<tab>/evil.com`
+ * both become `//evil.com`, which is another site. Hence the last check:
+ * resolve the path the way the browser will and require the origin unchanged.
  */
+const PROBE_ORIGIN = 'https://redirect-check.invalid';
+
 export function isValidRedirectPath(path: string): boolean {
   if (!path) return false;
 
@@ -18,11 +27,22 @@ export function isValidRedirectPath(path: string): boolean {
   if (path.includes('://')) return false;
   if (path.startsWith('//')) return false;
 
+  // Browsers read `\` as `/`.
+  if (path.includes('\\')) return false;
+
+  // Tabs and newlines are stripped by the URL parser; no control character
+  // belongs in a path we navigate to.
+  if (/[\x00-\x1f\x7f]/.test(path)) return false;
+
   // Additional safety: reject paths with common redirect bypasses
   if (path.toLowerCase().includes('javascript:')) return false;
   if (path.toLowerCase().includes('data:')) return false;
 
-  return true;
+  try {
+    return new URL(path, PROBE_ORIGIN).origin === PROBE_ORIGIN;
+  } catch {
+    return false;
+  }
 }
 
 /**
