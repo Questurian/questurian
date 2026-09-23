@@ -113,7 +113,12 @@ async function main(): Promise<void> {
       ]),
     )
 
-    const jar = await signInAll(manifest, { backend: BACKEND, origin, redisUrl: `redis://127.0.0.1:${STACK_PORTS.redis}` })
+    const jar = await signInAll(manifest, {
+      backend: BACKEND,
+      origin,
+      redisUrl: `redis://127.0.0.1:${STACK_PORTS.redis}`,
+      databaseUri: settings.databaseUri,
+    })
     const cookieFor = (label: string | null) => (label ? jar.get(label) : undefined)
     const privateHeaders = (label: string | null, extra: Record<string, string> = {}) => {
       const headers: Record<string, string> = { origin, ...extra }

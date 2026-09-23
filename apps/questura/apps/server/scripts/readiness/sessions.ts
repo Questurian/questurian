@@ -21,7 +21,8 @@ import { sandboxSettings } from './sandbox'
 import { readStackState, STACK_PORTS, STATE_DIR } from './stack'
 
 async function main(): Promise<void> {
-  assertPreflight(sandboxSettings())
+  const settings = sandboxSettings()
+  assertPreflight(settings)
   const stack = readStackState()
   if (!stack) throw new Error('No stack is running. Start one: pnpm readiness:stack -- up')
   const manifest = JSON.parse(readFileSync(LAUNCH_MANIFEST_PATH, 'utf8')) as LaunchManifest
@@ -33,6 +34,7 @@ async function main(): Promise<void> {
     backend: `http://127.0.0.1:${STACK_PORTS.backend}`,
     origin: stack.origins.client,
     redisUrl: `redis://127.0.0.1:${STACK_PORTS.redis}`,
+    databaseUri: settings.databaseUri,
     perIdentity,
   })
   const path = resolve(STATE_DIR, 'sessions.json')

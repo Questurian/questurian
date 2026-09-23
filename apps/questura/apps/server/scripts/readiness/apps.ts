@@ -23,6 +23,9 @@ import { resolve } from 'node:path'
 
 import { neutraliseDotenv, withOutboundGuard } from './sandbox-env'
 
+/** The sandbox backend's webhook signing secret. A placeholder: no Stripe endpoint has it. */
+export const SANDBOX_WEBHOOK_SECRET = 'whsec_readiness_placeholder'
+
 export type AppPorts = { backend: number; client: number }
 
 export type AppSettings = {
@@ -98,7 +101,7 @@ function backendEnvDeclared(settings: AppSettings): NodeJS.ProcessEnv {
     REFRESH_WORKER_INTERVAL_MS: String(settings.workerIntervalMs ?? 0),
 
     STRIPE_SECRET_KEY: 'sk_readiness_placeholder_not_a_key',
-    STRIPE_WEBHOOK_SECRET: 'whsec_readiness_placeholder',
+    STRIPE_WEBHOOK_SECRET: SANDBOX_WEBHOOK_SECRET,
     STRIPE_PRICE_ID: 'price_readiness_monthly',
     STRIPE_PRICE_ID_MONTHLY: 'price_readiness_monthly',
     STRIPE_PRICE_ID_YEARLY: 'price_readiness_yearly',
