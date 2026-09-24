@@ -60,6 +60,22 @@
 
   "images": { "binding": "IMAGES" },
 
+  // --- Workers Logs (launch fix plan item 3) -------------------------------
+  // Keeps what the Worker writes to the console, searchable by field in the
+  // dashboard. `onRequestError` (src/instrumentation.ts) writes one JSON line
+  // per failed request, with its request id (x-request-id, else cf-ray).
+  // Sampling is per invocation, so anything below 1 would drop error lines
+  // too; the volume is held down instead by leaving invocation logs (one line
+  // per request) off. Errors also reach Sentry through the API's beacon
+  // (docs/procedures/sentry-setup.md), so this is the record, not the alarm.
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    // Reset-password and sign-in links carry tokens in the query string.
+    "redact_query_string": true,
+    "logs": { "invocation_logs": false }
+  },
+
   "vars": {
     // Local preview only. NEXT_PUBLIC_* values are baked into the site when
     // it is built, so this runtime var does not choose the API a deployed

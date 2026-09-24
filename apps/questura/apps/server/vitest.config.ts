@@ -18,6 +18,8 @@ export default defineConfig({
       'src/shared/**/*.test.ts',
       'src/features/**/*.test.ts',
       'src/app/**/*.test.ts',
+      // The request-id proxy (launch fix plan item 3).
+      'src/proxy.test.ts',
       // The load harness's pure modules. Registered deliberately: everything
       // else under scripts/ is operational and has no unit tests.
       'scripts/measure/**/*.test.ts',

@@ -55,11 +55,20 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
 
    It must say the server would boot. It also refuses leftover placeholders,
    test-mode Stripe keys, loopback databases, sandbox variables and one secret
-   used twice, a missing Resend key, and a missing sender or one not on
-   questurian.com (`EMAIL_FROM_ADDRESS`).
+   used twice, a missing Resend key, a missing sender or one not on
+   questurian.com (`EMAIL_FROM_ADDRESS`), and a missing or malformed
+   `SENTRY_DSN`.
 
    Email DNS (SPF, DKIM, DMARC) must be verified in Resend before this:
    `docs/procedures/email-domain.md`, steps 1 to 5.
+
+   Sentry receives a scrubbed test event before the DSN goes on Railway
+   (`docs/procedures/sentry-setup.md`, step 4):
+
+   ```bash
+   SENTRY_DSN='<the DSN>' SENTRY_ENVIRONMENT=local-proof \
+     pnpm --dir apps/questura/apps/server sentry:test-event   # expect "Sent test event <id>": 1 event in Sentry, [email]/[redacted] in it, no originals
+   ```
 
 2. **Rehearse locally once more** (laptop, one heavy job at a time):
 
@@ -113,6 +122,16 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
    site, that one image loads as `image/*`, that a made-up path is a real 404,
    and that the site's JavaScript calls the `--api` origin.
    The last one uses up one caller's `/plans` budget for a minute.
+
+   Every API response carries a request id, and errors reach Sentry:
+
+   ```bash
+   curl -sI https://api.questurian.com/api/health | grep -i '^x-request-id:'   # expect 1 line
+   ```
+
+   Sentry → Issues: nothing new from the deploy itself. The forced-error drill
+   (one API error, one website error, each one event with a request id, alert
+   on the phone) is PL4, with the owner present.
 
 4. **The Stripe side** (live key, read-only):
 

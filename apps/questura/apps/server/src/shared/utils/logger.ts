@@ -1,8 +1,16 @@
 /**
  * Simple Logger Utility
  *
- * Provides structured logging for development and production
+ * Provides structured logging for development and production.
+ *
+ * Every line goes through the central redaction pass
+ * (`shared/observability/redact.ts`) and carries the request id of the request
+ * it was written for, when there is one (`shared/observability/request-id.ts`).
+ * Neither is the call site's job any more.
  */
+
+import { redact } from '@/shared/observability/redact'
+import { currentRequestId } from '@/shared/observability/request-id'
 
 type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 
@@ -17,11 +25,14 @@ class Logger {
   private isDevelopment = process.env.NODE_ENV === 'development'
 
   private formatLog(level: LogLevel, message: string, data?: Record<string, unknown>): LogData {
+    const requestId = currentRequestId()
+
     return {
       level,
-      message,
+      message: redact(message),
       timestamp: new Date().toISOString(),
-      ...data,
+      ...(requestId ? { requestId } : {}),
+      ...(data ? redact(data) : {}),
     }
   }
 
