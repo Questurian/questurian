@@ -63,9 +63,8 @@ export const visitorAuthPool = new Pool({
   application_name: applicationName('visitorAuth'),
   max: poolSizes().visitorAuth,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-  // Same statement, lock and idle budgets as Payload's pool: a session
-  // lookup that hangs holds one of ten connections and stalls sign-in.
+  // Same time limits as Payload's pool (shared/database/timeouts.ts): a
+  // session lookup that hangs holds one of ten connections and stalls sign-in.
   ...poolTimeoutOptions(servingTimeouts()),
 })
 

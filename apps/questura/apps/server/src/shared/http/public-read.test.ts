@@ -79,6 +79,19 @@ describe('publicRead admission', () => {
     await Promise.all(held)
   })
 
+  // A frozen database used to hang the request; with the pool's client-side
+  // limit it throws instead, and that is about right now, not the request.
+  it('answers a database that could not answer with a 503 nothing may cache', async () => {
+    const response = await publicRead({ req: request(), scope: 'search', payload: {} }, async () => {
+      throw new Error('Failed query: select 1', { cause: new Error('Query read timeout') })
+    })
+
+    expect(response.status).toBe(503)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(response.headers.get('X-Questura-Unavailable')).toBe('database')
+    expect(admissionGate('query').stats().active).toBe(0)
+  })
+
   it('still lets real errors through as errors', async () => {
     await expect(
       publicRead({ req: request(), scope: 'search', payload: {} }, async () => {

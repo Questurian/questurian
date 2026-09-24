@@ -388,6 +388,23 @@ export function servingLimitProblems(env: Env = process.env): FleetProblem[] {
         'holds its connection and its locks until the process dies.',
     )
   }
+  // The server-side budgets above cannot fire when the database is frozen
+  // rather than down; only the client-side limit can (timeouts.ts).
+  if (timeouts.queryMs <= 0) {
+    problems.push(
+      'PG_QUERY_TIMEOUT_MS is 0 for a serving process. That is the migration scripts\' value; in ' +
+        'serving, every request against a frozen database waits forever.',
+    )
+  } else if (timeouts.statementMs > 0 && timeouts.queryMs <= timeouts.statementMs) {
+    problems.push(
+      `PG_QUERY_TIMEOUT_MS (${timeouts.queryMs}) must be longer than PG_STATEMENT_TIMEOUT_MS ` +
+        `(${timeouts.statementMs}). Otherwise the client abandons a slow query while Postgres keeps ` +
+        'running it, instead of Postgres cancelling it cleanly first.',
+    )
+  }
+  if (timeouts.connectMs <= 0) {
+    problems.push('PG_CONNECTION_TIMEOUT_MS is 0: a request waits forever for a pool connection.')
+  }
 
   return problems
 }

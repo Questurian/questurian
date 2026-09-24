@@ -37,17 +37,6 @@ function record(group: string, name: string, ok: boolean, detail = ''): void {
   console.log(`${ok ? '  ok  ' : ' FAIL '} [${group}] ${name}${ok ? '' : ` — ${detail}`}`)
 }
 
-/**
- * A gap that is known and waiting on a decision: printed every run, never
- * silently passing, but not failing the run. When it starts passing, say so.
- */
-const known: Check[] = []
-function recordKnown(group: string, name: string, ok: boolean, detail: string, why: string): void {
-  if (ok) return record(group, `${name} (was a known gap: now passing, promote it)`, true)
-  known.push({ group, name, ok, detail })
-  console.log(` KNOWN [${group}] ${name} — ${detail}. ${why}`)
-}
-
 let address = 0
 const caller = () => {
   address += 1
@@ -185,27 +174,35 @@ async function main(): Promise<void> {
 
     // ------------------------------------------------------------ Postgres
     const d = 'database down'
+    // Paused, not stopped: the connections stay open and nothing answers, so
+    // no server-side timeout can fire. Only the pool's client-side limit
+    // (shared/database/timeouts.ts, 17 s by default) ends the wait.
     docker('pause', 'questura-readiness-pg')
     try {
       const read = await timed(() => fetch(`${BACKEND}/api/public/locations/menu`, { headers: { origin, ...caller() }, signal: AbortSignal.timeout(30_000) }).catch((error) => ({ status: 0, error })))
-      const why =
-        'Every Postgres timeout is server-side (statement_timeout, lock_timeout), so none fires when the server is unreachable; there is no client-side query_timeout. Owner decision, see the PR.'
-      recordKnown(d, 'the API answers, not hangs (under 20 s)', read.ms < 20_000, `${read.ms} ms`, why)
-      recordKnown(d, '…with a 503 or a cached 200, never a bare 500', [200, 503].includes((read.value as Response).status), `HTTP ${(read.value as Response).status}`, why)
-      const ready = await fetch(`${BACKEND}/api/health/ready`, { signal: AbortSignal.timeout(20_000) }).catch(() => null)
-      recordKnown(d, '/api/health/ready stops saying ready', ready?.status !== 200, `HTTP ${ready?.status ?? 'no answer'}`, 'Readiness reports initialisation, not database reachability.')
+      record(d, 'the API answers, not hangs (under 20 s)', read.ms < 20_000, `${read.ms} ms`)
+      record(d, '…with a 503 or a cached 200, never a bare 500', [200, 503].includes((read.value as Response).status), `HTTP ${(read.value as Response).status}`)
+      const ready = await timed(() => fetch(`${BACKEND}/api/health/ready`, { signal: AbortSignal.timeout(20_000) }).catch(() => null))
+      record(d, '/api/health/ready stops saying ready, promptly (503 under 5 s)', ready.value?.status === 503 && ready.ms < 5_000, `HTTP ${ready.value?.status ?? 'no answer'} in ${ready.ms} ms`)
     } finally {
       docker('unpause', 'questura-readiness-pg')
     }
     const back = await timed(() => fetch(`${BACKEND}/api/public/locations/menu`, { headers: { origin, ...caller() } }))
     record(d, 'the API recovers once Postgres is back, with no restart', back.value.status === 200, `HTTP ${back.value.status} in ${back.ms} ms`)
+    // The probe is sampled, so a failed answer may be reused for a moment.
+    let readyAgain = 0
+    for (let attempt = 0; attempt < 10 && readyAgain !== 200; attempt += 1) {
+      if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 1_000))
+      readyAgain = (await fetch(`${BACKEND}/api/health/ready`).catch(() => null))?.status ?? 0
+    }
+    record(d, '/api/health/ready says ready again once Postgres is back', readyAgain === 200, `HTTP ${readyAgain}`)
   } finally {
     await clearFault().catch(() => undefined)
     await pool.end()
   }
 
   const failedChecks = checks.filter((check) => !check.ok)
-  console.log(`\n${checks.length - failedChecks.length}/${checks.length} fault checks passed, ${known.length} known gaps.`)
+  console.log(`\n${checks.length - failedChecks.length}/${checks.length} fault checks passed.`)
   if (failedChecks.length > 0) process.exit(1)
 }
 

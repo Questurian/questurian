@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
+import { isDatabaseUnavailable } from '@/shared/database/unavailable'
+import { logger } from '@/shared/utils/logger'
 import { noteOnRequest } from '@/shared/observability/request-report'
 import { withPublicReadDiagnostics } from '@/shared/observability/public-read'
 
@@ -71,6 +73,22 @@ export function overloadedResponse(error: AdmissionRefused): NextResponse {
 }
 
 /**
+ * The database could not answer: frozen, gone, or too busy to finish inside
+ * its budget (`shared/database/timeouts.ts`). That is about right now, not
+ * about the request, so it is a 503 the frontend retries, never a 500 that
+ * reads as a bug, and nothing shared may cache it.
+ */
+export function databaseUnavailableResponse(): NextResponse {
+  return NextResponse.json(
+    { message: 'Temporarily unavailable. Please try again shortly.' },
+    {
+      status: 503,
+      headers: { 'Retry-After': '5', 'Cache-Control': 'no-store', 'X-Questura-Unavailable': 'database' },
+    },
+  )
+}
+
+/**
  * The five things every expensive public read needs, in the order they have
  * to happen.
  *
@@ -123,6 +141,13 @@ export async function publicRead(
     )
   } catch (error) {
     if (error instanceof AdmissionRefused) return overloadedResponse(error)
+    if (isDatabaseUnavailable(error)) {
+      logger.warn('Public read: database unavailable', {
+        scope: options.scope,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return databaseUnavailableResponse()
+    }
     throw error
   }
 }

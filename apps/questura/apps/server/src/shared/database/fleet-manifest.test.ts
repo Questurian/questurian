@@ -267,6 +267,24 @@ describe('serving limits that are configured and mean nothing', () => {
     )
   })
 
+  // The only limit that fires when the database is frozen rather than down.
+  it('refuses the migration scripts client query timeout in a serving process', () => {
+    expect(servingLimitProblems({ PG_QUERY_TIMEOUT_MS: '0' }).join(' ')).toContain('frozen database waits forever')
+  })
+
+  // Below the statement budget, the client abandons a slow query that
+  // Postgres keeps running, instead of Postgres cancelling it cleanly.
+  it('refuses a client query timeout that is not above the statement budget', () => {
+    expect(
+      servingLimitProblems({ PG_STATEMENT_TIMEOUT_MS: '15000', PG_QUERY_TIMEOUT_MS: '15000' }).join(' '),
+    ).toContain('must be longer than PG_STATEMENT_TIMEOUT_MS')
+    expect(servingLimitProblems({ PG_STATEMENT_TIMEOUT_MS: '15000', PG_QUERY_TIMEOUT_MS: '16000' })).toEqual([])
+  })
+
+  it('refuses a disabled connection timeout', () => {
+    expect(servingLimitProblems({ PG_CONNECTION_TIMEOUT_MS: '0' }).join(' ')).toContain('waits forever for a pool connection')
+  })
+
   // Finding 3's timeout half: gates were read from the argument and timeouts
   // from process.env, so a check could certify one environment while boot
   // used another.

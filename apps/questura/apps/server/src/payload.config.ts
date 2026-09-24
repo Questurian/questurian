@@ -78,12 +78,11 @@ export default buildConfig({
       max: poolSizes().payload,
       min: 2, // Minimum number of connections to keep open
       idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
-      connectionTimeoutMillis: 10000, // Fail fast instead of hanging forever
-      // Bounds on what a connection may do once it has one: a query with no
-      // plan, a lock nobody releases, a transaction a handler left open.
-      // `connectionTimeoutMillis` covers none of those, and aborting the HTTP
-      // request does not stop the database. The migration scripts set
-      // PG_STATEMENT_TIMEOUT_MS=0 -- see shared/database/timeouts.ts.
+      // Every time limit, server- and client-side: `connectionTimeoutMillis`,
+      // `query_timeout` (the one that fires when the database is frozen rather
+      // than down) and the statement, lock and idle budgets. Values, how they
+      // were measured, and the migration scripts' opt-out are all in
+      // shared/database/timeouts.ts.
       ...poolTimeoutOptions(servingTimeouts()),
     },
   }),
