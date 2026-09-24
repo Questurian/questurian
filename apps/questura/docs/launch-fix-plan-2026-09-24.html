@@ -103,6 +103,7 @@ summary{cursor:pointer;font-weight:600;color:var(--accent)}
 <tr><td>D8</td><td>Spending cap for the one real load test</td><td>You pick a number at the time, with usage alerts at 50% and 80%; the test stops at 80%.</td><td>PL3</td></tr>
 <tr><td>D9</td><td>What Redis does when it's full</td><td>Decide at go-live with the real memory numbers in hand (PL1 reports them). The one setting to avoid is "refuse writes when full", because that becomes a sign-in outage.</td><td>PL1</td></tr>
 </tbody></table></div>
+<p><strong>Owner's answer, 2026-09-24:</strong> the owner delegated every decision to the recommendation above. <strong>D1 = yes</strong> (Sentry; the owner creates the account and hands over the DSN, see <code>docs/procedures/sentry-setup.md</code>). <strong>D3 = yes</strong>, with the guard rails listed. D2, D4, D5 and D7 as recommended. D6, D8 and D9 stay go-live decisions, made with the owner present.</p>
 <p class="muted">D1 also covers part 1 of issue <a href="https://github.com/Questurian/questurian/issues/690">#690</a> (monitoring). The dashboard cockpit and the API Usage fix in #690 stay after launch.</p>
 </section>
 
