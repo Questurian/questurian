@@ -130,6 +130,10 @@ export class StripeStub {
         const done = this.account.completeCheckout(control[1]!, JSON.parse(body || '{}').email)
         return done ? send(200, done) : send(404, { error: 'no such session' })
       }
+      if ((control = /^\/__fake\/checkout\/([^/]+)\/reopen$/.exec(url.pathname)) && req.method === 'POST') {
+        const reopened = this.account.reopenCheckout(control[1]!)
+        return reopened ? send(200, reopened) : send(404, { error: 'no such session' })
+      }
       if ((control = /^\/__fake\/subscriptions\/([^/]+)$/.exec(url.pathname)) && req.method === 'POST') {
         const patched = this.account.patchSubscription(control[1]!, JSON.parse(body || '{}'))
         return patched ? send(200, patched) : send(404, { error: 'no such subscription' })

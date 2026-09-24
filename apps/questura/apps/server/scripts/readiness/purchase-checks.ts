@@ -224,17 +224,23 @@ async function main(): Promise<void> {
     const money = 'refunds and disputes'
     const subscriptionOf = async (id: unknown) =>
       ((await fake('/__fake/state')).subscriptions as Json[]).find((s) => s.id === id)
-    const buy = async (cookie: string, email: string, plan: 'monthly' | 'yearly') => {
-      const started = (await (await checkout(cookie, plan)).json()) as { url?: string }
-      const done = await fake(`/__fake/checkout/${String(started.url).split('/').pop()}/complete`, { email })
+    const pay = async (sessionId: string, email: string) => {
+      const done = await fake(`/__fake/checkout/${sessionId}/complete`, { email })
       const delivered = await deliver('checkout.session.completed', done.session)
-      return { subscription: (done.subscription ?? {}) as Json, charge: (done.charge ?? {}) as Json, status: delivered.status }
+      return {
+        session: (done.session ?? {}) as Json,
+        subscription: (done.subscription ?? {}) as Json,
+        charge: (done.charge ?? {}) as Json,
+        status: delivered.status,
+      }
     }
     const lookupsBefore = Number((await fake('/__fake/state')).invoicePaymentLookups)
 
-    // The buyer buys again (the Subscribe from A8 hands back its open session),
-    // is refunded part of it, then all of it.
-    const refundBuy = await buy(buyer, 'nonmember@example.com', 'monthly')
+    // The buyer buys again, yearly: a monthly checkout inside five minutes of
+    // A8's would be handed A8's session back (the checkout idempotency bucket).
+    // Refunded part of it, then all of it.
+    const started = (await (await checkout(buyer, 'yearly')).json()) as { url?: string }
+    const refundBuy = await pay(String(started.url).split('/').pop()!, 'nonmember@example.com')
     record(money, 'the buyer buys again and is a member', refundBuy.status === 200 && (await isMember(buyer)), `HTTP ${refundBuy.status}`)
     record(money, 'the charge carries no invoice, as basil returns it', Boolean(refundBuy.charge.id) && !('invoice' in refundBuy.charge), JSON.stringify(refundBuy.charge))
 
@@ -262,9 +268,11 @@ async function main(): Promise<void> {
     const won = await deliver('charge.dispute.closed', await fake(`/__fake/disputes/${opened.id}/close`, { status: 'won' }))
     record(money, 'a won dispute is accepted and restores the membership', won.status === 200 && (await isMember(reader)), `HTTP ${won.status}`)
 
-    // The buyer buys once more (yearly, so a fresh Checkout Session), disputes,
-    // and loses.
-    const disputeBuy = await buy(buyer, 'nonmember@example.com', 'yearly')
+    // The buyer buys once more, disputes, and loses. Both plans' checkouts are
+    // inside their five-minute replay window now, so the fake opens the
+    // session a later visit would get.
+    const reopened = await fake(`/__fake/checkout/${refundBuy.session.id}/reopen`, {})
+    const disputeBuy = await pay(String(reopened.id), 'nonmember@example.com')
     record(money, 'the buyer buys a third time and is a member', disputeBuy.status === 200 && (await isMember(buyer)), `HTTP ${disputeBuy.status}`)
     const lostOpened = await fake(`/__fake/charges/${disputeBuy.charge.id}/dispute`, {})
     const lostCreated = await deliver('charge.dispute.created', lostOpened)

@@ -417,6 +417,30 @@ export class FakeStripeAccount {
     return dispute
   }
 
+  /**
+   * Control: the same buyer starts checkout again later. The app's own
+   * checkout replays one session per plan for five minutes (its idempotency
+   * bucket), so a harness that buys twice inside that window uses this for the
+   * second session: same customer, price and metadata, new id, open.
+   */
+  reopenCheckout(sessionId: string): StripeObject | null {
+    const session = this.sessions.get(sessionId)
+    if (!session) return null
+    const id = newId('cs')
+    const reopened: StripeObject = {
+      ...JSON.parse(JSON.stringify(session)),
+      id,
+      status: 'open',
+      payment_status: 'unpaid',
+      subscription: null,
+      customer_details: undefined,
+      url: `http://127.0.0.1:3191/__fake/pay/${id}`,
+      created: now(),
+    }
+    this.sessions.set(id, reopened)
+    return this.publicSession(reopened)
+  }
+
   /** Control: change a subscription the way Stripe's billing would have. */
   patchSubscription(id: string, patch: Record<string, unknown>): StripeObject | null {
     const subscription = this.subscriptions.get(id)
