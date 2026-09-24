@@ -68,18 +68,36 @@ function run(command: string, args: string[], options: { cwd: string; env?: Node
   if (result.status !== 0) throw new Error(`${command} ${args.join(' ')} failed (exit ${result.status}). See ${options.log}.`)
 }
 
+function revision(cwd: string, ref: string): string {
+  return spawnSync('git', ['rev-parse', ref], { cwd, encoding: 'utf8' }).stdout.trim()
+}
+
 function prepareWorktree(): string {
   mkdirSync(STATE_DIR, { recursive: true, mode: 0o700 })
+  const gitLog = resolve(STATE_DIR, 'adapter-git.log')
+  run('git', ['fetch', '-q', 'origin', 'main'], { cwd: REPO, log: gitLog })
+  const target = revision(REPO, 'origin/main')
+  let moved = false
   if (!existsSync(CLIENT)) {
-    run('git', ['fetch', '-q', 'origin', 'main'], { cwd: REPO, log: resolve(STATE_DIR, 'adapter-git.log') })
-    run('git', ['worktree', 'add', '-q', '--detach', WORKTREE, 'origin/main'], { cwd: REPO, log: resolve(STATE_DIR, 'adapter-git.log') })
+    run('git', ['worktree', 'add', '-q', '--detach', WORKTREE, target], { cwd: REPO, log: gitLog })
+    moved = true
+  } else if (revision(WORKTREE, 'HEAD') !== target) {
+    // A worktree left by an earlier run sits on the `origin/main` of that
+    // day. Building it anyway checks an old client and reports it as today's
+    // (found while upgrading the client to Next 15.5, #683).
+    run('git', ['checkout', '-q', '--force', '--detach', target], { cwd: WORKTREE, log: gitLog })
+    moved = true
+  }
+  if (moved) {
     // From the local store only: `--offline` refuses to download anything.
     run('pnpm', ['install', '--frozen-lockfile', '--offline', '--filter', '@questura/client...'], {
       cwd: WORKTREE,
       log: resolve(STATE_DIR, 'adapter-install.log'),
     })
   }
-  return spawnSync('git', ['rev-parse', 'HEAD'], { cwd: WORKTREE, encoding: 'utf8' }).stdout.trim()
+  const sha = revision(WORKTREE, 'HEAD')
+  if (sha !== target) throw new Error(`Adapter worktree is at ${sha.slice(0, 8)}, not origin/main ${target.slice(0, 8)}. See ${gitLog}.`)
+  return sha
 }
 
 async function main(): Promise<void> {

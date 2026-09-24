@@ -1,0 +1,81 @@
+{
+  "kind": "surge-adapter-smoke",
+  "takenAt": "2026-09-24T17:40:27.749Z",
+  "source": {
+    "sha": "f2d83389c04bcbfd369ca063ac7202c569beea3a",
+    "dirty": true,
+    "diffFingerprint": "a8df8204e687b835"
+  },
+  "worktreeSha": "f2d83389c04bcbfd369ca063ac7202c569beea3a",
+  "article": "/zz-launch/river-bend/food-and-drink/launch-article-18",
+  "result": {
+    "total": 13,
+    "passed": 13
+  },
+  "checks": [
+    {
+      "ok": true,
+      "label": "no binding in wrangler.jsonc is marked remote"
+    },
+    {
+      "ok": true,
+      "label": "isolated worktree ready",
+      "detail": "origin/main f2d83389, offline install"
+    },
+    {
+      "ok": true,
+      "label": "the adapter builds the Worker",
+      "detail": "41s"
+    },
+    {
+      "ok": true,
+      "label": "the Worker preview serves on loopback",
+      "detail": "http://127.0.0.1:3104"
+    },
+    {
+      "ok": true,
+      "label": "the Worker serves the article at its current revision (R3)",
+      "detail": "{\"status\":200,\"r1\":true,\"r2\":false,\"title\":true}"
+    },
+    {
+      "ok": true,
+      "label": "the body is changed to R4 through Payload",
+      "detail": "HTTP 200"
+    },
+    {
+      "ok": true,
+      "label": "the save queued an invalidation naming the article’s path",
+      "detail": "4 tags, 1 paths"
+    },
+    {
+      "ok": true,
+      "label": "before any purge, the Worker still serves its cached revision",
+      "detail": "{\"status\":200,\"r1\":true,\"r2\":false,\"title\":true}"
+    },
+    {
+      "ok": true,
+      "label": "a purge with the wrong secret is refused",
+      "detail": "HTTP 401"
+    },
+    {
+      "ok": true,
+      "label": "and the refused purge changed nothing",
+      "detail": "{\"status\":200,\"r1\":true,\"r2\":false,\"title\":true}"
+    },
+    {
+      "ok": true,
+      "label": "a purge with the right secret is accepted",
+      "detail": "HTTP 200"
+    },
+    {
+      "ok": true,
+      "label": "after the purge the Worker serves the new revision, never both",
+      "detail": "{\"status\":200,\"r1\":false,\"r2\":true,\"title\":true}"
+    },
+    {
+      "ok": true,
+      "label": "every outbound attempt was refused, and none was to a billable service",
+      "detail": "telemetry.payloadcms.com×1, workers.cloudflare.com×6, registry.npmjs.org×2"
+    }
+  ]
+}

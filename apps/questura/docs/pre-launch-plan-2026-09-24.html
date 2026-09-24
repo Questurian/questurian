@@ -68,12 +68,11 @@ summary{cursor:pointer;font-weight:600;color:var(--accent)}
 
 <div class="you" style="background:var(--ok-soft)">
 <p><strong>Status, 2026-09-24: steps 1–7 are done and merged.</strong> #681 typecheck in CI · #679 DB time limit and honest health check · #680 Google linking and staff isolation checks (2 real holes fixed) · #682 Better Auth 1.6.33 · #683 client Next 15.5.26 · #684 server Payload 3.90.2 + Next 16.3.6 · #685 sharp 0.35.4 and dependency overrides. No critical advisories remain; the server has 8 left (dev-only vite/vitest/esbuild majors, plus js-cookie via the unused <code>@payloadcms/payload-cloud</code>).</p>
-<p><strong>Left:</strong> step 8 and step 9 (both optional, need the owner), and the follow-ups below.</p>
+<p><strong>Left:</strong> step 8 and step 9 (both optional, need the owner). Follow-ups:</p>
 <ul>
-<li>Remove <code>@payloadcms/payload-cloud</code>: it's loaded in <code>payload.config.ts</code> but inert, since nothing sets <code>PAYLOAD_CLOUD</code>. Removing it clears the js-cookie advisory.</li>
-<li>Client <code>lint</code> still uses <code>next lint</code>, which is deprecated and removed in Next 16. Move it to the ESLint CLI before the client goes to Next 16.</li>
-<li>Payload warns about 14 Postgres identifiers longer than 63 characters. They were already truncated and nothing collides. The fix (<code>dbName</code>) is a schema change and needs its own PR.</li>
-<li><code>readiness:routes</code> rewrites the tracked <code>docs/capacity/runs/2026-09-24-surge-routes.json</code> on every run. Move that output somewhere untracked.</li>
+<li><strong>Done:</strong> <code>@payloadcms/payload-cloud</code> removed (#687). The client <code>lint</code> is now <code>eslint src</code> instead of the deprecated <code>next lint</code>, with the same 3 warnings. <code>readiness:adapter</code> now moves a worktree left by an earlier run to today's <code>origin/main</code>, instead of building an old client.</li>
+<li><strong>Left as is, on purpose:</strong> the 14+ Postgres identifiers truncated at 63 characters. Shortening them means renaming block tables that hold live content, which is a risky migration for no gain: Postgres truncates them consistently, and a clash would fail loudly at <code>migrate:create</code>.</li>
+<li><strong>Left as is, on purpose:</strong> <code>readiness:routes</code> rewriting <code>docs/capacity/runs/&lt;date&gt;-surge-routes.json</code>. It's dated evidence that PRs commit (#667, #671, #673). Revert it when a run isn't evidence for your change.</li>
 <li>The deploy to the laptop's live window, when it happens, applies migration <code>20260924_145915_payload_3_90_upgrade</code>, which adds 2 nullable columns.</li>
 </ul>
 </div>
