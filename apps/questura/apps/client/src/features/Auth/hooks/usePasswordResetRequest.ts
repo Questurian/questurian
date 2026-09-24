@@ -3,7 +3,7 @@
  */
 
 import { useMutation } from '@tanstack/react-query';
-import { apiRequest, isServiceUnavailableError } from '@/lib/api';
+import { apiRequest, isServiceUnavailableError, rateLimitedMessage } from '@/lib/api';
 import type { PasswordResetRequest } from '../types';
 
 interface PasswordResetRequestResponse {
@@ -60,6 +60,11 @@ export const usePasswordResetRequest = () => {
 
         // If it's a generic error, check if it contains error details
         if (error instanceof Error) {
+          const limited = rateLimitedMessage(error);
+          if (limited) {
+            throw new PasswordResetRequestError(limited, 'RATE_LIMITED', undefined);
+          }
+
           // Check if it's a service unavailability error
           if (isServiceUnavailableError(error)) {
             throw new PasswordResetRequestError(

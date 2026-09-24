@@ -8,6 +8,7 @@ export {
   isTemporaryFailure,
   isUnauthenticated,
   parseRetryAfter,
+  rateLimitedMessage,
   RequestError,
   retryDecision,
 } from './api/request-policy';
