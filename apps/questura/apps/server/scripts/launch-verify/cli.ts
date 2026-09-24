@@ -15,6 +15,12 @@
  *                              address headers are ignored (31 requests)
  *   --home <path>              page for the home check (default /, which must
  *                              redirect to a city that exists)
+ *   --article <path>           article page for the host checks (default:
+ *                              the first article in the sitemap)
+ *   --author <path>            author page for the host checks (default: the
+ *                              first author link on the article)
+ *   --no-image-check           skip loading an image (readiness sandbox only,
+ *                              until it serves real images; printed as skipped)
  *   --allow-http               for the readiness sandbox only
  *   --json                     print results as JSON
  *
@@ -50,6 +56,9 @@ async function main(): Promise<void> {
     allowHttp: flag('allow-http'),
     rateLimitProbe: flag('rate-limit-probe'),
     homePath: arg('home'),
+    articlePath: arg('article'),
+    authorPath: arg('author'),
+    imageCheck: !flag('no-image-check'),
   }
 
   const results = await runChecks(target)
@@ -62,6 +71,7 @@ async function main(): Promise<void> {
       console.log(`${result.ok ? '  ok  ' : ' FAIL '} [${result.group}] ${result.name}${result.ok ? '' : ` — ${result.detail}`}`)
     }
     console.log(`\n${results.length - failed.length}/${results.length} launch checks passed.`)
+    if (!target.imageCheck) console.log('Skipped: the image check (--no-image-check). Never skip it against the real site.')
     console.log('\nStill to do by hand (not anonymous HTTP):')
     for (const step of MANUAL_STEPS) console.log(`  - ${step}`)
   }
