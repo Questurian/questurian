@@ -92,7 +92,7 @@ src/
 │   ├── lib/                 # Utilities (auth checks, error handling, etc.)
 │   ├── types/               # Global TypeScript types
 │   └── utils/               # Helper functions
-├── middleware.ts            # Next.js middleware (protects /admin routes)
+├── proxy.ts                 # Next.js proxy (was middleware.ts; logs /api/ requests in dev)
 ├── payload.config.ts        # Payload CMS configuration
 └── test-utils.ts            # Testing utilities
 ```
@@ -149,7 +149,7 @@ See `/src/features/payments/` for implementation details.
 See `/docs/BUNNY_IMAGE_VARIANTS.md` for complete image transformation specs.
 
 ### Admin Panel Access
-- Protected by middleware at `/src/middleware.ts`
+- Protected by Payload access control (`src/proxy.ts` only logs in development)
 - Only `admin` and `editor` roles can access
 - Field-level permissions restrict view/edit capabilities
 - See `/docs/ACCESS_CONTROL.md` and `/docs/FIELD_VISIBILITY_MATRIX.md`

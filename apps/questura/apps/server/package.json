@@ -9,7 +9,7 @@
     "dev": "node scripts/show-commands.cjs && cross-env NODE_OPTIONS='--no-deprecation --no-warnings=ExperimentalWarning' next dev -p 4000",
     "devsafe": "rm -rf .next && node scripts/show-commands.cjs && cross-env NODE_OPTIONS=--no-deprecation next dev -p 4000",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
-    "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
+    "generate:types": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/generate-types/cli.ts",
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "db:migrate": "cross-env PG_STATEMENT_TIMEOUT_MS=0 PG_LOCK_TIMEOUT_MS=0 PG_IDLE_IN_TRANSACTION_TIMEOUT_MS=0 PG_QUERY_TIMEOUT_MS=0 NODE_OPTIONS=--no-deprecation payload migrate",
@@ -75,13 +75,13 @@
     "readiness:restore": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/restore-rehearsal.ts"
   },
   "dependencies": {
-    "@payloadcms/db-postgres": "3.79.1",
-    "@payloadcms/email-resend": "3.79.1",
-    "@payloadcms/next": "3.79.1",
-    "@payloadcms/payload-cloud": "3.79.1",
-    "@payloadcms/plugin-cloud-storage": "3.79.1",
-    "@payloadcms/richtext-lexical": "3.79.1",
-    "@payloadcms/ui": "3.79.1",
+    "@payloadcms/db-postgres": "3.90.2",
+    "@payloadcms/email-resend": "3.90.2",
+    "@payloadcms/next": "3.90.2",
+    "@payloadcms/payload-cloud": "3.90.2",
+    "@payloadcms/plugin-cloud-storage": "3.90.2",
+    "@payloadcms/richtext-lexical": "3.90.2",
+    "@payloadcms/ui": "3.90.2",
     "@seshuk/payload-storage-bunny": "^2.1.1",
     "@types/pg": "^8.20.0",
     "@types/stripe": "^8.0.417",
@@ -92,8 +92,8 @@
     "graphql": "^16.8.1",
     "i18n-iso-countries": "^7.14.0",
     "ioredis": "^5.11.0",
-    "next": "15.4.11",
-    "payload": "3.79.1",
+    "next": "16.3.6",
+    "payload": "3.90.2",
     "pg": "^8.21.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
@@ -111,7 +111,7 @@
     "@typescript-eslint/parser": "^8.0.0",
     "@vitejs/plugin-react": "4.5.2",
     "eslint": "9.16.0",
-    "eslint-config-next": "15.4.11",
+    "eslint-config-next": "16.3.6",
     "fast-check": "^4.10.2",
     "jsdom": "26.1.0",
     "prettier": "^3.4.2",
@@ -123,7 +123,7 @@
     "vitest": "3.2.6"
   },
   "engines": {
-    "node": "^18.20.2 || >=20.9.0",
+    "node": ">=20.9.0",
     "pnpm": "^9 || ^10"
   }
 }

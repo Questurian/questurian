@@ -13,6 +13,11 @@ import type { CollectionBeforeOperationHook } from 'payload'
  * `apiKeyIndex` field hook derives the HMAC that lookups actually query from
  * `data.apiKey`, and field-level `beforeValidate` runs before the
  * collection-level one. A key written any later would never be findable.
+ *
+ * Since Payload 3.90 `apiKey` is write-only (no read access, no `reveal`
+ * configured), so a key this hook generates cannot be read back by anyone.
+ * A caller that needs to use the key supplies it, as the admin panel does;
+ * this hook still keeps an enabled row from being keyless.
  */
 export const generateApiKeyHook: CollectionBeforeOperationHook = async ({ args, operation }) => {
   if (operation !== 'create' && operation !== 'update') return args

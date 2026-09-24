@@ -3,7 +3,8 @@ import tsPlugin from '@typescript-eslint/eslint-plugin'
 
 const eslintConfig = [
   {
-    ignores: ['.next/**', 'node_modules/**', '**/*.d.ts'],
+    // Every build dir: `.next`, and the `NEXT_DIST_DIR` ones (`.next-readiness`, `.next-ci`).
+    ignores: ['.next/**', '.next-*/**', 'node_modules/**', '**/*.d.ts'],
   },
   {
     files: ['src/**/*.{ts,tsx}', 'scripts/**/*.{ts,tsx}'],

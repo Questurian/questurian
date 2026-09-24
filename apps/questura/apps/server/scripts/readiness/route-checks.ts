@@ -28,7 +28,7 @@
  * token or key is ever written; identities are named by label.
  */
 
-import { createHash, createHmac } from 'node:crypto'
+import { createHash, createHmac, randomBytes } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -233,14 +233,23 @@ async function main(): Promise<void> {
     const staffToken = ((await json(staffLogin)) as { token?: string } | null)?.token
     record('credentials', 'the synthetic staff account signs in', Boolean(staffToken), `HTTP ${staffLogin.status}`)
 
+    // Since Payload 3.90 an API key is write-only: no response ever carries
+    // it back. The caller brings the key, as the admin panel now does (it
+    // generates one in the browser and shows it once before saving).
+    const serviceKey = randomBytes(32).toString('hex')
     const service = await fetch(`${BACKEND}/api/service-accounts`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `JWT ${staffToken}` },
-      body: JSON.stringify({ name: `Readiness probe ${Date.now()}`, enableAPIKey: true }),
+      body: JSON.stringify({ name: `Readiness probe ${Date.now()}`, enableAPIKey: true, apiKey: serviceKey }),
     })
-    const serviceBody = (await json(service)) as { doc?: { apiKey?: string } } | null
-    const serviceKey = serviceBody?.doc?.apiKey
-    record('credentials', 'an admin can mint a service account key', Boolean(serviceKey), `HTTP ${service.status}`)
+    // That the key works is what the `valid service account` rows below prove.
+    const serviceBody = (await json(service)) as { doc?: { id?: unknown; apiKey?: string } } | null
+    record(
+      'credentials',
+      'an admin can mint a service account key, and the response does not echo it',
+      service.status === 201 && serviceBody?.doc?.id !== undefined && !('apiKey' in (serviceBody.doc ?? {})),
+      `HTTP ${service.status}, apiKey ${serviceBody?.doc && 'apiKey' in serviceBody.doc ? 'present' : 'absent'}`,
+    )
 
     // A staff account that is disabled after signing in: a valid token for a
     // user who must not count as staff.
