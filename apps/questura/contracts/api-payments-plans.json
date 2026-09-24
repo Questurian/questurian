@@ -1,0 +1,14 @@
+{
+  "plans": [
+    {
+      "amount": 0,
+      "compareAtAmount": null,
+      "currency": "string",
+      "id": "string",
+      "interval": "string",
+      "intervalCount": 0,
+      "priceId": "string",
+      "productName": "string"
+    }
+  ]
+}

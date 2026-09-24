@@ -1,0 +1,5 @@
+{
+  "authProvider": "string",
+  "hasGoogleOAuth": true,
+  "hasLocalPassword": true
+}

@@ -1,0 +1,20 @@
+{
+  "authenticated": true,
+  "principal": {
+    "email": "string",
+    "emailVerified": true,
+    "firstName": "string",
+    "id": "string",
+    "kind": "string",
+    "lastName": "string",
+    "membership": {
+      "active": true,
+      "cancelAtPeriodEnd": true,
+      "expiresAt": "string",
+      "graceUntil": null,
+      "source": "string",
+      "status": "string"
+    },
+    "profileId": 0
+  }
+}
