@@ -150,7 +150,6 @@ summary{cursor:pointer;font-weight:600;color:var(--accent)}
 <ul>
 <li>Read <code>AGENTS.md</code>, this plan (the item and its amendments) and the matching audit prompt before starting. The plan wins where they differ. Use the caveman skill.</li>
 <li><strong>Never touch ports 5433 or 6379 on this laptop</strong> (live Postgres and Redis) or the <code>questura-postgres</code> / <code>questura-redis</code> containers. The sandbox is Postgres <code>:5442</code> and Redis <code>:6390</code>.</li>
-<li>Until item 0 lands: <code>export READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness</code>, and put a <code>redis-server</code> shim first on <code>PATH</code> that runs <code>docker run --rm --name questura-readiness-redis -p 127.0.0.1:6390:6379 redis:7-alpine redis-server --save '' --appendonly no</code>. Start the Postgres container if it's missing: <code>docker run -d --name questura-readiness-pg --tmpfs /var/lib/postgresql/data -p 127.0.0.1:5442:5432 -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=questura_readiness postgres:16</code>.</li>
 <li><strong>Memory:</strong> about 7.5 GB, with the desktop app using ~1.5 GB. Never build while the readiness stack is up. Build with <code>NODE_OPTIONS="--no-deprecation --max-old-space-size=3072"</code>. Check <code>free -m</code> before each heavy job, and stop if less than 2,500 MB is available. Stop the stack when done.</li>
 <li><strong>Commit and push after each milestone</strong>, so a crash or usage limit loses nothing.</li>
 <li>No deploys, don't resume the laptop's live window, no live Stripe or Google, no paid services, no load against anything outside this machine. New dependencies need the owner's yes. Payload schema changes follow the AGENTS.md migration steps.</li>
@@ -428,7 +427,7 @@ Report back briefly, in plain words: the PR number, what changed, before/after t
 <div class="table-scroll"><table>
 <thead><tr><th>Item</th><th>Phase</th><th>Tier</th><th>PR</th><th>Done</th></tr></thead>
 <tbody>
-<tr><td>0 Sandbox setup</td><td>0</td><td>before go-live</td><td></td><td>☐</td></tr>
+<tr><td>0 Sandbox setup</td><td>0</td><td>before go-live</td><td>#693</td><td>☑</td></tr>
 <tr><td>1 Build and config traps</td><td>1</td><td>before go-live</td><td></td><td>☐</td></tr>
 <tr><td>2 Refunds and disputes (basil)</td><td>1</td><td>before go-live</td><td></td><td>☐</td></tr>
 <tr><td>16 Time zones</td><td>1</td><td>before go-live</td><td></td><td>☐</td></tr>

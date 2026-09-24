@@ -29,7 +29,8 @@ async function main(): Promise<void> {
 
   if (command === 'check') {
     assertPreflight(settings)
-    console.log(`Preflight passed. Sandbox database: ${sandboxDatabaseName()}`)
+    const where = new URL(settings.databaseUri)
+    console.log(`Preflight passed. Sandbox database: ${sandboxDatabaseName()} as ${where.username || '(no user)'} on ${where.host}`)
     return
   }
 

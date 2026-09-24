@@ -1,7 +1,7 @@
 /**
  * The whole local sandbox as one owned set of processes (surge plan L00).
  *
- *   pnpm readiness:stack -- up --build   # Redis, media, backend, client; builds first
+ *   pnpm readiness:stack -- up --build   # Postgres, Redis, media, backend, client; builds first
  *   pnpm readiness:stack -- up --build-client  # rebuild only the client
  *   pnpm readiness:stack -- up           # reuse the last .next-readiness builds
  *   pnpm readiness:stack -- status
@@ -29,7 +29,14 @@
  *  - **Redis.** A dedicated `redis-server` on 6390 with no persistence, so a
  *    flush can never reach an ordinary Redis on 6379 — the sandbox's key
  *    prefix is not relied on for isolation, because not every client in the
- *    codebase applies it.
+ *    codebase applies it. With no `redis-server` on PATH it is the
+ *    `questura-readiness-redis` container instead (`sandbox-docker.ts`),
+ *    which is also what `readiness:faults` pauses.
+ *  - **Postgres.** When the sandbox URI is the default (127.0.0.1:5442), the
+ *    `questura-readiness-pg` container is started if it is missing, stopped
+ *    or paused, and a database with no schema is bootstrapped and seeded with
+ *    the launch corpus before anything is built. A fresh session needs only
+ *    docker. Any other URI is used as given.
  *
  * Browser-facing origins are `http://app.readiness.localhost:3100` and
  * `http://api.readiness.localhost:4100` (see `AppSettings.browser`).
@@ -51,8 +58,20 @@ import {
   SERVER_DIR,
   waitForApp,
 } from './apps'
+import { Client } from 'pg'
+
 import { assertPreflight } from './preflight'
 import { sandboxSettings, sourceIdentity } from './sandbox'
+import {
+  binaryOnPath,
+  containerStatus,
+  ensureSandboxPostgres,
+  managesSandboxPostgres,
+  redisDockerArgs,
+  removeContainer,
+  SANDBOX_REDIS,
+} from './sandbox-docker'
+import { flushSandboxRedis } from './sandbox-redis'
 import { dotenvNames } from './sandbox-env'
 
 export const STACK_PORTS = { client: 3100, backend: 4100, media: 3190, stripe: 3191, oauth: 3192, redis: 6390 } as const
@@ -72,6 +91,8 @@ export type StackState = {
   outboundLog: string
   neutralised: { server: string[]; client: string[] }
   builtFrom: string | null
+  /** How Redis was started: a local binary, or the sandbox container. Absent in older state files. */
+  redis?: 'binary' | 'docker'
 }
 
 export function readStackState(): StackState | null {
@@ -104,6 +125,52 @@ export function stackAppSettings(state: Pick<StackState, 'secrets' | 'origins' |
   }
 }
 
+/**
+ * Start a check run from empty rate-limit counters (launch fix plan, item 0).
+ *
+ * Every readiness script signs in and pays from a handful of synthetic
+ * addresses, and the backend's limits are per address per minute in the
+ * stack's Redis. Run in launch-day order, the budget one script spent was
+ * still spent when the next began: `readiness:faults` scored 17/22 with
+ * checkout answering 429, against 22/22 on its own. Emptying the sandbox Redis
+ * (6390 only — `flushSandboxRedis` refuses 6379 and anything off loopback) is
+ * what `apps/e2e/tests/global-setup.ts` already does. Sessions survive: they
+ * are in Postgres too. The limiter itself is proved elsewhere, on purpose.
+ */
+export async function freshRateLimits(): Promise<void> {
+  await flushSandboxRedis(`redis://127.0.0.1:${STACK_PORTS.redis}`)
+}
+
+/**
+ * A brand-new sandbox database has no schema. Give it the committed fixture
+ * and the launch corpus, the same two steps CI runs, so `up` works from a
+ * fresh container. A database that already holds the corpus is left alone.
+ */
+async function prepareSandboxDatabase(databaseUri: string): Promise<void> {
+  const client = new Client({ connectionString: databaseUri })
+  await client.connect()
+  let hasSchema = false
+  let hasCorpus = false
+  try {
+    hasSchema = (await client.query<{ t: string | null }>(`SELECT to_regclass('public.articles')::text AS t`)).rows[0]?.t != null
+    if (hasSchema) {
+      const corpus = await client.query<{ n: number }>(`SELECT count(*)::int AS n FROM articles WHERE slug LIKE 'launch-%'`)
+      hasCorpus = (corpus.rows[0]?.n ?? 0) > 0
+    }
+  } finally {
+    await client.end()
+  }
+  if (hasCorpus) return
+
+  const run = (label: string, args: string[]) => {
+    console.log(`Sandbox database is new: ${label} …`)
+    const result = spawnSync('pnpm', args, { cwd: SERVER_DIR(), env: process.env, stdio: 'inherit' })
+    if (result.status !== 0) throw new Error(`\`pnpm ${args.join(' ')}\` failed (exit ${result.status}).`)
+  }
+  if (!hasSchema) run('loading the schema fixture', ['readiness', 'bootstrap'])
+  run('seeding the launch corpus', ['readiness:launch', '--', 'seed'])
+}
+
 function commandOf(pid: number): string {
   const result = spawnSync('ps', ['-p', String(pid), '-o', 'command='], { encoding: 'utf8' })
   return result.status === 0 ? result.stdout.trim() : ''
@@ -123,7 +190,10 @@ function build(label: string, cwd: string, env: NodeJS.ProcessEnv, restore: stri
   const originals = new Map(restore.filter((file) => existsSync(resolve(cwd, file))).map((file) => [file, readFileSync(resolve(cwd, file))]))
   const log = resolve(STATE_DIR, `build-${label}.log`)
   console.log(`Building ${label} into ${STACK_DIST} (log: ${log}) …`)
-  const result = spawnSync('pnpm', ['build'], { cwd, env, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 })
+  // Capped heap: the laptop has ~7.5 GB and part of the stack is already up
+  // while the client builds. Uncapped, a build has taken the desktop app down.
+  const heap = [env.NODE_OPTIONS ?? '', '--max-old-space-size=3072'].filter(Boolean).join(' ')
+  const result = spawnSync('pnpm', ['build'], { cwd, env: { ...env, NODE_OPTIONS: heap }, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 })
   writeFileSync(log, (result.stdout ?? '') + (result.stderr ?? ''))
   for (const [file, bytes] of originals) writeFileSync(resolve(cwd, file), bytes)
   if (result.status !== 0) throw new Error(`The ${label} build failed (exit ${result.status}). See ${log}.`)
@@ -142,7 +212,24 @@ export async function stackUp(options: { build: boolean; buildClient?: boolean }
   const sandbox = sandboxSettings()
   assertPreflight(sandbox)
   if (readStackState()) throw new Error('A stack is already recorded. Run `pnpm readiness:stack -- down` first.')
+
+  const redisMode: 'binary' | 'docker' = binaryOnPath('redis-server') ? 'binary' : 'docker'
+  if (redisMode === 'docker') {
+    if (!binaryOnPath('docker')) throw new Error('Neither redis-server nor docker is on PATH. The sandbox needs one of them for Redis on 6390.')
+    // No stack is recorded, so a sandbox Redis container still here was left
+    // by a crash. It holds nothing worth keeping (no persistence).
+    if (containerStatus(SANDBOX_REDIS.container) !== 'missing') {
+      console.log(`Removing a leftover ${SANDBOX_REDIS.container} container.`)
+      removeContainer(SANDBOX_REDIS.container)
+    }
+  }
   await assertPortsFree(Object.values(STACK_PORTS))
+
+  if (managesSandboxPostgres(sandbox.databaseUri)) {
+    const postgres = await ensureSandboxPostgres()
+    if (postgres !== 'running') console.log(`Sandbox Postgres: ${postgres}.`)
+    await prepareSandboxDatabase(sandbox.databaseUri)
+  }
 
   mkdirSync(STATE_DIR, { recursive: true, mode: 0o700 })
   const outboundLog = resolve(STATE_DIR, 'outbound.log')
@@ -166,20 +253,30 @@ export async function stackUp(options: { build: boolean; buildClient?: boolean }
     outboundLog,
     neutralised: { server: dotenvNames(SERVER_DIR()), client: dotenvNames(CLIENT_DIR()) },
     builtFrom: null,
+    redis: redisMode,
   }
   const settings = stackAppSettings(state)
   const record = () => writeState(state)
 
   try {
     state.processes.push(
-      launch('redis', 'redis-server', ['--port', String(STACK_PORTS.redis), '--bind', '127.0.0.1', '--save', '', '--appendonly', 'no'], {
-        cwd: STATE_DIR,
-        env: { PATH: process.env.PATH, NODE_ENV: 'production' },
-        marker: `redis-server 127.0.0.1:${STACK_PORTS.redis}`,
-      }),
+      redisMode === 'binary'
+        ? launch('redis', 'redis-server', ['--port', String(STACK_PORTS.redis), '--bind', '127.0.0.1', '--save', '', '--appendonly', 'no'], {
+            cwd: STATE_DIR,
+            env: { PATH: process.env.PATH, NODE_ENV: 'production' },
+            marker: `redis-server 127.0.0.1:${STACK_PORTS.redis}`,
+          })
+        : launch('redis', 'docker', redisDockerArgs(STACK_PORTS.redis), {
+            cwd: STATE_DIR,
+            env: dockerEnv(),
+            marker: `docker run --rm --name ${SANDBOX_REDIS.container}`,
+          }),
     )
     record()
-    if (!(await waitForPort(STACK_PORTS.redis, 10_000))) throw new Error('Redis did not start on 6390.')
+    // A container can take a while the first time (image unpacking).
+    if (!(await waitForPort(STACK_PORTS.redis, redisMode === 'docker' ? 60_000 : 10_000))) {
+      throw new Error(`Redis did not start on ${STACK_PORTS.redis}. See ${resolve(STATE_DIR, 'redis.log')}.`)
+    }
 
     state.processes.push(
       launch('media', process.execPath, ['--import', 'tsx', 'scripts/readiness/media-server.ts', String(STACK_PORTS.media)], {
@@ -254,6 +351,15 @@ export async function stackUp(options: { build: boolean; buildClient?: boolean }
   }
 }
 
+/** What the docker CLI needs to find its daemon, and nothing else. */
+function dockerEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { PATH: process.env.PATH, NODE_ENV: 'production' }
+  for (const name of ['HOME', 'DOCKER_HOST', 'DOCKER_CONTEXT', 'DOCKER_CONFIG', 'XDG_RUNTIME_DIR']) {
+    if (process.env[name]) env[name] = process.env[name]
+  }
+  return env
+}
+
 function readStackBuildSha(): string | null {
   const path = resolve(SERVER_DIR(), STACK_DIST, 'READINESS_BUILD')
   return existsSync(path) ? readFileSync(path, 'utf8').trim() : null
@@ -294,6 +400,13 @@ export async function stackDown(): Promise<string[]> {
         // Gone between the check and the signal.
       }
     }
+  }
+
+  // The container outlives its `docker run` client if the client was killed
+  // hard; removing it by name is what frees 6390 for the next `up`.
+  if (state.redis === 'docker' && containerStatus(SANDBOX_REDIS.container) !== 'missing') {
+    removeContainer(SANDBOX_REDIS.container)
+    if (!stopped.includes('redis')) stopped.push('redis')
   }
 
   rmSync(STATE_FILE, { force: true })

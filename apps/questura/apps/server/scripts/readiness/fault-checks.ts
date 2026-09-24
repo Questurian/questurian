@@ -23,12 +23,12 @@ import { SANDBOX_WEBHOOK_SECRET } from './apps'
 import { signIn } from './identities'
 import { assertPreflight } from './preflight'
 import { sandboxSettings } from './sandbox'
-import { readStackState, STACK_PORTS } from './stack'
+import { SANDBOX_CONTAINERS } from './sandbox-docker'
+import { freshRateLimits, readStackState, STACK_PORTS } from './stack'
 import { Pool } from 'pg'
 
 const BACKEND = `http://127.0.0.1:${STACK_PORTS.backend}`
 const STRIPE = `http://127.0.0.1:${STACK_PORTS.stripe}`
-const SANDBOX_CONTAINERS = new Set(['questura-readiness-redis', 'questura-readiness-pg'])
 
 type Check = { group: string; name: string; ok: boolean; detail: string }
 const checks: Check[] = []
@@ -60,7 +60,7 @@ async function timed<T>(work: () => Promise<T>): Promise<{ value: T; ms: number 
 }
 
 function docker(action: 'pause' | 'unpause', container: string): void {
-  if (!SANDBOX_CONTAINERS.has(container)) throw new Error(`Refusing to ${action} ${container}: not a sandbox container.`)
+  if (!SANDBOX_CONTAINERS.includes(container)) throw new Error(`Refusing to ${action} ${container}: not a sandbox container.`)
   execFileSync('docker', [action, container], { stdio: 'ignore' })
 }
 
@@ -74,6 +74,8 @@ async function main(): Promise<void> {
   assertPreflight(settings)
   const stack = readStackState()
   if (!stack) throw new Error('No stack is running. Start one: pnpm readiness:stack -- up --build')
+  // Scripts run back to back share the per-address budgets; start from zero.
+  await freshRateLimits()
   const origin = stack.origins.client
   const pool = new Pool({ connectionString: settings.databaseUri, max: 2 })
 

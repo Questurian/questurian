@@ -7,6 +7,43 @@ you run it; you do not write it. Steps marked **owner** need your yes.
 Platform plan: `docs/capacity/cap07-platform-readiness.md` §1a. Clicks:
 `docs/capacity/h01-provisioning-checklist.md`. Origin decision: ADR-0016.
 
+## Sandbox setup
+
+Step 2 runs against the readiness sandbox: production builds of both apps on
+this machine, with their own database and Redis, no network and fake
+Stripe/Google. From a fresh session it needs only `docker`:
+
+- **Postgres** is the `questura-readiness-pg` container on 127.0.0.1:5442
+  (`postgres:16`, data on a tmpfs, role `postgres`, database
+  `questura_readiness`). That is the default address, so no export is
+  needed. `readiness:stack -- up` starts the container if it is missing,
+  stopped or paused, and gives a brand-new database the schema fixture and the
+  launch corpus (`readiness bootstrap`, then `readiness:launch -- seed`)
+  before it builds. Set `READINESS_DATABASE_URI` only to use a different
+  disposable database; `stack up` then leaves it as it is.
+- **Redis** is 127.0.0.1:6390, never 6379. With no `redis-server` binary on
+  PATH, `stack up` runs it as the `questura-readiness-redis` container
+  (`redis:7-alpine`, no persistence), which is also what `readiness:faults`
+  pauses. `stack down` removes it.
+- **Rate limits.** Every step-2 script empties the sandbox Redis (6390 only)
+  before it starts, so running them back to back does not spend each other's
+  per-address budget. Playwright's global setup does the same.
+- On the laptop that serves the live window, 5433 and 6379 are the live
+  Postgres and Redis (`questura-postgres`, `questura-redis`). Nothing in the
+  sandbox touches them: preflight refuses Redis on 6379 and any database not
+  named `questura_readiness*`, and the container helpers refuse any other
+  container name or port.
+- **Memory.** About 7.5 GB. Check `free -m` first and stop below 2,500 MB
+  available. `stack up --build` caps each build at 3 GB of heap. Don't start a
+  second build while a stack is up, and run `readiness:stack -- down` when
+  finished.
+
+After step 2, the browser journeys run against the same stack:
+
+```bash
+pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --project=firefox   # expect 20 passed
+```
+
 ## Before the first deploy
 
 1. **Check the Railway variables.** Fill a copy of
