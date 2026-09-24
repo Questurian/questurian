@@ -39,7 +39,7 @@ import { signInAll } from './identities'
 import { LAUNCH_MANIFEST_PATH, type LaunchManifest, STAFF_EMAIL, SYNTHETIC_PASSWORD } from './launch-corpus'
 import { assertPreflight } from './preflight'
 import { sandboxSettings, sourceIdentity } from './sandbox'
-import { readStackState, STACK_PORTS } from './stack'
+import { freshRateLimits, readStackState, STACK_PORTS } from './stack'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const RUNS = resolve(HERE, '../../../../docs/capacity/runs')
@@ -101,6 +101,8 @@ async function main(): Promise<void> {
   assertPreflight(settings)
   const stack = readStackState()
   if (!stack) throw new Error('No stack is running. Start one: pnpm readiness:stack -- up --build')
+  // Scripts run back to back share the per-address budgets; start from zero.
+  await freshRateLimits()
   const origin = stack.origins.client
   const manifest = JSON.parse(readFileSync(LAUNCH_MANIFEST_PATH, 'utf8')) as LaunchManifest
   const pool = new Pool({ connectionString: settings.databaseUri, max: 2 })

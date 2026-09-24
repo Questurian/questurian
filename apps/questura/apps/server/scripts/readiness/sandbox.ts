@@ -9,7 +9,8 @@ import { assertPreflight, type SandboxSettings } from './preflight'
  *
  * Defaults are chosen so that running any of these scripts with no
  * environment at all lands on the sandbox rather than on anything real: a
- * database named `questura_readiness`, a Redis on 6390 rather than 6379, a
+ * database named `questura_readiness` in the sandbox container on 5442 rather
+ * than anything on 5432/5433, a Redis on 6390 rather than 6379, a
  * frontend receiver on 3100 rather than 3000, a backend on 4100 rather than
  * 4000. Overrides exist, but `preflight.ts` still has to agree with them.
  *
@@ -21,7 +22,11 @@ import { assertPreflight, type SandboxSettings } from './preflight'
 
 export const SANDBOX_DEFAULTS = {
   databaseName: 'questura_readiness',
-  postgresPort: 5432,
+  // The `questura-readiness-pg` container (`sandbox-docker.ts`), which
+  // `readiness:stack -- up` starts when it is missing. It has only the
+  // `postgres` role, so the default names it rather than `$USER`.
+  postgresUser: 'postgres',
+  postgresPort: 5442,
   redisPort: 6390,
   redisNamespace: 'readiness:',
   frontendPort: 3100,
@@ -45,7 +50,7 @@ export const BLOCKED_ENV = [
 export function sandboxSettings(env: NodeJS.ProcessEnv = process.env): SandboxSettings {
   const databaseUri =
     env.READINESS_DATABASE_URI ??
-    `postgres://${env.USER ?? 'postgres'}@127.0.0.1:${SANDBOX_DEFAULTS.postgresPort}/${SANDBOX_DEFAULTS.databaseName}`
+    `postgres://${SANDBOX_DEFAULTS.postgresUser}@127.0.0.1:${SANDBOX_DEFAULTS.postgresPort}/${SANDBOX_DEFAULTS.databaseName}`
 
   return {
     databaseUri,

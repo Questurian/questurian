@@ -47,7 +47,7 @@ import { STAFF_EMAIL, SYNTHETIC_PASSWORD } from './launch-corpus'
 import { FAKE_GOOGLE, type FakeGoogleIdentity, type FakeMail, type FakeStats, signJwt } from './oauth-fake'
 import { assertPreflight } from './preflight'
 import { sandboxSettings } from './sandbox'
-import { readStackState, STACK_PORTS } from './stack'
+import { freshRateLimits, readStackState, STACK_PORTS } from './stack'
 
 const BACKEND = `http://127.0.0.1:${STACK_PORTS.backend}`
 const AUTH = `${BACKEND}/api/visitor-auth`
@@ -303,6 +303,8 @@ async function main(): Promise<void> {
   assertPreflight(sandbox)
   const stack = readStackState()
   if (!stack) throw new Error('No stack is running. Start one: pnpm readiness:stack -- up --build')
+  // Scripts run back to back share the per-address budgets; start from zero.
+  await freshRateLimits()
   if (!stack.processes.some((process_) => process_.role === 'oauth-fake')) {
     throw new Error('This stack has no fake Google. Restart it: pnpm readiness:stack -- down && pnpm readiness:stack -- up')
   }

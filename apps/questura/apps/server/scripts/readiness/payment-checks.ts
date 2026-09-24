@@ -31,7 +31,7 @@ import { Pool } from 'pg'
 import { signIn } from './identities'
 import { assertPreflight } from './preflight'
 import { sandboxSettings } from './sandbox'
-import { readStackState, STACK_PORTS } from './stack'
+import { freshRateLimits, readStackState, STACK_PORTS } from './stack'
 import { SANDBOX_WEBHOOK_SECRET } from './apps'
 
 const BACKEND = `http://127.0.0.1:${STACK_PORTS.backend}`
@@ -194,6 +194,8 @@ async function main(): Promise<void> {
   assertPreflight(settings)
   const stack = readStackState()
   if (!stack) throw new Error('No stack is running. Start one: pnpm readiness:stack -- up --build')
+  // Scripts run back to back share the per-address budgets; start from zero.
+  await freshRateLimits()
 
   const pool = new Pool({ connectionString: settings.databaseUri, max: 2 })
   try {
