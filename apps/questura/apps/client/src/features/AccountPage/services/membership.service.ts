@@ -1,20 +1,17 @@
 import type { User } from '@/lib/user/types';
 
 import type { BillingInfo, MembershipState, MembershipType } from '../types/membership.types';
+// Relative and with its extension so node:test can load this module unbundled.
+import { formatAccessDate } from '../../../lib/dates.ts';
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return '';
 
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = date.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const formattedDate = formatAccessDate(dateString);
+  if (!formattedDate) return '';
 
-  const formattedDate = date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const diffTime = new Date(dateString).getTime() - Date.now();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays > 0 && diffDays <= 30) {
     return `${formattedDate} (in ${diffDays} ${diffDays === 1 ? 'day' : 'days'})`;
@@ -77,7 +74,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
           type: 'expiring',
           label: 'Premium - Expiring',
           badgeClass: 'bg-[#fff3e0] text-[#e65100] border border-[#ffe0b2]',
-          description: `Your premium membership will expire on ${expirationDate?.toLocaleDateString() || 'the end of your billing period'}. Your subscription has been cancelled but remains active until then.`,
+          description: `Your premium membership will expire on ${formatAccessDate(expirationDate) ?? 'the end of your billing period'}. Your subscription has been cancelled but remains active until then.`,
           showCancelButton: false,
           showUpgradeButton: false,
           showReactivateButton: true,
@@ -89,7 +86,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
           type: 'active',
           label: 'Premium Member',
           badgeClass: 'bg-[#1A1A1A] text-white',
-          description: `Your premium membership renews on ${renewalDate.toLocaleDateString()}.`,
+          description: `Your premium membership renews on ${formatAccessDate(renewalDate)}.`,
           showCancelButton: true,
           showUpgradeButton: false,
           showReactivateButton: false,
@@ -119,7 +116,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
         label: stillCovered ? 'Premium - Payment Issue' : 'Membership Expired',
         badgeClass: 'bg-[#fff3e0] text-[#e65100] border border-[#ffe0b2]',
         description: stillCovered
-          ? `We could not take your last payment. Your access continues until ${graceEnds!.toLocaleDateString()} while we retry — update your payment method to keep it.`
+          ? `We could not take your last payment. Your access continues until ${formatAccessDate(graceEnds)} while we retry — update your payment method to keep it.`
           : 'We could not take your last payment and your premium access has ended. Update your payment method to restore it.',
         showCancelButton: stillCovered,
         showUpgradeButton: !stillCovered,
@@ -134,7 +131,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
           type: 'expired',
           label: 'Membership Expired',
           badgeClass: 'bg-[#fce4ec] text-[#c62828] border border-[#f8bbd0]',
-          description: `Your premium membership expired on ${expirationDate?.toLocaleDateString()}. Upgrade to restore premium features.`,
+          description: `Your premium membership expired on ${formatAccessDate(expirationDate)}. Upgrade to restore premium features.`,
           showCancelButton: false,
           showUpgradeButton: true,
           showReactivateButton: false,
@@ -146,7 +143,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
           type: 'cancelled',
           label: 'Membership Cancelled',
           badgeClass: 'bg-[#fff3e0] text-[#e65100] border border-[#ffe0b2]',
-          description: `Your membership was cancelled but remains active until ${expirationDate.toLocaleDateString()}.`,
+          description: `Your membership was cancelled but remains active until ${formatAccessDate(expirationDate)}.`,
           showCancelButton: false,
           // Not reactivatable: this status means Stripe has already deleted the
           // subscription, so the endpoint can only refuse. Resuming before the

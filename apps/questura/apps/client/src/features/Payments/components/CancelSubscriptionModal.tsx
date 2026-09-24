@@ -1,4 +1,5 @@
 import type { CancelSubscriptionModalProps } from '../types';
+import { formatAccessDate } from '@/lib/dates';
 
 export function CancelSubscriptionModal({
   show,
@@ -9,14 +10,8 @@ export function CancelSubscriptionModal({
 }: CancelSubscriptionModalProps) {
   if (!show) return null;
 
-  const formatExpirationDate = (date: string | Date | null | undefined) => {
-    if (!date) return 'the end of your current billing period';
-    try {
-      return new Date(date).toLocaleDateString();
-    } catch {
-      return 'the end of your current billing period';
-    }
-  };
+  const formatExpirationDate = (date: string | Date | null | undefined) =>
+    formatAccessDate(date) ?? 'the end of your current billing period';
 
   return (
     <div className="fixed inset-0 bg-[#1A1A1A]/60 flex items-center justify-center p-5 z-50">

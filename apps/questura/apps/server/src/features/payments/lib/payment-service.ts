@@ -9,6 +9,7 @@ import { resyncSubscription } from './subscription-resync'
 import { findVisitorProfileByAuthUserId } from '@/features/visitor-auth/lib/visitor-profile'
 import { resolveProfileForStripeCustomer } from './subscription-profile'
 import { findLiveSubscription } from './customer-linkage'
+import { formatAccessDate } from '@/shared/lib/dates'
 
 /**
  * Stripe states in which a subscription is still live enough to cancel or
@@ -189,7 +190,7 @@ export async function cancelUserSubscription(authUserId: string): Promise<{
     return {
       success: true,
       message: endsAt
-        ? `Subscription cancelled. Access will continue until ${new Date(endsAt).toLocaleDateString()}`
+        ? `Subscription cancelled. Access will continue until ${formatAccessDate(endsAt)}`
         : 'Subscription cancelled',
       membershipExpiresAt: endsAt ?? undefined,
     }
@@ -252,7 +253,7 @@ export async function reactivateUserSubscription(authUserId: string): Promise<{
     return {
       success: true,
       message: renewsAt
-        ? `Subscription reactivated. Will renew on ${new Date(renewsAt).toLocaleDateString()}`
+        ? `Subscription reactivated. Will renew on ${formatAccessDate(renewsAt)}`
         : 'Subscription reactivated',
       renewsAt: renewsAt ?? undefined,
     }

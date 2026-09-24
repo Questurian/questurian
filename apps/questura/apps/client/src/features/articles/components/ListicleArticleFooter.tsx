@@ -11,6 +11,7 @@ import type {
   ListicleFooterLinks,
 } from '@/features/articles/lib/fetchListicleFooterLinks'
 import type { ArticleTypeKey } from '@/features/articles/lib/articleScope'
+import { formatArticleDate } from '@/lib/dates'
 
 /**
  * The way out of a finished list.
@@ -49,16 +50,7 @@ function formatSegmentName(segment: string): string {
 }
 
 function formatShortDate(value: string | null): string | null {
-  if (!value) return null
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  })
-    .format(date)
-    .toUpperCase()
+  return formatArticleDate(value, 'monthDay')?.toUpperCase() ?? null
 }
 
 function GuideCard({ link }: { link: ListicleFooterLink }): JSX.Element {

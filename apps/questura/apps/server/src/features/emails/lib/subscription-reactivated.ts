@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createInfoBox, EMAIL_PARAGRAPH_STYLE } from './email-utils'
 import type { EmailResult, SubscriptionReactivatedEmailData } from '../types'
+import { formatAccessDate } from '@/shared/lib/dates'
 
 export async function sendSubscriptionReactivatedEmail(
   payload: Payload,
@@ -8,7 +9,7 @@ export async function sendSubscriptionReactivatedEmail(
 ): Promise<EmailResult> {
   const greeting = buildGreeting(firstName, lastName)
   const renewalText = renewsAt
-    ? `Your subscription will automatically renew on ${renewsAt.toLocaleDateString()}.`
+    ? `Your subscription will automatically renew on ${formatAccessDate(renewsAt)}.`
     : 'Your subscription will continue to renew automatically.'
 
   const statusDetails = subscriptionType ? `
@@ -17,7 +18,7 @@ export async function sendSubscriptionReactivatedEmail(
         <strong>Subscription:</strong> ${subscriptionType}
       </p>
       <p style="font-size: 16px; line-height: 1.5; color: #333; margin: 10px 0 0 0;">
-        <strong>Next Renewal:</strong> ${renewsAt?.toLocaleDateString() || 'Active'}
+        <strong>Next Renewal:</strong> ${formatAccessDate(renewsAt) ?? 'Active'}
       </p>
     </div>
   ` : `

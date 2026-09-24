@@ -6,6 +6,7 @@ import type {
   LocationContentItem,
   LocationContentResponse,
 } from '@/features/search/lib/fetchSearch'
+import { formatArticleDate } from '@/lib/dates'
 
 const TYPE_LABEL: Record<LocationContentItem['type'], string> = {
   articles: 'Article',
@@ -14,10 +15,7 @@ const TYPE_LABEL: Record<LocationContentItem['type'], string> = {
 }
 
 function formatDate(value: string | null): string {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  return formatArticleDate(value, 'short') ?? ''
 }
 
 type Props = {

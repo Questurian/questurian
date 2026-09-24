@@ -323,6 +323,27 @@ describe('cancelUserSubscription', () => {
     expect(mocks.sendSubscriptionCancelledEmail).not.toHaveBeenCalled()
   })
 
+  // Half an hour before midnight UTC is already the next day east of it. The
+  // message is written in UTC whatever zone the server runs in (the unit tests
+  // run under TZ=UTC and TZ=Pacific/Kiritimati), so it names the day Stripe does.
+  it('states the access end date in UTC with the month spelled out', async () => {
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue(activeProfile)
+    mocks.stripeSubscriptionRetrieve.mockResolvedValue({
+      id: 'sub_1',
+      status: 'active',
+      cancel_at_period_end: false,
+    })
+    mocks.resyncSubscription.mockResolvedValue({
+      profileId: 10,
+      state: { paidThroughAt: '2030-01-31T23:30:00.000Z' },
+      transitions: [],
+    })
+
+    const result = await cancelUserSubscription('auth_1')
+
+    expect(result.message).toBe('Subscription cancelled. Access will continue until January 31, 2030')
+  })
+
   it('fails cleanly when Stripe rejects the cancellation', async () => {
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue(activeProfile)
     mocks.stripeSubscriptionRetrieve.mockResolvedValue({
@@ -417,6 +438,27 @@ describe('reactivateUserSubscription', () => {
     })
     expect(mocks.payloadUpdate).not.toHaveBeenCalled()
     expect(mocks.sendSubscriptionReactivatedEmail).not.toHaveBeenCalled()
+  })
+
+  it('states the renewal date in UTC with the month spelled out', async () => {
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
+      ...activeProfile,
+      cancelAtPeriodEnd: true,
+    })
+    mocks.stripeSubscriptionRetrieve.mockResolvedValue({
+      id: 'sub_1',
+      status: 'active',
+      cancel_at_period_end: true,
+    })
+    mocks.resyncSubscription.mockResolvedValue({
+      profileId: 10,
+      state: { paidThroughAt: '2030-01-31T23:30:00.000Z' },
+      transitions: [],
+    })
+
+    const result = await reactivateUserSubscription('auth_1')
+
+    expect(result.message).toBe('Subscription reactivated. Will renew on January 31, 2030')
   })
 
   it('fails cleanly when Stripe rejects the reactivation', async () => {

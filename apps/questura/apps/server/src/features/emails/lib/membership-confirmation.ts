@@ -1,13 +1,14 @@
 import type { Payload } from 'payload'
 import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createSectionBox, createInfoBox, EMAIL_PARAGRAPH_STYLE } from './email-utils'
 import type { EmailResult, MembershipConfirmationEmailData } from '../types'
+import { formatAccessDate } from '@/shared/lib/dates'
 
 export async function sendMembershipConfirmationEmail(
   payload: Payload,
   { email, firstName, lastName, subscriptionType, membershipExpiresAt, isRecurring = true }: MembershipConfirmationEmailData
 ): Promise<EmailResult> {
   const greeting = buildGreeting(firstName, lastName)
-  const expirationDate = membershipExpiresAt?.toLocaleDateString() || 'the end of your billing cycle'
+  const expirationDate = formatAccessDate(membershipExpiresAt) ?? 'the end of your billing cycle'
 
   const html = wrapEmailContent(`
     <h1 style="color: #28a745; text-align: center;">✅ Welcome to Questurian Premium</h1>

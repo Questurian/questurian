@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createInfoBox, EMAIL_PARAGRAPH_STYLE } from './email-utils'
 import type { EmailResult, SubscriptionCancelledEmailData } from '../types'
+import { formatAccessDate } from '@/shared/lib/dates'
 
 export async function sendSubscriptionCancelledEmail(
   payload: Payload,
@@ -9,7 +10,7 @@ export async function sendSubscriptionCancelledEmail(
   const greeting = buildGreeting(firstName, lastName)
   const accessText = wasImmediate
     ? 'Your access has been immediately revoked.'
-    : `Your access will continue until ${membershipExpiresAt?.toLocaleDateString() || 'the end of your billing period'}.`
+    : `Your access will continue until ${formatAccessDate(membershipExpiresAt) ?? 'the end of your billing period'}.`
 
   const statusDetails = subscriptionType ? `
     <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">

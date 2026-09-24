@@ -6,6 +6,7 @@ import { ArticleShareButton } from '@/features/articles/components/ArticleShareB
 import { BookmarkButton } from '@/features/bookmarks/components/BookmarkButton'
 import type { BookmarkTargetType } from '@/features/bookmarks/types'
 import { ArticleByline } from '@/features/articles/components/ArticleByline'
+import { formatArticleDate } from '@/lib/dates'
 
 type ArticlePageHeaderProps = {
   title: string
@@ -45,18 +46,6 @@ function WavyDivider(): JSX.Element {
   )
 }
 
-function formatHeaderDate(iso: string | undefined): string | null {
-  if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(d)
-}
-
 export function ArticlePageHeader({
   title,
   description,
@@ -67,7 +56,7 @@ export function ArticlePageHeader({
   bookmark,
 }: ArticlePageHeaderProps): JSX.Element {
   const publishedLine = (() => {
-    const formatted = formatHeaderDate(publishedAt ?? updatedAt)
+    const formatted = formatArticleDate(publishedAt ?? updatedAt, 'short')
     return formatted ? `Published ${formatted}` : null
   })()
 
