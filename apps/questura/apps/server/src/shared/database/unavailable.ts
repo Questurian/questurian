@@ -18,6 +18,7 @@ const UNAVAILABLE_SQLSTATE = new Set([
   '57P02', // crash_shutdown
   '57P03', // cannot_connect_now: starting up, or in recovery
   '53300', // too_many_connections
+  '55P03', // lock_not_available: our own lock_timeout, a table another session holds
 ])
 
 const UNAVAILABLE_ERRNO = new Set(['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'EPIPE', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH'])
