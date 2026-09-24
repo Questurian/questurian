@@ -3,7 +3,7 @@ import type { VisitorAuthMethods } from './account-query'
 import { visitorAuth } from './better-auth'
 import { deriveVisitorMembership } from './membership-entitlement'
 import { visitorSessionToken } from './session-cookie'
-import type { MembershipSource } from './membership-entitlement'
+import type { VisitorMembership } from './membership-entitlement'
 import { ensureVisitorProfileForAuthUser, findVisitorProfileByAuthUserId } from './visitor-profile'
 
 export type VisitorPrincipal = {
@@ -14,13 +14,9 @@ export type VisitorPrincipal = {
   profileId: string | number | null
   firstName: string
   lastName: string
-  membership: {
-    active: boolean
-    source: MembershipSource
-    status: string
-    expiresAt: string | null
-    cancelAtPeriodEnd: boolean
-  }
+  // The whole derived membership, `graceUntil` included: the client reads it,
+  // and the declared type had silently dropped it (apiContract.typecheck.ts).
+  membership: VisitorMembership
 }
 
 /**
