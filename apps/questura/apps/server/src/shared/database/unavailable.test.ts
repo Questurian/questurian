@@ -16,6 +16,7 @@ describe('isDatabaseUnavailable', () => {
     expect(isDatabaseUnavailable(withCode('57P03'))).toBe(true)
     expect(isDatabaseUnavailable(withCode('08006'))).toBe(true)
     expect(isDatabaseUnavailable(withCode('57014', 'canceling statement due to statement timeout'))).toBe(true)
+    expect(isDatabaseUnavailable(withCode('55P03', 'canceling statement due to lock timeout'))).toBe(true)
   })
 
   // Drizzle wraps the driver's error in `DrizzleQueryError`, with the

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isSlugSegment, sameSiteLocation } from '@/lib/routing/sameSiteRedirect'
 import { originFromRequest } from '@/lib/seo/requestOrigin'
 import {
   APPLE_PAY_DOMAIN_ASSOCIATION_BODY,
@@ -25,8 +26,10 @@ function getPublicOrigin(request: NextRequest): string {
   })
 }
 
-function redirectToPublicLocation(request: NextRequest, location: string, status = 307): NextResponse {
-  return NextResponse.redirect(new URL(location, getPublicOrigin(request)), status)
+/** A redirect on the visitor's own origin, or null if `location` would leave it. */
+function redirectToPublicLocation(request: NextRequest, location: string, status = 307): NextResponse | null {
+  const target = sameSiteLocation(location, getPublicOrigin(request))
+  return target ? NextResponse.redirect(target, status) : null
 }
 
 function stripTrailingSlash(url: URL): string | null {
@@ -48,7 +51,7 @@ function handleHomeGeoRedirect(request: NextRequest): NextResponse | null {
     }
     const cityId = parsed.cityId
     const country = parsed.country
-    if (cityId && country) {
+    if (isSlugSegment(cityId) && isSlugSegment(country)) {
       return redirectToPublicLocation(request, `/${country}/${cityId}`)
     }
   } catch {
@@ -92,9 +95,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Next's own trailing-slash redirect (308) runs before middleware, so this
+  // is a backstop; sameSiteLocation keeps it on the site either way.
   const stripped = stripTrailingSlash(request.nextUrl)
   if (stripped) {
-    return redirectToPublicLocation(request, stripped, 301)
+    const redirect = redirectToPublicLocation(request, stripped, 301)
+    if (redirect) return redirect
   }
 
   const homeRedirect = handleHomeGeoRedirect(request)

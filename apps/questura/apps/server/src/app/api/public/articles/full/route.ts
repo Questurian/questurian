@@ -15,6 +15,7 @@ import { isArticleTypeKey, TYPE_TO_COLLECTION } from '@/features/articles/public
 import { isGatedItem } from '@/shared/content/accessTier'
 import { runPrivateWork, temporarilyUnavailable } from '@/features/visitor-auth/lib/private-route'
 import { hasVisitorSessionCookie } from '@/features/visitor-auth/lib/session-cookie'
+import { isDatabaseUnavailable } from '@/shared/database/unavailable'
 
 /**
  * Full body of a Gated item, for a reader who has paid for it (ADR-0009).
@@ -140,6 +141,15 @@ async function readGatedBody(req: NextRequest, corsHeaders: Record<string, strin
     // source of truth for a question the status code already answers.
     return NextResponse.json(article, { headers: corsHeaders })
   } catch (error) {
+    // A locked table, a statement past its budget or a database that is gone
+    // says nothing about this request, so it is a 503 the reader's page can
+    // retry, like every other route here -- not a 500 that reads as a bug.
+    if (isDatabaseUnavailable(error)) {
+      logger.warn('Gated article: database unavailable', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return temporarilyUnavailable(corsHeaders, 'dependency')
+    }
     logger.error('Failed to load gated article', {
       error: error instanceof Error ? error.message : String(error),
     })

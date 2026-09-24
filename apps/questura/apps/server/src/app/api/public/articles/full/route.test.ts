@@ -31,7 +31,7 @@ vi.mock('@/features/articles/public/serializeArticleBlocks', () => ({
 }))
 
 vi.mock('@/shared/utils/logger', () => ({
-  logger: { error: vi.fn() },
+  logger: { error: vi.fn(), warn: vi.fn() },
 }))
 
 vi.mock('@/features/articles/public/articles-full-rate-limit', async (importOriginal) => {
@@ -253,6 +253,34 @@ describe('GET /api/public/articles/full — refusals', () => {
     expect(res.headers.get('cache-control')).toContain('no-store')
     expect(res.headers.get('retry-after')).toBe('2')
     expect(admissionGate('private').stats().active).toBe(0)
+  })
+
+  // L10: a members-only body under a table lock answered 500. The lock ends
+  // the read at lock_timeout (55P03); that is a temporary state, not a bug.
+  it('answers 503 + Retry-After + no-store when the article read hits a lock timeout', async () => {
+    find.mockRejectedValue(
+      new Error('Failed query', {
+        cause: Object.assign(new Error('canceling statement due to lock timeout'), { code: '55P03' }),
+      }),
+    )
+
+    const res = await GET(request({ type: 'articles', id: '42' }))
+
+    expect(res.status).toBe(503)
+    expect(res.headers.get('retry-after')).toBe('2')
+    expect(res.headers.get('cache-control')).toContain('no-store')
+    expect(res.headers.get('vary')).toContain('Cookie')
+    await expect(res.json()).resolves.toEqual({ error: 'Temporarily unavailable. Please try again shortly.' })
+    expect(admissionGate('private').stats().active).toBe(0)
+  })
+
+  it('answers 503 when the database stops answering mid-read', async () => {
+    find.mockRejectedValue(new Error('Query read timeout'))
+
+    const res = await GET(request({ type: 'articles', id: '42' }))
+
+    expect(res.status).toBe(503)
+    expect(res.headers.get('retry-after')).toBe('2')
   })
 
   it('does not leak internal error text on a 500', async () => {

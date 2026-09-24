@@ -11,6 +11,9 @@
  * faults pause the sandbox's own containers, and nothing else: the script
  * refuses any container not named `questura-readiness-*`, and always unpauses.
  *
+ * A locked table is a held `ACCESS EXCLUSIVE` lock on `articles`, taken in a
+ * transaction on the sandbox database and always rolled back.
+ *
  * The bar for every fault: a clean answer in bounded time, no second customer
  * or session, nothing recorded that would stop Stripe's retry from working,
  * and public reads staying up when only Redis is gone.
@@ -18,9 +21,11 @@
 
 import { execFileSync } from 'node:child_process'
 import { createHmac, randomBytes } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 
 import { SANDBOX_WEBHOOK_SECRET } from './apps'
 import { signIn } from './identities'
+import { LAUNCH_MANIFEST_PATH, type LaunchManifest } from './launch-corpus'
 import { assertPreflight } from './preflight'
 import { sandboxSettings } from './sandbox'
 import { SANDBOX_CONTAINERS } from './sandbox-docker'
@@ -173,6 +178,45 @@ async function main(): Promise<void> {
     }
     const recovered = await timed(checkout)
     record(r, 'checkout works again once Redis is back, with no restart', recovered.value.status === 200 || recovered.value.status === 400, `HTTP ${recovered.value.status}`)
+
+    // ------------------------------------------------------ Postgres locked
+    // L10 (docs/capacity/runs/2026-09-22-surge-L10-local-runs.md): a member's
+    // paid body answered 500 while the articles table was locked. The read
+    // ends at the server's 5 s lock_timeout (55P03); that is "try again", so
+    // the answer is a 503 with Retry-After, never a 500 that reads as a bug.
+    const l = 'database locked'
+    const manifest = JSON.parse(readFileSync(LAUNCH_MANIFEST_PATH, 'utf8')) as LaunchManifest
+    const piece = manifest.pieces.find((entry) => entry.status === 'published' && entry.access === 'member' && entry.type === 'articles')!
+    const member = await signIn(BACKEND, origin, 'member-a@example.com', '198.21.251.1')
+    const memberBody = () =>
+      fetch(`${BACKEND}/api/public/articles/full?type=articles&id=${piece.id}&lang=en`, {
+        headers: { cookie: member, origin, ...caller() },
+        signal: AbortSignal.timeout(30_000),
+      })
+    const hasMemberMarker = async (response: Response) => (await response.text()).includes(piece.markers.member!)
+
+    const unlocked = await memberBody()
+    record(l, 'a member reads the members-only body before the lock', unlocked.status === 200 && (await hasMemberMarker(unlocked)), `HTTP ${unlocked.status}`)
+    const locker = await pool.connect()
+    try {
+      await locker.query('BEGIN')
+      await locker.query('LOCK TABLE articles IN ACCESS EXCLUSIVE MODE')
+      const locked = await timed(memberBody)
+      const retryAfter = locked.value.headers.get('retry-after')
+      const cacheControl = locked.value.headers.get('cache-control') ?? ''
+      record(
+        l,
+        'while articles is locked, the member body answers 503 with Retry-After and no-store, not 500',
+        locked.value.status === 503 && Number(retryAfter) > 0 && /no-store/.test(cacheControl) && !(await hasMemberMarker(locked.value)),
+        `HTTP ${locked.value.status}, Retry-After ${retryAfter ?? 'none'}, Cache-Control ${cacheControl || 'none'}`,
+      )
+      record(l, '…in bounded time (under 10 s: the 5 s lock timeout)', locked.ms < 10_000, `${locked.ms} ms`)
+    } finally {
+      await locker.query('ROLLBACK').catch(() => undefined)
+      locker.release()
+    }
+    const released = await memberBody()
+    record(l, 'the member body is back once the lock is released, with no restart', released.status === 200 && (await hasMemberMarker(released)), `HTTP ${released.status}`)
 
     // ------------------------------------------------------------ Postgres
     const d = 'database down'
