@@ -11,12 +11,15 @@ Evidence: [`docs/capacity/runs/2026-09-22-L09-cloudflare-adapter.md`](../../../d
 ```
 @opennextjs/cloudflare  1.18.1
 wrangler                4.136.2
-next                    15.4.11
+next                    15.5.26
 ```
 
-`1.19.0` raises its Next floor to `>=15.5.15`; `@latest` (1.20.6) wants
-`>=15.5.24`. The apps are on **15.4.11**, so **1.18.1 is the ceiling** until
-Next is upgraded — and that moves both apps, so it is a separate decision.
+`1.18.1` declares `next: ~15.4.11 || ~15.5.10 || ~16.0.11 || ^16.1.5`, so it
+accepts the client's **15.5.26** and the adapter did not need to move when Next
+did. `1.19.0` raises its Next floor to `>=15.5.15`; 1.20.6 wants
+`>=15.5.24 <16 || >=16.3.3`. Moving the adapter is its own change: check the
+new release's `peerDependencies` against the pinned Next first. The server
+(Payload) is not built by the adapter and stays on its own Next.
 
 A caret on either package would let a routine `pnpm install` cross that
 boundary with no error until a build fails. `cloudflare-readiness.test.mjs`

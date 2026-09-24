@@ -14,15 +14,17 @@ const read = (name) => readFileSync(resolve(clientRoot, name), 'utf8')
  * three things about that setup which would break silently.
  */
 
-// `@opennextjs/cloudflare@1.19.0` raises its Next floor to 15.5.15, and the
-// apps are on 15.4.11. A caret on either side of that pair lets a routine
-// install cross the boundary with no error until the build fails.
+// `@opennextjs/cloudflare@1.18.1` declares `next: ~15.4.11 || ~15.5.10 || ...`,
+// and the client is on 15.5.26. Later adapters move the floor (1.19.0 wants
+// >=15.5.15, 1.20.6 wants >=15.5.24 <16 || >=16.3.3). A caret on either side of
+// the pair lets a routine install cross a boundary with no error until the
+// build fails.
 test('the adapter and Next are pinned to a compatible pair', () => {
-  assert.equal(pkg.dependencies.next, '15.4.11')
+  assert.equal(pkg.dependencies.next, '15.5.26')
   assert.equal(
     pkg.devDependencies['@opennextjs/cloudflare'],
     '1.18.1',
-    'Exact, not caret: 1.19.0 requires Next >= 15.5.15. Moving past 1.18.1 means upgrading Next in both apps first.',
+    'Exact, not caret: each adapter release moves its Next range. Check its peerDependencies against the pinned Next before moving it.',
   )
   assert.equal(pkg.devDependencies.wrangler, '4.136.2')
 })
