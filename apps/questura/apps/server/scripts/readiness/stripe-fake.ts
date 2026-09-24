@@ -3,12 +3,22 @@
  * A2, A5, A8). Loopback only, in memory, no money.
  *
  * It answers the calls the app makes: customers, Checkout Sessions,
- * subscriptions, invoices, refunds and the billing portal. Its subscription
- * and invoice objects are **real captured Stripe payloads**
- * (`payments/__fixtures__/membership-lifecycle.events.json`) with only ids,
- * dates, prices and status changed, so the app reads the same shapes it
- * reads from Stripe. Checkout Sessions have no captured payload yet (A3);
- * they carry the fields the handler reads.
+ * subscriptions, invoices, charges, invoice payments, refunds and the billing
+ * portal. Its subscription and invoice objects are **real captured Stripe
+ * payloads** (`payments/__fixtures__/membership-lifecycle.events.json`) with
+ * only ids, dates, prices and status changed, so the app reads the same shapes
+ * it reads from Stripe. Checkout Sessions, charges, disputes and invoice
+ * payments have no captured payload yet (A3); they carry the fields the
+ * handlers read.
+ *
+ * Every object is shaped as the pinned API version (2025-08-27.basil) returns
+ * it, which is not the version the fixture was captured at. Basil removed
+ * `paid`, `charge`, `payment_intent`, `subscription` and `subscription_details`
+ * from Invoice and `invoice` from Charge, so they are stripped here: the only
+ * way from a charge to its subscription is charge → payment intent → invoice
+ * payment → invoice → `parent.subscription_details`, exactly as on Stripe.
+ * `invoicePaymentLookups` counts the lookups, so the harness can prove the app
+ * took that road.
  *
  * What it is not: a model of Stripe's billing engine. Nothing renews, retries
  * or cancels by itself. The harness moves state with the control endpoints
@@ -34,6 +44,9 @@ const template = (type: string): StripeObject => {
 }
 const SUBSCRIPTION_TEMPLATE = template('customer.subscription.updated')
 const INVOICE_TEMPLATE = template('invoice.payment_succeeded')
+
+/** Invoice fields the pinned API version (basil) no longer returns. */
+const PRE_BASIL_INVOICE_FIELDS = ['paid', 'charge', 'payment_intent', 'subscription', 'subscription_details'] as const
 
 const now = () => Math.floor(Date.now() / 1000)
 const newId = (prefix: string) => `${prefix}_fake${randomBytes(9).toString('hex')}`
@@ -89,7 +102,12 @@ export class FakeStripeAccount {
   sessions = new Map<string, StripeObject>()
   subscriptions = new Map<string, StripeObject>()
   invoices = new Map<string, StripeObject>()
+  charges = new Map<string, StripeObject>()
+  disputes = new Map<string, StripeObject>()
+  invoicePayments: StripeObject[] = []
   refunds: StripeObject[] = []
+  /** `GET /v1/invoice_payments` calls: how the app finds a charge's invoice on basil. */
+  invoicePaymentLookups = 0
   /** Idempotency-Key → the response first given for it, as Stripe replays it. */
   private idempotent = new Map<string, FakeResponse>()
   /** Every Checkout Session creation that reached the account (after idempotency). */
@@ -102,6 +120,10 @@ export class FakeStripeAccount {
     this.sessions.clear()
     this.subscriptions.clear()
     this.invoices.clear()
+    this.charges.clear()
+    this.disputes.clear()
+    this.invoicePayments = []
+    this.invoicePaymentLookups = 0
     this.refunds = []
     this.idempotent.clear()
     this.checkoutCreates = 0
@@ -193,7 +215,32 @@ export class FakeStripeAccount {
     // --- invoices, charges, refunds
     if ((match = /^\/v1\/invoices\/([^/]+)$/.exec(path)) && method === 'GET') {
       const invoice = this.invoices.get(match[1]!)
-      return invoice ? ok(invoice) : missing('invoice', match[1]!)
+      if (!invoice) return missing('invoice', match[1]!)
+      // `payments` is includable: present only when asked for, as on Stripe.
+      if (!this.expands(url).includes('payments')) return ok(invoice)
+      const payments = this.invoicePayments.filter((entry) => entry.invoice === invoice.id)
+      return ok({ ...invoice, payments: list(payments, `/v1/invoices/${invoice.id}/payments`) })
+    }
+    if (method === 'GET' && path === '/v1/invoice_payments') {
+      this.invoicePaymentLookups += 1
+      const invoice = url.searchParams.get('invoice')
+      const paymentIntent = url.searchParams.get('payment[payment_intent]')
+      const status = url.searchParams.get('status')
+      const found = this.invoicePayments.filter(
+        (entry) =>
+          (!invoice || entry.invoice === invoice) &&
+          (!paymentIntent || (entry.payment as { payment_intent?: string }).payment_intent === paymentIntent) &&
+          (!status || entry.status === status),
+      )
+      return ok(list(found, path))
+    }
+    if ((match = /^\/v1\/charges\/([^/]+)$/.exec(path)) && method === 'GET') {
+      const charge = this.charges.get(match[1]!)
+      return charge ? ok(charge) : missing('charge', match[1]!)
+    }
+    if ((match = /^\/v1\/disputes\/([^/]+)$/.exec(path)) && method === 'GET') {
+      const dispute = this.disputes.get(match[1]!)
+      return dispute ? ok(dispute) : missing('dispute', match[1]!)
     }
     if (method === 'POST' && path === '/v1/refunds') {
       const refund: StripeObject = { id: newId('re'), object: 'refund', status: 'succeeded', created: now(), ...params }
@@ -204,10 +251,18 @@ export class FakeStripeAccount {
     return null
   }
 
-  /** Control: the buyer paid. Creates the subscription and its paid invoice. */
-  completeCheckout(sessionId: string, email = 'buyer@example.com'): { session: StripeObject; subscription: StripeObject } | null {
+  /**
+   * Control: the buyer paid. Creates the subscription, its paid invoice, and
+   * the payment intent's charge and invoice payment that tie them together.
+   */
+  completeCheckout(
+    sessionId: string,
+    email = 'buyer@example.com',
+  ): { session: StripeObject; subscription: StripeObject; charge: StripeObject } | null {
     const session = this.sessions.get(sessionId)
-    if (!session) return null
+    // A Checkout Session is paid once. Completing it again would conjure a
+    // second subscription out of one payment page, which Stripe cannot do.
+    if (!session || session.status === 'complete') return null
     const price = this.prices[String(session._price)]!
     const start = now()
     const end = start + (price.interval === 'year' ? 365 : 30) * DAY
@@ -215,6 +270,7 @@ export class FakeStripeAccount {
     const subscription = JSON.parse(JSON.stringify(SUBSCRIPTION_TEMPLATE)) as StripeObject
     const subId = newId('sub')
     const invoiceId = newId('in')
+    const paymentIntentId = newId('pi')
     const item = (subscription.items as { data: Array<Record<string, unknown>> }).data[0]!
     Object.assign(item, {
       id: newId('si'),
@@ -244,12 +300,11 @@ export class FakeStripeAccount {
     })
 
     const invoice = JSON.parse(JSON.stringify(INVOICE_TEMPLATE)) as StripeObject
+    for (const field of PRE_BASIL_INVOICE_FIELDS) delete invoice[field]
     Object.assign(invoice, {
       id: invoiceId,
       customer: session.customer,
-      subscription: subId,
       status: 'paid',
-      paid: true,
       amount_paid: price.amount,
       amount_due: price.amount,
       created: start,
@@ -258,21 +313,132 @@ export class FakeStripeAccount {
       next_payment_attempt: null,
       livemode: false,
     })
-    // Newer API versions put the subscription under `parent`; keep both honest.
-    if (invoice.parent && typeof invoice.parent === 'object') {
-      const parent = invoice.parent as { subscription_details?: Record<string, unknown> }
-      if (parent.subscription_details) parent.subscription_details.subscription = subId
+    // The period the charge paid for: what a refund or dispute revokes.
+    const line = (invoice.lines as { data?: Array<Record<string, unknown>> } | undefined)?.data?.[0]
+    if (line) line.period = { start, end }
+
+    // Basil keeps the invoice's subscription under `parent` and nowhere else.
+    invoice.parent = {
+      type: 'subscription_details',
+      quote_details: null,
+      subscription_details: { subscription: subId, metadata: session._subscriptionMetadata ?? {} },
+    }
+
+    // No `invoice` on the charge: basil removed it.
+    const charge: StripeObject = {
+      id: newId('ch'),
+      object: 'charge',
+      amount: price.amount,
+      amount_captured: price.amount,
+      amount_refunded: 0,
+      captured: true,
+      currency: price.currency,
+      customer: session.customer,
+      disputed: false,
+      paid: true,
+      payment_intent: paymentIntentId,
+      refunded: false,
+      status: 'succeeded',
+      created: start,
+      livemode: false,
+      metadata: {},
+    }
+    const invoicePayment: StripeObject = {
+      id: newId('inpay'),
+      object: 'invoice_payment',
+      amount_paid: price.amount,
+      amount_requested: price.amount,
+      created: start,
+      currency: price.currency,
+      invoice: invoiceId,
+      is_default: true,
+      livemode: false,
+      payment: { type: 'payment_intent', payment_intent: paymentIntentId },
+      status: 'paid',
+      status_transitions: { canceled_at: null, paid_at: start },
     }
 
     this.subscriptions.set(subId, subscription)
     this.invoices.set(invoiceId, invoice)
+    this.charges.set(charge.id, charge)
+    this.invoicePayments.push(invoicePayment)
     Object.assign(session, {
       status: 'complete',
       payment_status: 'paid',
       subscription: subId,
       customer_details: { email, name: null },
     })
-    return { session: this.publicSession(session), subscription }
+    return { session: this.publicSession(session), subscription, charge }
+  }
+
+  /**
+   * Control: refund `amount` (all that is left when omitted) off a charge, as
+   * the Dashboard would. Returns the charge as `charge.refunded` carries it.
+   */
+  refundCharge(chargeId: string, amount?: number): StripeObject | null {
+    const charge = this.charges.get(chargeId)
+    if (!charge) return null
+    const total = Number(charge.amount)
+    const refunded = Math.min(total, Number(charge.amount_refunded) + (amount ?? total - Number(charge.amount_refunded)))
+    Object.assign(charge, { amount_refunded: refunded, refunded: refunded >= total })
+    this.refunds.push({ id: newId('re'), object: 'refund', status: 'succeeded', created: now(), charge: chargeId, amount: amount ?? total })
+    return charge
+  }
+
+  /** Control: the cardholder disputes a charge. Returns the dispute as `charge.dispute.created` carries it. */
+  openDispute(chargeId: string): StripeObject | null {
+    const charge = this.charges.get(chargeId)
+    if (!charge) return null
+    const dispute: StripeObject = {
+      id: newId('dp'),
+      object: 'dispute',
+      amount: charge.amount,
+      // An id, not the object: the app has to fetch the charge, which is the
+      // path where basil's missing `invoice` bit.
+      charge: chargeId,
+      currency: charge.currency,
+      payment_intent: charge.payment_intent,
+      reason: 'fraudulent',
+      status: 'needs_response',
+      created: now(),
+      livemode: false,
+      metadata: {},
+    }
+    charge.disputed = true
+    this.disputes.set(dispute.id, dispute)
+    return dispute
+  }
+
+  /** Control: the card network decides. Returns the dispute as `charge.dispute.closed` carries it. */
+  closeDispute(disputeId: string, status: 'won' | 'lost'): StripeObject | null {
+    const dispute = this.disputes.get(disputeId)
+    if (!dispute) return null
+    dispute.status = status
+    return dispute
+  }
+
+  /**
+   * Control: the same buyer starts checkout again later. The app's own
+   * checkout replays one session per plan for five minutes (its idempotency
+   * bucket), so a harness that buys twice inside that window uses this for the
+   * second session: same customer, price and metadata, new id, open.
+   */
+  reopenCheckout(sessionId: string): StripeObject | null {
+    const session = this.sessions.get(sessionId)
+    if (!session) return null
+    const id = newId('cs')
+    const reopened: StripeObject = {
+      ...JSON.parse(JSON.stringify(session)),
+      id,
+      status: 'open',
+      payment_status: 'unpaid',
+      subscription: null,
+      customer_details: undefined,
+      url: `http://127.0.0.1:3191/__fake/pay/${id}`,
+      created: now(),
+    }
+    this.sessions.set(id, reopened)
+    return this.publicSession(reopened)
   }
 
   /** Control: change a subscription the way Stripe's billing would have. */
@@ -291,8 +457,13 @@ export class FakeStripeAccount {
     Object.assign(subscription, { status: 'canceled', canceled_at: now(), ended_at: now(), cancel_at_period_end: false })
   }
 
+  /** `expand[]=x` or the SDK's `expand[0]=x`, `expand[1]=y` for a GET. */
+  private expands(url: URL): string[] {
+    return [...url.searchParams].filter(([key]) => /^expand\[\d*\]$/.test(key)).map(([, value]) => value)
+  }
+
   private expanded(subscription: StripeObject, url: URL): StripeObject {
-    const expand = url.searchParams.getAll('expand[]').concat(url.searchParams.getAll('expand[0]'))
+    const expand = this.expands(url)
     if (!expand.includes('latest_invoice') || typeof subscription.latest_invoice !== 'string') return subscription
     return { ...subscription, latest_invoice: this.invoices.get(subscription.latest_invoice) ?? subscription.latest_invoice }
   }

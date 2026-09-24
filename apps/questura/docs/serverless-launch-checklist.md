@@ -153,9 +153,24 @@ broken — but it is slow for every visitor.
 New origin means a new endpoint, a new signing secret, and the event list has
 to be set explicitly.
 
-- Create the endpoint on the new domain, set `STRIPE_WEBHOOK_SECRET`
+- Create the endpoint on the new domain **at the pinned API version**:
+  `api_version` = `STRIPE_API_VERSION` in
+  `apps/server/src/features/payments/lib/stripe-api-version.ts`
+  (`2025-08-27.basil` today). The Dashboard offers its own latest version by
+  default, and an endpoint with no version follows the account default. Pin
+  it explicitly.
+- Set `STRIPE_WEBHOOK_SECRET`
 - Enable every event in `handled-events.ts`
-- Run `pnpm verify:stripe-webhook-events` and read the output
+- Run `pnpm verify:stripe-webhook-events` and read the output. It prints each
+  endpoint's `api_version` and fails (`VERSION:`) when it is not the pinned
+  one.
+
+Why the version matters: Stripe renders every webhook body at the endpoint's
+API version, not the SDK's. Basil (2025-03-31) removed `invoice` from Charge,
+so a refund reads differently depending on which version rendered it. The
+refund and dispute handlers now find the invoice through invoice payments,
+which works on basil, and read `charge.invoice` only as a fallback for older
+endpoints. Matching the pin keeps webhook bodies and API reads in one shape.
 
 The `charge.*` events were never enabled on the current endpoint, so refund and
 dispute revocation was dead code in live Stripe until 2026-08-16. It was

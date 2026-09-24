@@ -17,7 +17,15 @@ const RESTORE_ON_DISPUTE_STATUS = new Set<Stripe.Dispute.Status>(['won', 'warnin
 /** The one closing status that means the money went back and is not coming again. */
 const DISPUTE_STATUS_LOST: Stripe.Dispute.Status = 'lost'
 
-/** `invoice` is on the wire but absent from the pinned SDK's `Charge`. */
+/**
+ * `invoice` as a pre-basil webhook endpoint still renders it on a charge.
+ *
+ * Stripe API 2025-03-31.basil removed it from Charge and PaymentIntent, and
+ * the pinned SDK (`stripe-api-version.ts`) has no such field. A charge the SDK
+ * retrieves -- every dispute goes through one -- never carries it, and neither
+ * does a `charge.refunded` body once the endpoint is created on basil. It is
+ * read only as a fallback, for deliveries from an endpoint on an older version.
+ */
 type ChargeWithInvoice = Stripe.Charge & {
   invoice?: string | Stripe.Invoice | null
 }
@@ -25,14 +33,43 @@ type ChargeWithInvoice = Stripe.Charge & {
 /** The subscription period a charge's invoice covers, in Stripe's seconds. */
 type InvoicePeriod = { end: number | null }
 
-async function resolveChargeInvoice(charge: Stripe.Charge): Promise<Stripe.Invoice | null> {
-  const chargeInvoice = (charge as ChargeWithInvoice).invoice
-  const invoiceId = typeof chargeInvoice === 'string' ? chargeInvoice : chargeInvoice?.id
-  if (!invoiceId) return null
+function idOf(value: string | { id?: string } | null | undefined): string | null {
+  if (!value) return null
+  return typeof value === 'string' ? value : (value.id ?? null)
+}
 
-  return typeof chargeInvoice === 'object' && chargeInvoice && 'id' in chargeInvoice
-    ? chargeInvoice
-    : stripe.invoices.retrieve(invoiceId)
+/**
+ * The invoice a payment intent paid, from its invoice payment.
+ *
+ * On basil this is the only link from a charge to its invoice. The list is
+ * filtered by payment intent, the one payment filter the API offers; a
+ * subscription charge always has one. More than one entry means an attempt
+ * that never completed sits beside the real one, so the paid entry wins.
+ *
+ * A failed lookup throws on purpose: reading it as "not a membership charge"
+ * would be the silent no-revocation this exists to prevent, whereas a throw
+ * fails the webhook and Stripe retries.
+ */
+async function invoiceIdFromPaymentIntent(paymentIntentId: string): Promise<string | null> {
+  const payments = await stripe.invoicePayments.list({
+    payment: { type: 'payment_intent', payment_intent: paymentIntentId },
+  })
+  const entries = payments.data ?? []
+  const chosen = entries.find((entry) => entry.status === 'paid') ?? entries[0]
+
+  return chosen ? idOf(chosen.invoice) : null
+}
+
+async function resolveChargeInvoice(charge: Stripe.Charge): Promise<Stripe.Invoice | null> {
+  const paymentIntentId = idOf(charge.payment_intent)
+  const viaPayment = paymentIntentId ? await invoiceIdFromPaymentIntent(paymentIntentId) : null
+  if (viaPayment) return stripe.invoices.retrieve(viaPayment)
+
+  const chargeInvoice = (charge as ChargeWithInvoice).invoice
+  if (chargeInvoice && typeof chargeInvoice === 'object' && 'id' in chargeInvoice) return chargeInvoice
+
+  const invoiceId = idOf(chargeInvoice)
+  return invoiceId ? stripe.invoices.retrieve(invoiceId) : null
 }
 
 function invoicePeriod(invoice: Stripe.Invoice): InvoicePeriod {

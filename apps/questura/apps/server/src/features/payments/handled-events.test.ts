@@ -3,6 +3,7 @@ import {
   DELIBERATELY_UNHANDLED_STRIPE_EVENTS,
   HANDLED_STRIPE_EVENT_TYPES,
   isHandledStripeEventType,
+  webhookApiVersionProblem,
 } from '@/payments/webhooks/event-contract'
 import { STRIPE_WEBHOOK_HANDLERS } from '@/payments/webhooks/handled-events'
 
@@ -81,5 +82,33 @@ describe('stripe webhook event contract', () => {
     )
 
     expect(source).not.toMatch(/^\s*import\s/m)
+  })
+
+  // A webhook body is rendered at the endpoint's API version, not the SDK's.
+  // An endpoint on an older version sends refund bodies whose shape the code
+  // pinned to STRIPE_API_VERSION no longer expects, and one on a newer version
+  // can drop fields it still reads. The verify script fails on either.
+  describe('webhookApiVersionProblem', () => {
+    const PINNED = '2025-08-27.basil'
+
+    it('passes an endpoint created at the pinned version', () => {
+      expect(webhookApiVersionProblem(PINNED, PINNED)).toBeNull()
+    })
+
+    it('flags an endpoint on an older version, naming both', () => {
+      const problem = webhookApiVersionProblem('2020-08-27', PINNED)
+      expect(problem).toContain('2020-08-27')
+      expect(problem).toContain(PINNED)
+    })
+
+    it('flags an endpoint on a newer version', () => {
+      expect(webhookApiVersionProblem('2025-09-30.clover', PINNED)).toContain('2025-09-30.clover')
+    })
+
+    // No version on the endpoint means "whatever the account default is", which
+    // nothing in this repo controls and which can change under it.
+    it('flags an endpoint that follows the account default', () => {
+      expect(webhookApiVersionProblem(null, PINNED)).toContain('account default')
+    })
   })
 })

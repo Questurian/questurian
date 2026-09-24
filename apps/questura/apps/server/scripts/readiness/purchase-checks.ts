@@ -20,6 +20,13 @@
  *   refused so Stripe retries, nobody's access changes; two customers at once
  *   → neither waits on the other's lock, both land.
  *
+ * Refunds and disputes, with basil-shaped charges (no `invoice` on them, as
+ * the pinned Stripe API version returns them):
+ *   a partial refund changes nothing → a full refund ends the membership and
+ *   the billing → a dispute suspends the membership but keeps billing → won,
+ *   it comes back → lost, it stays ended and the billing stops. Every one of
+ *   them finds the charge's invoice through an invoice payment.
+ *
  * Uses `nonmember@example.com` and `member-b@example.com`. It changes their
  * membership in the sandbox database only.
  */
@@ -104,8 +111,8 @@ async function main(): Promise<void> {
     const text = await response.text()
     return { status: response.status, hasMarker: text.includes(memberMarker) }
   }
-  const checkout = (cookie: string) =>
-    fetch(`${BACKEND}/api/payments/create-checkout-session`, { method: 'POST', headers: as(cookie), body: JSON.stringify({ plan: 'monthly' }) })
+  const checkout = (cookie: string, plan: 'monthly' | 'yearly' = 'monthly') =>
+    fetch(`${BACKEND}/api/payments/create-checkout-session`, { method: 'POST', headers: as(cookie), body: JSON.stringify({ plan }) })
 
   try {
     // Start from a non-member whatever an earlier run left behind.
@@ -209,6 +216,75 @@ async function main(): Promise<void> {
     ])
     record(a2, 'two customers at once both land', x.status === 200 && y.status === 200, `${x.status}/${y.status}`)
     record(a2, "and neither waited out the other's lock (under 8 s together)", Date.now() - t0 < 8_000, `${Date.now() - t0} ms`)
+
+    // ------------------------------------------------ refunds and disputes
+    // The fake's charges carry no `invoice`, as the pinned API version (basil)
+    // returns them, so each of these only works if the app goes charge →
+    // payment intent → invoice payment → invoice → subscription.
+    const money = 'refunds and disputes'
+    const subscriptionOf = async (id: unknown) =>
+      ((await fake('/__fake/state')).subscriptions as Json[]).find((s) => s.id === id)
+    const pay = async (sessionId: string, email: string) => {
+      const done = await fake(`/__fake/checkout/${sessionId}/complete`, { email })
+      const delivered = await deliver('checkout.session.completed', done.session)
+      return {
+        session: (done.session ?? {}) as Json,
+        subscription: (done.subscription ?? {}) as Json,
+        charge: (done.charge ?? {}) as Json,
+        status: delivered.status,
+      }
+    }
+    const lookupsBefore = Number((await fake('/__fake/state')).invoicePaymentLookups)
+
+    // The buyer buys again, yearly: a monthly checkout inside five minutes of
+    // A8's would be handed A8's session back (the checkout idempotency bucket).
+    // Refunded part of it, then all of it.
+    const started = (await (await checkout(buyer, 'yearly')).json()) as { url?: string }
+    const refundBuy = await pay(String(started.url).split('/').pop()!, 'nonmember@example.com')
+    record(money, 'the buyer buys again and is a member', refundBuy.status === 200 && (await isMember(buyer)), `HTTP ${refundBuy.status}`)
+    record(money, 'the charge carries no invoice, as basil returns it', Boolean(refundBuy.charge.id) && !('invoice' in refundBuy.charge), JSON.stringify(refundBuy.charge))
+
+    const partial = await deliver('charge.refunded', await fake(`/__fake/charges/${refundBuy.charge.id}/refund`, { amount: 100 }))
+    record(money, 'a partial refund is accepted', partial.status === 200, `HTTP ${partial.status}`)
+    const afterPartial = await subscriptionOf(refundBuy.subscription.id)
+    record(money, 'a partial refund leaves the membership and the billing alone', (await isMember(buyer)) && afterPartial?.status === 'active', `status=${afterPartial?.status}`)
+
+    const full = await deliver('charge.refunded', await fake(`/__fake/charges/${refundBuy.charge.id}/refund`, {}))
+    record(money, 'a full refund is accepted', full.status === 200, `HTTP ${full.status} ${JSON.stringify(full.body)}`)
+    record(money, 'a full refund ends the membership', !(await isMember(buyer)))
+    const refunded = await subscriptionOf(refundBuy.subscription.id)
+    record(money, 'a full refund stops the billing', refunded?.status === 'canceled', `status=${refunded?.status}`)
+    const refundedBody = await body(buyer)
+    record(money, 'the member body locks after a refund', refundedBody.status === 403 && !refundedBody.hasMarker, `HTTP ${refundedBody.status}`)
+
+    // The reader disputes their charge, and the bank sides with the site.
+    const readerCharge = (readerPaid.charge ?? {}) as Json
+    const opened = await fake(`/__fake/charges/${readerCharge.id}/dispute`, {})
+    const disputeCreated = await deliver('charge.dispute.created', opened)
+    record(money, 'a dispute opening is accepted', disputeCreated.status === 200, `HTTP ${disputeCreated.status} ${JSON.stringify(disputeCreated.body)}`)
+    record(money, 'an open dispute suspends the membership', !(await isMember(reader)))
+    const underDispute = await subscriptionOf(readerSub.id)
+    record(money, 'an open dispute keeps the subscription, so a win can restore it', underDispute?.status === 'active', `status=${underDispute?.status}`)
+    const won = await deliver('charge.dispute.closed', await fake(`/__fake/disputes/${opened.id}/close`, { status: 'won' }))
+    record(money, 'a won dispute is accepted and restores the membership', won.status === 200 && (await isMember(reader)), `HTTP ${won.status}`)
+
+    // The buyer buys once more, disputes, and loses. Both plans' checkouts are
+    // inside their five-minute replay window now, so the fake opens the
+    // session a later visit would get.
+    const reopened = await fake(`/__fake/checkout/${refundBuy.session.id}/reopen`, {})
+    const disputeBuy = await pay(String(reopened.id), 'nonmember@example.com')
+    record(money, 'the buyer buys a third time and is a member', disputeBuy.status === 200 && (await isMember(buyer)), `HTTP ${disputeBuy.status}`)
+    const lostOpened = await fake(`/__fake/charges/${disputeBuy.charge.id}/dispute`, {})
+    const lostCreated = await deliver('charge.dispute.created', lostOpened)
+    const lost = await deliver('charge.dispute.closed', await fake(`/__fake/disputes/${lostOpened.id}/close`, { status: 'lost' }))
+    record(money, 'a lost dispute is accepted and the membership stays ended', lostCreated.status === 200 && lost.status === 200 && !(await isMember(buyer)), `HTTP ${lostCreated.status}/${lost.status}`)
+    const lostSub = await subscriptionOf(disputeBuy.subscription.id)
+    record(money, 'a lost dispute stops the billing', lostSub?.status === 'canceled', `status=${lostSub?.status}`)
+
+    // Full refund, dispute opened, won, opened, lost: five lookups. The
+    // partial refund stops before looking anything up.
+    const lookups = Number((await fake('/__fake/state')).invoicePaymentLookups) - lookupsBefore
+    record(money, 'each of them found its invoice through an invoice payment', lookups >= 5, `lookups=${lookups}`)
   } finally {
     await pool.end()
   }

@@ -25,6 +25,11 @@
  *   DISABLED   An endpoint whose status is not `enabled`. Reported so a
  *              correctly-configured but switched-off endpoint cannot look like
  *              a pass.
+ *   VERSION    The endpoint renders events at another API version than
+ *              STRIPE_API_VERSION, or follows the account default. Webhook
+ *              bodies use the endpoint's version, so refunds then arrive in a
+ *              shape the handlers were not written for (Stripe basil removed
+ *              `invoice` from Charge). Fails the run on an enabled endpoint.
  *
  * Safety
  * ------
@@ -48,8 +53,8 @@
  *
  * Confirmed working against the live account on 2026-08-16.
  *
- * Exits non-zero if any enabled endpoint is missing a handled event, so it can
- * gate a deploy.
+ * Exits non-zero if any enabled endpoint is missing a handled event or is on
+ * the wrong API version, so it can gate a deploy.
  */
 
 import { fileURLToPath } from 'node:url'
@@ -63,6 +68,7 @@ import Stripe from 'stripe'
 import {
   DELIBERATELY_UNHANDLED_STRIPE_EVENTS,
   HANDLED_STRIPE_EVENT_TYPES,
+  webhookApiVersionProblem,
 } from '../src/features/payments/webhooks/event-contract.ts'
 // Type-only, so it is erased before Node sees the file and adds no runtime
 // dependency. That property is load-bearing here — see the header.
@@ -108,7 +114,7 @@ export async function run(
     return {
       ok: false,
       reason: 'no-endpoint',
-      counts: { endpoints: 0, missing: 0, disabled: 0, extra: 0 },
+      counts: { endpoints: 0, missing: 0, disabled: 0, extra: 0, version_mismatch: 0 },
       lines,
     }
   }
@@ -119,6 +125,7 @@ export async function run(
   let missingCount = 0
   let disabledCount = 0
   let extraCount = 0
+  let versionMismatchCount = 0
   let failed = false
 
   for (const endpoint of ours) {
@@ -136,6 +143,7 @@ export async function run(
 
     emit(`\n${endpoint.url}`)
     emit(`  status: ${endpoint.status}`)
+    emit(`  api_version: ${endpoint.api_version ?? '(account default)'} (app pinned to ${STRIPE_API_VERSION})`)
 
     if (endpoint.status !== 'enabled') {
       disabledCount += 1
@@ -154,6 +162,16 @@ export async function run(
       }
     }
 
+    const versionProblem = webhookApiVersionProblem(endpoint.api_version, STRIPE_API_VERSION)
+    if (versionProblem) {
+      emit(`  VERSION: ${versionProblem}`)
+      // Same rule as MISSING: only an enabled endpoint is a live failure.
+      if (endpoint.status === 'enabled') {
+        versionMismatchCount += 1
+        failed = true
+      }
+    }
+
     for (const type of extra) {
       const reason = DELIBERATELY_UNHANDLED_STRIPE_EVENTS[type]
       emit(
@@ -166,12 +184,15 @@ export async function run(
     if (missing.length === 0 && endpoint.status === 'enabled') {
       emit(`  OK: all ${HANDLED_STRIPE_EVENT_TYPES.length} handled events are enabled`)
     }
+    if (!versionProblem && endpoint.status === 'enabled') {
+      emit(`  OK: events are rendered at the pinned API version`)
+    }
   }
 
   if (failed) {
-    emit('\nFAIL: an enabled endpoint is missing events this app handles.')
+    emit('\nFAIL: an enabled endpoint is missing events this app handles, or is on the wrong API version.')
   } else {
-    emit('\nPASS: every handled event is enabled on every enabled endpoint.')
+    emit('\nPASS: every handled event is enabled on every enabled endpoint, at the pinned API version.')
   }
 
   return {
@@ -183,6 +204,7 @@ export async function run(
       missing: missingCount,
       disabled: disabledCount,
       extra: extraCount,
+      version_mismatch: versionMismatchCount,
     },
     lines,
   }
