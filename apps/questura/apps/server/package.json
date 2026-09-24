@@ -65,6 +65,7 @@
     "readiness:payments": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/payment-checks.ts",
     "readiness:auth": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/auth-checks.ts",
     "readiness:purchase": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/purchase-checks.ts",
+    "readiness:faults": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/fault-checks.ts",
     "readiness:sessions": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/sessions.ts",
     "readiness:publication": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/publication-checks.ts",
     "readiness:required": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/required-integrations.ts",

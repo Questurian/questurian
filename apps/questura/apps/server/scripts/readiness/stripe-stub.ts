@@ -65,10 +65,32 @@ function readBody(req: import('node:http').IncomingMessage): Promise<string> {
   })
 }
 
+/**
+ * A failure to inject into `/v1/*` (launch harness A7). `hang` never answers;
+ * `hang-after` does the work and then never answers, the case where only the
+ * SDK's idempotency key stops a retry from doing it twice; `error` answers
+ * 500; `slow` answers after `ms`. `path` limits it to matching requests and
+ * `times` to that many of them.
+ */
+export type StripeFault = { mode: 'hang' | 'hang-after' | 'error' | 'slow'; ms?: number; path?: string; times?: number }
+
 export class StripeStub {
   readonly stats: StripeStubStats = { prices: 0, refused: {} }
   readonly account = new FakeStripeAccount(FAKE_PRICES)
+  fault: StripeFault | null = null
   private server: Server | null = null
+
+  /** The fault for this request, if any, counting it down. */
+  private takeFault(method: string, path: string): StripeFault | null {
+    const fault = this.fault
+    if (!fault || !path.startsWith('/v1/')) return null
+    if (fault.path && !new RegExp(fault.path).test(`${method} ${path}`)) return null
+    if (fault.times !== undefined) {
+      fault.times -= 1
+      if (fault.times <= 0) this.fault = null
+    }
+    return fault
+  }
 
   async listen(port: number): Promise<number> {
     this.server = createServer(async (req, res) => {
@@ -83,6 +105,11 @@ export class StripeStub {
       if (url.pathname === '/__fake/reset' && req.method === 'POST') {
         this.account.reset()
         return send(200, { reset: true })
+      }
+      if (url.pathname === '/__fake/fault' && req.method === 'POST') {
+        const fault = JSON.parse(body || 'null') as StripeFault | null
+        this.fault = fault && fault.mode ? fault : null
+        return send(200, { fault: this.fault })
       }
       if (url.pathname === '/__fake/state') {
         return send(200, {
@@ -107,20 +134,26 @@ export class StripeStub {
         res.end(JSON.stringify(this.stats))
         return
       }
+      const fault = this.takeFault(req.method ?? 'GET', url.pathname)
+      if (fault?.mode === 'hang') return // hold the socket; the client's timeout decides
+      if (fault?.mode === 'error') {
+        return send(500, { error: { type: 'api_error', message: 'readiness Stripe stub: injected failure' } })
+      }
+      if (fault?.mode === 'slow') await new Promise((resolveDelay) => setTimeout(resolveDelay, fault.ms ?? 7_000))
+      const reply: typeof send = fault?.mode === 'hang-after' ? () => undefined : send
+
       const match = /^\/v1\/prices\/([^/]+)$/.exec(url.pathname)
       const plan = (Object.keys(STUB_PRICES) as Array<keyof typeof STUB_PRICES>).find(
         (key) => match && STUB_PRICES[key] === decodeURIComponent(match[1]!),
       )
       if (req.method === 'GET' && plan) {
         this.stats.prices += 1
-        res.writeHead(200, { 'content-type': 'application/json' })
-        res.end(JSON.stringify(price(plan)))
-        return
+        return reply(200, price(plan))
       }
       const answered = this.account.handle(req.method ?? 'GET', url, body, {
         idempotencyKey: (req.headers['idempotency-key'] as string | undefined) ?? undefined,
       })
-      if (answered) return send(answered.status, answered.body)
+      if (answered) return reply(answered.status, answered.body)
 
       const key = `${req.method} ${url.pathname.replace(/\/[^/]*_[A-Za-z0-9]+/g, '/:id')}`
       this.stats.refused[key] = (this.stats.refused[key] ?? 0) + 1
