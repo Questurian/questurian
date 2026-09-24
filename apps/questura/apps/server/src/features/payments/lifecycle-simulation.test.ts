@@ -41,21 +41,23 @@ type Sub = {
   latest_invoice: string | null
 }
 
+// Shaped as the pinned API version (2025-08-27.basil) returns them. Basil
+// removed `paid`, `payment_intent`, `charge` and `subscription` from Invoice and
+// `invoice` from Charge: the subscription sits under `parent`, and an invoice
+// is joined to its payment only through invoice payments (`payments`, which is
+// includable, so the fake returns it only when expanded).
 type Invoice = {
   id: string
   status: string
-  paid: boolean
   billing_reason: string
   next_payment_attempt: number | null
-  payment_intent: string | null
-  charge: string | null
-  subscription: string | null
+  parent: { type: 'subscription_details'; subscription_details: { subscription: string } } | null
+  payments: { data: Array<{ id: string; status: string; payment: { type: 'payment_intent'; payment_intent: string } }> }
   lines: { data: Array<{ period: { end: number } }> }
 }
 
 type Charge = {
   id: string
-  invoice: string | null
   refunded: boolean
   payment_intent: string | null
 }
@@ -136,11 +138,24 @@ const fakeStripe = {
     },
   },
   invoices: {
-    retrieve: async (id: string) => {
+    retrieve: async (id: string, opts?: { expand?: string[] }) => {
       const invoice = store.invoices.get(id)
       if (!invoice) throw stripeError(`No such invoice: ${id}`)
-      return clone(invoice)
+      const out = clone(invoice) as Partial<Invoice>
+      if (!opts?.expand?.includes('payments')) delete out.payments
+      return out
     },
+  },
+  // The only way from a charge to its invoice on basil. Filtered by payment
+  // intent, which is the one payment filter the API offers.
+  invoicePayments: {
+    list: async ({ payment }: { payment?: { type: string; payment_intent?: string } } = {}) => ({
+      data: [...store.invoices.values()].flatMap((invoice) =>
+        invoice.payments.data
+          .filter((entry) => !payment?.payment_intent || entry.payment.payment_intent === payment.payment_intent)
+          .map((entry) => ({ ...clone(entry), object: 'invoice_payment', invoice: invoice.id })),
+      ),
+    }),
   },
   charges: {
     retrieve: async (id: string) => {
@@ -327,19 +342,35 @@ function makeSub(id: string, over: Partial<Sub> = {}): Sub {
   }
 }
 
-function makeInvoice(id: string, over: Partial<Invoice> = {}): Invoice {
+type InvoiceInput = Partial<Omit<Invoice, 'parent' | 'payments'>> & {
+  /** The subscription the invoice bills, written where basil keeps it. */
+  subscription?: string
+  /** The intent that paid it; `null` for an invoice nothing was collected on. */
+  payment_intent?: string | null
+}
+
+function makeInvoice(id: string, over: InvoiceInput = {}): Invoice {
+  const { subscription = 'sub_A', payment_intent = `pi_${id}`, ...rest } = over
+  const status = rest.status ?? 'paid'
   return {
     id,
-    status: 'paid',
-    paid: true,
+    status,
     billing_reason: 'subscription_create',
     next_payment_attempt: null,
-    payment_intent: `pi_${id}`,
-    charge: `ch_${id}`,
-    subscription: 'sub_A',
+    parent: { type: 'subscription_details', subscription_details: { subscription } },
+    payments: {
+      data: payment_intent
+        ? [{ id: `inpay_${id}`, status: status === 'paid' ? 'paid' : 'open', payment: { type: 'payment_intent', payment_intent } }]
+        : [],
+    },
     lines: { data: [{ period: { end: now() + 28 * DAY } }] },
-    ...over,
+    ...rest,
   }
+}
+
+/** A charge as the pinned API version shapes it: no `invoice`. */
+function makeCharge(invoiceId: string, refunded: boolean): Charge {
+  return { id: `ch_${invoiceId}`, refunded, payment_intent: `pi_${invoiceId}` }
 }
 
 beforeEach(() => {
@@ -406,7 +437,7 @@ describe('purchase', () => {
       latest_invoice: 'in_1',
     })
     store.subs.set(sub.id, sub)
-    store.invoices.set('in_1', makeInvoice('in_1', { status: 'open', paid: false }))
+    store.invoices.set('in_1', makeInvoice('in_1', { status: 'open' }))
 
     await deliver('customer.subscription.created', sub)
 
@@ -438,7 +469,7 @@ describe('purchase', () => {
       latest_invoice: 'in_1',
     })
     store.subs.set(sub.id, sub)
-    store.invoices.set('in_1', makeInvoice('in_1', { status: 'open', paid: false }))
+    store.invoices.set('in_1', makeInvoice('in_1', { status: 'open' }))
 
     await deliver('customer.subscription.created', sub)
     expect(emails).toEqual([])
@@ -466,7 +497,7 @@ describe('renewal and dunning', () => {
     })
     store.subs.set(sub.id, sub)
     store.invoices.set('in_2', makeInvoice('in_2', {
-      status: 'open', paid: false, billing_reason: 'subscription_cycle',
+      status: 'open', billing_reason: 'subscription_cycle',
       next_payment_attempt: now() + 4 * DAY,
     }))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
@@ -506,7 +537,7 @@ describe('renewal and dunning', () => {
       latest_invoice: 'in_2',
     })
     store.subs.set(sub.id, sub)
-    store.invoices.set('in_2', makeInvoice('in_2', { status: 'open', paid: false }))
+    store.invoices.set('in_2', makeInvoice('in_2', { status: 'open' }))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
     db['visitor-profiles'][0].subscriptionStatus = 'past_due'
     // What the failed renewal left behind: paid through the last period it
@@ -547,7 +578,7 @@ describe('refunds and disputes', () => {
     const sub = makeSub('sub_A', { latest_invoice: 'in_1' })
     store.subs.set(sub.id, sub)
     store.invoices.set('in_1', makeInvoice('in_1'))
-    store.charges.set('ch_in_1', { id: 'ch_in_1', invoice: 'in_1', refunded: true, payment_intent: 'pi_in_1' })
+    store.charges.set('ch_in_1', makeCharge('in_1', true))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
     db['visitor-profiles'][0].subscriptionStatus = 'active'
     db['visitor-profiles'][0].paidThroughAt = new Date(Date.now() + 20 * DAY * 1000).toISOString()
@@ -563,7 +594,7 @@ describe('refunds and disputes', () => {
     const sub = makeSub('sub_A', { status: 'canceled', ended_at: now(), latest_invoice: 'in_1' })
     store.subs.set(sub.id, sub)
     store.invoices.set('in_1', makeInvoice('in_1'))
-    store.charges.set('ch_in_1', { id: 'ch_in_1', invoice: 'in_1', refunded: true, payment_intent: 'pi_in_1' })
+    store.charges.set('ch_in_1', makeCharge('in_1', true))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
     db['visitor-profiles'][0].paidThroughAt = new Date(Date.now() + 20 * DAY * 1000).toISOString()
 
@@ -578,7 +609,7 @@ describe('refunds and disputes', () => {
     const sub = makeSub('sub_A', { latest_invoice: 'in_1' })
     store.subs.set(sub.id, sub)
     store.invoices.set('in_1', makeInvoice('in_1'))
-    store.charges.set('ch_in_1', { id: 'ch_in_1', invoice: 'in_1', refunded: false, payment_intent: 'pi_in_1' })
+    store.charges.set('ch_in_1', makeCharge('in_1', false))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
 
     await deliver('charge.dispute.created', { id: 'dp_1', charge: 'ch_in_1', status: 'needs_response' })
@@ -594,7 +625,7 @@ describe('refunds and disputes', () => {
     const sub = makeSub('sub_A', { latest_invoice: 'in_1' })
     store.subs.set(sub.id, sub)
     store.invoices.set('in_1', makeInvoice('in_1'))
-    store.charges.set('ch_in_1', { id: 'ch_in_1', invoice: 'in_1', refunded: false, payment_intent: 'pi_in_1' })
+    store.charges.set('ch_in_1', makeCharge('in_1', false))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
 
     await deliver('charge.dispute.created', { id: 'dp_1', charge: 'ch_in_1', status: 'needs_response' })
@@ -612,8 +643,8 @@ describe('refunds and disputes', () => {
     store.subs.set(sub.id, sub)
     store.invoices.set('in_1', makeInvoice('in_1', { lines: { data: [{ period: { end: januaryEnd } }] } }))
     store.invoices.set('in_2', makeInvoice('in_2', { billing_reason: 'subscription_cycle' }))
-    store.charges.set('ch_in_1', { id: 'ch_in_1', invoice: 'in_1', refunded: false, payment_intent: 'pi_in_1' })
-    store.charges.set('ch_in_2', { id: 'ch_in_2', invoice: 'in_2', refunded: true, payment_intent: 'pi_in_2' })
+    store.charges.set('ch_in_1', makeCharge('in_1', false))
+    store.charges.set('ch_in_2', makeCharge('in_2', true))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
     db['visitor-profiles'][0].subscriptionStatus = 'active'
 
@@ -697,7 +728,7 @@ describe('duplicate checkout collapse', () => {
     store.subs.set(newer.id, newer)
     store.invoices.set('in_A', makeInvoice('in_A', { subscription: 'sub_A' }))
     store.invoices.set('in_B', makeInvoice('in_B', { subscription: 'sub_B' }))
-    store.charges.set('ch_in_A', { id: 'ch_in_A', invoice: 'in_A', refunded: true, payment_intent: 'pi_in_A' })
+    store.charges.set('ch_in_A', makeCharge('in_A', true))
 
     await deliver('checkout.session.completed', {
       id: 'cs_2', customer: 'cus_1', subscription: 'sub_B',
@@ -722,7 +753,7 @@ describe('duplicate checkout collapse', () => {
     const paid = makeSub('sub_B', { created: now() - 50, latest_invoice: 'in_B' })
     store.subs.set(abandoned.id, abandoned)
     store.subs.set(paid.id, paid)
-    store.invoices.set('in_A', makeInvoice('in_A', { status: 'open', paid: false, subscription: 'sub_A' }))
+    store.invoices.set('in_A', makeInvoice('in_A', { status: 'open', subscription: 'sub_A' }))
     store.invoices.set('in_B', makeInvoice('in_B', { subscription: 'sub_B' }))
 
     await deliver('checkout.session.completed', {
@@ -798,7 +829,7 @@ describe('adversarial', () => {
     store.subs.set(b.id, b)
     store.invoices.set('in_A', makeInvoice('in_A', { subscription: 'sub_A' }))
     store.invoices.set('in_B', makeInvoice('in_B', { subscription: 'sub_B' }))
-    store.charges.set('ch_in_A', { id: 'ch_in_A', invoice: 'in_A', refunded: true, payment_intent: 'pi_in_A' })
+    store.charges.set('ch_in_A', makeCharge('in_A', true))
 
     // sub_A's checkout resynced first, so the profile points at the loser.
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
@@ -835,7 +866,7 @@ describe('adversarial', () => {
       latest_invoice: 'in_2',
     })
     store.subs.set(sub.id, sub)
-    store.invoices.set('in_2', makeInvoice('in_2', { status: 'open', paid: false, billing_reason: 'subscription_cycle' }))
+    store.invoices.set('in_2', makeInvoice('in_2', { status: 'open', billing_reason: 'subscription_cycle' }))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
     db['visitor-profiles'][0].dunningGraceUntil = new Date(Date.now() - DAY * 1000).toISOString()
 
@@ -881,7 +912,7 @@ describe('adversarial', () => {
     store.subs.set(old.id, old)
     store.invoices.set('in_N', makeInvoice('in_N', { subscription: 'sub_NEW' }))
     store.invoices.set('in_O', makeInvoice('in_O', { subscription: 'sub_OLD' }))
-    store.charges.set('ch_in_O', { id: 'ch_in_O', invoice: 'in_O', refunded: true, payment_intent: 'pi_in_O' })
+    store.charges.set('ch_in_O', makeCharge('in_O', true))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_NEW'
     db['visitor-profiles'][0].subscriptionStatus = 'active'
     db['visitor-profiles'][0].paidThroughAt = new Date(Date.now() + 20 * DAY * 1000).toISOString()
@@ -906,7 +937,7 @@ describe('adversarial', () => {
     store.subs.set(b.id, b)
     store.invoices.set('in_A', makeInvoice('in_A', { subscription: 'sub_A' }))
     store.invoices.set('in_B', makeInvoice('in_B', { subscription: 'sub_B' }))
-    store.charges.set('ch_in_A', { id: 'ch_in_A', invoice: 'in_A', refunded: false, payment_intent: 'pi_in_A' })
+    store.charges.set('ch_in_A', makeCharge('in_A', false))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
     db['visitor-profiles'][0].subscriptionStatus = 'active'
     db['visitor-profiles'][0].paidThroughAt = new Date(Date.now() + 20 * DAY * 1000).toISOString()
@@ -942,7 +973,7 @@ describe('resync ownership when the profile points at the dead subscription', ()
     store.subs.set(dead.id, dead)
     store.invoices.set('in_A', makeInvoice('in_A', { subscription: 'sub_A' }))
     store.invoices.set('in_B', makeInvoice('in_B', { subscription: 'sub_B' }))
-    store.charges.set('ch_in_B', { id: 'ch_in_B', invoice: 'in_B', refunded: true, payment_intent: 'pi_in_B' })
+    store.charges.set('ch_in_B', makeCharge('in_B', true))
 
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_B'
     db['visitor-profiles'][0].subscriptionStatus = 'active'
@@ -1005,7 +1036,7 @@ describe('unusual subscription shapes', () => {
     store.subs.set(sub.id, sub)
     // Stripe smart retries can schedule well out on an annual plan.
     store.invoices.set('in_2', makeInvoice('in_2', {
-      status: 'open', paid: false, billing_reason: 'subscription_cycle',
+      status: 'open', billing_reason: 'subscription_cycle',
       next_payment_attempt: now() + 21 * DAY,
     }))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
@@ -1038,7 +1069,7 @@ describe('unusual subscription shapes', () => {
       latest_invoice: 'in_1',
     })
     store.subs.set(sub.id, sub)
-    store.invoices.set('in_1', makeInvoice('in_1', { status: 'open', paid: false }))
+    store.invoices.set('in_1', makeInvoice('in_1', { status: 'open' }))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
 
     await deliver('customer.subscription.updated', sub)
@@ -1062,7 +1093,7 @@ describe('unusual subscription shapes', () => {
     store.invoices.set('in_A', makeInvoice('in_A', { subscription: 'sub_A' }))
     // Never collected: no payment_intent, no charge.
     store.invoices.set('in_B', makeInvoice('in_B', {
-      subscription: 'sub_B', status: 'open', paid: false, payment_intent: null, charge: null,
+      subscription: 'sub_B', status: 'open', payment_intent: null,
     }))
 
     const res = await deliver('checkout.session.completed', {

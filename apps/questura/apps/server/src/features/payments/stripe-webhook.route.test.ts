@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   constructEvent: vi.fn(),
   invoiceRetrieve: vi.fn(),
   chargeRetrieve: vi.fn(),
+  invoicePaymentList: vi.fn(),
   subscriptionUpdate: vi.fn(),
   subscriptionRetrieve: vi.fn(),
   subscriptionList: vi.fn(),
@@ -67,6 +68,7 @@ vi.mock('@/payments/lib/stripe', () => ({
     webhooks: { constructEvent: mocks.constructEvent },
     invoices: { retrieve: mocks.invoiceRetrieve },
     charges: { retrieve: mocks.chargeRetrieve },
+    invoicePayments: { list: mocks.invoicePaymentList },
     subscriptions: {
       update: mocks.subscriptionUpdate,
       retrieve: mocks.subscriptionRetrieve,
@@ -206,6 +208,7 @@ describe('Stripe webhook route', () => {
     mocks.subscriptionList.mockResolvedValue({ data: [] })
     mocks.subscriptionCancel.mockResolvedValue({})
     mocks.refundCreate.mockResolvedValue({})
+    mocks.invoicePaymentList.mockResolvedValue({ data: [] })
     mocks.getSubscriptionProductName.mockResolvedValue('Premium Membership')
     mocks.findVisitorProfileByStripeCustomerId.mockResolvedValue({
       id: 10,
@@ -920,6 +923,228 @@ describe('Stripe webhook route', () => {
 
     expect(mocks.subscriptionUpdate).not.toHaveBeenCalled()
     expect(mocks.resyncSubscription).not.toHaveBeenCalled()
+  })
+
+  // Stripe API 2025-03-31.basil removed `invoice` from Charge (and
+  // PaymentIntent), and the SDK is pinned to 2025-08-27.basil. A charge the SDK
+  // retrieves -- every dispute -- has no invoice, and so does a charge.refunded
+  // body once the webhook endpoint is on basil. The charge's invoice is found
+  // through its payment intent's invoice payment instead, and the invoice's
+  // subscription lives under `parent.subscription_details`.
+  describe('basil-shaped charges (no invoice on the charge)', () => {
+    const BASIL_INVOICE = {
+      id: 'in_1',
+      parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_1' } },
+      lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
+    }
+
+    function basilCharge(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'ch_1',
+        object: 'charge',
+        amount: 1_299,
+        amount_refunded: 1_299,
+        refunded: true,
+        payment_intent: 'pi_1',
+        ...overrides,
+      }
+    }
+
+    function givenInvoicePayment() {
+      mocks.invoicePaymentList.mockResolvedValue({
+        data: [
+          {
+            id: 'inpay_1',
+            object: 'invoice_payment',
+            invoice: 'in_1',
+            status: 'paid',
+            is_default: true,
+            payment: { type: 'payment_intent', payment_intent: 'pi_1' },
+          },
+        ],
+      })
+      mocks.invoiceRetrieve.mockResolvedValue(BASIL_INVOICE)
+    }
+
+    const REVOKED_FOR_DISPUTE = {
+      metadata: {
+        access_revoked: 'true',
+        access_revoked_reason: 'dispute',
+        access_revoked_period_end: '2000',
+      },
+    }
+
+    it('revokes access and stops billing on a full refund', async () => {
+      givenEvent('charge.refunded', basilCharge())
+      givenInvoicePayment()
+
+      const response = await POST(createRequest())
+
+      await expect(response.json()).resolves.toEqual({ received: true })
+      expect(mocks.invoicePaymentList).toHaveBeenCalledWith({
+        payment: { type: 'payment_intent', payment_intent: 'pi_1' },
+      })
+      expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', {
+        metadata: {
+          access_revoked: 'true',
+          access_revoked_reason: 'refund',
+          access_revoked_period_end: '2000',
+        },
+      })
+      expect(mocks.subscriptionCancel).toHaveBeenCalledWith('sub_1', {
+        cancellation_details: { comment: expect.any(String) },
+      })
+      expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+    })
+
+    it('reads an expanded payment intent on the charge', async () => {
+      givenEvent('charge.refunded', basilCharge({ payment_intent: { id: 'pi_1', object: 'payment_intent' } }))
+      givenInvoicePayment()
+
+      await POST(createRequest())
+
+      expect(mocks.invoicePaymentList).toHaveBeenCalledWith({
+        payment: { type: 'payment_intent', payment_intent: 'pi_1' },
+      })
+      expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+    })
+
+    it('leaves a partial refund alone without looking anything up', async () => {
+      givenEvent('charge.refunded', basilCharge({ refunded: false, amount_refunded: 100 }))
+      givenInvoicePayment()
+
+      const response = await POST(createRequest())
+
+      await expect(response.json()).resolves.toEqual({ received: true })
+      expect(mocks.invoicePaymentList).not.toHaveBeenCalled()
+      expect(mocks.subscriptionUpdate).not.toHaveBeenCalled()
+      expect(mocks.subscriptionCancel).not.toHaveBeenCalled()
+      expect(mocks.resyncSubscription).not.toHaveBeenCalled()
+    })
+
+    it('revokes access, and keeps billing, when a dispute opens', async () => {
+      givenEvent('charge.dispute.created', { id: 'dp_1', charge: 'ch_1', status: 'needs_response' })
+      mocks.chargeRetrieve.mockResolvedValue(basilCharge({ refunded: false, amount_refunded: 0 }))
+      givenInvoicePayment()
+
+      const response = await POST(createRequest())
+
+      await expect(response.json()).resolves.toEqual({ received: true })
+      expect(mocks.chargeRetrieve).toHaveBeenCalledWith('ch_1')
+      expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', REVOKED_FOR_DISPUTE)
+      expect(mocks.subscriptionCancel).not.toHaveBeenCalled()
+      expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+    })
+
+    it('restores access when the dispute is won', async () => {
+      givenEvent('charge.dispute.closed', { id: 'dp_1', charge: 'ch_1', status: 'won' })
+      mocks.chargeRetrieve.mockResolvedValue(basilCharge({ refunded: false, amount_refunded: 0 }))
+      givenInvoicePayment()
+      mocks.subscriptionRetrieve.mockResolvedValue({ id: 'sub_1', status: 'active', ...REVOKED_FOR_DISPUTE })
+
+      const response = await POST(createRequest())
+
+      await expect(response.json()).resolves.toEqual({ received: true })
+      expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', {
+        metadata: {
+          access_revoked: '',
+          access_revoked_reason: '',
+          access_revoked_period_end: '',
+        },
+      })
+      expect(mocks.subscriptionCancel).not.toHaveBeenCalled()
+      expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+    })
+
+    it('keeps access revoked and stops billing when the dispute is lost', async () => {
+      givenEvent('charge.dispute.closed', { id: 'dp_1', charge: 'ch_1', status: 'lost' })
+      mocks.chargeRetrieve.mockResolvedValue(basilCharge({ refunded: false, amount_refunded: 0 }))
+      givenInvoicePayment()
+
+      const response = await POST(createRequest())
+
+      await expect(response.json()).resolves.toEqual({ received: true })
+      expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', REVOKED_FOR_DISPUTE)
+      expect(mocks.subscriptionCancel).toHaveBeenCalledWith('sub_1', {
+        cancellation_details: { comment: expect.any(String) },
+      })
+      expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+    })
+
+    it('does nothing to anyone when the charge paid no invoice', async () => {
+      givenEvent('charge.refunded', basilCharge())
+      mocks.invoicePaymentList.mockResolvedValue({ data: [] })
+
+      const response = await POST(createRequest())
+
+      await expect(response.json()).resolves.toEqual({ received: true })
+      expect(mocks.invoiceRetrieve).not.toHaveBeenCalled()
+      expect(mocks.subscriptionUpdate).not.toHaveBeenCalled()
+      expect(mocks.resyncSubscription).not.toHaveBeenCalled()
+    })
+
+    // A lookup that fails must retry, not be read as "not a membership charge":
+    // that reading is the silent no-revocation this whole block is about.
+    it('fails the webhook when the invoice payment lookup fails', async () => {
+      givenEvent('charge.refunded', basilCharge())
+      mocks.invoicePaymentList.mockRejectedValue(badApiKeyError())
+
+      const response = await POST(createRequest())
+
+      expect(response.status).toBe(500)
+      expect(mocks.resyncSubscription).not.toHaveBeenCalled()
+    })
+
+    // A paid-out-of-band or cancelled attempt can sit beside the real payment;
+    // the paid one is the invoice this money bought.
+    it('prefers the paid invoice payment when the intent has more than one', async () => {
+      givenEvent('charge.refunded', basilCharge())
+      mocks.invoicePaymentList.mockResolvedValue({
+        data: [
+          { id: 'inpay_0', invoice: 'in_0', status: 'canceled', payment: { type: 'payment_intent', payment_intent: 'pi_1' } },
+          { id: 'inpay_1', invoice: 'in_1', status: 'paid', payment: { type: 'payment_intent', payment_intent: 'pi_1' } },
+        ],
+      })
+      mocks.invoiceRetrieve.mockResolvedValue(BASIL_INVOICE)
+
+      await POST(createRequest())
+
+      expect(mocks.invoiceRetrieve).toHaveBeenCalledWith('in_1')
+      expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+    })
+
+    // The duplicate-subscription refund already reads the basil shape: an
+    // invoice retrieved at the pinned version carries no payment_intent or
+    // charge, only the expanded `payments` list. Pinned so it stays that way.
+    it('refunds a duplicate subscription from the invoice\'s payments list', async () => {
+      givenEvent('checkout.session.completed', {
+        id: 'cs_basil',
+        customer: 'cus_1',
+        subscription: 'sub_new',
+      })
+      mocks.subscriptionList.mockResolvedValue({
+        data: [
+          { id: 'sub_old', status: 'active', created: 100, latest_invoice: 'in_old' },
+          { id: 'sub_new', status: 'active', created: 200, latest_invoice: 'in_new' },
+        ],
+      })
+      mocks.invoiceRetrieve.mockResolvedValue({
+        id: 'in_old',
+        parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_old' } },
+        payments: {
+          data: [{ id: 'inpay_old', payment: { type: 'payment_intent', payment_intent: 'pi_old' } }],
+        },
+      })
+
+      await POST(createRequest())
+
+      expect(mocks.invoiceRetrieve).toHaveBeenCalledWith('in_old', { expand: ['payments'] })
+      expect(mocks.refundCreate).toHaveBeenCalledWith(
+        { payment_intent: 'pi_old' },
+        { idempotencyKey: 'dup-sub-refund-sub_old' },
+      )
+      expect(mocks.subscriptionCancel).toHaveBeenCalledWith('sub_old')
+    })
   })
 
   it('cancels and refunds an older duplicate subscription, then resyncs the newer', async () => {
