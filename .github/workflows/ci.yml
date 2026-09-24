@@ -116,6 +116,16 @@ jobs:
       - name: The build did not rewrite source
         run: git diff --exit-code -- apps/questura/apps/server/src
 
+      # `next.config.mjs` sets `typescript.ignoreBuildErrors`, so the build
+      # above does not typecheck. It does leave behind what `tsc` needs and a
+      # fresh checkout lacks: `src/payload-types.ts` (the build script runs
+      # `generate:types` first, against the placeholders, with no database),
+      # `next-env.d.ts`, and the route types under `.next-ci/types`. That is
+      # why the typecheck rides in this job and not in the tests job, where
+      # none of those exist.
+      - name: Typecheck
+        run: pnpm --dir apps/questura/apps/server run typecheck
+
   # The readiness integration tests, where a skip is a failure (surge plan
   # L09). Everything else in CI stays green on a machine with no database, so
   # these used to skip quietly and a green run said nothing about them. Here a
@@ -189,6 +199,30 @@ jobs:
       # install. The negative controls need k6 and run locally.
       - name: Load supervisor policy
         run: node --test apps/questura/load/k6/supervisor/policy.test.mjs
+
+  # Its own job so the tests job above keeps its no-install shape. No build
+  # first: a fresh checkout has no `next-env.d.ts` or `.next/types`, which
+  # costs the route-type checks and nothing else, because the client imports
+  # no CSS-module or image bindings that need Next's ambient declarations. If
+  # one appears, this job is what says so.
+  questura-client-typecheck:
+    name: Questura client typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @questura/client...
+
+      - name: Typecheck
+        run: pnpm --dir apps/questura/apps/client run typecheck
 
   writer-web:
     name: Writer frontend
