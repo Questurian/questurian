@@ -1,3 +1,4 @@
+import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 
 import { DEFAULT_RETURN_PATH, isSafeReturnPath, safeReturnPath } from './safe-return-path'
@@ -88,4 +89,41 @@ describe('safeReturnPath — edges found by mutation testing', () => {
       expect(isSafeReturnPath(path)).toBe(false)
     }
   )
+})
+
+describe('safeReturnPath — fuzzed (launch harness D2)', () => {
+  const PROBE = 'https://www.questurian.com'
+  const pieces = ['/', '//', '\\', '%2F', '%5C', '%25', '%09', '%0A', '\t', '\n', 'evil.example', ':', '@', '.', '..', '?', '#', 'https:', 'javascript:', 'a', 'é', '／', '⁄', ' ', '%', '2F', '5C']
+  const hostile = fc.array(fc.constantFrom(...pieces), { minLength: 1, maxLength: 8 }).map((parts) => parts.join(''))
+
+  // The success page decodes once and the client guard once more; allow a
+  // few beyond that. Every stage must stay on the site.
+  it('whatever it returns stays on the site through every later decode', () => {
+    fc.assert(
+      fc.property(fc.oneof(hostile, fc.string(), fc.string({ unit: 'binary' })), (value) => {
+        let layer = safeReturnPath(value)
+        for (let decodes = 0; decodes < 5; decodes += 1) {
+          expect(new URL(layer, PROBE).origin).toBe(PROBE)
+          let next: string
+          try {
+            next = decodeURIComponent(layer)
+          } catch {
+            return
+          }
+          if (next === layer) return
+          layer = next
+        }
+      }),
+      { numRuns: 20_000 },
+    )
+  })
+
+  it('never throws, whatever it is given', () => {
+    fc.assert(
+      fc.property(fc.anything(), (value) => {
+        expect(typeof safeReturnPath(value)).toBe('string')
+      }),
+      { numRuns: 5_000 },
+    )
+  })
 })

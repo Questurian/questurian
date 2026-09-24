@@ -36,8 +36,22 @@ export function isSafeReturnPath(path: string): boolean {
   // eslint-disable-next-line no-control-regex
   if (/[\x00-\x1f\x7f]/.test(path)) return false
 
-  return true
+  // Whatever the checks above missed, the browser's own parser decides.
+  try {
+    return new URL(path, PROBE_ORIGIN).origin === PROBE_ORIGIN
+  } catch {
+    return false
+  }
 }
+
+const PROBE_ORIGIN = 'https://return-path-check.invalid'
+
+/**
+ * How many more decodes a value may survive. The success page decodes once
+ * reading its query and the client guard decodes again, so a value is
+ * checked at every layer it could be peeled to, not only the first.
+ */
+const MAX_LATER_DECODES = 3
 
 export function safeReturnPath(value: unknown): string {
   if (typeof value !== 'string') return DEFAULT_RETURN_PATH
@@ -51,5 +65,22 @@ export function safeReturnPath(value: unknown): string {
     return DEFAULT_RETURN_PATH
   }
 
-  return isSafeReturnPath(candidate) ? candidate : DEFAULT_RETURN_PATH
+  // Checking only this first decode let `/%252F%252Fevil.example` through:
+  // safe here, `//evil.example` two decodes later in the browser. Every layer
+  // it can be peeled to must be safe too.
+  let layer = candidate
+  for (let decodes = 0; decodes <= MAX_LATER_DECODES; decodes += 1) {
+    if (!isSafeReturnPath(layer)) return DEFAULT_RETURN_PATH
+    let next: string
+    try {
+      next = decodeURIComponent(layer)
+    } catch {
+      return DEFAULT_RETURN_PATH
+    }
+    if (next === layer) return candidate
+    layer = next
+  }
+
+  // Still changing after that many decodes: nobody writes a path like that.
+  return DEFAULT_RETURN_PATH
 }
