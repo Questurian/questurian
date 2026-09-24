@@ -1,10 +1,10 @@
 {
   "kind": "surge-route-checks",
-  "takenAt": "2026-09-24T00:06:19.876Z",
+  "takenAt": "2026-09-24T00:48:57.588Z",
   "source": {
-    "sha": "a3b09bfdf6f3f6d1f7921af66c64d3ce5d0ec32d",
-    "dirty": false,
-    "diffFingerprint": null
+    "sha": "6ce7810e08f98bf9dfd7ae15a057b8edf18ab9f0",
+    "dirty": true,
+    "diffFingerprint": "acd5649faf7394ae"
   },
   "dataset": {
     "version": "launch-v1"
@@ -17,7 +17,7 @@
       "stripe": 3191,
       "redis": 6390
     },
-    "builtFrom": "a3b09bfdf6f3f6d1f7921af66c64d3ce5d0ec32d"
+    "builtFrom": "6ce7810e08f98bf9dfd7ae15a057b8edf18ab9f0"
   },
   "counts": {
     "total": 114,

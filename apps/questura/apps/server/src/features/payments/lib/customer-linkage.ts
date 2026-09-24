@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 import type Stripe from 'stripe'
 
 import { stripe } from './stripe'
@@ -93,14 +95,31 @@ export async function resolveStripeCustomerForVisitor(params: {
     return { customerId: owned.id, created: false }
   }
 
-  const customer = await stripe.customers.create({
+  const createParams = {
     email,
     name: name || email,
     metadata: {
       visitorAuthUserId,
       visitorProfileId: String(visitorProfileId ?? ''),
     },
-  })
+  }
+
+  // Two requests for one visitor at once (a double-clicked Subscribe on a
+  // first purchase) both reach this line, because neither can see the
+  // customer the other is creating. Without a key each created one: two
+  // customers, two Checkout Sessions (the session key includes the customer
+  // id), a profile linked to only one of them, and a buyer who could pay on
+  // the other and never become a member. Stripe answers a repeated key with
+  // the first customer, for 24 hours.
+  //
+  // The key is a digest of every parameter, so a changed name or address
+  // gets a new key instead of Stripe's "same key, different parameters"
+  // refusal, and no address appears in it.
+  const idempotencyKey = `customer-create:${createHash('sha256')
+    .update(JSON.stringify([visitorAuthUserId, createParams.email, createParams.name, createParams.metadata.visitorProfileId]))
+    .digest('hex')}`
+
+  const customer = await stripe.customers.create(createParams, { idempotencyKey })
 
   return { customerId: customer.id, created: true }
 }
