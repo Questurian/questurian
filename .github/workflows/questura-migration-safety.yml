@@ -1,0 +1,60 @@
+name: Questura migration safety
+
+# Fails a pull request that adds or changes a Payload migration the deploy
+# guard would refuse (DROP, TRUNCATE, DELETE, column rewrites, visitor-auth
+# tables, SQL it cannot read), unless the PR description acknowledges that
+# migration by name:
+#
+#   Acknowledge-risky-migration: <migration name>
+#
+# The acknowledgement only turns this check green. The deploy guard in
+# Railway's pre-deploy step still refuses the migration; it is applied by hand
+# after a restore point is recorded
+# (apps/questura/docs/procedures/backup-restore-rollback.md).
+#
+# Separate from ci.yml so that editing the PR description re-runs this check
+# alone instead of the whole suite.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths:
+      - 'apps/questura/apps/server/src/migrations/**'
+      - 'apps/questura/apps/server/scripts/deploy/check-pending-migrations.mjs'
+      - 'apps/questura/apps/server/scripts/deploy/check-pr-migrations.mjs'
+      - '.github/workflows/questura-migration-safety.yml'
+
+concurrency:
+  group: questura-migration-safety-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  migration-safety:
+    name: Questura migration safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # GitHub's merge commit: its first parent is the base branch, so
+      # HEAD^1..HEAD is exactly what this pull request changes.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @questura/server...
+
+      - name: Risky migrations need an acknowledgement
+        working-directory: apps/questura/apps/server
+        env:
+          # Passed as data, never interpolated into the script.
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node scripts/deploy/check-pr-migrations.mjs --base HEAD^1
