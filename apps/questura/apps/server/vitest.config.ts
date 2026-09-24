@@ -28,6 +28,8 @@ export default defineConfig({
       'scripts/readiness/**/*.test.ts',
       // The env check the Railway template is held to (launch harness C1).
       'scripts/env-check/**/*.test.ts',
+      // The launch-day runner, against a fake server (launch harness A9).
+      'scripts/launch-verify/**/*.test.ts',
     ],
   },
 })
