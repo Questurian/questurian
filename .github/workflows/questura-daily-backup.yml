@@ -1,0 +1,70 @@
+name: Questura daily backup
+
+# The daily copy of the production database that lives outside Neon (D7).
+# Dumps Neon with pg_dump 17, proves the dump restores into a throwaway
+# Postgres 17, and only then uploads it to a private Cloudflare R2 bucket.
+# Script and its tests: apps/questura/infra/backup/daily-dump.sh.
+# Setup and restore: apps/questura/docs/procedures/backup-restore-rollback.md.
+#
+# Dormant until the owner sets the repository variable
+# QUESTURA_BACKUP_ENABLED=true, after creating:
+#   secrets   QUESTURA_BACKUP_DATABASE_URL  (read-only Neon role, direct endpoint)
+#             R2_BACKUP_ACCESS_KEY_ID, R2_BACKUP_SECRET_ACCESS_KEY
+#   variables QUESTURA_BACKUP_S3_URI        (s3://<bucket>/daily)
+#             QUESTURA_BACKUP_S3_ENDPOINT   (https://<account id>.r2.cloudflarestorage.com)
+#
+# The repository is public, so the log is too: the script never prints a
+# connection string, and the dump itself never becomes a workflow artifact.
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: questura-daily-backup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: Questura daily backup
+    if: vars.QUESTURA_BACKUP_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      verify:
+        image: postgres:17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: questura_backup_verify
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: apps/questura/infra/backup
+
+      # Neon runs Postgres 17 and pg_dump refuses a newer server than itself.
+      # The runner's own client is older, so install 17 from the PostgreSQL apt repo.
+      - name: Postgres 17 client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "PG_BINDIR=/usr/lib/postgresql/17/bin" >> "$GITHUB_ENV"
+
+      - name: Dump, prove the restore, upload
+        env:
+          QUESTURA_BACKUP_DATABASE_URL: ${{ secrets.QUESTURA_BACKUP_DATABASE_URL }}
+          QUESTURA_BACKUP_VERIFY_URL: postgres://postgres@127.0.0.1:5432/questura_backup_verify
+          QUESTURA_BACKUP_S3_URI: ${{ vars.QUESTURA_BACKUP_S3_URI }}
+          QUESTURA_BACKUP_S3_ENDPOINT: ${{ vars.QUESTURA_BACKUP_S3_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: bash apps/questura/infra/backup/daily-dump.sh
