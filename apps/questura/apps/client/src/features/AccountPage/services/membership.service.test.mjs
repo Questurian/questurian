@@ -129,3 +129,40 @@ test('an entitled visitor is never offered an upgrade', () => {
   assert.equal(state.showUpgradeButton, false)
   assert.match(state.description, /rejoin once it ends/)
 })
+
+// Half an hour before midnight UTC is already the next day east of it. The card
+// writes access dates in UTC whatever zone renders it (the tests run under
+// TZ=UTC and TZ=Pacific/Kiritimati), so the server's HTML, the browser's first
+// render and the emails all name the same day.
+const LATE_UTC = '2099-01-31T23:30:00.000Z'
+
+test('every date on the membership card is the UTC day, month spelled out', () => {
+  const cases = [
+    [visitor({ subscriptionRenewsAt: LATE_UTC }), 'renews on January 31, 2099.'],
+    [
+      visitor({ cancelAtPeriodEnd: true, membershipExpiration: LATE_UTC }),
+      'will expire on January 31, 2099.',
+    ],
+    [
+      visitor({ subscriptionStatus: 'past_due', dunningGraceUntil: LATE_UTC }),
+      'continues until January 31, 2099 while',
+    ],
+    [
+      visitor({ subscriptionStatus: 'cancelled', membershipExpiration: LATE_UTC }),
+      'remains active until January 31, 2099.',
+    ],
+    [
+      visitor({ subscriptionStatus: 'cancelled', membershipExpiration: '2001-01-31T23:30:00.000Z' }),
+      'expired on January 31, 2001.',
+    ],
+  ]
+
+  for (const [user, expected] of cases) {
+    const { description } = getMembershipState(user, true)
+    assert.ok(description.includes(expected), `${description} should include "${expected}"`)
+  }
+  assert.equal(
+    getBillingInfo(visitor({ subscriptionRenewsAt: LATE_UTC }), true)?.nextBilling,
+    'January 31, 2099'
+  )
+})

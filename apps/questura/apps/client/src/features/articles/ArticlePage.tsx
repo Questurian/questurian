@@ -17,19 +17,8 @@ import { ArticleByline } from '@/features/articles/components/ArticleByline'
 import { ArticleAuthorBanner } from '@/features/articles/components/ArticleAuthorBanner'
 import { getPublicBaseUrl } from '@/lib/seo/publicBaseUrl'
 import { Article } from './types'
+import { formatArticleDate } from '@/lib/dates'
 
-function formatMagazineDate(iso: string | undefined): string | null {
-  if (!iso) return null
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return null
-
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'America/New_York',
-  }).format(date)
-}
 function StandardArticleHeader({
   article,
   path,
@@ -41,7 +30,7 @@ function StandardArticleHeader({
 }) {
   const { id: articleId, title, author, publishedAt, updatedAt, seoSection, headerSection } = article
   const description = seoSection?.metaDescription
-  const dateLine = formatMagazineDate(publishedAt ?? updatedAt)
+  const dateLine = formatArticleDate(publishedAt ?? updatedAt, 'long')
   const crumbs = articleCrumbsFromPath(path)
 
   return (

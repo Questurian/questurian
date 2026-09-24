@@ -20,6 +20,7 @@ import {
   type BookmarkListItem,
   type BookmarkTargetType,
 } from '../types';
+import { formatArticleDate } from '@/lib/dates';
 
 /*
   The saved list is a broadsheet index, not a card wall: rows separated by
@@ -32,9 +33,7 @@ const tabClass =
   'relative -mb-px border-b-2 px-1 pb-3 font-display text-[11px] uppercase tracking-[0.18em] transition-colors';
 
 function formatSavedDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return formatArticleDate(value, 'short') ?? '';
 }
 
 function BookmarkRow({ item }: { item: BookmarkListItem }) {

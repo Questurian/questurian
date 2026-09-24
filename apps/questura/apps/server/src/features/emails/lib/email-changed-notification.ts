@@ -1,16 +1,14 @@
 import type { Payload } from 'payload'
 import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createSectionBox, createInfoBox, EMAIL_PARAGRAPH_STYLE } from './email-utils'
 import type { EmailChangedNotificationData, EmailResult } from '../types'
+import { formatMemberTimestamp } from '@/shared/lib/dates'
 
 export async function sendEmailChangedNotificationEmail(
   payload: Payload,
   { oldEmail, newEmail, firstName, lastName, wasGoogleUnlinked = false, wasStripeUpdated = false }: EmailChangedNotificationData
 ): Promise<EmailResult> {
   const greeting = buildGreeting(firstName, lastName)
-  const timestamp = new Date().toLocaleString('en-US', {
-    dateStyle: 'full',
-    timeStyle: 'short'
-  })
+  const timestamp = formatMemberTimestamp(new Date())
 
   const html = wrapEmailContent(`
     <h1 style="color: #28a745; text-align: center;">📧 Your Email Address Was Changed</h1>

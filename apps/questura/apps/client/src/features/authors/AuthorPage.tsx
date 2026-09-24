@@ -8,18 +8,10 @@ import { AuthorSocialIcons } from "@/features/authors/components/AuthorSocialLin
 import { AuthorAvatar } from "@/features/authors/components/AuthorAvatar";
 import { EditorialLabelRule } from "@/features/articles/components/EditorialRule";
 import { PublicImage } from "@/components/media/PublicImage";
+import { formatArticleDate } from "@/lib/dates";
 
 function formatDate(iso: string | null): string | null {
-  if (!iso) return null;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+  return formatArticleDate(iso, "long");
 }
 
 function articleLabel(article: AuthorArticleItem): string {
