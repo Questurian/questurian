@@ -15,9 +15,9 @@ import {
  * ever verified. `beforeLogin` runs only *after* `authenticateLocalStrategy`
  * succeeds, so it cannot see — let alone throttle — a wrong-password attempt.
  *
- * Running inside Payload rather than in `middleware.ts` also keeps this on the
- * Node runtime, where the Redis-backed counter works; Next middleware is Edge
- * by default and `ioredis` cannot run there.
+ * Running inside Payload rather than in `proxy.ts` keeps the throttle next
+ * to the operation it guards. (When this was written, Next middleware ran on
+ * Edge, where `ioredis` cannot; Next 16's `proxy.ts` runs on Node.)
  */
 export const staffAuthRateLimitHook: CollectionBeforeOperationHook = async ({
   args,

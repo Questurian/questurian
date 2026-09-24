@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const IS_DEVELOPMENT = process.env.NODE_ENV === 'development'
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   if (IS_DEVELOPMENT && req.nextUrl.pathname.startsWith('/api/')) {
     console.log(`${req.method} ${req.nextUrl.pathname}`)
   }

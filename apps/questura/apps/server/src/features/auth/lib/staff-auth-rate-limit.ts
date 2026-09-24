@@ -9,7 +9,7 @@ import {
  * Rate limits for the staff (Payload `users`) credential endpoints.
  *
  * `Users.ts` sets `lockTime: 0, maxLoginAttempts: 0`, Payload 3 ships no
- * built-in request throttling, and `middleware.ts` only logs in development, so
+ * built-in request throttling, and `proxy.ts` only logs in development, so
  * `POST /api/users/login` was an unthrottled password oracle against admin
  * accounts while visitors already had 10 sign-ins/min, 5 resets/min and
  * Turnstile. `/api/users/forgot-password` is public, unthrottled, and doubles
