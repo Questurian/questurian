@@ -240,23 +240,53 @@ pnpm exec wrangler secret put CLOUDFLARE_ZONE_ID             # from step 12
 `NEXT_PUBLIC_` anything — a render token in a browser bundle is a published
 bypass of the per-IP read limits.
 
-**18. Point `NEXT_PUBLIC_BACKEND_URL` at the real backend.**
-In `wrangler.jsonc`, `vars.NEXT_PUBLIC_BACKEND_URL` is still
-`http://127.0.0.1:4100` from local preview. It becomes the Railway API
-origin.
+**18. Gather the site's build settings.**
+`NEXT_PUBLIC_*` values are written into the site's JavaScript when it is
+built. Setting them later (a `wrangler.jsonc` var, the Cloudflare dashboard)
+changes nothing. `vars.NEXT_PUBLIC_BACKEND_URL` in `wrangler.jsonc` is the
+local-preview value and does not choose the API a deployed site calls.
 
-**19. Build — in a worktree, not the working copy.**
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_BACKEND_URL` | the API origin, e.g. `https://api.questurian.com` |
+| `NEXT_PUBLIC_APP_URL` | the site origin, e.g. `https://www.questurian.com` |
+| `NEXT_PUBLIC_FRONTEND_URL` | the same site origin |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | the live publishable key, `pk_live_…` |
+| `NEXT_PUBLIC_IMAGE_CDN_ORIGIN` | the Bunny pull zone origin, e.g. `https://questurian-cdn.b-cdn.net` (optional: a preconnect hint) |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | the browser Maps key (optional: maps stay blank without it) |
+| `NEXT_PUBLIC_ENDORSELY_ENABLED`, `NEXT_PUBLIC_ENDORSELY_ORG_ID` | only if affiliate tracking is on |
+
+The build refuses to start if the first four are missing, not `https`, point
+at this computer, or the key is not `pk_live_`. The message names the
+variable.
+
+**19. Build — in a worktree, not the working copy, with the settings above.**
 
 ```bash
-git worktree add /tmp/questura-build HEAD
+git worktree add /tmp/questura-build origin/main
 cd /tmp/questura-build/apps/questura && pnpm install
-cd apps/client && pnpm exec opennextjs-cloudflare build
+cd apps/client
+NEXT_PUBLIC_BACKEND_URL=https://api.questurian.com \
+NEXT_PUBLIC_APP_URL=https://www.questurian.com \
+NEXT_PUBLIC_FRONTEND_URL=https://www.questurian.com \
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_… \
+  pnpm exec opennextjs-cloudflare build
+pnpm scan:bundle   # expect: no localhost or loopback addresses in .next/static, .open-next/assets
 ```
+
+The worktree has no `.env` files, which is the point: everything the site
+bakes in is on that command line and nowhere else. The build itself scans
+`.next/static` for `localhost` and `127.0.0.1` when it finishes; `pnpm
+scan:bundle` checks `.open-next/assets`, which is what gets uploaded. Either
+failing means: do not deploy.
 
 If `pnpm dev` is running, building in the working copy fails with
 `Could not resolve "../../chunks/ssr/[turbopack]_runtime.js"` — an error that
 says nothing about its cause. The dev server writes turbopack artifacts into
 `.next`, the adapter bundles from `.next`, and it ignores `NEXT_DIST_DIR`.
+
+`wrangler.jsonc` sets `workers_dev: false` and `preview_urls: false`: the site
+is served only on its own domain, never as a crawlable `*.workers.dev` copy.
 
 **20. Deploy.** `pnpm exec opennextjs-cloudflare deploy`. This is the first
 irreversible step in Part C.

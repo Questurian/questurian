@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import createNextIntlPlugin from "next-intl/plugin";
 
+import { assertProductionBuildEnv } from "./src/lib/release/productionBuildEnv";
 import { SECURITY_HEADERS } from "./src/lib/http/securityHeaders";
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
@@ -41,4 +43,13 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+// A production build refuses to start without the real API and site
+// addresses and a live Stripe key: they are baked into the JavaScript at
+// build time, and without them the site would call localhost. The readiness
+// sandbox opts out with QUESTURA_BUILD_TARGET=readiness. `next dev` and
+// `next start` are not checked. After the build, `scripts/scan-client-bundle.mjs`
+// checks the output itself.
+export default function config(phase: string): NextConfig {
+  if (phase === PHASE_PRODUCTION_BUILD) assertProductionBuildEnv(process.env);
+  return withNextIntl(nextConfig);
+}

@@ -30,6 +30,16 @@ export type Target = {
    * on a 200. The readiness sandbox has only its own test cities.
    */
   homePath?: string
+  /** The article page the host checks load. Default: the first article in the sitemap. */
+  articlePath?: string
+  /** The author page the host checks load. Default: the first author link on the article. */
+  authorPath?: string
+  /**
+   * Load one image from the home page and expect 200 image/*. Default on.
+   * Off only for the readiness sandbox, which has no image CDN until launch
+   * fix plan item 8 points it at its fixture media server.
+   */
+  imageCheck?: boolean
 }
 
 export type Result = { group: string; name: string; ok: boolean; detail: string }
@@ -75,6 +85,9 @@ export async function runChecks(target: Target, fetchImpl: Fetch = fetch): Promi
     home.status === 200 && landedOn === new URL(target.client).origin,
     `HTTP ${home.status} at ${home.url || target.client}`,
   )
+
+  // --- Hosts: the built site points at the real site and API --------------------
+  await hostChecks(target, fetchImpl, await home.clone().text().catch(() => ''), home.url || `${target.client}${target.homePath ?? '/'}`, record)
 
   // --- Headers (D4, B6) ---------------------------------------------------------
   if (!target.allowHttp) {
@@ -219,6 +232,155 @@ export async function runChecks(target: Target, fetchImpl: Fetch = fetch): Promi
   }
 
   return results
+}
+
+type Record_ = (group: string, name: string, ok: boolean, detail?: string) => void
+
+// Any address on the machine that built or runs the site. Visitors cannot
+// reach it, so one in a page means a build or setting was missing.
+const LOOPBACK = /(?:https?:)?\/\/((?:[a-z0-9-]+\.)*localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0|\[::1\])(?::\d+)?(?![a-z0-9.-])/gi
+
+/** Loopback addresses in `html`, except the hosts under test (the sandbox's own *.localhost names). */
+export function loopbackAddresses(html: string, allowedHosts: string[]): string[] {
+  const found = new Set<string>()
+  for (const match of html.matchAll(LOOPBACK)) {
+    let host = ''
+    try {
+      host = new URL(match[0].startsWith('//') ? `http:${match[0]}` : match[0]).host
+    } catch {
+      // keep it: unparsable is still an address on this machine
+    }
+    if (!allowedHosts.includes(host)) found.add(match[0])
+  }
+  return [...found]
+}
+
+function attribute(tag: string, name: string): string | null {
+  const match = new RegExp(`\\s${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, 'i').exec(tag)
+  return match ? (match[2] ?? match[3] ?? '').replace(/&amp;/g, '&') : null
+}
+
+/** `<link rel="canonical">` and `<meta property="og:url">` hrefs, as written. */
+export function pageAddresses(html: string): { canonical: string | null; ogUrl: string | null } {
+  let canonical: string | null = null
+  let ogUrl: string | null = null
+  for (const [tag] of html.matchAll(/<(?:link|meta)\b[^>]*>/gi)) {
+    if (canonical === null && /\srel\s*=\s*["']?canonical\b/i.test(tag)) canonical = attribute(tag, 'href')
+    if (ogUrl === null && /\sproperty\s*=\s*["']og:url["']/i.test(tag)) ogUrl = attribute(tag, 'content')
+  }
+  return { canonical, ogUrl }
+}
+
+function absoluteOn(value: string | null, host: string): boolean {
+  if (!value || !/^https?:\/\//i.test(value)) return false
+  try {
+    return new URL(value).host === host
+  } catch {
+    return false
+  }
+}
+
+async function text(fetchImpl: Fetch, url: string): Promise<{ status: number; body: string; type: string }> {
+  try {
+    const response = await fetchImpl(url, { redirect: 'follow' })
+    return { status: response.status, body: await response.text(), type: header(response, 'content-type') }
+  } catch (error) {
+    return { status: 0, body: '', type: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+/**
+ * What a build or setting that is wrong would leave in the served site:
+ * loopback addresses in pages, canonicals naming another host (a workers.dev
+ * copy canonicalising to itself), a sitemap for the wrong host, images from a
+ * host that serves nothing, and a bundle calling some other API.
+ */
+async function hostChecks(target: Target, fetchImpl: Fetch, homeHtml: string, homeUrl: string, record: Record_): Promise<void> {
+  const client = new URL(target.client)
+  const api = new URL(target.api)
+  const allowed = [client.host, api.host]
+
+  const robots = await text(fetchImpl, `${target.client}/robots.txt`)
+  const sitemapLines = [...robots.body.matchAll(/^\s*sitemap:\s*(\S+)/gim)].map((match) => match[1]!)
+  record(
+    'hosts',
+    '/robots.txt answers 200 and names only this site’s sitemap',
+    robots.status === 200 && sitemapLines.length > 0 && sitemapLines.every((line) => absoluteOn(line, client.host)),
+    `HTTP ${robots.status} sitemap=${JSON.stringify(sitemapLines)}`,
+  )
+
+  const sitemap = await text(fetchImpl, `${target.client}/sitemap.xml`)
+  const locs = [...sitemap.body.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((match) => match[1]!.replace(/&amp;/g, '&'))
+  const foreign = locs.filter((loc) => !absoluteOn(loc, client.host))
+  record(
+    'hosts',
+    '/sitemap.xml answers 200 and lists only this site',
+    sitemap.status === 200 && locs.length > 0 && foreign.length === 0,
+    `HTTP ${sitemap.status}, ${locs.length} urls${foreign.length ? `, other hosts: ${foreign.slice(0, 3).join(' ')}` : ''}`,
+  )
+
+  const articlePath =
+    target.articlePath ??
+    locs
+      .filter((loc) => absoluteOn(loc, client.host))
+      .map((loc) => new URL(loc).pathname)
+      .find((path) => path.split('/').filter(Boolean).length === 4)
+  const article = articlePath ? await text(fetchImpl, `${target.client}${articlePath}`) : null
+  const authorPath =
+    target.authorPath ??
+    /href="((?:https?:\/\/[^"/]+)?\/authors\/[^"?#]+)"/.exec(`${article?.body ?? ''} ${homeHtml}`)?.[1]?.replace(/^https?:\/\/[^/]+/, '')
+  const author = authorPath ? await text(fetchImpl, `${target.client}${authorPath}`) : null
+
+  const pages: Array<[string, string | undefined, { status: number; body: string } | null]> = [
+    ['home', target.homePath ?? '/', { status: 200, body: homeHtml }],
+    ['article', articlePath, article],
+    ['author', authorPath, author],
+  ]
+  for (const [label, path, page] of pages) {
+    if (!page || !path) {
+      record('hosts', `${label} page found`, false, label === 'article' ? 'no 4-segment URL in the sitemap; pass --article' : 'no /authors/ link on the article; pass --author')
+      continue
+    }
+    if (label !== 'home') record('hosts', `${label} page answers 200`, page.status === 200, `HTTP ${page.status} at ${path}`)
+    const loopback = loopbackAddresses(page.body, allowed)
+    record('hosts', `${label} page has no localhost or 127.0.0.1 address`, loopback.length === 0, loopback.slice(0, 5).join(' ') || path)
+    const { canonical, ogUrl } = pageAddresses(page.body)
+    record('hosts', `${label} page canonical is absolute on ${client.host}`, absoluteOn(canonical, client.host), `canonical=${canonical ?? 'missing'} at ${path}`)
+    record('hosts', `${label} page og:url, if any, is absolute on ${client.host}`, ogUrl === null || absoluteOn(ogUrl, client.host), `og:url=${ogUrl}`)
+  }
+
+  const missing = await text(fetchImpl, `${target.client}/launch-verify-${Date.now().toString(36)}/no-such-page`)
+  record('hosts', 'a made-up path answers 404', missing.status === 404, `HTTP ${missing.status}`)
+
+  if (target.imageCheck !== false) {
+    const src = [...homeHtml.matchAll(/<img\b[^>]*>/gi)].map(([tag]) => attribute(tag, 'src')).find((value) => value && !value.startsWith('data:'))
+    let detail = 'no <img src> on the home page'
+    let ok = false
+    if (src) {
+      const image = await fetchImpl(new URL(src, homeUrl).toString(), { redirect: 'follow' }).catch((error: unknown) => error)
+      if (image instanceof Response) {
+        ok = image.status === 200 && /^image\//i.test(header(image, 'content-type'))
+        detail = `HTTP ${image.status} ${header(image, 'content-type')} ${src}`
+        await image.body?.cancel().catch(() => undefined)
+      } else {
+        detail = `${image instanceof Error ? image.message : String(image)}: ${src}`
+      }
+    }
+    record('hosts', 'one image on the home page loads (200 image/*)', ok, detail)
+  }
+
+  // The API address is baked into the JavaScript at build time. The page can
+  // be right while the bundle calls some other API, or localhost.
+  const scripts = [...homeHtml.matchAll(/<script\b[^>]*\ssrc="([^"]+\.js[^"]*)"/gi)].map((match) => new URL(match[1]!.replace(/&amp;/g, '&'), homeUrl).toString())
+  let carrier = ''
+  for (const url of scripts.slice(0, 60)) {
+    const chunk = await text(fetchImpl, url)
+    if (chunk.body.includes(api.origin)) {
+      carrier = new URL(url).pathname
+      break
+    }
+  }
+  record('hosts', `a script the home page loads calls ${api.origin}`, carrier !== '', carrier || `none of ${scripts.length} scripts mention it`)
 }
 
 /** What cannot be checked over anonymous HTTP. Printed after the run. */

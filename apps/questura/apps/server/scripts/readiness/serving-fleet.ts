@@ -107,6 +107,9 @@ function childEnv(instance: string, port: number): NodeJS.ProcessEnv {
     QUESTURA_REVALIDATION_SECRET: 'readiness-serving-revalidation',
     REFRESH_WORKER_INTERVAL_MS: '0',
 
+    // Production refuses to boot without an image host; this one resolves nowhere.
+    BUNNY_STORAGE_HOSTNAME: 'readiness-media.invalid',
+
     STRIPE_SECRET_KEY: 'sk_readiness_placeholder_not_a_key',
     STRIPE_WEBHOOK_SECRET: 'whsec_readiness_placeholder',
     // Required in production; the outbound guard means neither reaches Resend.

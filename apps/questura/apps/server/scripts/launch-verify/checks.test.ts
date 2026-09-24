@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { runChecks, type Target } from './checks'
+import { loopbackAddresses, pageAddresses, runChecks, type Target } from './checks'
 
 /**
  * The launch-day runner, against a fake server. A healthy server passes
@@ -31,7 +31,22 @@ type Behaviour = Partial<{
   bypassStatus: number | 'unreachable'
   rateLimited: boolean
   homeRedirectsOff: boolean
+  // Host checks
+  homeHtmlExtra: string
+  canonical: string | null
+  ogUrl: string | null
+  authorCanonical: string
+  robotsSitemap: string
+  sitemapHost: string
+  imageStatus: number
+  imageType: string
+  unknownPathStatus: number
+  chunkApi: string
 }>
+
+const ARTICLE = '/peru/lima/culture/a-walk'
+const AUTHOR = '/authors/jane'
+const CHUNK = '/_next/static/chunks/app-1.js'
 
 function fakeServer(behaviour: Behaviour = {}): typeof fetch {
   const b = {
@@ -47,8 +62,23 @@ function fakeServer(behaviour: Behaviour = {}): typeof fetch {
     webhookStatus: 400,
     bypassStatus: 'unreachable' as number | 'unreachable',
     rateLimited: true,
+    homeHtmlExtra: '',
+    canonical: `${TARGET.client}/peru/lima` as string | null,
+    ogUrl: `${TARGET.client}/peru/lima` as string | null,
+    authorCanonical: `${TARGET.client}${AUTHOR}`,
+    robotsSitemap: `${TARGET.client}/sitemap.xml`,
+    sitemapHost: TARGET.client,
+    imageStatus: 200,
+    imageType: 'image/jpeg',
+    unknownPathStatus: 404,
+    chunkApi: TARGET.api,
     ...behaviour,
   }
+  const head = (canonical: string | null, ogUrl: string | null) =>
+    `${canonical === null ? '' : `<link rel="canonical" href="${canonical}"/>`}${ogUrl === null ? '' : `<meta property="og:url" content="${ogUrl}"/>`}`
+  const homeHtml =
+    `<html><head>${head(b.canonical, b.ogUrl)}<script src="${CHUNK}" async=""></script></head>` +
+    `<body><img alt="" src="https://cdn.example.test/media/a.jpg"/><a href="${AUTHOR}">Jane</a>${b.homeHtmlExtra}</body></html>`
   let plansCalls = 0
 
   return (async (input: string | URL | Request, init: RequestInit = {}) => {
@@ -71,7 +101,25 @@ function fakeServer(behaviour: Behaviour = {}): typeof fetch {
       const h: Record<string, string> = { ...base, 'cache-control': b.homeCache }
       if (b.frame) h['content-security-policy'] = b.frame
       if (b.homeSetsCookie) h['set-cookie'] = 'x=1'
-      return new Response('<html></html>', { status: 200, headers: h })
+      return new Response(homeHtml, { status: 200, headers: h })
+    }
+    if (url.origin === 'https://cdn.example.test') {
+      return new Response('jpeg', { status: b.imageStatus, headers: { 'content-type': b.imageType } })
+    }
+    if (url.origin === TARGET.client) {
+      switch (url.pathname) {
+        case '/robots.txt':
+          return new Response(`User-Agent: *\nAllow: /\n\nSitemap: ${b.robotsSitemap}\n`)
+        case '/sitemap.xml':
+          return new Response(`<urlset><url><loc>${b.sitemapHost}/peru</loc></url><url><loc>${b.sitemapHost}${ARTICLE}</loc></url></urlset>`)
+        case ARTICLE:
+          return new Response(`<html>${head(`${TARGET.client}${ARTICLE}`, `${TARGET.client}${ARTICLE}`)}<a href="${AUTHOR}">Jane</a></html>`)
+        case AUTHOR:
+          return new Response(`<html>${head(b.authorCanonical, null)}</html>`)
+        case CHUNK:
+          return new Response(`fetch("${b.chunkApi}/api/me")`, { headers: { 'content-type': 'text/javascript' } })
+      }
+      return new Response('not found', { status: b.unknownPathStatus })
     }
     switch (url.pathname) {
       case '/api/health/ready':
@@ -112,10 +160,47 @@ describe('launch-verify checks', () => {
     ['foreign origin accepted', { foreignStatus: 200 }, /foreign origin/],
     ['foreign origin reflected', { reflectForeign: true }, /foreign origin|preflight/],
     ['webhook accepts unsigned', { webhookStatus: 200 }, /unsigned|forged/],
+    ['localhost baked into the page', { homeHtmlExtra: '<a href="http://localhost:4000/api/me">x</a>' }, /localhost or 127/],
+    ['127.0.0.1 baked into the page', { homeHtmlExtra: '<link rel="preconnect" href="http://127.0.0.1:4100"/>' }, /localhost or 127/],
+    ['relative canonical', { canonical: '/peru/lima' }, /home page canonical/],
+    ['no canonical', { canonical: null }, /home page canonical/],
+    ['canonical on a workers.dev copy', { canonical: 'https://questura-client.example.workers.dev/peru/lima' }, /home page canonical/],
+    ['relative og:url', { ogUrl: '/peru/lima' }, /og:url/],
+    ['relative author canonical', { authorCanonical: AUTHOR }, /author page canonical/],
+    ['robots names another host', { robotsSitemap: 'https://questura-client.example.workers.dev/sitemap.xml' }, /robots/],
+    ['sitemap lists another host', { sitemapHost: 'http://localhost:3000' }, /sitemap|article page/],
+    ['image host serves nothing', { imageStatus: 404 }, /image/],
+    ['image host serves a web page', { imageType: 'text/html' }, /image/],
+    ['a soft 404', { unknownPathStatus: 200 }, /404/],
+    ['bundle calls another API', { chunkApi: 'http://localhost:4000' }, /script the home page loads/],
   ])('%s fails the matching check', async (_label, behaviour, pattern) => {
     const failed = await failures(behaviour)
     expect(failed.length).toBeGreaterThan(0)
     for (const name of failed) expect(name).toMatch(pattern)
+  })
+
+  it('finds the article in the sitemap and the author on the article', async () => {
+    const results = await runChecks(TARGET, fakeServer())
+    expect(results.find((r) => r.name === 'article page answers 200')?.detail).toContain(ARTICLE)
+    expect(results.find((r) => r.name === 'author page answers 200')?.detail).toContain(AUTHOR)
+  })
+
+  it('the image check can be skipped for the sandbox, and then is not run at all', async () => {
+    const results = await runChecks({ ...TARGET, imageCheck: false }, fakeServer({ imageStatus: 404 }))
+    expect(results.filter((r) => !r.ok)).toEqual([])
+    expect(results.some((r) => /image/.test(r.name))).toBe(false)
+  })
+
+  it('allows the hosts under test themselves, even when they are *.localhost (the sandbox)', () => {
+    const html = '<a href="http://app.readiness.localhost:3100/x"></a><a href="http://localhost:4000/y"></a>'
+    expect(loopbackAddresses(html, ['app.readiness.localhost:3100', 'api.readiness.localhost:4100'])).toEqual(['http://localhost:4000'])
+  })
+
+  it('reads canonical and og:url however the attributes are ordered', () => {
+    expect(pageAddresses('<link href="https://a.test/x" rel="canonical"><meta content="https://a.test/y" property="og:url">')).toEqual({
+      canonical: 'https://a.test/x',
+      ogUrl: 'https://a.test/y',
+    })
   })
 
   it('a home page that redirects off the site fails', async () => {

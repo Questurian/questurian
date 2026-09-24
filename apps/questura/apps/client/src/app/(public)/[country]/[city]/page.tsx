@@ -68,6 +68,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${locationLabel} — Questurian`,
     description: `Your guide to living in ${locationLabel}. Neighborhoods, accommodations, tours, and more.`,
+    alternates: { canonical: `/${country}/${city}` },
     openGraph: {
       title: `${locationLabel} — Questurian`,
       url: `/${country}/${city}`,

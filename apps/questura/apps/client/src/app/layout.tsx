@@ -11,6 +11,7 @@ import { IMAGE_CDN_ORIGIN } from "@/lib/media/imageCdnOrigin";
 import { NavigationFeedback } from "@/components/navigation/NavigationFeedback";
 import { IDENTITY_HINT_SCRIPT } from "@/lib/user/identityHint";
 import { getBackendUrl } from "@/lib/api/api-config";
+import { getPublicBaseUrl } from "@/lib/seo/publicBaseUrl";
 
 /*
  * Only the families every route renders belong here: next/font preloads a
@@ -31,6 +32,10 @@ const editorialSerif = Cormorant_Garamond({
   subsets: ["latin"],
 });
 export const metadata: Metadata = {
+  // Resolves every relative canonical and og:url against the site's own
+  // address. Without it they stayed relative, so a copy of the site served
+  // from another host (a *.workers.dev URL, say) named itself as canonical.
+  metadataBase: new URL(getPublicBaseUrl()),
   title: "Questura",
   description: "Curated city guides, travel maps, itineraries, and local recommendations.",
 };

@@ -108,6 +108,12 @@ function backendEnvDeclared(settings: AppSettings): NodeJS.ProcessEnv {
     // "after the publish" observation ambiguous.
     REFRESH_WORKER_INTERVAL_MS: String(settings.workerIntervalMs ?? 0),
 
+    // Production refuses to boot without an image host. The sandbox has no
+    // CDN, so this resolves nowhere, as the empty value did before
+    // (`https:///media/…`). Pointing it at the fixture media server is
+    // launch fix plan item 8.
+    BUNNY_STORAGE_HOSTNAME: 'readiness-media.invalid',
+
     STRIPE_SECRET_KEY: 'sk_readiness_placeholder_not_a_key',
     STRIPE_WEBHOOK_SECRET: SANDBOX_WEBHOOK_SECRET,
     // Production requires a Resend key and a sender on the site's domain. A
@@ -164,6 +170,10 @@ export function clientEnv(settings: AppSettings, options: { build?: boolean } = 
     QUESTURA_REVALIDATION_SECRET: settings.revalidationSecret,
     ...(settings.renderToken ? { QUESTURA_RENDER_TOKEN: settings.renderToken } : {}),
   }
+  // The client refuses a production build with loopback addresses and no
+  // live Stripe key (`productionBuildEnv.ts`), and scans its output for them.
+  // The sandbox is built that way on purpose and says so by name.
+  if (options.build) env.QUESTURA_BUILD_TARGET = 'readiness'
   // `next/font/google` downloads its fonts during the build; that is the one
   // outbound request a readiness process may make, and only while building.
   const allow = options.build ? ['fonts.googleapis.com', 'fonts.gstatic.com'] : []

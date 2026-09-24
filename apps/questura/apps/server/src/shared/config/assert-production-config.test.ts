@@ -31,6 +31,7 @@ const VALID_PRODUCTION_ENV = {
   // Mail that arrives: a key, and a sender on the site's own domain.
   RESEND_API_KEY: 're_placeholder_not_a_real_key',
   EMAIL_FROM_ADDRESS: 'hello@questurian.com',
+  BUNNY_STORAGE_HOSTNAME: 'questurian-cdn.b-cdn.net',
 }
 
 describe('production config assertion', () => {
@@ -46,6 +47,7 @@ describe('production config assertion', () => {
     vi.stubEnv('BETTER_AUTH_SECRET', '')
     vi.stubEnv('STRIPE_SECRET_KEY', '')
     vi.stubEnv('STRIPE_WEBHOOK_SECRET', '')
+    vi.stubEnv('BUNNY_STORAGE_HOSTNAME', '')
     vi.stubEnv('STRIPE_PRICE_ID', '')
     vi.stubEnv('STRIPE_PRICE_ID_MONTHLY', '')
     vi.stubEnv('TRUSTED_PROXY', '')
@@ -266,6 +268,15 @@ describe('production config assertion', () => {
       expect(collectProductionConfigProblems().join('\n')).toContain(`${name} is not set`)
     }
   )
+
+  it('rejects a production boot with no image host', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      BUNNY_STORAGE_HOSTNAME: '',
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('BUNNY_STORAGE_HOSTNAME is not set')
+  })
 
   it('rejects a production boot with no monthly Stripe price id', async () => {
     const { collectProductionConfigProblems } = await load({
