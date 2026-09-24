@@ -48,3 +48,7 @@ src/payload-types.ts
 # Claude Code
 .claude/
 CLAUDE.md
+
+# Stryker mutation reports (pnpm mutation)
+/reports/mutation/
+/.stryker-tmp/

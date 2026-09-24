@@ -84,6 +84,30 @@ describe('normalizeClientAddress', () => {
     expect(normalizeClientAddress(value)).toBeNull()
   })
 
+  // Shapes the random generator below never produced; mutation testing
+  // (`pnpm mutation`) showed each branch could be broken with no test failing.
+  it.each([
+    ['1:2:3:4::5:6:7:8', null], // `::` must stand for at least one group
+    ['1:2:3:4:5:6:7:8::', null],
+    ['1.2.3.4::1', null], // an IPv4 part only ever ends the address
+    ['::1.2.3.4:1', null],
+    ['1:2:3:4:5:6:1.2.3.4', '1:2:3:4::'],
+    ['1:2:3:4:5:6:7::', '1:2:3:4::'],
+    ['::', '0:0:0:0::'],
+    ['1::', '1:0:0:0::'],
+    ['::ffff:1.2.3.4', '1.2.3.4'],
+    // One non-zero group anywhere before `ffff` means it is not IPv4-mapped.
+    ['1:0:0:0:0:ffff:1.2.3.4', '1:0:0:0::'],
+    ['0:1:0:0:0:ffff:1.2.3.4', '0:1:0:0::'],
+    ['0:0:1:0:0:ffff:1.2.3.4', '0:0:1:0::'],
+    ['0:0:0:1:0:ffff:1.2.3.4', '0:0:0:1::'],
+    ['0:0:0:0:1:ffff:1.2.3.4', '0:0:0:0::'],
+    ['::fffe:1.2.3.4', '0:0:0:0::'],
+  ])('%s → %s', (value, expected) => {
+    expect(normalizeClientAddress(value)).toBe(expected)
+    expect(normalizeClientAddress(value) !== null).toBe(isIP(value) !== 0)
+  })
+
   // Agrees with Node's parser on validity for every string it is shown, so
   // the hand-written parser has no private idea of what an address is. Seeded,
   // so a failure reproduces.
@@ -116,6 +140,13 @@ describe('normalizeClientAddress', () => {
       generated.push(
         Array.from({ length: 4 }, () => Math.floor(random() * 300)).join('.')
       )
+      // `::` placed anywhere, including where it would stand for no group,
+      // and an IPv4 part dropped into any position.
+      const at = Math.floor(random() * 9)
+      generated.push([...groups.slice(0, at), '', ...groups.slice(at)].join(':').replace(/:{3,}/, '::'))
+      const v4 = Array.from({ length: 4 }, () => Math.floor(random() * 256)).join('.')
+      const slot = Math.floor(random() * 7)
+      generated.push([...groups.slice(0, slot), v4, ...groups.slice(slot + 2)].join(':'))
     }
 
     for (const value of generated) {

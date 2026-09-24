@@ -41,3 +41,14 @@ describe('resolveTrustedProxyHeader', () => {
     expect(TRUSTED_PROXY_NAMES.length).toBe(Object.keys(TRUSTED_PROXY_HEADERS).length)
   })
 })
+
+describe('resolveTrustedProxyHeader and object built-ins', () => {
+  // The names are looked up on a plain object, so a key every object has
+  // (found by `pnpm mutation`) resolved to a function and passed the boot check.
+  it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty', 'valueOf'])(
+    'refuses %s',
+    (name) => {
+      expect(resolveTrustedProxyHeader(name)).toBeNull()
+    }
+  )
+})
