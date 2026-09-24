@@ -19,8 +19,9 @@ import { FakeStripeAccount } from './stripe-fake'
  * that matches the catalog exactly, so the site's own guard
  * (`getPurchasablePlan`) passes for the reason it would in production.
  *
- * Customers, Checkout, subscriptions, invoices and refunds are answered by a
- * small in-memory account (`stripe-fake.ts`), so a whole purchase can run in
+ * Customers, Checkout, subscriptions, invoices, charges, disputes, invoice
+ * payments and refunds are answered by a small in-memory account
+ * (`stripe-fake.ts`), so a whole purchase, a refund and a dispute can run in
  * the sandbox (launch harness A8). The harness moves that account's state
  * with `/__fake/*` and tells the app with signed webhooks, as Stripe would.
  * Anything else gets a 400 and is counted, so a journey that reaches for an
@@ -117,6 +118,10 @@ export class StripeStub {
           sessions: [...this.account.sessions.values()],
           subscriptions: [...this.account.subscriptions.values()],
           refunds: this.account.refunds,
+          charges: [...this.account.charges.values()],
+          disputes: [...this.account.disputes.values()],
+          invoicePayments: this.account.invoicePayments,
+          invoicePaymentLookups: this.account.invoicePaymentLookups,
           checkoutCreates: this.account.checkoutCreates,
         })
       }
@@ -128,6 +133,20 @@ export class StripeStub {
       if ((control = /^\/__fake\/subscriptions\/([^/]+)$/.exec(url.pathname)) && req.method === 'POST') {
         const patched = this.account.patchSubscription(control[1]!, JSON.parse(body || '{}'))
         return patched ? send(200, patched) : send(404, { error: 'no such subscription' })
+      }
+      if ((control = /^\/__fake\/charges\/([^/]+)\/refund$/.exec(url.pathname)) && req.method === 'POST') {
+        const refunded = this.account.refundCharge(control[1]!, JSON.parse(body || '{}').amount)
+        return refunded ? send(200, refunded) : send(404, { error: 'no such charge' })
+      }
+      if ((control = /^\/__fake\/charges\/([^/]+)\/dispute$/.exec(url.pathname)) && req.method === 'POST') {
+        const dispute = this.account.openDispute(control[1]!)
+        return dispute ? send(200, dispute) : send(404, { error: 'no such charge' })
+      }
+      if ((control = /^\/__fake\/disputes\/([^/]+)\/close$/.exec(url.pathname)) && req.method === 'POST') {
+        const status = JSON.parse(body || '{}').status
+        if (status !== 'won' && status !== 'lost') return send(400, { error: 'status must be won or lost' })
+        const dispute = this.account.closeDispute(control[1]!, status)
+        return dispute ? send(200, dispute) : send(404, { error: 'no such dispute' })
       }
       if (url.pathname === '/__stats') {
         res.writeHead(200, { 'content-type': 'application/json' })

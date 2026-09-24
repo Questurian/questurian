@@ -1113,6 +1113,23 @@ describe('Stripe webhook route', () => {
       expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
     })
 
+    // Basil moved an invoice's subscription under `parent`; a body rendered at
+    // the pinned version has no top-level `subscription`. Pinned so the
+    // fallback cannot quietly become a second Stripe round trip or a miss.
+    it('finds the subscription on a basil invoice body without refetching it', async () => {
+      givenEvent('invoice.payment_succeeded', {
+        id: 'in_1',
+        customer: 'cus_1',
+        billing_reason: 'subscription_create',
+        parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_1' } },
+      })
+
+      await POST(createRequest())
+
+      expect(mocks.invoiceRetrieve).not.toHaveBeenCalled()
+      expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+    })
+
     // The duplicate-subscription refund already reads the basil shape: an
     // invoice retrieved at the pinned version carries no payment_intent or
     // charge, only the expanded `payments` list. Pinned so it stays that way.
