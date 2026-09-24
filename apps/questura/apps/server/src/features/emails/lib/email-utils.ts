@@ -2,6 +2,9 @@ import type { Payload } from 'payload'
 
 import type { EmailResult } from '../types'
 import { recordEmailLog } from './email-log'
+import { maskEmail } from './mask-email'
+
+export { maskEmail }
 
 /**
  * Builds a personalized greeting from first/last name
@@ -24,7 +27,7 @@ export async function sendEmail(
   }
 ): Promise<EmailResult> {
   try {
-    console.log(`📧 Sending ${config.emailType} to:`, config.to)
+    console.log(`📧 Sending ${config.emailType} to:`, maskEmail(config.to))
 
     await payload.sendEmail({
       to: config.to,
@@ -32,7 +35,7 @@ export async function sendEmail(
       html: config.html,
     })
 
-    console.log(`✅ ${config.emailType} sent successfully to:`, config.to)
+    console.log(`✅ ${config.emailType} sent successfully to:`, maskEmail(config.to))
     await recordEmailLog(payload, {
       emailType: config.emailType,
       recipient: config.to,
@@ -43,7 +46,7 @@ export async function sendEmail(
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     console.error(`❌ Failed to send ${config.emailType}:`, {
-      email: config.to,
+      email: maskEmail(config.to),
       error: message
     })
     await recordEmailLog(payload, {
