@@ -30,12 +30,19 @@
  * so; only the build does.
  */
 
+import type { Instrumentation } from 'next'
+
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     // First, and outside everything below: this used to be swallowed by the
     // catch and the process served anyway. See shared/config/boot-guard.ts.
     const { refuseBootOnInvalidConfig } = await import('./shared/config/boot-guard')
     refuseBootOnInvalidConfig()
+
+    // Error reporting next, so a failure anywhere below is reported. Off
+    // without SENTRY_DSN, and it never throws (shared/observability/error-reporting.ts).
+    const { initErrorReporting } = await import('./shared/observability/error-reporting')
+    await initErrorReporting()
 
     const { logger } = await import('./shared/utils/logger')
     const { markNotReady, retryUntilReady } = await import('./shared/observability/readiness')
@@ -105,5 +112,20 @@ export async function register() {
       })
       process.exitCode = 1
     })
+  }
+}
+
+/**
+ * A route handler, page, action or proxy threw. One redacted log line with the
+ * request id, plus one Sentry event when a DSN is configured
+ * (shared/observability/error-reporting.ts).
+ *
+ * Same shape as `register`, for the same reason: the dynamic import stays
+ * inside the `nodejs` block so the edge bundle never sees it.
+ */
+export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { reportRequestError } = await import('./shared/observability/error-reporting')
+    reportRequestError(error, request, context)
   }
 }

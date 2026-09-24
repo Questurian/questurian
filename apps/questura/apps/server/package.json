@@ -72,7 +72,8 @@
     "readiness:publication": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/publication-checks.ts",
     "readiness:required": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/required-integrations.ts",
     "readiness:adapter": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/adapter-smoke.ts",
-    "readiness:restore": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/restore-rehearsal.ts"
+    "readiness:restore": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/restore-rehearsal.ts",
+    "sentry:test-event": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/sentry-test-event.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.90.2",
@@ -81,6 +82,7 @@
     "@payloadcms/plugin-cloud-storage": "3.90.2",
     "@payloadcms/richtext-lexical": "3.90.2",
     "@payloadcms/ui": "3.90.2",
+    "@sentry/nextjs": "10.75.3",
     "@seshuk/payload-storage-bunny": "^2.1.1",
     "@types/pg": "^8.20.0",
     "@types/stripe": "^8.0.417",
