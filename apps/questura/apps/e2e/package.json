@@ -1,0 +1,13 @@
+{
+  "name": "@questura/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:sandbox": "playwright test --project=chromium --project=firefox --project=webkit",
+    "install:browsers": "playwright install chromium firefox webkit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

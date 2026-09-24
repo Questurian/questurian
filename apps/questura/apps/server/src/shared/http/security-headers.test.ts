@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-// @ts-expect-error -- plain .mjs config, no type declarations
 import nextConfig from '../../../next.config.mjs'
 
 // The API and the Payload admin carry the same framing and sniffing guards as
@@ -10,7 +9,7 @@ describe('server security headers', () => {
   it('every route sends them', async () => {
     type Rule = { source: string; headers: Array<{ key: string; value: string }> }
     // `withPayload` adds its own catch-all rule beside ours; combine them.
-    const rules = (await nextConfig.headers()) as Rule[]
+    const rules = (await nextConfig.headers!()) as Rule[]
     const headers = Object.fromEntries(
       rules
         .filter((rule) => rule.source === '/:path*')
