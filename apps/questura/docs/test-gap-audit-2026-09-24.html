@@ -1,0 +1,954 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Test Gap Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F5F0E8; --paper:#EFE9DE; --ink:#1F1B16; --muted:#6A6258; --rule:#D9CFBF;
+  --accent:#3B5BDB; --ok:#2E6B45; --ok-soft:#E1EDE3;
+  --warn:#9A5A00; --warn-soft:#F4E6CF; --bad:#A3322A; --bad-soft:#F3DEDA; --code:#E6DECF;
+  --display:"Playfair Display",Georgia,"Times New Roman",serif;
+  --body:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --ok:#7CC39A; --ok-soft:#1F2E25;
+  --warn:#E3AE62; --warn-soft:#33281A; --bad:#EE8C80; --bad-soft:#3A201D; --code:#2C2822;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --ok:#7CC39A; --ok-soft:#1F2E25;
+  --warn:#E3AE62; --warn-soft:#33281A; --bad:#EE8C80; --bad-soft:#3A201D; --code:#2C2822;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.6 var(--body);margin:0}
+.wrap{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:40px 80px}
+h1{font:600 2.2rem/1.12 var(--display);margin:0 0 10px;text-wrap:balance}
+h2{font:600 1.35rem/1.25 var(--display);margin:0;text-wrap:balance}
+h3{font:600 1.05rem/1.35 var(--body);margin:0}
+p{margin:0}
+ul,ol{margin:0;padding-left:20px;display:grid;gap:6px}
+.lede{color:var(--muted);max-width:64ch}
+code{font:500 .82rem/1.4 var(--mono);background:var(--code);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+pre{font:400 .8rem/1.55 var(--mono);background:var(--code);padding:10px 12px;border-radius:4px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+pre code{background:none;padding:0}
+a{color:var(--accent)}
+.label{font:600 .72rem/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:10px}
+.label::after{content:"";flex:1;height:1px;background:var(--rule)}
+section{display:grid;gap:14px;margin-top:48px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:600 .72rem/1 var(--body);padding:4px 7px;border-radius:999px;white-space:nowrap;background:var(--code);color:var(--muted)}
+.small{background:var(--ok-soft);color:var(--ok)}
+.medium{background:var(--warn-soft);color:var(--warn)}
+.big{background:var(--bad-soft);color:var(--bad)}
+.step{background:var(--paper);border-left:3px solid var(--accent);padding:16px;display:grid;gap:10px;border-radius:0 4px 4px 0}
+.step .num{font:600 1.6rem/1 var(--display);color:var(--accent)}
+.head{display:flex;gap:12px;align-items:baseline}
+.you{background:var(--warn-soft);padding:14px 16px;border-radius:4px;display:grid;gap:8px}
+.stop{background:var(--bad-soft);padding:14px 16px;border-radius:4px;display:grid;gap:8px}
+.good{background:var(--ok-soft);padding:14px 16px;border-radius:4px;display:grid;gap:8px}
+details{display:grid;gap:8px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.muted{color:var(--muted)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;vertical-align:top;padding:7px 8px;border-bottom:1px solid var(--rule)}
+th{font-weight:600;color:var(--muted);font-size:.78rem;letter-spacing:.03em;text-transform:uppercase}
+.scary{display:grid;gap:14px}
+.scary .item{display:grid;gap:4px;padding-left:14px;border-left:3px solid var(--bad)}
+.scary .item h3{font:600 1.1rem/1.3 var(--display)}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+<p class="label">Audit · 2026-09-24</p>
+<h1>Questura test gap audit</h1>
+<p class="lede">Before paid hosting exists: what the tests we have would miss, ranked, with a prompt for each fix. Nothing in the app was changed to write this. It builds on <a href="pre-launch-plan-2026-09-24.html">the pre-launch plan</a> (steps 1–7 done), <code>docs/launch-day.md</code>, the launch harness, and the capacity work. It doesn't re-propose anything those already cover.</p>
+
+<section>
+<p class="label">For you</p>
+<h2>The 5 scariest gaps, in plain words</h2>
+<div class="scary">
+<div class="item">
+<h3>1. The website could go live pointing at "localhost"</h3>
+<p>The website's address for the API is baked in when the site is built. The build steps in our setup checklist leave it out, so the live site would quietly fall back to <code>http://localhost:4000</code>. Every visitor's sign-in, bookmark and Subscribe button would fail. A similar setting controls where images come from. The template labels it confusingly, and one wrong value breaks every image. <strong>What we do:</strong> make the build refuse to finish without the real addresses, scan the built site for "localhost", and check it again on launch day. About an hour of work, and it needs no hosting (prompt 1).</p>
+</div>
+<div class="item">
+<h3>2. A refunded or disputed customer may keep getting charged</h3>
+<p>Stripe changed the shape of its data in the API version we use: a charge no longer says which invoice it paid. Our dispute handling relies on exactly that field, so a chargeback probably does nothing today. Refunds rely on it too, and will break the same way once the new webhook is created on the new host. The tests all use hand-made data that still has the old field, so they pass anyway. <strong>What we do:</strong> fix the lookup, test it with data in the new shape, pin the webhook's version, and prove it with your one real refund on launch day (prompts 2 and 6).</p>
+</div>
+<div class="item">
+<h3>3. When something breaks, nobody will know</h3>
+<p>No error reporting is set up, the website's logs are off on Cloudflare, and there are no alerts and no uptime check. Emails also go out from a placeholder address (<code>you@questurian.com</code>) with no anti-spam records written down, so password-reset emails may land in spam or never send. <strong>What we do:</strong> pick an error sink (a free option works), turn on logs, request ids and one uptime check, fix the sender, and write down the DNS records to add (prompts 3 and 4).</p>
+</div>
+<div class="item">
+<h3>4. Moving day can break things quietly</h3>
+<p>The new host needs fresh secret keys. Changing them also, without any warning, disconnects the machine accounts that publish into the site: the writer pipeline and Location Manager. Sign-ups and Stripe events that land on the laptop during the move would be lost. The laptop's own Stripe webhook, nightly job and key would keep running afterwards. Backups on Neon aren't set, and a restore has never been timed. <strong>What we do:</strong> rehearse the whole move on this laptop, rotated secrets included, and write the cutover and backup runbooks before paying for anything (prompts 5 and 12).</p>
+</div>
+<div class="item">
+<h3>5. Most of what a visitor does has never been clicked through, and the checks don't run by themselves</h3>
+<p>Browser tests cover the paywall, signing in and out, and redirects. Nothing clicks through sign-up, checkout and return, password reset, the account page, cancelling, the phone layout or a slow connection. A 5-minute sweep today found a JavaScript error on the account page. The big readiness suite and the browser tests only run when someone starts them by hand, so after launch a change can break sign-up with CI still green. <strong>What we do:</strong> add those journeys, fail on any console error, and run the whole suite in CI (prompts 7 and 8).</p>
+</div>
+</div>
+<div class="you">
+<p><strong>What needs you:</strong> three small decisions, all in their prompts. <strong>(a)</strong> Which error sink: a free, no-vendor setup, or Sentry (prompt 3). <strong>(b)</strong> Whether visitors can delete their own account, or ask by email at launch (prompt 14). <strong>(c)</strong> The design of a time-boxed "load test key" so a load test through Cloudflare isn't counted as one visitor (prompt 9). Everything else is agent work on this laptop.</p>
+</div>
+</section>
+
+<section>
+<p class="label">What I ran</p>
+<h2>The existing checks, on today's main</h2>
+<p>Sandbox production build of <code>07de266b</code> (after #684 and #688), one job at a time, Postgres :5442, Redis :6390.</p>
+<div class="scroll"><table>
+<tr><th>Check</th><th>Result</th><th>What it taught me</th></tr>
+<tr><td><code>readiness:routes</code></td><td>114/114</td><td>—</td></tr>
+<tr><td><code>readiness:payments</code></td><td>43/43</td><td>—</td></tr>
+<tr><td><code>readiness:purchase</code></td><td>22/22</td><td>—</td></tr>
+<tr><td><code>readiness:auth</code></td><td>29/29</td><td>—</td></tr>
+<tr><td><code>readiness:oauth</code></td><td>71/71</td><td>—</td></tr>
+<tr><td><code>readiness:faults</code></td><td><strong>17/22</strong> in the runbook's order, 22/22 alone</td><td>Run straight after the others, checkout answers 429: the scripts share one rate-limit budget. On launch day that would look like real failures.</td></tr>
+<tr><td><code>readiness:contracts</code></td><td>all ok</td><td>—</td></tr>
+<tr><td>Playwright, Chromium + Firefox</td><td>20/20</td><td>10 tests × 2 engines</td></tr>
+<tr><td>One-off browser sweep (10 pages × desktop + Pixel 7), not committed</td><td>—</td><td><code>/account</code> throws React error #418 (hydration mismatch) on both. Every sandbox image is <code>https://media/launch-NN.jpg</code>, which doesn't resolve, so no local test has ever seen an image load. Mobile: no horizontal scroll on the pages checked. Missing page: a real 404.</td></tr>
+</table></div>
+<p class="muted">Setup friction a fresh agent will hit, both undocumented: this host has no <code>redis-server</code> binary (earlier sessions used a docker shim in their own scratch folder), and the sandbox's default database user <code>$USER</code> doesn't exist in the container (use the <code>postgres</code> role). Prompt 0 fixes both.</p>
+</section>
+
+<section>
+<p class="label">Ranked gaps · part 1</p>
+<h2>Do locally, before go-live</h2>
+<p class="muted">Likelihood and harm are for launch week. "Local" means it can be built and proven on this laptop now.</p>
+<div class="scroll"><table>
+<tr><th>#</th><th>Gap</th><th>What could go wrong</th><th>Likely · harm</th><th>Effort</th></tr>
+<tr><td>1</td><td><strong>Build and config traps</strong></td><td><code>NEXT_PUBLIC_BACKEND_URL</code> falls back to <code>http://localhost:4000</code> (<code>apps/client/src/lib/api/api-config.ts:10</code>, <code>lib/config.ts:11</code>). It's inlined at build time, but H01 steps 18–19 set it only as a runtime wrangler var and build in a fresh worktree that lacks the gitignored <code>.env.production.local</code>, so the Stripe publishable key is empty too. <code>readiness:adapter</code> passes the env explicitly, so it can't catch this. Image host: <code>infra/railway/server.env.template:145</code> says "Bunny storage hostname" and <code>railway-template.test.ts:64</code> uses <code>storage.bunnycdn.com</code>, but <code>bunny-public-url.ts</code> needs the <em>pull zone</em>, and nothing checks it. <code>wrangler.jsonc</code> doesn't turn off <code>workers.dev</code>, and with no <code>metadataBase</code> the canonical and <code>og:url</code> are relative (seen in the sandbox HTML), so a <code>workers.dev</code> copy is crawlable and canonicalises to itself.</td><td>high · total</td><td><span class="chip small">small</span></td></tr>
+<tr><td>2</td><td><strong>Refunds and disputes under Stripe <code>basil</code></strong></td><td><code>charge-revocation.ts</code> finds the subscription through <code>charge.invoice</code>. Stripe removed that field from Charge in 2025-03-31.basil (<a href="https://docs.stripe.com/changelog/basil/2025-03-31/add-support-for-multiple-partial-payments-on-invoices">changelog</a>), and the SDK is pinned to <code>2025-08-27.basil</code>. Disputes re-fetch the charge through the SDK, so they log "no subscription" and return 200: no revocation, and billing continues. Refunds read the event body, which is rendered at the endpoint's API version, and the new endpoint may well be basil or later. Every test hand-builds charges with <code>invoice</code> set.</td><td>high · money, chargebacks, Stripe account health</td><td><span class="chip medium">medium</span></td></tr>
+<tr><td>3</td><td><strong>No error reporting, logs or alerts</strong></td><td>No error reporter and no <code>onRequestError</code> in either app. <code>app/error.tsx</code> only logs in development. There's no <code>global-error.tsx</code>, no <code>observability</code> block in <code>wrangler.jsonc</code> (Workers Logs off), no request ids, and redaction is left to each call site. The alert table in cap07 §5 exists only on paper, and there's no uptime check.</td><td>certain · slow, blind recovery</td><td><span class="chip medium">medium</span></td></tr>
+<tr><td>4</td><td><strong>Email not launch-ready</strong></td><td>Sender is <code>you@questurian.com</code> (<code>payload.config.ts:89</code>). No SPF, DKIM or DMARC plan. <code>RESEND_API_KEY</code> isn't required at boot, so a missing key first shows up as a failed password reset. No template is rendered in any test. 10 templates are never sent, including the notice to the old address after an email change.</td><td>high · resets in spam, account recovery broken</td><td><span class="chip small">small</span></td></tr>
+<tr><td>5</td><td><strong>Moving day (cutover)</strong></td><td>A fresh <code>PAYLOAD_SECRET</code> breaks every service-account API key: Payload looks them up by <code>HMAC(secret)</code> (<code>node_modules/payload/dist/auth/strategies/apiKey.js</code>). A fresh <code>BETTER_AUTH_SECRET</code> makes stored Google tokens undecryptable (<code>encryptOAuthTokens: true</code>). Neither is documented. Postgres versions differ: laptop 16, Neon's default 17, CI 14. Sign-ups and webhooks can land on the laptop after the final dump. The laptop's webhook endpoint, <code>questura-reconcile.timer</code> (Persistent, apply on) and <code>rk_live</code> key aren't retired anywhere. Two live members pay the $0.50 laptop price.</td><td>medium · machine clients down, lost events</td><td><span class="chip medium">medium</span></td></tr>
+<tr><td>6</td><td><strong>Launch-day kit has holes</strong></td><td><code>launch-day.md</code> step 5 says to follow <code>live-checks/payments.html</code> "ending with the refund". That page is the laptop version (docker exec, laptop price, "close without paying") and has no purchase-to-refund steps. <code>LAUNCH_VERIFY_COOKIE_CHECK</code> is named in <code>MANUAL_STEPS</code> (<code>launch-verify/checks.ts:229</code>) but nothing implements it. The lockdown check counts a DNS or TLS error as "locked" (<code>:193-201</code>) and never tries the SNI bypass ADR-0016 describes. Leaving out <code>--bypass</code> or <code>--rate-limit-probe</code> silently drops those checks from an all-green result.</td><td>high on the day · false confidence</td><td><span class="chip medium">medium</span></td></tr>
+<tr><td>7</td><td><strong>The safety net only runs by hand</strong></td><td>CI never runs the client <code>next build</code>, the OpenNext build, Questura lint, any <code>readiness:*</code> suite beyond the outbox integration tests, Playwright, or the k6 negative controls. 3 client tests always skip in CI (<code>articleStreamsBeforeRecommendations.test.mjs:36</code>).</td><td>medium · breakage merges green after launch</td><td><span class="chip big">medium–big</span></td></tr>
+<tr><td>8</td><td><strong>Visitor journeys with no browser test</strong></td><td>See the journey table below. Most of what a visitor does is untested in a browser, including the checkout handoff and return, sign-up, reset and cancel. There's no console-error gate, and the <code>/account</code> hydration error is live today. <code>redirects.spec.ts</code> passes even if the page never redirects at all.</td><td>medium · broken flows found by customers</td><td><span class="chip big">big</span></td></tr>
+<tr><td>9</td><td><strong>Load test can't give a true answer on the platform</strong></td><td>k6 fakes <code>cf-connecting-ip</code> per virtual user (<code>load/k6/lib/requests.js</code> <code>clientAddress</code>). Cloudflare overwrites that header, so the whole test counts as one caller and hits the per-address limits (public reads 60–240/min, member bodies 30/min, plans 30/min), and Cloudflare's bot protection may challenge it. Missing traffic shapes: a viral spike to one article, crawlers, a cold start right after a deploy, a realistic 1–3% signed-in share. <strong>Every baseline predates #683/#684</strong> (runs dated 09-21 to 09-23, all on the Node client, never the Worker).</td><td>high · wrong go/no-go</td><td><span class="chip medium">medium</span></td></tr>
+<tr><td>10</td><td><strong>API front door (ADR-0016)</strong></td><td>The in-app half of option A (<code>ORIGIN_AUTH_SECRET</code>) isn't built; grep finds it only in the ADR. The site's own server-side renders go Worker → <code>api.questurian.com</code>. Whether the Cloudflare rule adds the secret to those requests, and which client IP the API sees for them, is unknown. Get it wrong and the edge rule blocks the site's own pages, or every render shares one rate-limit bucket.</td><td>medium · whole site 5xx, or bypassable limits</td><td><span class="chip medium">medium</span></td></tr>
+<tr><td>11</td><td><strong>Dead ends for members with a failed card</strong></td><td>In the payment-issue state there's no Update Payment Method link (<code>useMembershipSection.ts:99</code> needs <code>billingInfo</code>, which is null unless status is <code>active</code>, <code>membership.service.ts:32</code>). Once expired, the page offers Upgrade, but checkout refuses with 400 because <code>past_due</code> still counts as live (<code>create-checkout-session/route.ts:214-219</code>). Yearly members see "Monthly" (<code>membership.service.ts:40</code>). <code>customer.deleted</code> isn't handled, so checkout and the portal return 500 for that visitor forever. A paused subscription keeps access and allows a second checkout. A subscription with no items wipes <code>paidThroughAt</code> (pinned as P2 in <code>lifecycle-simulation.test.ts</code>). Found by reading the code; confirm each with a test.</td><td>medium · lost renewals, support email</td><td><span class="chip medium">medium</span></td></tr>
+<tr><td>12</td><td><strong>Backups, migrations, rollback</strong></td><td>The only backup is one manual dump. D6 (RTO/RPO) is undecided. The destructive-SQL migration guard runs only in the laptop's <code>deploy.sh</code>: Railway has no pre-deploy step and <code>infra/railway</code> holds only the env template. Nothing covers rolling back the Worker, the version skew when only one side rolls back, or restoring onto Neon's Postgres major version.</td><td>low · catastrophic</td><td><span class="chip medium">small–medium</span></td></tr>
+<tr><td>13</td><td><strong>No speed budget anywhere</strong></td><td>No web-vitals reporting, no Lighthouse, no bundle or image-weight check, no per-route latency or statement-count check in CI. The only numbers are one-off (performance sweep 2026-09-20: no LCP/INP/CLS captured) and k6's "local regression thresholds".</td><td>medium · slow creep, noticed by users</td><td><span class="chip medium">medium</span></td></tr>
+<tr><td>14</td><td><strong>Account lifecycle</strong></td><td>No account deletion. No "sign out everywhere". A password change signs out other devices only because the client asks (<code>usePasswordChangeMutations.ts:32</code>). Email change is untested end to end, and a failed Stripe email sync is only logged. Reset-link expiry is untested.</td><td>medium · privacy requests, hijacked-session cleanup</td><td><span class="chip medium">medium</span></td></tr>
+<tr><td>15</td><td><strong>Tests that can't fail, or can't see</strong></td><td>Stryker has never been run on record, and <code>"break": null</code> means it can never fail. The origin-guard test passes if a file merely <em>mentions</em> <code>forbiddenOriginResponse</code>. 16 of 37 client tests check source text, not behaviour. <code>e2e/tests/global-setup.ts:18</code> compares two constants, so the guard can never fire. Real Better Auth never runs in vitest, and all server tests run under jsdom. Sandbox, readiness and e2e all run <code>next start</code> on Node, never workerd.</td><td>medium · false green</td><td><span class="chip medium">medium</span></td></tr>
+<tr><td>16</td><td><strong>Dates depend on the server's time zone</strong></td><td>Bare <code>toLocaleDateString()</code> in emails, payment API messages and the account page. Server components format without a <code>timeZone</code>, and two article components disagree (New York vs UTC). Railway and Workers run in UTC, the laptop in local time.</td><td>medium · "access ends" a day off, hydration errors</td><td><span class="chip small">small</span></td></tr>
+<tr><td>17</td><td><strong>Small correctness items</strong></td><td>The client middleware's trailing-slash redirect may turn <code>//evil.com/</code> into an off-site redirect: unverified, and there's no test. No <code>global-error.tsx</code>. The member article body answers 500 instead of 503 while the DB is locked (L10 finding).</td><td>low · medium</td><td><span class="chip small">small</span></td></tr>
+<tr><td>0</td><td><strong>Sandbox setup (do first)</strong></td><td>The redis shim and database role above. The launch-day order fails <code>faults</code> 17/22 on shared rate limits.</td><td>certain · every agent loses time</td><td><span class="chip small">small</span></td></tr>
+</table></div>
+</section>
+
+<section>
+<p class="label">Ranked gaps · part 2</p>
+<h2>Prove during the quiet go-live, on the real hosting</h2>
+<p class="muted">These can't be proven on the laptop. Each one runs after deploy and before any announcement, with you present for anything live. The provisioning checks already written (H01 A–D: publish reaches the page, the purge reaches the edge, the advisory lock pool is direct) are not repeated here.</p>
+<div class="scroll"><table>
+<tr><th>#</th><th>Prove on the platform</th><th>Why only there</th><th>Prompt</th></tr>
+<tr><td>P1</td><td>Built site and hosts: no <code>localhost</code> in the HTML or JS, the JS calls the real API origin, canonical host, robots and sitemap on www only, <code>workers.dev</code> off, apex → www, http → https, one Bunny image loads, a missing page returns 404</td><td>Real build, DNS and Worker routes</td><td>PL1</td></tr>
+<tr><td>P2</td><td>API front door: Worker renders pass the edge rule, the SNI bypass is refused, the address the API sees for real visitors and for Worker renders, sign-in rate limits behind real Cloudflare IPs</td><td>Cloudflare and Railway edge behaviour</td><td>PL1</td></tr>
+<tr><td>P3</td><td>Stripe, read-only first: the endpoint's <code>api_version</code> equals the pinned one, events enabled, portal configuration (cancel mode, plan switching, proration), retry schedule and what happens when retries end, Stripe's failed-payment and 3DS emails on, key scope narrowed. Then your one purchase → cancel → refund</td><td>Dashboard state, and the live signing secret</td><td>PL2 + prompt 6</td></tr>
+<tr><td>P4</td><td>Sign-in on the real domains: Chrome, Firefox, <strong>a real iPhone Safari</strong> (WebKit is skipped locally), Google sign-in with the real consent screen and redirect URIs, the reset email lands in Gmail and Outlook inboxes with SPF, DKIM and DMARC all "pass"</td><td>Real cookies across www/api, Safari tracking prevention, real DNS for mail</td><td>PL1</td></tr>
+<tr><td>P5</td><td>Quiet load test with the numbers below, and a spend cap</td><td>Platform capacity is unmeasured (CAP-08)</td><td>PL3</td></tr>
+<tr><td>P6</td><td>Ops drills: a forced error reaches the sink and an alert fires, the uptime check alerts, Redis restart under load, Neon restore to a branch (timed against RTO), roll back the API alone and then the Worker alone, schedulers fire once each, cold start after a deploy</td><td>Platform features</td><td>PL4</td></tr>
+<tr><td>P7</td><td>Limits: Neon <code>SHOW max_connections</code> fits the budget (0.25 CU = 104, 7 reserved; the shrunk pools' 125 need ≥ 0.5 CU = 209; the default pools' 251 need ≥ 1 CU = 419), TLS works (the sandbox never uses it), scale-to-zero off; Railway Redis <code>maxmemory</code> and <code>maxmemory-policy</code> (<code>noeviction</code> + full = sign-in outage), Railway instance memory (the local backend peaked at 786 MB RSS at 160 journeys/s)</td><td>Plan-specific numbers</td><td>PL1, PL3</td></tr>
+</table></div>
+</section>
+
+<section>
+<p class="label">Area 3</p>
+<h2>Visitor journeys in a real browser</h2>
+<div class="scroll"><table>
+<tr><th>Journey</th><th>Browser coverage today</th></tr>
+<tr><td>Home → city → article → author</td><td><strong>none</strong></td></tr>
+<tr><td>Article reading, anonymous paywall</td><td>yes (<code>membership.spec.ts</code>)</td></tr>
+<tr><td>Member signs in, article opens, signs out, locks again</td><td>yes</td></tr>
+<tr><td>Signed-in non-member sees the paywall</td><td>yes</td></tr>
+<tr><td>Sign-up with password (+ verification email)</td><td><strong>none</strong></td></tr>
+<tr><td>Sign-in with Google</td><td><strong>none</strong> (HTTP-level only, <code>readiness:oauth</code>)</td></tr>
+<tr><td>Wrong password</td><td>yes</td></tr>
+<tr><td>Join / pricing page shows $12.99 and $79.99</td><td><strong>none</strong> in a browser (<code>launch:verify</code> checks the API)</td></tr>
+<tr><td>Checkout handoff and return to <code>/subscription</code></td><td><strong>none</strong></td></tr>
+<tr><td>Account page: plan, renewal date, Manage billing</td><td><strong>none</strong></td></tr>
+<tr><td>Cancel, reactivate, resubscribe</td><td><strong>none</strong> (HTTP-level only)</td></tr>
+<tr><td>Password reset from email</td><td><strong>none</strong> (HTTP-level only)</td></tr>
+<tr><td>Change password / change email</td><td><strong>none</strong></td></tr>
+<tr><td>Bookmarks</td><td><strong>none</strong> (k6 HTTP only)</td></tr>
+<tr><td>Search</td><td><strong>none</strong></td></tr>
+<tr><td>returnTo cannot leave the site</td><td>yes (weak assertion)</td></tr>
+<tr><td>Session cookie flags</td><td>yes</td></tr>
+<tr><td>Mobile viewport</td><td><strong>none</strong> (desktop profiles only)</td></tr>
+<tr><td>Slow 3G / slow CPU</td><td><strong>none</strong></td></tr>
+<tr><td>JavaScript errors in the console</td><td><strong>none</strong>, and one exists today on <code>/account</code></td></tr>
+<tr><td>Broken images</td><td><strong>none</strong>, and every sandbox image is broken by setup</td></tr>
+<tr><td>404 page / 500 page</td><td><strong>none</strong></td></tr>
+<tr><td>Safari (WebKit)</td><td>skipped on this laptop (decided); prove on a real iPhone at go-live</td></tr>
+</table></div>
+</section>
+
+<section>
+<p class="label">Area 4</p>
+<h2>Auth and payments, the paranoid pass</h2>
+<div class="scroll"><table>
+<tr><th>Failure mode</th><th>Code</th><th>Tests</th><th>Gap</th></tr>
+<tr><td>Card decline at checkout</td><td>Stripe's hosted page</td><td>none</td><td>Fine by design; nothing to build. Don't try to trigger one live.</td></tr>
+<tr><td>3DS / SCA</td><td><code>incomplete</code> = no access</td><td>unit + captured payloads (S1b, S1c, F2)</td><td>Never in a browser. <code>invoice.payment_action_required</code> is ignored, so the customer relies on Stripe's own email. Check that it's on (P3).</td></tr>
+<tr><td>Renewal failure, dunning</td><td>grace ≥ 5 days</td><td>unit + property tests + F1</td><td>UI dead ends (gap 11); the retry schedule is unchecked (P3).</td></tr>
+<tr><td>Refund</td><td>full refund revokes and cancels</td><td>unit + lifecycle</td><td><strong>basil shape (gap 2)</strong></td></tr>
+<tr><td>Dispute / chargeback</td><td>revoke; restore if won</td><td>unit with hand-built charges</td><td><strong>probably a no-op today (gap 2)</strong></td></tr>
+<tr><td>Webhook retries, duplicates, out of order</td><td>event lock, per-customer lock, refetch</td><td>unit + readiness (purchase, faults)</td><td>Covered. Run faults on its own, or after prompt 0.</td></tr>
+<tr><td>Monthly ↔ yearly in the portal</td><td>resync</td><td>lifecycle P8</td><td>Proration and allowed switches are unchecked Dashboard settings; UI says "Monthly".</td></tr>
+<tr><td>Second subscription</td><td>blocked, collapsed, refunded</td><td>unit + readiness</td><td>A paused subscription slips through (gap 11).</td></tr>
+<tr><td><code>customer.deleted</code></td><td>not handled</td><td>none</td><td>500s forever for that visitor (gap 11).</td></tr>
+<tr><td>Account deletion</td><td>doesn't exist</td><td>—</td><td>Owner decision (gap 14).</td></tr>
+<tr><td>Sign out everywhere</td><td>no UI</td><td>—</td><td>gap 14</td></tr>
+<tr><td>Email change</td><td>verified; Stripe email synced</td><td>unit (sync only)</td><td>gap 14</td></tr>
+<tr><td>Multiple tabs and devices</td><td>password change revokes (client asks)</td><td><code>auth-smoke.sh</code> (by hand)</td><td>No browser test with two contexts; not enforced server-side.</td></tr>
+<tr><td>5-minute cookie cache</td><td>paid bodies and payments bypass it</td><td>readiness</td><td>Accepted: <code>/api/me</code> can be 5 min stale.</td></tr>
+</table></div>
+<div class="you">
+<p><strong>Only provable live, and how to do it safely:</strong> one real purchase on your own card at the catalog monthly price → the return page → a member article → the account page → the Stripe portal (look, change nothing) → cancel at period end → reactivate → cancel → <strong>refund in the Dashboard</strong> → access gone within a minute <em>and</em> the subscription cancelled in Stripe → nightly reconcile dry run shows 0 changes. Cost: the refund returns the $12.99, but Stripe keeps its processing fee. <strong>Never live:</strong> disputes (they hurt the account; prove them with committed fixtures and the fake), declines and 3DS on purpose, a second card, load on checkout, test mode as evidence.</p>
+</div>
+</section>
+
+<section>
+<p class="label">Area 1</p>
+<h2>Quiet go-live load test: the numbers</h2>
+<p>Run through <code>load/k6/supervise.mjs</code> (the rolling-window stop), from one machine outside Railway's region, after prompt 9 has solved the one-IP problem. No images: they're Bunny's bill and are measured once in a browser instead. <strong>Spend cap:</strong> you set it before the run (suggestion: $25 on top of the month's base plans), with Railway and Neon usage alerts at 50% and 80% and a stop at 80%. 1 journey is about 2.4 requests.</p>
+<div class="scroll"><table>
+<tr><th>Stage</th><th>Load</th><th>Passes when</th></tr>
+<tr><td>S0 smoke</td><td>1 journey/s, 2 min</td><td>0 failures, 0 correctness failures</td></tr>
+<tr><td>S1 baseline</td><td>5/s, 5 min</td><td>record p50/p95 per class; this is the platform baseline</td></tr>
+<tr><td>S2 plateau</td><td>20/s, 10 min</td><td>all gates</td></tr>
+<tr><td>S3 plateau (the go line)</td><td>40/s, 10 min (≈ 100 req/s, ≈ 144k visits an hour)</td><td>all gates</td></tr>
+<tr><td>S4 spike</td><td>5 → 50 → 5/s inside a minute</td><td>back to S1's p95 within 60 s; 0 restarts</td></tr>
+<tr><td>S5 cold after deploy</td><td>redeploy the API, then 10/s at once, 5 min</td><td>first-minute page p95 ≤ 1.5 s; only 503s with <code>Retry-After</code>; baseline within 2 min</td></tr>
+<tr><td>S6 viral article</td><td>50/s on ONE free article through the site, 5 min</td><td>edge HIT ≥ 99%; backend calls for that path ≈ revalidation only; p95 ≤ 300 ms</td></tr>
+<tr><td>S7 crawler</td><td>2/s walking distinct sitemap URLs, 10 min, alongside 10/s readers</td><td>0 assembly refusals; readers' p95 no more than 20% above S1</td></tr>
+<tr><td>S8 soak</td><td>20/s, 30 min</td><td>RSS grows &lt; 10% after warm-up; pool <code>waiting</code> 0; refresh <code>oldestPendingAgeS</code> &lt; 120</td></tr>
+</table></div>
+<p><strong>Gates at every stage</strong> (from <code>load/k6/lib/config.js</code>, plus the platform):</p>
+<ul>
+<li>Pages: p95 ≤ 500 ms, TTFB p95 ≤ 400 ms. Dynamic reads: p95 ≤ 1 s, p99 ≤ 2.5 s. Failed requests &lt; 0.1%, counting 429 and 503. Correctness failures = 0. Dropped iterations = 0.</li>
+<li>Railway: CPU &lt; 70% average, memory &lt; 75% of the limit, 0 restarts. Neon: connections &lt; 60% of <code>max_connections</code>, CPU &lt; 70%. Redis: <code>used_memory</code> &lt; 50% of <code>maxmemory</code>, 0 evicted or rejected. <code>db-stats</code> <code>payloadPool.waiting</code> never above 0 for more than 10 s.</li>
+</ul>
+<div class="stop">
+<p><strong>Abort</strong> on: failures &gt; 1% over a rolling 60 s · any correctness or privacy failure · any 5xx that isn't an admission 503 · spend reaching 80% of the cap · any restart.</p>
+<p><strong>GO</strong> if S0–S8 pass at 40/s. If 40/s fails but 20/s passes, go only if the expected launch-week peak is ≤ 10 journeys/s (2× headroom), and write the ceiling down. <strong>NO-GO</strong> on any correctness or privacy failure at any level, or any failure at ≤ 5/s.</p>
+</div>
+</section>
+
+<section>
+<p class="label">Already covered</p>
+<h2>Not re-proposed</h2>
+<p class="muted">Webhook signature on raw bytes (<code>stripe-webhook-signature.route.test.ts</code>, readiness); cross-user and CSRF matrix; Google linking and staff/visitor isolation (71 checks); DB freeze and Redis loss (faults); publish chain and edge purge (H01 A–D, L05, adapter smoke); CAP-08 matrix, negative controls and abort supervisor; prewarm; connection budget and boot refusal; entitlement property tests (<code>entitlement.property.test.ts</code>); env check for Railway; the decided items in <code>serverless-launch-checklist.md</code> ("Not blockers").</p>
+</section>
+
+<section>
+<p class="label">Prompts · local, in order</p>
+<h2>One fresh session each</h2>
+<p>Each one is a PR. Run them one at a time: most use the sandbox, and two sandbox jobs at once will crash the laptop. Prompt 0 first. Prompts 3, 4, 13, 14, 15 and 16 need no sandbox and can run next to one that does.</p>
+
+<div class="step">
+<div class="head"><span class="num">0</span><h3>Make the sandbox start from a fresh session</h3></div>
+<div class="chips"><span class="chip small">small · ~1 h</span><span class="chip">uses sandbox</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura readiness sandbox: make it start cleanly from a fresh session. Today, from a clean state:
+- `pnpm readiness:stack -- up --build` fails with "Could not start redis." because this Linux host has no redis-server binary. Earlier sessions put a shim in their own scratch folder.
+- The backend then can't reach Postgres. sandboxSettings() in apps/questura/apps/server/scripts/readiness/sandbox.ts defaults to postgres://$USER@127.0.0.1:5442, but the questura-readiness-pg container has only the `postgres` role. You'll see `role "webdev" does not exist`, or `SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string`.
+- Running docs/launch-day.md step 2 in order (routes, payments, purchase, auth, oauth, faults) gave faults 17/22: checkout answered HTTP 429. faults alone gives 22/22. The scripts share one rate-limit budget in the sandbox Redis.
+
+Fix:
+1. Commit a fallback that runs redis:7-alpine on 127.0.0.1:6390 when no binary exists. It must refuse any port but 6390.
+2. Make the default database URI work with the container, or make `pnpm readiness check` print the exact export.
+3. Make each readiness script start from clean sandbox rate-limit counters. Flush only the sandbox Redis on 6390, the way apps/questura/apps/e2e/tests/global-setup.ts does, or give each script its own synthetic addresses.
+4. Add a "Sandbox setup" section to docs/launch-day.md.
+
+Proof: from a clean state, all of step 2 passes in order in one go, then Playwright (chromium + firefox) passes 20/20.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres is the container questura-readiness-pg on 127.0.0.1:5442. Until this PR lands, export READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness.
+- Redis is on 127.0.0.1:6390. Until this PR lands, put a `redis-server` shim first on PATH that runs `docker run --rm --name questura-readiness-redis -p 127.0.0.1:6390:6379 redis:7-alpine redis-server --save '' --appendonly no`.
+- NEVER touch 5433 or 6379 on this laptop: they are live data.
+- About 7.5 GB RAM: one heavy job at a time (builds, readiness:stack, Stryker, k6).
+- No deploys. Don't resume the laptop's live window. No live Stripe or Google, no paid services, no load against anything outside this machine.
+- New dependencies need the owner's yes. Payload schema changes follow the AGENTS.md migration steps.
+- If readiness:routes rewrites docs/capacity/runs/&lt;date&gt;-surge-routes.json and the run isn't evidence for your change, revert it.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">1</span><h3>Build and config traps: localhost, image host, workers.dev, canonical</h3></div>
+<div class="chips"><span class="chip small">small · ~2 h</span><span class="chip">uses sandbox</span><span class="chip big">blocker</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura: stop a production build or config from quietly pointing at the wrong place.
+
+Facts:
+(a) apps/questura/apps/client/src/lib/api/api-config.ts:10 and src/lib/config.ts:11 fall back to http://localhost:4000. NEXT_PUBLIC_* values are inlined at build time. docs/capacity/h01-provisioning-checklist.md steps 18–19 set NEXT_PUBLIC_BACKEND_URL only as a runtime wrangler var, and build in a fresh git worktree that lacks the gitignored .env.production.local. So the shipped bundle would call localhost:4000, and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY would be empty. readiness:adapter passes the env explicitly, so it can't catch this.
+(b) infra/railway/server.env.template:145 labels BUNNY_STORAGE_HOSTNAME "Bunny storage hostname", and scripts/env-check/railway-template.test.ts:64 uses storage.bunnycdn.com. But src/features/media/lib/bunny-public-url.ts builds every public image URL from it and says it must be the pull zone (questurian-cdn.b-cdn.net). Nothing checks it.
+(c) apps/client/wrangler.jsonc doesn't turn off workers_dev or preview URLs. There is no metadataBase in app/layout.tsx. The sandbox HTML has a relative canonical on /authors/* and a relative og:url on city pages, so a workers.dev copy is crawlable and canonicalises to itself.
+
+Do:
+1. Client build guard (next.config.ts): a production build fails unless NEXT_PUBLIC_BACKEND_URL and NEXT_PUBLIC_APP_URL are https and not loopback, and the Stripe publishable key is pk_live. Allow the sandbox only through an explicit flag (e.g. QUESTURA_BUILD_TARGET=readiness), and have readiness:adapter/stack set it.
+2. A post-build scan that fails on localhost, 127.0.0.1 or readiness.localhost in the shipped client assets (.open-next and .next/static).
+3. Rewrite H01 steps 18–19 so the build gets its env explicitly.
+4. Image host: require BUNNY_STORAGE_HOSTNAME in production (assertProductionConfig), and make env:check refuse storage.bunnycdn.com and *.storage.bunnycdn.com. Fix the template comment and the test.
+5. Add metadataBase from publicBaseUrl(). Make canonicals absolute, and add canonicals to country, city and neighbourhood pages. Set workers_dev: false and preview_urls: false.
+6. launch:verify (scripts/launch-verify/checks.ts), with unit tests in checks.test.ts. On home, one article and one author page:
+   - no localhost or 127.0.0.1 in the HTML;
+   - canonical host equals the --client host, and og:url is absolute;
+   - one &lt;img&gt; src answers 200 image/*;
+   - /robots.txt and /sitemap.xml answer 200 and list only the client host;
+   - a made-up path is a real 404;
+   - a JS chunk the home page loads contains the --api origin.
+
+Prove it: readiness:adapter still passes, and a build without the env fails with a message naming the variable.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres is the container questura-readiness-pg on 127.0.0.1:5442 (export READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness). Redis is on 127.0.0.1:6390; if prompt 0 hasn't landed, use a `redis-server` shim that runs redis:7-alpine with -p 127.0.0.1:6390:6379.
+- NEVER touch 5433 or 6379 on this laptop: they are live data.
+- About 7.5 GB RAM: one heavy job at a time.
+- No deploys, no live window, no live Stripe or Google, no paid services, no load outside this machine.
+- New dependencies need the owner's yes. Schema changes follow AGENTS.md.
+- Revert a rewritten docs/capacity/runs/*-surge-routes.json unless it is evidence for this change.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">2</span><h3>Refunds and disputes under Stripe basil</h3></div>
+<div class="chips"><span class="chip medium">medium · half a day</span><span class="chip">uses sandbox</span><span class="chip big">money</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura payments. apps/questura/apps/server/src/features/payments/webhooks/handlers/charge-revocation.ts finds the subscription through charge.invoice (resolveChargeInvoice, ChargeWithInvoice).
+
+Stripe API 2025-03-31.basil removed `invoice` from Charge and PaymentIntent: https://docs.stripe.com/changelog/basil/2025-03-31/add-support-for-multiple-partial-payments-on-invoices. The SDK is pinned to 2025-08-27.basil (stripe-api-version.ts). What follows:
+- handleDisputeCreated and handleDisputeClosed re-fetch the charge with stripe.charges.retrieve. There is no invoice, so they log "Dispute has no subscription" and return 200. Access isn't revoked, and billing continues.
+- handleChargeRefunded uses the charge in the event body, which is rendered at the webhook endpoint's API version. The new Railway endpoint is created at launch. If it's basil or later, refunds stop revoking access and stop cancelling the subscription too.
+- Every test hand-builds charges with `invoice:` set, so no test sees this.
+
+Fix:
+- Resolve invoice → subscription in a way that works on basil: e.g. stripe.invoicePayments.list({ payment: { type: 'payment_intent', payment_intent: charge.payment_intent } }), then read the invoice's subscription. Check the basil Invoice shape in node_modules/stripe/types. Fall back to charge.invoice only when it's present.
+- Tests with basil-shaped charges (no invoice) for: full refund, partial refund, dispute created, dispute closed won, dispute closed lost.
+- Extend scripts/readiness/stripe-fake.ts with charges, disputes and invoice_payments, and have readiness:purchase drive a refund and a dispute end to end. Update its expected count in docs/launch-day.md.
+- scripts/verify-stripe-webhook-events.ts: print the endpoint's api_version, and fail when it differs from STRIPE_API_VERSION.
+- docs/serverless-launch-checklist.md §5: create the new endpoint at the pinned API version.
+
+Optional, only if the owner offers a Stripe TEST-mode key for this session: capture basil charge.refunded and charge.dispute.created as committed fixtures. That is the one allowed use of sk_test in AGENTS.md: say out loud that you're doing it and why, and never use the Mac stripe CLI key. Use the stripe-docs skill for API facts only.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres is questura-readiness-pg on 127.0.0.1:5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness). Redis is on 127.0.0.1:6390 (redis:7-alpine shim if prompt 0 hasn't landed).
+- NEVER touch 5433 or 6379: live data.
+- One heavy job at a time (7.5 GB RAM).
+- No deploys, no live window, no live Stripe or Google, no paid services, no load outside this machine.
+- New dependencies need the owner's yes.
+- Revert a rewritten *-surge-routes.json unless it is evidence.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">3</span><h3>See errors: reporting, logs, request ids</h3></div>
+<div class="chips"><span class="chip medium">medium · ~1 day</span><span class="chip">needs you: pick the sink</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura has no error reporting:
+- no Sentry and no onRequestError in either app (apps/questura/apps/server, apps/questura/apps/client);
+- no client global-error.tsx, and app/error.tsx only console.errors in development;
+- apps/client/wrangler.jsonc has no `observability` block, so Workers Logs are off;
+- the server logger (src/shared/utils/logger.ts) has no request id, and redaction is left to each call site.
+
+ASK THE OWNER FIRST which sink to use:
+(a) Sentry free tier. This is a new dependency plus an external service: approval needed.
+(b) No vendor: Next's onRequestError in both apps writes one structured JSON line (route, digest, status, release SHA, request id; no cookies, emails or tokens), Workers Logs are turned on with a sampling rate, the client posts errors to a rate-limited beacon on the API that logs them, and alerts come from Railway and Cloudflare log search.
+Recommend (b) now and (a) later if the owner wants email alerts.
+
+Either way:
+- Add x-request-id: accepted or generated, echoed in the response, and present in every log line.
+- Add a redaction pass in logger.ts for email, cookie, authorization and stripe-signature.
+- Add global-error.tsx, and make error.tsx report in production.
+- Map the alerts table in docs/capacity/cap07-platform-readiness.md §5 onto the chosen sink, plus one free uptime check on /api/health/ready and the home page.
+
+Tests: in each app, a unit test that a forced error gives exactly one redacted line with the request id; in the sandbox, a thrown route shows that line in backend.log.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. If you need the sandbox:
+- Postgres :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness), Redis :6390.
+- NEVER 5433 or 6379: live data.
+- One heavy job at a time.
+- No deploys, no live window, no live Stripe or Google, no paid services, no load outside this machine.
+- New dependencies need the owner's yes.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">4</span><h3>Email sender, boot check, templates, DNS runbook</h3></div>
+<div class="chips"><span class="chip small">small · ~3 h</span><span class="chip">no sandbox needed</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura email isn't launch-ready:
+- apps/questura/apps/server/src/payload.config.ts:89 sends from 'you@questurian.com', a placeholder.
+- Nothing documents SPF, DKIM or DMARC for questurian.com on Resend.
+- RESEND_API_KEY isn't required by assertProductionConfig, so a missing key first shows up when a visitor's password reset fails.
+- No email template is rendered in any test.
+- 10 templates in src/features/emails are never sent, among them welcome, password changed, the email-changed notice to the old address, and Google linked. 3 senders bypass EmailLogs.
+
+Do:
+- Make the sender configurable (EMAIL_FROM_ADDRESS, EMAIL_FROM_NAME, EMAIL_REPLY_TO) and required in production on the questurian.com domain: env:check, infra/railway/server.env.template, and its test.
+- Require RESEND_API_KEY in production.
+- Render tests for every template that is actually sent: subject; links on the NEXT_PUBLIC_APP_URL host over https; no localhost; a plain-text part; dates in a fixed time zone.
+- Send the email-changed notice to the OLD address from the Better Auth change-email flow (src/features/visitor-auth/lib/better-auth.ts).
+- Ask the owner whether to delete or wire the other dead templates.
+- Write docs/procedures/email-domain.md:
+  - Resend domain verification, the SPF include and the DKIM CNAMEs;
+  - DMARC: p=none with rua first, then quarantine after two clean weeks;
+  - the launch-day check: send a reset to a Gmail and an Outlook address, and "show original" must say SPF, DKIM and DMARC all pass.
+- If the sandbox is available: readiness:oauth already reads the fake mailbox on :3192. Assert that the reset and verification mails carry the new from-address and https links.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill.
+- Sandbox, if used: Postgres :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness), Redis :6390.
+- NEVER 5433 or 6379: live data.
+- One heavy job at a time.
+- No real email sends, no deploys, no live Stripe or Google, no paid services.
+- New dependencies need the owner's yes.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">5</span><h3>Rehearse moving day and write the cutover runbook</h3></div>
+<div class="chips"><span class="chip medium">medium · ~1 day</span><span class="chip">uses sandbox</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Rehearse Questura's database move and secret rotation in the sandbox, then write the cutover runbook.
+
+Facts:
+1. docs/serverless-launch-checklist.md §3 and docs/capacity/h01-provisioning-checklist.md require a fresh PAYLOAD_SECRET and BETTER_AUTH_SECRET on Railway.
+   - Payload looks up API keys by HMAC(secret) and encrypts them with it (node_modules/payload/dist/auth/strategies/apiKey.js, baseFields/apiKey). With a new secret, every ServiceAccounts key stops working (ADR-0006: Location Manager, the writer pipeline).
+   - better-auth.ts sets encryptOAuthTokens: true, so stored Google tokens become undecryptable.
+   - Neither is documented.
+2. The first Neon database is a pg_dump of the laptop (Postgres 16) restored into Neon (default Postgres 17). CI's readiness job uses Postgres 14.
+3. Between the final dump and the DNS switch, the laptop can still take sign-ups and Stripe webhooks. After cutover, nothing retires the laptop's Stripe webhook endpoint, its questura-reconcile.timer (Persistent=true, apply on) or its rk_live key. Two live members are billed at the $0.50 laptop price.
+
+Do, all local:
+- `pnpm readiness copy-from` → pg_dump → restore into a postgres:17 container on a spare loopback port (not 5433, 5442, 5432 or 6379) → pnpm db:migrate → row counts of locations, articles, media_assets, media_sets, users, visitor_profiles and visitor_auth_* match the source.
+- Boot the stack against it with BOTH secrets rotated, and prove:
+  - password sign-in works;
+  - fake-Google sign-in works (oauth-fake);
+  - staff login works;
+  - an old service-account key gets 401, and a newly issued key works;
+  - an old visitor cookie gets 401, never 500.
+- Write docs/procedures/cutover.md. The order: pause the laptop → final dump → restore → migrate → compare counts → deploy → DNS → create the new Stripe endpoint at the pinned API version → disable the laptop endpoint → revoke the laptop key → disable the laptop timer. Also: which service keys to re-issue and where each client stores its key; what to do about the two members on $0.50 (the owner decides); a reconcile dry run on the new host showing 0 changes.
+
+Make no live calls, and don't touch the laptop's live containers.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres is questura-readiness-pg on :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness). Redis is on :6390.
+- NEVER touch 5433 or 6379: live data.
+- One heavy job at a time (7.5 GB RAM).
+- No deploys, no live window, no live Stripe or Google, no paid services.
+- New dependencies need the owner's yes. Schema changes follow AGENTS.md.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">6</span><h3>Launch-day kit: the purchase-to-refund page, cookie check, honest lockdown</h3></div>
+<div class="chips"><span class="chip medium">medium · half a day</span><span class="chip">uses sandbox</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura launch-day tooling has holes.
+- docs/launch-day.md step 5 says to follow live-checks/payments.html "ending with the refund and the loss of access". That page is the laptop version (docker exec, ~/questura, laptop price, "close without paying") and has no purchase-to-refund steps.
+- apps/questura/apps/server/scripts/launch-verify/checks.ts MANUAL_STEPS tells you to run LAUNCH_VERIFY_COOKIE_CHECK. Nothing reads it.
+- The lockdown check (checks.ts:193-201) counts any fetch error, including a DNS or TLS typo, as "locked down".
+- It only tries the *.up.railway.app host, never the SNI bypass in ADR-0016: connecting to Railway's edge while naming api.questurian.com.
+- Without --bypass or --rate-limit-probe, those checks silently vanish from an all-green summary.
+
+Build:
+1. live-checks/launch-purchase.html. Load the artifact-design skill for the page itself, and match the existing live-checks pages (ticks in localStorage only). It is the owner's one real purchase on the platform, monthly at the catalog price, with the expected visitor_profiles row and /api/me answer at each step:
+   checkout → return page → a member article opens → account page shows the plan and renewal date → Stripe portal opens (change nothing) → cancel at period end → reactivate → cancel → refund in the Dashboard → within a minute access is gone AND the subscription is cancelled in Stripe → reconcile dry run shows 0 changes.
+   Also list what never to do: no disputes, no second card, no test mode as evidence, no load on checkout.
+2. The signed-in cookie check. It takes LAUNCH_VERIFY_COOKIE, a dedicated test account's cookie passed at run time and never committed, and checks: __Secure- prefix, HttpOnly, Secure, SameSite=Lax, Domain=.questurian.com; /api/me is no-store with Vary: Cookie; the member flag is right.
+3. launch:verify changes:
+   - --bypass and --rate-limit-probe are required unless --local is given;
+   - a DNS or TLS error on the bypass host reports "unknown" and fails;
+   - add --edge-ip &lt;railway edge IP&gt; for the SNI bypass: request api.questurian.com resolved to that IP with a forged CF-Connecting-IP, and expect a refusal.
+4. Unit tests for each in checks.test.ts. Update docs/launch-day.md so step 5 points at the new page.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness), Redis :6390.
+- NEVER touch 5433 or 6379: live data.
+- One heavy job at a time.
+- No deploys, no live window, no live Stripe or Google, no paid services, no load outside this machine.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">7</span><h3>Run the safety net in CI</h3></div>
+<div class="chips"><span class="chip big">medium–big · 1 day</span><span class="chip">no laptop sandbox; CI services</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>/.github/workflows/ci.yml runs Questura's unit tests, the server build, both typechecks and the refresh-outbox integration tests.
+
+It never runs:
+- the client `next build`, or the OpenNext Cloudflare build;
+- Questura lint (only the writer app is linted, though the header says "typecheck and lint");
+- any readiness:* suite (routes, payments, purchase, auth, oauth, faults, contracts);
+- Playwright;
+- the k6 negative controls (load/k6/negative-control/run.mjs).
+
+Three client tests always skip in CI because the client job doesn't install dependencies (apps/questura/apps/client/src/features/articles/articleStreamsBeforeRecommendations.test.mjs:36). CI runs Postgres 14; the laptop runs 16 and Neon defaults to 17.
+
+Add:
+1. A client install, `next build`, and `opennextjs-cloudflare build` with explicit sandbox env, plus prompt 1's bundle scan if it has landed.
+2. Lint for both Questura apps.
+3. A readiness job on ubuntu-latest with postgres:16 (or 17) and redis:7 services. It runs readiness:stack up --build, then routes, payments, purchase, auth, oauth, contracts, and Playwright chromium + firefox, and uploads the Playwright report on failure.
+   - faults pauses containers by name: adapt it to the CI containers, or run it nightly only.
+   - If the job takes more than 15 min, run it on push to main, nightly and workflow_dispatch, and keep a fast subset on PRs.
+4. Install the client's dependencies so the 3 skipped tests run.
+5. The k6 negative controls, if they fit in the time budget.
+
+No paid services. Prove it: a throwaway commit that breaks one readiness check turns the job red. Revert it before merging.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill.
+- Locally, if needed: sandbox Postgres :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness), Redis :6390.
+- NEVER touch 5433 or 6379: live data.
+- One heavy job at a time.
+- No deploys, no live Stripe or Google, no paid services.
+- New dependencies need the owner's yes.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">8</span><h3>Browser journeys, console errors, mobile, slow network</h3></div>
+<div class="chips"><span class="chip big">big · 2 days</span><span class="chip">uses sandbox</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura Playwright (apps/questura/apps/e2e) has 10 tests × 2 engines: paywall, member sign-in and sign-out, non-member paywall, returnTo redirects, cookie flags, wrong password. Add browser coverage for the rest.
+
+The specs run against the readiness sandbox (fake Stripe :3191, fake Google and mailbox :3192). Where a spec is read-only, it must also run on launch day against the real site through E2E_BASE_URL and a dedicated test account.
+
+Journeys:
+1. home → city → article → author → back.
+2. Anonymous article → paywall → Join. Pricing shows $12.99 and $79.99. Subscribe → sign-up → verification mail from the fake mailbox → checkout handoff reaches the stub checkout URL (never real Stripe) → return to /subscription → the member article opens. In the sandbox, sign checkout.session.completed with the sandbox secret, the way scripts/readiness/purchase-checks.ts does.
+3. Sign-up with a password, sign-in, sign-out.
+4. Google sign-in through the fake provider (popup flow, src/features/Auth/pages/AuthPage.tsx).
+5. Password reset via the mailbox: old sessions are signed out, the link works once, an expired link is refused.
+6. Change password: a second browser context is signed out.
+7. Change email via the mailbox.
+8. Account page shows the plan, the renewal date, and Monthly vs Yearly correctly. Cancel, then reactivate (stub).
+9. Add and remove a bookmark. Search.
+10. A missing page is a real 404 with the nav. A backend 503 on an article shows the error page, not a blank page.
+11. Journeys 1–3 on Pixel 7 and iPhone 13 profiles, with no horizontal scroll.
+12. Journey 1 under Chromium CDP throttling (Slow 3G + 4× CPU): no JS errors, and done within a generous budget.
+
+Every page in every spec fails on console errors, pageerror and failed requests, with an explicit allowlist.
+
+Known today, found 2026-09-24 by a one-off sweep:
+- /account throws React error #418 (hydration mismatch) in the production build, on desktop and mobile. Find it, fix it, and add a test.
+- Every sandbox image URL is https://media/launch-NN.jpg because BUNNY_STORAGE_HOSTNAME is unset in the sandbox (see "Empty storage host" in docs/capacity/runs/2026-09-22-surge-L10-local-runs.md). Point the sandbox at the fixture media server on :3190, and assert that images actually decode.
+
+Tighten tests/redirects.spec.ts: assert the final path is the safe fallback, not just the origin. Today a page that never redirects passes.
+
+WebKit stays skipped on this laptop (decided). Add every new spec to docs/launch-day.md with its count.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness), Redis :6390.
+- NEVER touch 5433 or 6379: live data.
+- One heavy job at a time.
+- No deploys, no live window, no live Stripe or Google, no paid services, no load outside this machine.
+- New dependencies need the owner's yes.
+- Revert a rewritten *-surge-routes.json unless it is evidence.
+- One PR, or split it into two. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">9</span><h3>Load test that tells the truth on the platform, and a fresh baseline</h3></div>
+<div class="chips"><span class="chip medium">medium · 1 day</span><span class="chip">uses sandbox</span><span class="chip medium">needs you: approve the load key design</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Make Questura's k6 suite (apps/questura/load/k6) give a true answer on the real platform, and re-baseline locally.
+
+1. One-IP problem. Every script sends a synthetic cf-connecting-ip per virtual user (lib/requests.js clientAddress). Through Cloudflare that header is overwritten with the generator's real address, so the whole test counts as one caller:
+   - the per-address limits refuse it: public reads 60–240/min per scope (src/shared/http/public-read-rate-limit.ts), member bodies 30/min, plans 30/min;
+   - Cloudflare's bot and DDoS protection may challenge it.
+   The result says nothing about capacity, and it tempts someone to raise the limits.
+   Design a time-boxed load identity. For example:
+   - LOAD_TEST_KEY on the API: unset by default; production refuses a key under 32 characters; every use is logged; launch:verify fails while it is set.
+   - A request carrying HMAC(key, synthetic address) is counted as that address.
+   - A written Cloudflare WAF skip rule for the generator IP, limited to the test window.
+   GET THE OWNER'S OK ON THE DESIGN BEFORE BUILDING: it is a deliberate bypass.
+2. Missing traffic shapes. Add scenarios with thresholds from lib/config.js gates():
+   - a viral spike on ONE free article through the client, reporting the cache HIT ratio and backend calls for that path;
+   - a crawler walking distinct sitemap URLs;
+   - a cold start right after a deploy (a documented step, then 10 journeys/s);
+   - a 1–3% signed-in share next to today's ~25%.
+   Slow clients: document that Cloudflare buffers them, since k6 can't throttle reads.
+3. Stale baselines. Every number in docs/capacity/runs is from 2026-09-21 to 09-23: before #683 (client Next 15.5) and #684 (Payload 3.90 + Next 16), and all on the Node client, never the Worker. Re-run on the laptop sandbox:
+   - measure:api public-api (the Lima control was 171 statements, 17 reads);
+   - the L10 ladder at 10/20/40/80/160 journeys/s, plus the spike, via load/k6/runs/local-matrix.mjs.
+   Write docs/capacity/runs/&lt;date&gt;-post-upgrade-baseline.md comparing before and after. Say plainly that these are laptop numbers, not a platform capacity.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness), Redis :6390.
+- NEVER touch 5433 or 6379: live data.
+- About 7.5 GB RAM: k6 and the stack are each heavy, so nothing else runs at the same time.
+- No deploys, no live window, no live Stripe or Google, no paid services, NO load against anything outside this machine.
+- New dependencies need the owner's yes.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">10</span><h3>API front door: the in-app half of ADR-0016</h3></div>
+<div class="chips"><span class="chip medium">medium · half a day</span><span class="chip">uses sandbox</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Background: ADR-0016 option A (Cloudflare in front of the Questura API, origin locked by a secret header) is the owner's pick (docs/pre-launch-plan-2026-09-24.html, "Decided for you"). Its in-app half isn't built; grep finds ORIGIN_AUTH_SECRET only in docs/adr/0016-api-origin-identity-on-railway.md.
+
+Build it in apps/questura/apps/server:
+- ORIGIN_AUTH_SECRET: at least 32 characters, enforced only in production, compared in constant time.
+- Checked in src/proxy.ts (Next 16's name for middleware) for every route except /api/health (liveness).
+- Two modes: 'refuse' (403, no-store) and 'unidentified' (the request joins the shared unidentified bucket).
+- The header is stripped before any handler sees it and is never logged.
+- Stripe webhooks come through Cloudflare too, so they will carry the header; document that.
+
+The site's own renders: the client Worker's server-side fetches to api.questurian.com go through the same Cloudflare zone. Two things are platform-only unknowns: whether a Transform Rule adds the header to Worker subrequests, and which client IP they present. So also send the header from the client's server-side fetches (publicFetchOptions and the other render-token call sites) from a Worker secret, never NEXT_PUBLIC.
+
+Tests:
+- unit: missing, wrong and right header; constant-time compare;
+- readiness: the stack with the secret set refuses a direct call without the header, and the client still renders every page in the route list;
+- launch:verify: a request without the header that reaches Railway's edge must be refused.
+
+Update ADR-0016's status, H01 step 8 and infra/railway/server.env.template.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness), Redis :6390.
+- NEVER touch 5433 or 6379: live data.
+- One heavy job at a time.
+- No deploys, no live window, no live Stripe or Google, no paid services.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">11</span><h3>Dead ends for members with a failed card, and odd Stripe states</h3></div>
+<div class="chips"><span class="chip medium">medium · ~1 day</span><span class="chip">uses sandbox</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura membership UI and webhook edge cases, found by reading the code. Confirm each with a failing test first (the tdd skill), then fix it.
+
+1. Dunning, payment-issue state: no Update Payment Method link. showActionLinks in apps/questura/apps/client/src/features/AccountPage/hooks/useMembershipSection.ts:99 needs billingInfo, and getBillingInfo (services/membership.service.ts:32) returns null unless status is 'active'.
+2. Dunning, expired state: the page offers Upgrade, which goes to checkout, which refuses with 400 because past_due still counts as live (apps/server/src/app/api/payments/create-checkout-session/route.ts:214-219). Send both states to the Stripe portal instead.
+3. getBillingInfo hardcodes billingPeriod: 'Monthly' (membership.service.ts:40), so yearly members see "Monthly".
+4. customer.deleted isn't handled, and isn't on the deliberately-ignored list (webhooks/event-contract.ts). The profile keeps a dead customer id, checkout (route.ts:176) and the portal return 500 forever, and reconcile skips deleted customers. Handle it: clear the link, then add it to handled-events and the verify script.
+5. A paused subscription keeps access (lifecycle-simulation.test.ts P1) but doesn't count as live in customer-linkage.ts:127-132, so a second checkout is allowed. Questura doesn't offer pausing: treat paused as no access, and as live for duplicate prevention. Confirm with the owner.
+6. A subscription with no items writes paidThroughAt = null (lifecycle-simulation.test.ts P2): keep the last good date and log instead.
+
+Drive past_due through the stripe fake's /__fake/subscriptions in readiness:purchase. If prompt 8 has landed, add an account-page Playwright check.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness), Redis :6390.
+- NEVER touch 5433 or 6379: live data.
+- One heavy job at a time.
+- No deploys, no live window, no live Stripe or Google, no paid services.
+- The UI keeps advertising $12.99 / $79.99 (AGENTS.md pricing rule).
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">12</span><h3>Backups, migration guard on Railway, rollback runbook</h3></div>
+<div class="chips"><span class="chip medium">small–medium · half a day</span><span class="chip">uses a local postgres:17</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Write docs/procedures/backup-restore-rollback.md for Questura, and harden the Railway deploy path.
+
+Facts:
+- The only backup is one manual 1.8 MB dump (docs/serverless-launch-checklist.md §4). D6 (RTO/RPO) is undecided.
+- readiness:restore rehearses pg_dump/restore only, not PITR.
+- The destructive-SQL migration guard (apps/questura/apps/server/scripts/deploy/check-pending-migrations.mjs) runs only in the laptop's deploy.sh. infra/railway holds only the env template: no railway.json, no pre-deploy command.
+- Rollback is one line in docs/launch-day.md. Nothing covers the Worker (wrangler versions / rollback), or version skew when only one side rolls back. A code rollback never reverses migrations.
+
+Do:
+1. Commit infra/railway/railway.json, or document the dashboard fields, with a pre-deploy command that runs the migration guard, then pnpm db:migrate. It refuses destructive SQL unless an explicit acknowledgement env is set.
+2. A CI check that fails a PR adding a migration with DROP / TRUNCATE / ALTER … DROP unless the PR carries an explicit marker.
+3. The procedure doc:
+   - a recommended Neon PITR window (≥ 7 days);
+   - a daily logical dump to storage the owner controls (not Neon), and how to restore it;
+   - a restore drill on a Neon branch, with the timings to record against RTO and RPO;
+   - rollback order for the Worker and the API separately, and the rule that API changes stay additive for one release so either side can roll back alone;
+   - the no-deploy switches (REFRESH_OUTBOX=off, gate sizes).
+4. Prove the dump restores on Neon's Postgres major: run readiness:restore against a postgres:17 container on a spare loopback port.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness), Redis :6390. Extra containers go on spare loopback ports only.
+- NEVER touch 5433 or 6379: live data.
+- One heavy job at a time.
+- No deploys, no provisioning, no paid services.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">13</span><h3>Speed budgets that fail CI</h3></div>
+<div class="chips"><span class="chip medium">medium · ~1 day</span><span class="chip">uses sandbox</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura has no speed budget: no web-vitals reporting, no Lighthouse, no bundle-size or image-weight check, and no per-route latency or statement-count assertion in CI. The k6 gates are called "local regression thresholds" (load/k6/lib/config.js). docs/performance-sweep-2026-09-20.md captured no LCP, INP or CLS.
+
+Without new dependencies (ask before adding Lighthouse CI):
+1. A Playwright perf spec (Chromium) for home, a city, an article and /join:
+   - mobile profile with CDP throttling (Fast 3G, 4× CPU);
+   - LCP and CLS via PerformanceObserver, and an INP proxy from a scripted tap;
+   - transferred JS, CSS and image bytes.
+   Measure first, then set each budget 10% above today, capped at LCP ≤ 2.5 s, CLS ≤ 0.1, first-load JS ≤ 170 KB gzip per route, and above-the-fold images ≤ 400 KB. Real images need prompt 8's media fix.
+2. A build-output check: read the client build manifest, and fail if any route's first-load JS grows more than 10% over a committed baseline file.
+3. Statement counts in readiness:routes:
+   - a Lima-class city page ≤ 171 statements + 10% (docs/capacity/STATUS.md CAP-05);
+   - anonymous /api/me = 0 statements;
+   - an article ≤ its measured count.
+4. useReportWebVitals in the client, posting to the same beacon or sink as prompt 3, so real users' LCP, INP and CLS are visible after launch.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness), Redis :6390.
+- NEVER touch 5433 or 6379: live data.
+- One heavy job at a time.
+- No deploys, no live window, no paid services, no load outside this machine.
+- New dependencies need the owner's yes.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">14</span><h3>Account lifecycle: deletion, sign out everywhere, email change</h3></div>
+<div class="chips"><span class="chip medium">medium · ~1 day</span><span class="chip medium">needs you: deletion policy</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura visitor account lifecycle (Better Auth 1.6.33, apps/questura/apps/server/src/features/visitor-auth/lib/better-auth.ts). Gaps:
+- No account deletion: no deleteUser, no route.
+- No "sign out everywhere" UI.
+- A password change revokes other sessions only because the client sends revokeOtherSessions: true (apps/client/src/features/AccountPage/hooks/usePasswordChangeMutations.ts:32).
+- Email change has only a unit test of the Stripe sync, and a failed Stripe email update is only logged (payments/lib/customer-linkage.ts:58-66).
+- Password-reset token expiry isn't tested.
+
+ASK THE OWNER about deletion first. Either a documented email request at launch, or self-serve deletion that cancels the Stripe subscription, revokes all sessions, and deletes or anonymises visitor_profiles and bookmarks.
+
+Then:
+- enforce revoking other sessions server-side on password change;
+- add a "sign out of all devices" action;
+- have nightly reconcile fix Stripe customer email drift;
+- readiness checks for reset expiry, the email change end to end (oauth-checks has the fake mailbox), and sign-out everywhere;
+- if prompt 8 has landed, a two-context Playwright test.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness), Redis :6390.
+- NEVER touch 5433 or 6379: live data.
+- One heavy job at a time.
+- No deploys, no live window, no live Stripe or Google, no paid services.
+- Schema changes follow the AGENTS.md migration steps; stop and ask if visitor_auth_* would change.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">15</span><h3>Tests that can't fail: mutation run, behavioural guards</h3></div>
+<div class="chips"><span class="chip medium">medium · 1–2 days</span><span class="chip">heavy: run alone</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Tighten Questura tests that can pass without proving anything.
+
+1. Stryker (apps/questura/apps/server/stryker.config.json) has never been run on record, and "break": null means it can never fail.
+   - Add to its mutate list: src/app/api/payments/webhooks/stripe/route.ts, src/features/articles/public/gatePublicArticle.ts, gateExternalApiRead.ts, src/shared/utils/cors.ts and payments/lib/safe-return-path.ts.
+   - Run it on one area at a time. Each run is heavy: run nothing else.
+     a. webhook route + handlers
+     b. entitlement: subscription-state.ts, visitor-auth/lib/membership-entitlement.ts, membership-transitions.ts
+     c. paywall gates
+     d. cookie / session / origin: shared/config/session-cookie.ts, visitor-auth/lib/current-principal.ts, cors.ts
+     e. client IP / proxy / rate limit: shared/lib/client-address.ts, shared/config/trusted-proxy.ts, visitor-auth/lib/client-identity.ts, shared/lib/rate-limit-counter.ts
+   - Kill every surviving mutant with a test, or record why it's equivalent.
+   - Set break to the achieved score minus 5, and record the scores in docs.
+2. src/app/api/cookie-auth-origin-guard.test.ts counts a route as guarded if the file contains the string forbiddenOriginResponse, so a comment passes. It also skips routes that don't import current-principal, such as account/set-password. Make it behavioural.
+3. 16 of 37 client tests regex source text (e.g. src/lib/cache/cloudflare-readiness.test.mjs). Replace the ones that guard launch-critical behaviour with behavioural tests.
+4. apps/e2e/tests/global-setup.ts:18 compares the constant 6390 to 6379, so the guard can never fire. Guard the actual target instead.
+5. Real Better Auth never runs in vitest. Add one integration test that builds the real betterAuth() against the sandbox DB, and make a skip count as a failure in CI, the way readiness:required does.
+6. All server vitest tests run under jsdom (vitest.config.ts:15). Move the tests that don't need a DOM to the node environment.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness), Redis :6390.
+- NEVER touch 5433 or 6379: live data.
+- About 7.5 GB RAM: Stryker runs alone.
+- No deploys, no live Stripe or Google, no paid services.
+- New dependencies need the owner's yes.
+- One PR per numbered item is fine. Wait for green CI, then squash-merge each yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">16</span><h3>Time zones in dates members see</h3></div>
+<div class="chips"><span class="chip small">small · ~2 h</span><span class="chip">no sandbox needed</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Dates Questura members see depend on the server's time zone.
+
+Bare toLocaleDateString():
+- emails: apps/questura/apps/server/src/features/emails/lib/subscription-cancelled.ts:12, subscription-reactivated.ts:11 and :20, membership-confirmation.ts:10;
+- API messages: payments/lib/payment-service.ts:192 and :255;
+- the account page: apps/client/src/features/AccountPage/services/membership.service.ts:80, :92, :122, :137, :149.
+
+Other formatting:
+- Server components format with 'en-US' but no timeZone (ArticleIndexPage.tsx:31, LocationContentList.tsx:20).
+- ArticlePage.tsx:30 uses America/New_York while ArticlePageHeader.tsx:56 uses UTC.
+
+Railway and Workers run in UTC and the laptop in local time. So "access ends" dates can be a day off, and the server and browser can render different text, which causes React hydration errors.
+
+Pick one rule: access dates in UTC with the month name, and article dates in one fixed zone. Put it in one helper per app, and use it everywhere above. Run the date tests under TZ=UTC and TZ=Pacific/Kiritimati.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill.
+- NEVER touch 5433 or 6379: live data.
+- No deploys, no paid services.
+- New dependencies need the owner's yes.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">17</span><h3>Small correctness items</h3></div>
+<div class="chips"><span class="chip small">small · ~2 h</span><span class="chip">uses sandbox</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Three small Questura items.
+
+1. apps/questura/apps/client/src/middleware.ts: the trailing-slash redirect builds new URL(path, origin). A request for //evil.com/ may redirect off the site, unless Next and OpenNext normalise repeated slashes first. Unverified.
+   Test against next start AND the OpenNext preview (readiness:adapter) with //evil.com/, /\evil.com/ and /%2F%2Fevil.com/. Fix it if any of them leaves the site. Add a unit test.
+2. The client has no app/global-error.tsx. Add one: plain, on-brand, and it reports if prompt 3 has landed.
+3. The member article body answers 500 while the database is locked (docs/capacity/runs/2026-09-22-surge-L10-local-runs.md). Make it a 503 with Retry-After and no-store, like the other routes, and add a check in scripts/readiness/fault-checks.ts. Update its count in docs/launch-day.md.
+
+Rules (AGENTS.md wins over any skill). Use the caveman skill. Sandbox only:
+- Postgres :5442 (READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness), Redis :6390.
+- NEVER touch 5433 or 6379: live data.
+- One heavy job at a time.
+- No deploys, no live window, no live Stripe or Google, no paid services.
+- One PR. Wait for green CI, then squash-merge it yourself.</code></pre>
+</details>
+</div>
+</section>
+
+<section>
+<p class="label">Prompts · on the real hosting</p>
+<h2>During the quiet go-live, with you present</h2>
+<p>These run after H01 (provisioning), after the deploy, and before any announcement. They replace nothing in <code>launch-day.md</code>; they add to it.</p>
+
+<div class="step">
+<div class="head"><span class="num">PL1</span><h3>Go-live verification: hosts, front door, browsers, limits</h3></div>
+<div class="chips"><span class="chip medium">~2 h</span><span class="chip">live, read-only</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura quiet go-live verification. The owner is present, and nothing has been announced yet. Read AGENTS.md, docs/launch-day.md and apps/questura/docs/test-gap-audit-2026-09-24.html (part 2) first.
+
+Read-only unless the owner says yes to a specific action:
+1. pnpm launch:verify with every flag (--bypass, --rate-limit-probe, --edge-ip if prompt 6 has landed). Everything must pass.
+2. Hosts:
+   - view-source of home, one article and one author: no localhost, and the canonical is on www;
+   - a JS chunk contains https://api.questurian.com;
+   - robots.txt and sitemap.xml are on www only;
+   - the workers.dev URL doesn't serve the site; apex → www; http → https;
+   - TLS certificates are valid on www and api;
+   - one Bunny image answers 200;
+   - a made-up path is a real 404.
+3. Front door:
+   - curl the Railway edge with Host api.questurian.com (SNI) and a forged CF-Connecting-IP: refused;
+   - site pages render while the edge rule is on;
+   - from the API log, record which client address and which origin-auth header Worker renders arrive with;
+   - sign-in reaches 429 at its limit through Cloudflare.
+4. Limits:
+   - Neon: SHOW max_connections equals the declared DATABASE_MAX_CONNECTIONS and fits the budget; TLS in use; scale-to-zero off;
+   - Railway Redis: INFO memory, CONFIG GET maxmemory and maxmemory-policy (report them; the owner decides);
+   - /api/internal/db-stats shows the advisory lock pool on the direct endpoint.
+5. Real browsers, done by the owner, with a dedicated test account: Chrome and Firefox on desktop, the owner's iPhone Safari, one Android Chrome. Sign-up, verification email, sign-in, Google sign-in, sign-out, the paywall, the account page. The reset email arrives in Gmail and Outlook inboxes, and "show original" says SPF, DKIM and DMARC all pass.
+6. The Playwright read-only subset with E2E_BASE_URL and the test account.
+
+Write the results to docs/capacity/runs/&lt;date&gt;-go-live-verification.md: no secrets, cookies, emails or ids. One PR.
+
+Rules: AGENTS.md wins over any skill. Use the caveman skill. Live Stripe only through apps/questura/scripts/stripe-live, never the Mac stripe CLI key, never test mode as evidence. No checkout, no load, no config changes without the owner's yes to that specific action. Laptop ports 5433 and 6379 are the old live data: never touch them.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">PL2</span><h3>Stripe configuration audit, then the owner's one purchase</h3></div>
+<div class="chips"><span class="chip medium">~1 h</span><span class="chip big">real money: owner only</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura live Stripe check on the new platform. The owner is present.
+
+Part 1 is READ-ONLY, through apps/questura/scripts/stripe-live only. Report each item:
+- the new webhook endpoint: url, status, api_version (must equal STRIPE_API_VERSION in apps/server/src/features/payments/lib/stripe-api-version.ts), enabled events (pnpm verify:stripe-webhook-events: no MISSING, not DISABLED);
+- the old laptop endpoint: disabled or deleted?
+- billing portal configurations: cancel mode (at period end), plan switching (monthly ↔ yearly allowed?), proration behaviour;
+- subscription retry settings, and what happens when retries end (cancel or mark unpaid);
+- customer emails for failed payments and for 3DS confirmation: on? Receipts: on?
+- the restricted key's scope is narrowed (serverless-launch-checklist §7);
+- prices: the catalog $12.99 / $79.99 are what checkout will charge.
+Show every command to the owner before running it. Print no emails, names or ids; counts and settings only.
+
+Part 2, only with the owner's explicit yes: follow live-checks/launch-purchase.html (from prompt 6) step by step: one purchase on the owner's own card, monthly, then cancel → reactivate → cancel → refund in the Dashboard. After the refund: access gone within a minute AND the subscription cancelled in Stripe (proves the basil fix from prompt 2), and a reconcile dry run shows 0 changes.
+Never: disputes, a second card, test mode as evidence, load on checkout.
+
+Record the results with no personal data in docs/capacity/runs/&lt;date&gt;-live-stripe.md. One PR.
+
+Rules: AGENTS.md wins over the bundled stripe-* skills. Laptop ports 5433 and 6379 are the old live data: never touch them.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">PL3</span><h3>The quiet go-live load test</h3></div>
+<div class="chips"><span class="chip medium">~3 h</span><span class="chip big">billed: owner sets the cap</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura quiet go-live load test (CAP-08, trimmed). The owner has approved it in writing, with a spend cap of $____ and usage alerts at 50% and 80% on Railway and Neon. Stop at 80%.
+
+Before the run:
+- prompt 9's load identity is enabled for this window only;
+- the Cloudflare skip rule is on for the generator IP;
+- record the release SHA;
+- run pnpm prewarm:campaign;
+- poll db-stats and refresh-jobs every 10 s;
+- the generator runs outside Railway's region, and its CPU is watched: dropped_iterations must stay 0.
+
+Stages and gates: exactly as in apps/questura/docs/test-gap-audit-2026-09-24.html ("Quiet go-live load test: the numbers"), S0 to S8 in order, run through load/k6/supervise.mjs. No images. Never load checkout, sign-up, email or uploads.
+
+After the run:
+- turn the load identity OFF and remove the skip rule;
+- launch:verify must pass again, including its check that no load key is set.
+
+Record in docs/capacity/runs/&lt;date&gt;-go-live-load.md: SHA, plans, instance count, pool and gate settings, the k6 summary JSON, db-stats samples, offered vs achieved rate, and the GO / NO-GO line with the reason. If a gate fails, find the bottleneck from the evidence, change one thing, and re-run that stage. Never loosen a gate.
+
+Rules: AGENTS.md wins over any skill. Use the caveman skill. Laptop ports 5433 and 6379 are the old live data: never touch them.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">PL4</span><h3>Ops drills on the platform</h3></div>
+<div class="chips"><span class="chip medium">~3 h</span><span class="chip">live, owner present</span></div>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura ops drills on the real platform, before announcement, one at a time, the owner present for each:
+1. Force one server error and one client error: each reaches the chosen sink (prompt 3), and the alert fires.
+2. Stop the API for 2 minutes: the uptime check alerts.
+3. Restart Railway Redis during a 5 journeys/s run: public reads keep serving, payments refuse, sign-in recovers without a restart (cap07 §6.3).
+4. Restore Neon to a branch from 10 minutes ago. Point a scratch backend at it: db:migrate:status, rebuild:search-index, read one city page. Record the wall time against RTO and the restore point against RPO (docs/procedures/backup-restore-rollback.md from prompt 12).
+5. Roll back the API alone, then the Worker alone (wrangler rollback). Pages still render, and the refresh outbox drains.
+6. The schedulers fire once each (refresh-jobs every minute, exchange rates daily, nightly reconcile) and log it.
+7. Cold start: deploy the API, and time the first request and the first minute.
+
+Record in docs/capacity/runs/&lt;date&gt;-ops-drills.md. One PR.
+
+Rules: AGENTS.md wins over any skill. Use the caveman skill. No Stripe writes, no checkout, and no load beyond the 5 journeys/s in drill 3. Laptop ports 5433 and 6379 are the old live data: never touch them.</code></pre>
+</details>
+</div>
+</section>
+
+<section>
+<p class="label">Method</p>
+<h2>How this was put together</h2>
+<p class="muted">Read: the pre-launch plan, launch-day runbook, harness and upgrade handoffs, capacity STATUS/README/cap07/cap08/local-readiness handoff, ADR-0014 and ADR-0016, the performance sweep, the H01 and serverless checklists, <code>load/k6/*</code>, <code>apps/e2e/*</code>, <code>launch-verify/*</code>, CI. Three read-only helper agents swept payments/auth, test honesty, and frontend/ops, each citing file and line. The load-bearing claims were then re-checked by hand: the localhost fallback, the image host, the email sender and unsent templates, the Payload API-key HMAC, the missing origin-auth code, the source-text tests and Stryker's <code>break</code>. The <code>basil</code> change was checked against Stripe's changelog, and Neon's connection limits against Neon's docs. Anything not confirmed is marked "unverified" or "found by reading the code". Ran the checks listed in "What I ran" in the sandbox, one at a time. Live data (5433, 6379) wasn't touched. Nothing was deployed, and no code was changed.</p>
+</section>
+
+</main>
+</body>
+</html>
