@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
 
 import { fixtureDataProblems, fixtureMigrations, repositoryMigrations } from './bootstrap'
 import { collectPreflightProblems } from './preflight'
-import { dotenvNames, neutraliseDotenv, withOutboundGuard } from './sandbox-env'
+import { dotenvNames, neutraliseDotenv, withFakeProviderRoute, withOutboundGuard } from './sandbox-env'
 
 /**
  * The sandbox's own guarantees (surge plan L00/L01), checked without a
@@ -97,6 +97,39 @@ describe('the outbound guard', () => {
 
   it('points at a file that exists', () => {
     expect(resolve(__dirname, 'deny-outbound.cjs')).toMatch(/deny-outbound\.cjs$/)
+  })
+})
+
+describe('the fake-provider route', () => {
+  const probe = `
+    const http = require('node:http')
+    const out = []
+    const server = http.createServer((q, r) => r.end(q.method + ' ' + q.url)).listen(Number(process.env.PROBE_PORT), '127.0.0.1', async () => {
+      const read = async (url, init) => {
+        try { return await (await fetch(url, { ...init, signal: AbortSignal.timeout(3000) })).text() }
+        catch (e) { return 'refused ' + (e.cause && e.cause.code) }
+      }
+      out.push(await read('https://oauth2.googleapis.com/token?x=1', { method: 'POST', body: 'a=b' }))
+      out.push(await read(new Request('https://www.googleapis.com/oauth2/v3/certs')))
+      out.push(await read('https://api.resend.com/emails', { method: 'POST', body: '{}' }))
+      out.push(await read('https://oauth2.googleapis.com/revoke'))
+      server.close(() => console.log(out.join('|')))
+    })`
+
+  const run = (sandbox: string) => {
+    const port = String(20000 + Math.floor(Math.random() * 20000))
+    const env = withFakeProviderRoute(
+      withOutboundGuard({ PATH: process.env.PATH, READINESS_SANDBOX: sandbox, READINESS_FAKE_PROVIDER_URL: `http://127.0.0.1:${port}`, PROBE_PORT: port } as unknown as NodeJS.ProcessEnv),
+    )
+    return spawnSync(process.execPath, ['-e', probe], { env, encoding: 'utf8' }).stdout.trim()
+  }
+
+  it('sends exactly the Google and Resend endpoints to the fake, and nothing else', () => {
+    expect(run('1')).toBe('POST /google/token?x=1|GET /google/certs|POST /resend/emails|refused EREADINESSOUTBOUND')
+  })
+
+  it('does nothing outside the sandbox', () => {
+    expect(run('')).toBe('refused EREADINESSOUTBOUND|refused EREADINESSOUTBOUND|refused EREADINESSOUTBOUND|refused EREADINESSOUTBOUND')
   })
 })
 

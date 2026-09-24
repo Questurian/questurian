@@ -13,6 +13,7 @@ import { syncStripeCustomerEmail } from '@/payments/lib/customer-linkage'
 import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { normalizeEmail } from '@/shared/lib/normalize-email'
 import { VISITOR_AUTH_CLIENT_IP_HEADER } from './client-identity'
+import { googleProviderOptions } from './google-provider'
 import { redisSecondaryStorage } from './redis-secondary-storage'
 import { getVisitorPasswordError } from './visitor-password-guard'
 import { ensureVisitorProfileForAuthUser, splitDisplayName, updateVisitorProfileByAuthUserId } from './visitor-profile'
@@ -35,20 +36,11 @@ if (APP_CONFIG.isProduction && APP_CONFIG.turnstile.enabled && !APP_CONFIG.turns
 const googleProvider =
   APP_CONFIG.google.clientId && APP_CONFIG.google.clientSecret
     ? {
-        google: {
+        google: googleProviderOptions({
           clientId: APP_CONFIG.google.clientId,
           clientSecret: APP_CONFIG.google.clientSecret,
-          redirectURI: `${APP_URLS.backend}/api/visitor-auth/callback/google`,
-          mapProfileToUser: async (profile: { email?: string; email_verified?: boolean }) => {
-            const email = normalizeEmail(profile.email)
-            await rejectStaffEmailForVisitorAuth({ path: '/callback/google', email })
-
-            return {
-              email,
-              emailVerified: Boolean(profile.email_verified),
-            }
-          },
-        },
+          backendUrl: APP_URLS.backend,
+        }),
       }
     : undefined
 
