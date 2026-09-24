@@ -64,3 +64,28 @@ describe('safeReturnPath — refuses', () => {
     expect(safeReturnPath(`/${'a'.repeat(600)}`)).toBe(DEFAULT_RETURN_PATH)
   })
 })
+
+describe('safeReturnPath — edges found by mutation testing', () => {
+  it('falls back to the account page, by that exact path', () => {
+    expect(DEFAULT_RETURN_PATH).toBe('/account')
+    expect(safeReturnPath(42)).toBe('/account')
+  })
+
+  it('falls back when the value cannot be decoded', () => {
+    expect(safeReturnPath('/%E0%A4%A')).toBe('/account')
+  })
+
+  it('accepts exactly 512 characters and refuses 513', () => {
+    expect(isSafeReturnPath(`/${'a'.repeat(511)}`)).toBe(true)
+    expect(isSafeReturnPath(`/${'a'.repeat(512)}`)).toBe(false)
+  })
+
+  // The browser would keep these on-site, but a later hop that treats the
+  // value as a URL might not; refused on purpose, and pinned.
+  it.each(['/x://evil.test', '/JavaScript:alert(1)', '/DATA:text/html,x', '/a?next=data:x'])(
+    'refuses %s',
+    (path) => {
+      expect(isSafeReturnPath(path)).toBe(false)
+    }
+  )
+})

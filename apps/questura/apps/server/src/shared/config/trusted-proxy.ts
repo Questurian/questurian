@@ -58,5 +58,6 @@ export function resolveTrustedProxyHeader(configured: string | undefined): strin
   const name = configured?.trim().toLowerCase()
   if (!name) return null
 
-  return TRUSTED_PROXY_HEADERS[name as TrustedProxyName] ?? null
+  // Own keys only: `constructor` or `toString` must not resolve to a function.
+  return Object.hasOwn(TRUSTED_PROXY_HEADERS, name) ? TRUSTED_PROXY_HEADERS[name as TrustedProxyName] : null
 }

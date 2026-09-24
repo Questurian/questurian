@@ -198,3 +198,53 @@ describe('registrableDomain', () => {
     )
   })
 })
+
+describe('cookie domain edges found by mutation testing', () => {
+  it.each([
+    'trycloudflare.com', 'pages.dev', 'workers.dev', 'r2.dev', 'up.railway.app', 'vercel.app',
+    'netlify.app', 'fly.dev', 'onrender.com', 'github.io', 'herokuapp.com', 'ngrok.io',
+    'ngrok.app', 'ngrok-free.app', 'co.uk', 'com.au', 'com.br',
+  ])('treats %s as a public suffix, in both checks', (suffix) => {
+    expect(validateCookieDomain(suffix, [`app.${suffix}`])).toContain('public suffix')
+    expect(registrableDomain(`a.b.${suffix}`)).toBe(`b.${suffix}`)
+  })
+
+  it('accepts a domain whose last label ends in a digit', () => {
+    expect(validateCookieDomain('shop.example1', ['www.shop.example1'])).toBeNull()
+  })
+
+  it('refuses a dotted-number domain, as an IP address', () => {
+    expect(validateCookieDomain('10.0.0.1')).toContain('IP address')
+    expect(validateCookieDomain('1.23')).toContain('IP address')
+  })
+
+  it('accepts one-character labels', () => {
+    expect(validateCookieDomain('a.b.co', ['x.a.b.co'])).toBeNull()
+  })
+
+  it('accepts 253 characters and a 63-character label, refuses one more of each', () => {
+    const label63 = 'a'.repeat(63)
+    expect(validateCookieDomain(`${label63}.com`, [`www.${label63}.com`])).toBeNull()
+    expect(validateCookieDomain(`${'a'.repeat(64)}.com`)).toContain('hostname labels')
+
+    const name253 = [label63, label63, label63, 'a'.repeat(61)].join('.')
+    expect(name253.length).toBe(253)
+    expect(validateCookieDomain(name253, [`${name253}`])).toBeNull()
+    expect(validateCookieDomain(`a${name253}`)).toContain('hostname labels')
+  })
+
+  it('refuses an empty label', () => {
+    expect(validateCookieDomain('questurian..com')).toContain('hostname labels')
+  })
+
+  it('ignores blank entries in the required-hosts list', () => {
+    expect(validateCookieDomain('questurian.com', ['', '   ', 'www.questurian.com'])).toBeNull()
+  })
+
+  it('names every uncovered host, comma-separated', () => {
+    expect(validateCookieDomain('questurian.com', ['a.example.com', 'b.example.com'])).toBe(
+      'is not sent to every host that needs the staff session ' +
+        '(a.example.com, b.example.com); those hosts would see no cookie and answer 401.'
+    )
+  })
+})
