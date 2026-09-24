@@ -58,6 +58,7 @@ function filled(): Record<string, string> {
     STRIPE_PRICE_ID_MONTHLY: 'price_synthetic_monthly',
     STRIPE_PRICE_ID_YEARLY: 'price_synthetic_yearly',
     RESEND_API_KEY: 're_synthetic',
+    EMAIL_FROM_ADDRESS: 'hello@questurian.com',
     GOOGLE_CLIENT_ID: 'synthetic.apps.googleusercontent.com',
     GOOGLE_CLIENT_SECRET: 'synthetic-google-secret',
     BUNNY_STORAGE_API_KEY: 'synthetic-bunny-key',
@@ -173,8 +174,22 @@ describe('platform checks the boot check cannot make', () => {
     ['REFRESH_DISCONNECTED', '1', 'readiness sandbox'],
     ['STRIPE_PRICE_ID', 'price_other', 'both set and differ'],
     ['TRUSTED_PROXY', '<decide>', 'placeholder'],
+    ['RESEND_API_KEY', 'sk_live_pasted_into_the_wrong_field', 'does not look like a Resend'],
+    ['EMAIL_FROM_ADDRESS', '<e.g. hello@questurian.com>', 'placeholder'],
   ])('refuses %s=%s', (key, value, expected) => {
     expect(platformProblems({ ...base(), [key]: value }).join('\n')).toContain(expected)
+  })
+
+  // Plan item 4, "done when": env:check refuses a missing or off-domain sender.
+  it.each([
+    [{ EMAIL_FROM_ADDRESS: '' }, 'EMAIL_FROM_ADDRESS is not set'],
+    [{ EMAIL_FROM_ADDRESS: 'you@gmail.com' }, "not the site's domain"],
+    [{ RESEND_API_KEY: '' }, 'RESEND_API_KEY is not set'],
+  ])('the boot check refuses %o', async (override, expected) => {
+    vi.resetModules()
+    const { problems } = await runBootCheck({ ...base(), ...override })
+
+    expect(problems.join('\n')).toContain(expected)
   })
 
   it('refuses one secret in two roles', () => {

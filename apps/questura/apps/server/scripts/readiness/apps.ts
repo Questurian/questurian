@@ -110,6 +110,11 @@ function backendEnvDeclared(settings: AppSettings): NodeJS.ProcessEnv {
 
     STRIPE_SECRET_KEY: 'sk_readiness_placeholder_not_a_key',
     STRIPE_WEBHOOK_SECRET: SANDBOX_WEBHOOK_SECRET,
+    // Production requires a Resend key and a sender on the site's domain. A
+    // placeholder key reaches nothing: the outbound guard blocks api.resend.com,
+    // and with the fake provider loaded the mail lands in its mailbox instead.
+    RESEND_API_KEY: 're_readiness_placeholder_not_a_key',
+    EMAIL_FROM_ADDRESS: `readiness@${new URL(origins?.clientOrigin ?? 'https://readiness-client.invalid').hostname}`,
     STRIPE_PRICE_ID: 'price_readiness_monthly',
     STRIPE_PRICE_ID_MONTHLY: 'price_readiness_monthly',
     STRIPE_PRICE_ID_YEARLY: 'price_readiness_yearly',

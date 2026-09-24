@@ -109,6 +109,9 @@ function childEnv(instance: string, port: number): NodeJS.ProcessEnv {
 
     STRIPE_SECRET_KEY: 'sk_readiness_placeholder_not_a_key',
     STRIPE_WEBHOOK_SECRET: 'whsec_readiness_placeholder',
+    // Required in production; the outbound guard means neither reaches Resend.
+    RESEND_API_KEY: 're_readiness_placeholder_not_a_key',
+    EMAIL_FROM_ADDRESS: 'readiness@readiness-client.invalid',
     STRIPE_PRICE_ID: 'price_readiness_placeholder',
     STRIPE_PRICE_ID_MONTHLY: 'price_readiness_placeholder',
 

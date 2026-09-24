@@ -108,6 +108,13 @@ export function platformProblems(env: Env): string[] {
     problems.push('STRIPE_SECRET_KEY does not look like a Stripe secret or restricted key.')
   }
 
+  // A Resend key always starts `re_`. Anything else is a value pasted into
+  // the wrong field, and it fails the first password reset, not the boot.
+  const resendKey = value('RESEND_API_KEY')
+  if (resendKey && !/^re_/.test(resendKey) && !PLACEHOLDER.test(resendKey)) {
+    problems.push('RESEND_API_KEY does not look like a Resend API key (re_...).')
+  }
+
   const monthly = value('STRIPE_PRICE_ID_MONTHLY')
   const legacy = value('STRIPE_PRICE_ID')
   if (monthly && legacy && monthly !== legacy) {

@@ -6,6 +6,7 @@ import {
   validateCookieDomain,
 } from './session-cookie'
 import { TRUSTED_PROXY_NAMES } from './trusted-proxy'
+import { emailSenderProblems } from './email-sender'
 import { clientBaseUrl, revalidationDisconnected, revalidationSecret } from '@/features/public-revalidation/revalidation/env'
 import { looksTransactionPooled } from '@/shared/database/pooled-uri'
 import { describePoolBudget, poolBudget } from '@/shared/database/pool-budget'
@@ -245,6 +246,19 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
     problems.push(
       'STRIPE_PRICE_ID (or STRIPE_PRICE_ID_MONTHLY) is not set — checkout would 400 at peak intent.'
     )
+  }
+
+  // Mail is how a reader gets back into their account. A missing Resend key
+  // does not fail the boot, it fails the first password reset; a sender off
+  // the site's domain sends nothing or lands in spam (`email-sender.ts`).
+  for (const problem of emailSenderProblems({
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    EMAIL_FROM_ADDRESS: process.env.EMAIL_FROM_ADDRESS,
+    EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME,
+    EMAIL_REPLY_TO: process.env.EMAIL_REPLY_TO,
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  })) {
+    problems.push(problem)
   }
 
   // Session-level advisory locks and transaction pooling are incompatible, and
