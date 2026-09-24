@@ -66,11 +66,23 @@ summary{cursor:pointer;font-weight:600;color:var(--accent)}
 <h1>Questura pre-launch plan</h1>
 <p class="lede">This is everything left before launch, in the order to do it. Each step is its own job with a prompt you can paste into a fresh AI session. The prompts are written so the new agent does not need this conversation. Most steps need nothing from you.</p>
 
+<div class="you" style="background:var(--ok-soft)">
+<p><strong>Status, 2026-09-24: steps 1–7 are done and merged.</strong> #681 typecheck in CI · #679 DB time limit and honest health check · #680 Google linking and staff isolation checks (2 real holes fixed) · #682 Better Auth 1.6.33 · #683 client Next 15.5.26 · #684 server Payload 3.90.2 + Next 16.3.6 · #685 sharp 0.35.4 and dependency overrides. No critical advisories remain; the server has 8 left (dev-only vite/vitest/esbuild majors, plus js-cookie via the unused <code>@payloadcms/payload-cloud</code>).</p>
+<p><strong>Left:</strong> step 8 and step 9 (both optional, need the owner), and the follow-ups below.</p>
+<ul>
+<li>Remove <code>@payloadcms/payload-cloud</code>: it's loaded in <code>payload.config.ts</code> but inert, since nothing sets <code>PAYLOAD_CLOUD</code>. Removing it clears the js-cookie advisory.</li>
+<li>Client <code>lint</code> still uses <code>next lint</code>, which is deprecated and removed in Next 16. Move it to the ESLint CLI before the client goes to Next 16.</li>
+<li>Payload warns about 14 Postgres identifiers longer than 63 characters. They were already truncated and nothing collides. The fix (<code>dbName</code>) is a schema change and needs its own PR.</li>
+<li><code>readiness:routes</code> rewrites the tracked <code>docs/capacity/runs/2026-09-24-surge-routes.json</code> on every run. Move that output somewhere untracked.</li>
+<li>The deploy to the laptop's live window, when it happens, applies migration <code>20260924_145915_payload_3_90_upgrade</code>, which adds 2 nullable columns.</li>
+</ul>
+</div>
+
 <section>
 <p class="label">For you</p>
 <h2>What actually needs you</h2>
 <div class="you">
-<p><strong>Right now: nothing.</strong> Start step 1 whenever you like.</p>
+<p><strong>Right now: nothing.</strong></p>
 <p><strong>Later, two small things. Both are optional, and neither blocks launch:</strong></p>
 <ul>
 <li><strong>Step 8:</strong> give the agent a Stripe <em>test-mode</em> key if you want recorded sample data. Skip it if not.</li>
