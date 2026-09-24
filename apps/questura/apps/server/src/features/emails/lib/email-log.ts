@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { APP_CONFIG } from '../../../shared/config'
+import { maskEmail } from './mask-email'
 
 export type EmailLogEntry = {
   emailType: string
@@ -36,7 +37,7 @@ export async function recordEmailLog(payload: Payload, entry: EmailLogEntry): Pr
   } catch (error) {
     console.error('⚠️ Failed to record email log entry:', {
       emailType: entry.emailType,
-      recipient: entry.recipient,
+      recipient: maskEmail(entry.recipient),
       error: error instanceof Error ? error.message : 'Unknown error',
     })
   }
