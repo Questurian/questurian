@@ -74,12 +74,12 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
 
    ```bash
    pnpm --dir apps/questura/apps/server readiness:stack -- up --build
-   pnpm --dir apps/questura/apps/server readiness:routes     # expect 114/114
+   pnpm --dir apps/questura/apps/server readiness:routes     # expect 119/119: includes redirects never leaving the site
    pnpm --dir apps/questura/apps/server readiness:payments   # expect 43/43
    pnpm --dir apps/questura/apps/server readiness:purchase   # expect 38/38: a whole purchase, refunds and disputes, fake Stripe (basil-shaped)
    pnpm --dir apps/questura/apps/server readiness:auth       # expect 29/29: sign-in and sessions, attacked
    pnpm --dir apps/questura/apps/server readiness:oauth      # expect 71/71: Google linking (fake Google), staff/visitor isolation
-   pnpm --dir apps/questura/apps/server readiness:faults     # expect 22/22: Stripe, Redis, Postgres failing (Postgres frozen: 503 in ~17 s, ready 503 in ~2 s)
+   pnpm --dir apps/questura/apps/server readiness:faults     # expect 26/26: Stripe, Redis, Postgres failing (Postgres frozen: 503 in ~17 s, ready 503 in ~2 s; articles locked: member body 503 + Retry-After in ~5 s)
    pnpm --dir apps/questura/apps/server readiness:contracts  # expect all ok: response shapes match both apps' types
    pnpm --dir apps/questura/apps/server launch:verify -- \
      --client http://app.readiness.localhost:3100 \
