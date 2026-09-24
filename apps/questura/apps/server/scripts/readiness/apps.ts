@@ -164,6 +164,10 @@ export function clientEnv(settings: AppSettings, options: { build?: boolean } = 
     QUESTURA_REVALIDATION_SECRET: settings.revalidationSecret,
     ...(settings.renderToken ? { QUESTURA_RENDER_TOKEN: settings.renderToken } : {}),
   }
+  // The client refuses a production build with loopback addresses and no
+  // live Stripe key (`productionBuildEnv.ts`), and scans its output for them.
+  // The sandbox is built that way on purpose and says so by name.
+  if (options.build) env.QUESTURA_BUILD_TARGET = 'readiness'
   // `next/font/google` downloads its fonts during the build; that is the one
   // outbound request a readiness process may make, and only while building.
   const allow = options.build ? ['fonts.googleapis.com', 'fonts.gstatic.com'] : []

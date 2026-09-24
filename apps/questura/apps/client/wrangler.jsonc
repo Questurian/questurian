@@ -17,6 +17,12 @@
   "compatibility_date": "2026-09-22",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
 
+  // The site is served only on its own domain. A *.workers.dev copy (or a
+  // per-version preview URL) would be a second, crawlable copy of every page
+  // that cannot carry the session cookie.
+  "workers_dev": false,
+  "preview_urls": false,
+
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -55,7 +61,9 @@
   "images": { "binding": "IMAGES" },
 
   "vars": {
-    // Public, non-secret. The backend origin this frontend renders from.
+    // Local preview only. NEXT_PUBLIC_* values are baked into the site when
+    // it is built, so this runtime var does not choose the API a deployed
+    // site calls: the build's environment does (H01 step 19).
     "NEXT_PUBLIC_BACKEND_URL": "http://127.0.0.1:4100"
   }
 

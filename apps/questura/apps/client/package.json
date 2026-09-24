@@ -5,7 +5,8 @@
   "scripts": {
     "sync:flags": "node scripts/sync-flag-assets.mjs",
     "dev": "pnpm run sync:flags && node scripts/show-commands.cjs && next dev --turbopack -p 3000",
-    "build": "pnpm run sync:flags && next build",
+    "build": "pnpm run sync:flags && next build && node scripts/scan-client-bundle.mjs",
+    "scan:bundle": "node scripts/scan-client-bundle.mjs",
     "check:global-css": "node scripts/check-global-css-boundaries.mjs",
     "start": "next start",
     "lint": "eslint src",
