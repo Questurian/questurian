@@ -126,7 +126,6 @@ describe('member emails', () => {
 
   it('the email-changed notice names the zone of its timestamp', async () => {
     await sendEmailChangedNotificationEmail(payload, {
-      email: 'old@example.com',
       oldEmail: 'old@example.com',
       newEmail: 'new@example.com',
       firstName: 'Ada',

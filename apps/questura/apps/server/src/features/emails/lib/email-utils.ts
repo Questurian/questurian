@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 
+import { APP_CONFIG } from '@/shared/config'
 import type { EmailResult } from '../types'
 import { recordEmailLog } from './email-log'
 import { maskEmail } from './mask-email'
@@ -7,11 +8,65 @@ import { maskEmail } from './mask-email'
 export { maskEmail }
 
 /**
- * Builds a personalized greeting from first/last name
+ * Escapes a value for HTML text or a double-quoted attribute.
+ *
+ * Every value a visitor controls goes through this before it reaches a
+ * template. A display name is typed at sign-up, and sign-up mails a
+ * verification link to whatever address was typed. Unescaped, anyone could
+ * register a stranger's address with a "name" that is a link or a fake
+ * notice, and Questurian would deliver it for them, from our own domain.
+ */
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
+ * Builds a personalized greeting from first/last name, escaped for HTML.
  */
 export function buildGreeting(firstName?: string, lastName?: string): string {
   const name = firstName || lastName ? `${firstName || ''} ${lastName || ''}`.trim() : ''
-  return name ? `Hello ${name}` : 'Hello'
+  return name ? `Hello ${escapeHtml(name)}` : 'Hello'
+}
+
+const ENTITIES: Record<string, string> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&#39;': "'",
+  '&nbsp;': ' ',
+}
+
+/**
+ * The plain-text part, derived from the HTML so the two cannot drift.
+ *
+ * Mail with no text part scores worse with spam filters and is unreadable in
+ * text-only clients. Links keep their address ("Reset password:
+ * https://..."), because a text part whose button went missing is useless.
+ */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href: string, label: string) => {
+      const text = label.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+      return text && text !== href ? `${text}: ${href}` : href
+    })
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<li\b[^>]*>/gi, '\n- ')
+    .replace(/<\/(p|div|h[1-6]|ul|ol|li|tr)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(amp|lt|gt|quot|#39|nbsp);/g, (entity) => ENTITIES[entity] ?? entity)
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
 
 /**
@@ -29,10 +84,15 @@ export async function sendEmail(
   try {
     console.log(`📧 Sending ${config.emailType} to:`, maskEmail(config.to))
 
+    // The From header is the adapter's default (payload.config.ts), set from
+    // EMAIL_FROM_ADDRESS / EMAIL_FROM_NAME. Reply-To only when configured.
+    const replyTo = APP_CONFIG.email.replyTo
     await payload.sendEmail({
       to: config.to,
       subject: config.subject,
       html: config.html,
+      text: htmlToText(config.html),
+      ...(replyTo ? { replyTo } : {}),
     })
 
     console.log(`✅ ${config.emailType} sent successfully to:`, maskEmail(config.to))
@@ -168,6 +228,28 @@ export function createSectionBox(
         ${content}
       </div>
     </div>
+  `
+}
+
+/**
+ * A button plus the bare link beneath it, for clients that drop the button.
+ * `url` is escaped for the attribute. It must already be an absolute https
+ * address on the site or API host; the render tests hold every template to
+ * that.
+ */
+export function createActionLink(url: string, label: string): string {
+  const href = escapeHtml(url)
+  return `
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${href}" style="background-color: #1A1A1A; color: #ffffff; padding: 14px 22px; border-radius: 4px; text-decoration: none; font-weight: 600; display: inline-block;">
+        ${escapeHtml(label)}
+      </a>
+    </div>
+    <p style="font-size: 14px; line-height: 1.5; color: #777;">
+      If the button does not work, copy and paste this link into your browser:
+      <br>
+      <a href="${href}" style="color: #1A1A1A; word-break: break-all;">${href}</a>
+    </p>
   `
 }
 

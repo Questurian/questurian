@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import {
   buildGreeting,
+  createActionLink,
   createFooter,
   createInfoBox,
   EMAIL_PARAGRAPH_STYLE,
@@ -24,16 +25,7 @@ export async function sendPasswordResetLinkEmail(
     <p style="${EMAIL_PARAGRAPH_STYLE}">
       We received a request to reset the password for your Questurian account.
     </p>
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${url}" style="background-color: #1A1A1A; color: #ffffff; padding: 14px 22px; border-radius: 4px; text-decoration: none; font-weight: 600; display: inline-block;">
-        Reset password
-      </a>
-    </div>
-    <p style="font-size: 14px; line-height: 1.5; color: #777;">
-      If the button does not work, copy and paste this link into your browser:
-      <br>
-      <a href="${url}" style="color: #1A1A1A; word-break: break-all;">${url}</a>
-    </p>
+    ${createActionLink(url, 'Reset password')}
     ${createInfoBox('warning', '<strong>Did not request this?</strong> You can safely ignore this email. Your password will remain unchanged.')}
     ${createFooter('Questurian Security Team')}
   `)

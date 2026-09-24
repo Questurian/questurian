@@ -1,61 +1,64 @@
 import type { Payload } from 'payload'
-import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createSectionBox, createInfoBox, EMAIL_PARAGRAPH_STYLE } from './email-utils'
-import type { EmailChangedNotificationData, EmailResult } from '../types'
-import { formatMemberTimestamp } from '@/shared/lib/dates'
 
+import { APP_URLS } from '@/shared/config'
+import { formatMemberTimestamp } from '@/shared/lib/dates'
+import type { EmailChangedNotificationData, EmailResult } from '../types'
+import {
+  buildGreeting,
+  createActionLink,
+  createFooter,
+  createInfoBox,
+  createSectionBox,
+  EMAIL_PARAGRAPH_STYLE,
+  escapeHtml,
+  sendEmail,
+  wrapEmailContent,
+} from './email-utils'
+
+/**
+ * Security notice to the OLD address once an email change has been verified.
+ *
+ * The new address proves only that the person asking controls the new
+ * address. If a session was stolen, the old address is the one place the
+ * real owner still hears about it, so this goes there and nowhere else.
+ */
 export async function sendEmailChangedNotificationEmail(
   payload: Payload,
-  { oldEmail, newEmail, firstName, lastName, wasGoogleUnlinked = false, wasStripeUpdated = false }: EmailChangedNotificationData
+  { oldEmail, newEmail, firstName, lastName }: EmailChangedNotificationData,
+  changedAt: Date = new Date()
 ): Promise<EmailResult> {
   const greeting = buildGreeting(firstName, lastName)
-  const timestamp = formatMemberTimestamp(new Date())
+  const timestamp = formatMemberTimestamp(changedAt)
 
   const html = wrapEmailContent(`
-    <h1 style="color: #28a745; text-align: center;">📧 Your Email Address Was Changed</h1>
+    <h1 style="color: #333; text-align: center;">Your email address was changed</h1>
     <p style="${EMAIL_PARAGRAPH_STYLE}">
       ${greeting},
     </p>
     <p style="${EMAIL_PARAGRAPH_STYLE}">
-      This is a security notification that your email address for your Questurian account has been successfully changed.
+      The email address on your Questurian account was changed. We are writing to your previous
+      address so you know.
     </p>
     ${createSectionBox(
-      '📋 Change Details:',
-      `<p style="margin: 8px 0;"><strong>Previous Email:</strong> ${oldEmail}</p>
-      <p style="margin: 8px 0;"><strong>New Email:</strong> ${newEmail}</p>
-      <p style="margin: 8px 0;"><strong>Changed On:</strong> ${timestamp}</p>
-      ${wasGoogleUnlinked ? '<p style="margin: 8px 0;"><strong>Google OAuth:</strong> Automatically unlinked</p>' : ''}
-      ${wasStripeUpdated ? '<p style="margin: 8px 0;"><strong>Stripe Email:</strong> Updated to new address</p>' : ''}`,
+      'Change details',
+      `<p style="margin: 8px 0;"><strong>Previous Email:</strong> ${escapeHtml(oldEmail)}</p>
+      <p style="margin: 8px 0;"><strong>New Email:</strong> ${escapeHtml(newEmail)}</p>
+      <p style="margin: 8px 0;"><strong>Changed On:</strong> ${timestamp}</p>`,
       'neutral'
     )}
-    ${wasGoogleUnlinked ? createSectionBox(
-      '🔗 Google Account Unlinked',
-      `<p style="margin: 8px 0;">Because you changed your email address, your Google account was automatically unlinked from your Questurian account for security reasons.</p>
-      <p style="margin: 8px 0;">You can now only log in with your password. If you'd like to re-link a Google account with your new email address, you can do so from your account settings.</p>`,
-      'info'
-    ) : ''}
-    ${createSectionBox(
-      '🔐 What Changed:',
-      `<ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
-        <li>Your account email has been updated to ${newEmail}</li>
-        <li>All active sessions were logged out for security</li>
-        <li>Future logins must use your new email address</li>
-        ${wasGoogleUnlinked ? '<li>Google OAuth was unlinked (password login only)</li>' : ''}
-        <li>Email notifications will now be sent to your new address</li>
-        ${wasStripeUpdated ? '<li>Stripe receipts and invoices will be sent to your new address</li>' : ''}
-      </ul>`,
-      'success'
-    )}
-    ${createInfoBox('warning', '⚠️ <strong>Didn\'t make this change?</strong> If you didn\'t authorize this email change, please contact our support team immediately to secure your account. Someone may have unauthorized access.')}
     <p style="${EMAIL_PARAGRAPH_STYLE}">
-      This notification was sent to your previous email address as a security measure. You will receive all future communications at your new email address.
+      From now on you sign in with the new address, and account and membership emails go there.
+      If that was you, there is nothing else to do.
     </p>
+    ${createInfoBox('warning', '<strong>Did not make this change?</strong> Reply to this email straight away so we can secure your account. This address no longer signs in to it.')}
+    ${createActionLink(APP_URLS.frontendUrl('/account'), 'Open your account')}
     ${createFooter('Questurian Security Team')}
   `)
 
   return sendEmail(payload, {
     emailType: 'email changed notification email',
-    to: oldEmail, // Send to OLD email as security notification
-    subject: 'Your Email Address Was Changed - Questurian',
-    html
+    to: oldEmail,
+    subject: 'Your Questurian email address was changed',
+    html,
   })
 }

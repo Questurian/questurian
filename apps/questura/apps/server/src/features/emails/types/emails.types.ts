@@ -9,34 +9,19 @@ export interface EmailResult {
   error?: string
 }
 
-export interface EmailChangeVerificationData extends BaseEmailData {
-  code: string
-}
-
-export interface EmailChangedNotificationData extends BaseEmailData {
+/** Sent to the OLD address once an email change has been verified. */
+export interface EmailChangedNotificationData {
   oldEmail: string
   newEmail: string
-  wasGoogleUnlinked?: boolean
-  wasStripeUpdated?: boolean
-}
-
-export interface EmailVerificationParams {
-  email: string
-  firstName: string
-  lastName: string
-  code: string
+  firstName?: string
+  lastName?: string
 }
 
 export interface EmailVerificationLinkParams extends BaseEmailData {
   url: string
 }
 
-export interface GoogleAccountLinkedParams {
-  email: string
-  firstName: string
-  lastName: string
-  googleEmail: string
-}
+export type GoogleAccountLinkedEmailData = BaseEmailData
 
 export interface MembershipConfirmationEmailData extends BaseEmailData {
   subscriptionType?: string
@@ -44,19 +29,7 @@ export interface MembershipConfirmationEmailData extends BaseEmailData {
   isRecurring?: boolean
 }
 
-export type PasswordBackupAddedEmailData = BaseEmailData
-
-export interface PasswordChangeConfirmationEmailData extends BaseEmailData {
-  code: string
-}
-
-export type PasswordChangedSuccessEmailData = BaseEmailData
-
-export type PasswordResetSuccessEmailData = BaseEmailData
-
-export interface PasswordResetEmailData extends BaseEmailData {
-  code: string
-}
+export type PasswordChangedEmailData = BaseEmailData
 
 export interface PasswordResetLinkEmailData extends BaseEmailData {
   url: string
@@ -71,10 +44,4 @@ export interface SubscriptionCancelledEmailData extends BaseEmailData {
 export interface SubscriptionReactivatedEmailData extends BaseEmailData {
   subscriptionType?: string
   renewsAt?: Date
-}
-
-export interface WelcomeEmailParams {
-  email: string
-  firstName: string
-  lastName: string
 }

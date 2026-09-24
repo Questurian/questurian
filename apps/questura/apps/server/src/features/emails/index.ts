@@ -1,16 +1,17 @@
-// Export all email template functions
-export { sendEmailVerificationEmail } from './lib/email-verification'
-export { sendWelcomeEmail } from './lib/welcome-email'
-export { sendGoogleAccountLinkedEmail } from './lib/google-account-linked'
-export { sendEmailChangeVerificationEmail } from './lib/email-change-verification'
-export { sendEmailChangedNotificationEmail } from './lib/email-changed-notification'
-export { sendPasswordChangeConfirmationEmail } from './lib/password-change-confirmation'
-export { sendPasswordChangedSuccessEmail } from './lib/password-changed-success'
-export { sendPasswordBackupAddedEmail } from './lib/password-backup-added'
-export { sendPasswordResetEmail } from './lib/password-reset-verification'
+// Every template here is sent, and each has a render test (lib/templates.test.ts).
+// Templates nothing sent were deleted (launch fix plan, decision D4). Add one
+// back only together with the code that sends it and its render test.
+
+// Visitor account
 export { sendPasswordResetLinkEmail } from './lib/password-reset-link'
 export { sendVisitorEmailVerificationLinkEmail } from './lib/visitor-email-verification-link'
-export { sendPasswordResetSuccessEmail } from './lib/password-reset-success'
+
+// Security notices, sent from visitor-auth/lib/security-notices.ts
+export { sendPasswordChangedEmail } from './lib/password-changed'
+export { sendEmailChangedNotificationEmail } from './lib/email-changed-notification'
+export { sendGoogleAccountLinkedEmail } from './lib/google-account-linked'
+
+// Membership
 export { sendSubscriptionCancelledEmail } from './lib/subscription-cancelled'
 export { sendSubscriptionReactivatedEmail } from './lib/subscription-reactivated'
 export { sendMembershipConfirmationEmail } from './lib/membership-confirmation'
