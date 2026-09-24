@@ -8,7 +8,7 @@
     "build": "pnpm run sync:flags && next build",
     "check:global-css": "node scripts/check-global-css-boundaries.mjs",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint src",
     "test": "node --experimental-strip-types --test \"src/**/*.test.mjs\"",
     "typecheck": "tsc --noEmit"
   },
