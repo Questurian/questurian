@@ -14,7 +14,7 @@ import {
  * nightly that can be exercised without touching live Stripe.
  */
 
-const CLEAN_VERIFY = { endpoints: 1, missing: 0, disabled: 0, extra: 0 }
+const CLEAN_VERIFY = { endpoints: 1, missing: 0, disabled: 0, extra: 0, version_mismatch: 0 }
 const CLEAN_PROFILES = {
   scanned: 12,
   profiles: 9,
@@ -83,6 +83,9 @@ describe('buildReconcileReport exit code', () => {
   it.each([
     ['missing events on an enabled endpoint', { verify: { missing: 2 } }],
     ['a disabled endpoint', { verify: { disabled: 1 } }],
+    // An endpoint on another API version renders refund bodies in a shape the
+    // handlers were not written against (the basil `invoice` removal).
+    ['an endpoint on a different API version', { verify: { version_mismatch: 1 } }],
     ['an orphaned Stripe customer', { profiles: { orphaned: 1 } }],
     ['duplicate Stripe customers for one email', { profiles: { duplicate: 1 } }],
     ['a stuck revocation', { audit: { stuck: 1 } }],

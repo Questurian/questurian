@@ -57,7 +57,10 @@ export type StepStatus = 'ok' | 'attention' | 'error'
  * pass exists to fix, so finding them is not an escalation.
  */
 export const ESCALATING_COUNTS: Readonly<Record<ReconcileStepName, readonly string[]>> = {
-  verify: ['missing', 'disabled'],
+  // `version_mismatch` is an endpoint rendering events at another API version
+  // than the SDK's pin: refund bodies then arrive in a shape the handlers were
+  // not written for. Fixing it means recreating the endpoint, a human job.
+  verify: ['missing', 'disabled', 'version_mismatch'],
   // `unproven` and `mismatched` are ownership questions only a human can
   // answer: an email match is not proof, so the script reports them instead of
   // adopting them, and the nightly must not let that report go unread.
@@ -76,7 +79,7 @@ export const ESCALATING_COUNTS: Readonly<Record<ReconcileStepName, readonly stri
  * stable enough to grep and to diff between nights.
  */
 const SUMMARY_COUNTS: Readonly<Record<ReconcileStepName, readonly string[]>> = {
-  verify: ['missing', 'disabled', 'extra'],
+  verify: ['missing', 'disabled', 'extra', 'version_mismatch'],
   profiles: [
     'relinkable',
     'drifted',

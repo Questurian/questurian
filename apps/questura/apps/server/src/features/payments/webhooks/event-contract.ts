@@ -46,3 +46,27 @@ export const DELIBERATELY_UNHANDLED_STRIPE_EVENTS: Readonly<Record<string, strin
   'invoice.payment_action_required':
     'SCA step-up on a renewal. Stripe emails the visitor and retries on its own, and a genuine failure arrives as invoice.payment_failed, which is handled. Adding it would only duplicate the dunning signal.',
 }
+
+/**
+ * Why a webhook endpoint's API version is wrong for this app, or null when it
+ * is right.
+ *
+ * Stripe renders every webhook body at the *endpoint's* API version, not the
+ * version the SDK is pinned to (`stripe-api-version.ts`). The two must match:
+ * API 2025-03-31.basil removed `invoice` from Charge, so the same refund reads
+ * differently depending on which version rendered it, and code written against
+ * one shape silently does nothing with the other. An endpoint with no version
+ * follows the account default, which nothing in this repo controls. Create the
+ * endpoint at the pinned version (serverless launch checklist §5).
+ *
+ * Takes the pinned version as an argument so this module stays import-free.
+ */
+export function webhookApiVersionProblem(endpointVersion: string | null, pinnedVersion: string): string | null {
+  if (endpointVersion === pinnedVersion) return null
+
+  if (!endpointVersion) {
+    return `renders events at the account default API version, not the pinned ${pinnedVersion}; recreate the endpoint with api_version ${pinnedVersion}`
+  }
+
+  return `renders events at API version ${endpointVersion}, but the app is pinned to ${pinnedVersion}; recreate the endpoint with api_version ${pinnedVersion}`
+}
