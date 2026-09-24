@@ -49,6 +49,13 @@ async function withCors(req: NextRequest, handler: (request: Request) => Promise
     headers.set(key, value)
   }
 
+  // Better Auth's limiter says when to come back in `X-Retry-After`, a header
+  // nothing reads. Clients and proxies read `Retry-After`.
+  const betterAuthRetry = headers.get('x-retry-after')
+  if (response.status === 429 && betterAuthRetry && !headers.has('retry-after')) {
+    headers.set('Retry-After', betterAuthRetry)
+  }
+
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

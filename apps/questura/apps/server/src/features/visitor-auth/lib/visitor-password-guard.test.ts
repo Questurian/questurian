@@ -57,3 +57,20 @@ describe('visitor password guard', () => {
     expect(getVisitorPasswordError('/', { newPassword: 'weak' })).toBeNull()
   })
 })
+
+describe('visitor password guard reads the field each path sets', () => {
+  // Reset, change and set send `newPassword`. The guard used to check
+  // `password ?? newPassword`, so a strong decoy `password` hid a weak
+  // `newPassword` (found by `pnpm readiness:auth`).
+  it.each(['/reset-password', '/change-password', '/set-password'])('%s checks newPassword even beside a strong decoy', (path) => {
+    expect(getVisitorPasswordError(path, { newPassword: 'weakpass', password: 'Decoy-Strong-2026!' })).not.toBeNull()
+  })
+
+  it('sign-up checks password even beside a strong decoy newPassword', () => {
+    expect(getVisitorPasswordError('/sign-up/email', { password: 'weakpass', newPassword: 'Decoy-Strong-2026!' })).not.toBeNull()
+  })
+
+  it('a missing new password is left to Better Auth, as before', () => {
+    expect(getVisitorPasswordError('/change-password', { currentPassword: 'x' } as never)).toBeNull()
+  })
+})

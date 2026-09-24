@@ -38,7 +38,8 @@ export function validatePasswordRequirements(password: string): PasswordRequirem
     hasMinLength: password.length >= PASSWORD_MIN_LENGTH,
     hasMaxLength: password.length <= PASSWORD_MAX_LENGTH,
     hasNumber: /\d/.test(password),
-    hasUppercase: /[A-Z]/.test(password),
+    // Any alphabet: `[A-Z]` refused `Ünïcødé-…` for having no uppercase letter.
+    hasUppercase: /\p{Lu}/u.test(password),
     hasSymbol: SYMBOL_PATTERN.test(password),
   }
 }
@@ -57,6 +58,13 @@ export function getPasswordStrengthError(password: unknown): string | null {
 
   if (!requirements.hasMaxLength) {
     return `Password must be at most ${PASSWORD_MAX_LENGTH} characters.`
+  }
+
+  // No keyboard or password manager types these. A password holding one is a
+  // paste accident its owner cannot reproduce, or an attack on whatever
+  // stores or compares it.
+  if (/[\x00-\x1f\x7f]/.test(password)) {
+    return 'Password must not contain control characters.'
   }
 
   const missing: string[] = []

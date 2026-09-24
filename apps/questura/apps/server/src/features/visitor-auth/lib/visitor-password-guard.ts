@@ -24,7 +24,8 @@ type PasswordBody = {
  * Returns the strength error for a Better Auth request, or `null` when the
  * request either carries no new password or carries an acceptable one.
  *
- * Sign-up sends `password`; reset/change/set send `newPassword`.
+ * Sign-up sends `password`; reset/change/set send `newPassword`, and only that
+ * field is checked on each.
  *
  * Kept separate from `better-auth.ts` so it can be tested without constructing
  * a live Better Auth instance (that module opens a database pool at import).
@@ -32,7 +33,10 @@ type PasswordBody = {
 export function getVisitorPasswordError(path: string, body: PasswordBody): string | null {
   if (!PASSWORD_BEARING_PATHS.has(path)) return null
 
-  const candidate = body?.password ?? body?.newPassword
+  // The field Better Auth will actually set on this path. Taking whichever
+  // was present let a strong decoy `password` stand in for a weak
+  // `newPassword` on reset, change and set.
+  const candidate = path === '/sign-up/email' ? body?.password : body?.newPassword
 
   if (candidate === undefined || candidate === null) return null
 

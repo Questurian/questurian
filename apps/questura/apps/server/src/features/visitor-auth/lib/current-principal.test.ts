@@ -292,3 +292,47 @@ describe('Current principal', () => {
     })
   })
 })
+
+// Better Auth trusts a valid session_data cookie without checking it belongs
+// to the session_token beside it (found by `pnpm readiness:auth`): A's cache
+// cookie with B's token was read as A.
+describe('cookie cache that does not match the session token', () => {
+  const user = (id: string) => ({ id, email: `${id}@example.com`, emailVerified: true, name: id })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.findAccounts.mockResolvedValue([])
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({ id: 1, firstName: '', lastName: '' })
+  })
+
+  it('is not trusted: the session is looked up fresh from the token', async () => {
+    mocks.getSession
+      .mockResolvedValueOnce({ session: { token: 'token_A' }, user: user('visitor_A') })
+      .mockResolvedValueOnce({ session: { token: 'token_B' }, user: user('visitor_B') })
+
+    const result = await getCurrentPrincipal(new Headers({ cookie: 'questura_visitor.session_token=token_B.sig' }))
+
+    expect(mocks.getSession).toHaveBeenCalledTimes(2)
+    expect(mocks.getSession.mock.calls[1]![0]).toMatchObject({ query: { disableCookieCache: true } })
+    expect(result.principal?.id).toBe('visitor_B')
+  })
+
+  it('with no session token at all, is not trusted either', async () => {
+    mocks.getSession
+      .mockResolvedValueOnce({ session: { token: 'token_A' }, user: user('visitor_A') })
+      .mockResolvedValueOnce(null)
+
+    const result = await getCurrentPrincipal(new Headers({ cookie: 'questura_visitor.session_data=cached' }))
+
+    expect(result.principal).toBeNull()
+  })
+
+  it('costs nothing extra when cache and token agree', async () => {
+    mocks.getSession.mockResolvedValue({ session: { token: 'token_A' }, user: user('visitor_A') })
+
+    const result = await getCurrentPrincipal(new Headers({ cookie: '__Secure-questura_visitor.session_token=token_A.sig' }))
+
+    expect(mocks.getSession).toHaveBeenCalledTimes(1)
+    expect(result.principal?.id).toBe('visitor_A')
+  })
+})

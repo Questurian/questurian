@@ -88,7 +88,8 @@ async function main(): Promise<void> {
   if (!stack) throw new Error('No stack is running. Start one: pnpm readiness:stack -- up --build')
   const origin = stack.origins.client
   const manifest = JSON.parse(readFileSync(LAUNCH_MANIFEST_PATH, 'utf8')) as LaunchManifest
-  const memberPiece = manifest.pieces.find((piece) => piece.access === 'member' && piece.status === 'published')!
+  const memberPiece = manifest.pieces.find((piece) => piece.access === 'member' && piece.status === 'published' && piece.markers.member)!
+  const memberMarker = memberPiece.markers.member!
   const pool = new Pool({ connectionString: settings.databaseUri, max: 2 })
 
   await fake('/__fake/reset', {})
@@ -99,7 +100,7 @@ async function main(): Promise<void> {
   const body = async (cookie: string) => {
     const response = await fetch(`${BACKEND}/api/public/articles/full?type=${memberPiece.type}&id=${memberPiece.id}&lang=en`, { headers: as(cookie) })
     const text = await response.text()
-    return { status: response.status, hasMarker: text.includes(memberPiece.markers.member) }
+    return { status: response.status, hasMarker: text.includes(memberMarker) }
   }
   const checkout = (cookie: string) =>
     fetch(`${BACKEND}/api/payments/create-checkout-session`, { method: 'POST', headers: as(cookie), body: JSON.stringify({ plan: 'monthly' }) })
