@@ -1,13 +1,13 @@
 {
-  "createdAt": "2026-09-24T23:44:07.301Z",
+  "createdAt": "2026-09-23T03:58:53.080Z",
   "source": {
-    "sha": "389426c461b60225fcecf01e7f2852dcda0cdaaa",
+    "sha": "9fb7cd1bdf6cca945f41fe2ab82ae975f4a07c5b",
     "dirty": true,
-    "diffFingerprint": "becf5ee72080eace"
+    "diffFingerprint": "0150832b26de14a2"
   },
   "runtime": {
-    "node": "v22.23.2",
-    "platform": "linux"
+    "node": "v24.15.0",
+    "platform": "darwin"
   },
   "dataset": {
     "database": "questura_readiness",
@@ -17,11 +17,11 @@
   "ports": {
     "frontend": 3100,
     "backend": 4100,
-    "redis": 6491
+    "redis": 6390
   },
   "settings": {
-    "databaseUri": "postgres://127.0.0.1:5463/questura_readiness",
-    "redisUri": "redis://127.0.0.1:6491",
+    "databaseUri": "postgres://127.0.0.1:5432/questura_readiness",
+    "redisUri": "redis://127.0.0.1:6390",
     "frontendUrl": "http://127.0.0.1:3100",
     "backendUrl": "http://127.0.0.1:4100"
   },
