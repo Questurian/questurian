@@ -26,6 +26,7 @@ Platform plan: `docs/capacity/cap07-platform-readiness.md` §1a. Clicks:
    pnpm --dir apps/questura/apps/server readiness:stack -- up --build
    pnpm --dir apps/questura/apps/server readiness:routes     # expect 114/114
    pnpm --dir apps/questura/apps/server readiness:payments   # expect 43/43
+   pnpm --dir apps/questura/apps/server readiness:purchase   # expect 22/22: a whole purchase, fake Stripe
    pnpm --dir apps/questura/apps/server launch:verify -- \
      --client http://app.readiness.localhost:3100 \
      --api http://api.readiness.localhost:4100 \

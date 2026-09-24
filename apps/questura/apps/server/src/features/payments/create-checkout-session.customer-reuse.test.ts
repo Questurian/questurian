@@ -211,7 +211,9 @@ describe('create checkout session duplicate Stripe customer guard', () => {
       expect.objectContaining({
         email: 'visitor@example.com',
         metadata: { visitorAuthUserId: 'visitor_123', visitorProfileId: '10' },
-      })
+      }),
+      // Idempotent, so a double-clicked first purchase makes one customer.
+      { idempotencyKey: expect.stringMatching(/^customer-create:[0-9a-f]{64}$/) }
     )
   })
 
