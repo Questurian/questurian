@@ -111,7 +111,7 @@ th{font:600 .72rem/1.2 var(--body);letter-spacing:.06em;text-transform:uppercase
 <ul>
 <li>Read the Better Auth changelog from 1.6.12 to 1.6.33 for anything touching cookie cache, <code>ipAddressHeaders</code>, rate limiting, <code>X-Retry-After</code>, social sign-in or the Payload/Postgres adapter. The Questura code leans on several of these on purpose; see <code>src/features/visitor-auth/lib/current-principal.ts</code> and <code>client-identity.ts</code>.</li>
 <li>If the Better Auth tables change, follow the migration steps in <code>AGENTS.md</code> exactly. Stop and ask if <code>visitor_auth_*</code> tables would change unexpectedly.</li>
-<li>Prove it with the unit tests, then <code>readiness:auth</code> (29/29), <code>readiness:purchase</code> (22/22) and the Playwright suite.</li>
+<li>Prove it with the unit tests, then <code>readiness:auth</code> (29/29), <code>readiness:oauth</code> (71/71: Google linking against a fake Google, staff/visitor isolation), <code>readiness:purchase</code> (22/22) and the Playwright suite.</li>
 </ul>
 </div>
 
@@ -154,12 +154,13 @@ pnpm --dir apps/questura/apps/server test
 pnpm --dir apps/questura/apps/client test
 
 # production build of both apps in the readiness sandbox
-# (Postgres :5442, Redis :6390, fake Stripe :3191; see launch-day.md for setup)
+# (Postgres :5442, Redis :6390, fake Stripe :3191, fake Google :3192; see launch-day.md for setup)
 pnpm --dir apps/questura/apps/server readiness:stack -- up --build
 pnpm --dir apps/questura/apps/server readiness:routes     # 114/114
 pnpm --dir apps/questura/apps/server readiness:payments   # 43/43
 pnpm --dir apps/questura/apps/server readiness:purchase   # 22/22
 pnpm --dir apps/questura/apps/server readiness:auth       # 29/29
+pnpm --dir apps/questura/apps/server readiness:oauth      # 71/71
 pnpm --dir apps/questura/apps/server readiness:faults     # 22/22
 pnpm --dir apps/questura/apps/server readiness:contracts  # all ok
 

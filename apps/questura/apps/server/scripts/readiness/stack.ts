@@ -9,8 +9,8 @@
  *
  * What it guarantees, and how each guarantee is enforced rather than hoped:
  *
- *  - **Ports.** Redis 6390, fixture media 3190, Stripe stub 3191, backend
- *    4100, client 3100.
+ *  - **Ports.** Redis 6390, fixture media 3190, Stripe stub 3191, fake
+ *    Google and mailbox 3192 (`oauth-fake.ts`), backend 4100, client 3100.
  *    Each is TCP-probed first; anything listening is a refusal, never
  *    something to attach to. Development ports (3000/4000/5432/6379) are
  *    refused by preflight.
@@ -55,7 +55,7 @@ import { assertPreflight } from './preflight'
 import { sandboxSettings, sourceIdentity } from './sandbox'
 import { dotenvNames } from './sandbox-env'
 
-export const STACK_PORTS = { client: 3100, backend: 4100, media: 3190, stripe: 3191, redis: 6390 } as const
+export const STACK_PORTS = { client: 3100, backend: 4100, media: 3190, stripe: 3191, oauth: 3192, redis: 6390 } as const
 export const STACK_DIST = '.next-readiness'
 export const STATE_DIR = resolve(tmpdir(), 'questura-readiness')
 const STATE_FILE = resolve(STATE_DIR, 'stack.json')
@@ -100,6 +100,7 @@ export function stackAppSettings(state: Pick<StackState, 'secrets' | 'origins' |
     outboundLog: state.outboundLog,
     workerIntervalMs: 5_000,
     stripeStubUrl: `http://127.0.0.1:${STACK_PORTS.stripe}`,
+    fakeProviderUrl: `http://127.0.0.1:${STACK_PORTS.oauth}`,
   }
 }
 
@@ -199,6 +200,21 @@ export async function stackUp(options: { build: boolean; buildClient?: boolean }
     )
     record()
     if (!(await waitForPort(STACK_PORTS.stripe, 15_000))) throw new Error('The Stripe stub did not start on 3191.')
+
+    state.processes.push(
+      launch('oauth-fake', process.execPath, ['--import', 'tsx', 'scripts/readiness/oauth-fake.ts', String(STACK_PORTS.oauth)], {
+        cwd: SERVER_DIR(),
+        env: {
+          PATH: process.env.PATH,
+          HOME: process.env.HOME,
+          NODE_ENV: 'production',
+          READINESS_GOOGLE_REDIRECT_URI: `${state.origins.backend}/api/visitor-auth/callback/google`,
+        },
+        marker: 'oauth-fake.ts',
+      }),
+    )
+    record()
+    if (!(await waitForPort(STACK_PORTS.oauth, 15_000))) throw new Error('The fake Google did not start on 3192.')
 
     if (options.build) build('server', SERVER_DIR(), backendEnv(settings), ['tsconfig.json', 'src/payload-types.ts'])
 

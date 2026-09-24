@@ -28,6 +28,7 @@ Platform plan: `docs/capacity/cap07-platform-readiness.md` §1a. Clicks:
    pnpm --dir apps/questura/apps/server readiness:payments   # expect 43/43
    pnpm --dir apps/questura/apps/server readiness:purchase   # expect 22/22: a whole purchase, fake Stripe
    pnpm --dir apps/questura/apps/server readiness:auth       # expect 29/29: sign-in and sessions, attacked
+   pnpm --dir apps/questura/apps/server readiness:oauth      # expect 71/71: Google linking (fake Google), staff/visitor isolation
    pnpm --dir apps/questura/apps/server readiness:faults     # expect 22/22: Stripe, Redis, Postgres failing (Postgres frozen: 503 in ~17 s, ready 503 in ~2 s)
    pnpm --dir apps/questura/apps/server readiness:contracts  # expect all ok: response shapes match both apps' types
    pnpm --dir apps/questura/apps/server launch:verify -- \

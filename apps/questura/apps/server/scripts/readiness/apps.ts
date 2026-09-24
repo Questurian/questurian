@@ -21,7 +21,8 @@ import { existsSync } from 'node:fs'
 import { connect } from 'node:net'
 import { resolve } from 'node:path'
 
-import { neutraliseDotenv, withOutboundGuard } from './sandbox-env'
+import { FAKE_GOOGLE } from './oauth-fake'
+import { neutraliseDotenv, withFakeProviderRoute, withOutboundGuard } from './sandbox-env'
 
 /** The sandbox backend's webhook signing secret. A placeholder: no Stripe endpoint has it. */
 export const SANDBOX_WEBHOOK_SECRET = 'whsec_readiness_placeholder'
@@ -56,6 +57,12 @@ export type AppSettings = {
   workerIntervalMs?: number
   /** The loopback Stripe stub (`stripe-stub.ts`). Without it, Stripe calls are refused at the socket. */
   stripeStubUrl?: string
+  /**
+   * The loopback fake Google and mailbox (`oauth-fake.ts`). Present: Google
+   * sign-in is switched on with the fake's client, and the backend loads
+   * `oauth-fake-route.cjs` so its calls to Google and Resend land there.
+   */
+  fakeProviderUrl?: string
 }
 
 export const backendUrl = (settings: AppSettings): string => `http://127.0.0.1:${settings.ports.backend}`
@@ -65,7 +72,8 @@ const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
 export function backendEnv(settings: AppSettings): NodeJS.ProcessEnv {
   const env = backendEnvDeclared(settings)
-  return withOutboundGuard(neutraliseDotenv(env, SERVER_DIR()).env, settings.outboundLog)
+  const guarded = withOutboundGuard(neutraliseDotenv(env, SERVER_DIR()).env, settings.outboundLog)
+  return settings.fakeProviderUrl ? withFakeProviderRoute(guarded) : guarded
 }
 
 function backendEnvDeclared(settings: AppSettings): NodeJS.ProcessEnv {
@@ -107,6 +115,13 @@ function backendEnvDeclared(settings: AppSettings): NodeJS.ProcessEnv {
     STRIPE_PRICE_ID_YEARLY: 'price_readiness_yearly',
     READINESS_SANDBOX: '1',
     ...(settings.stripeStubUrl ? { READINESS_STRIPE_STUB_URL: settings.stripeStubUrl } : {}),
+    ...(settings.fakeProviderUrl
+      ? {
+          READINESS_FAKE_PROVIDER_URL: settings.fakeProviderUrl,
+          GOOGLE_CLIENT_ID: FAKE_GOOGLE.clientId,
+          GOOGLE_CLIENT_SECRET: FAKE_GOOGLE.clientSecret,
+        }
+      : {}),
 
     DATABASE_MAX_CONNECTIONS: '100',
     APP_PROCESS_COUNT: '1',

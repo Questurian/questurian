@@ -26,6 +26,12 @@ function AuthErrorContent() {
         case 'account_not_linked':
           setError('This email already has an account. Sign in the way you created it, then connect Google from your account settings.');
           break;
+        // The server refuses a Google account whose address Google itself has
+        // not verified (visitor-auth/lib/google-provider.ts). Retrying does the
+        // same thing, so say what would change the answer.
+        case 'google_email_unverified':
+          setError('Google has not verified the email address on this Google account. Verify it with Google, or sign up with your email and password.');
+          break;
         case 'oauth_cancelled':
           setError('Google sign-in was cancelled. Please try again.');
           break;

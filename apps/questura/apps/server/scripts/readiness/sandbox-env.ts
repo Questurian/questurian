@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 export const DENY_OUTBOUND_PRELOAD = resolve(HERE, 'deny-outbound.cjs')
+export const FAKE_PROVIDER_PRELOAD = resolve(HERE, 'oauth-fake-route.cjs')
 
 const FILES = ['.env', '.env.local', '.env.production', '.env.production.local', '.env.development', '.env.development.local']
 
@@ -61,4 +62,9 @@ export function withOutboundGuard(env: NodeJS.ProcessEnv, logPath?: string, allo
     ...(logPath ? { READINESS_OUTBOUND_LOG: logPath } : {}),
     ...(allowHosts.length ? { READINESS_OUTBOUND_ALLOW: allowHosts.join(',') } : {}),
   }
+}
+
+/** `NODE_OPTIONS` that re-aims the backend's Google and Resend calls at the fake (`oauth-fake-route.cjs`). */
+export function withFakeProviderRoute(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return { ...env, NODE_OPTIONS: [env.NODE_OPTIONS ?? '', `--require ${FAKE_PROVIDER_PRELOAD}`].filter(Boolean).join(' ') }
 }
