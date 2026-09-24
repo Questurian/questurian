@@ -4,11 +4,13 @@ import { getClientIp, UNIDENTIFIED_CLIENT } from '@/shared/lib/rate-limit-counte
  * How Better Auth's own rate limiter learns who is calling.
  *
  * Better Auth reads the client address from `advanced.ipAddress.ipAddressHeaders`.
- * When none of those headers holds a valid address, it returns `null` and —
- * in production only — **skips rate limiting for that request entirely**
- * (`better-auth/dist/api/rate-limiter`, "Rate limiting skipped: could not
- * determine client IP address"). In development and tests it substitutes
- * `127.0.0.1` instead, so no unit test ever saw the gap.
+ * When none of those headers holds a valid address, it returns `null`. Up to
+ * 1.6.11 it then — in production only — **skipped rate limiting for that
+ * request entirely**. By 1.6.33 it instead puts every such caller in one
+ * shared per-path bucket (`better-auth/dist/api/rate-limiter`,
+ * "falling back to a single shared per-path bucket"). In development and tests
+ * it substitutes `127.0.0.1` either way, so no unit test ever saw the gap;
+ * `client-identity.production.test.ts` pins the library's current fallback.
  *
  * Pointing it at the proxy header was not enough. A caller who reaches the
  * origin without passing the proxy sends no `CF-Connecting-IP` (or sends

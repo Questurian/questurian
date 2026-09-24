@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest'
  * Better Auth's limiter, in production mode, fed a caller the proxy did not
  * identify. Runs `production-rate-limit.fixture.ts` in a child process because
  * Better Auth fixes `NODE_ENV` when it loads, and vitest's is `test` — where
- * Better Auth quietly substitutes `127.0.0.1` and the gap never shows.
+ * Better Auth quietly substitutes `127.0.0.1` and its production fallback
+ * never shows.
  */
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -52,12 +53,20 @@ describe('Better Auth rate limit in production', () => {
     expect(result.nodeEnv).toBe('production')
   })
 
-  // The gap, pinned. If this starts failing after a Better Auth upgrade, the
-  // library stopped skipping unidentified callers: re-read
-  // `client-identity.ts` before deleting anything.
-  it('skips its limiter when it reads the proxy header and the header is missing or junk', () => {
-    expect(result.proxyHeaderMissing).not.toContain(429)
-    expect(result.proxyHeaderJunk).not.toContain(429)
+  // The library's own fallback, pinned. Up to 1.6.11 Better Auth skipped its
+  // limiter for a caller whose address it could not read; by 1.6.33 it puts
+  // every such caller in one shared per-path bucket instead. The route still
+  // names the caller itself (`client-identity.ts`), so neither behaviour is
+  // reachable through the handler. If this starts failing after an upgrade,
+  // the fallback changed again: re-read `client-identity.ts` before deleting
+  // anything.
+  it('puts callers it cannot identify in one shared bucket when it reads the proxy header itself', () => {
+    const { limit, proxyHeaderMissing, proxyHeaderJunk } = result
+
+    expect(proxyHeaderMissing.slice(0, limit).every((status) => status === 401)).toBe(true)
+    expect(proxyHeaderMissing.slice(limit).every((status) => status === 429)).toBe(true)
+    // Same bucket, already spent: a junk header is not a fresh identity.
+    expect(proxyHeaderJunk.every((status) => status === 429)).toBe(true)
   })
 
   it('limits a caller with no proxy header once the route names the caller', () => {

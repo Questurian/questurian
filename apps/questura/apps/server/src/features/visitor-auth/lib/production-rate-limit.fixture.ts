@@ -1,8 +1,9 @@
 /**
  * Run by `client-identity.production.test.ts` in a child process with
  * `NODE_ENV=production`. Better Auth reads `NODE_ENV` once, when it loads, and
- * only in production does an unreadable address switch its limiter off — so
- * this cannot run inside vitest, where it is always `test`.
+ * only in production does an unreadable address reach its fallback (limiter
+ * off up to 1.6.11, one shared bucket by 1.6.33) — so this cannot run inside
+ * vitest, where it is always `test`.
  *
  * Two real Better Auth instances, memory adapter, identical except for how
  * they learn the caller's address. Each gets `ATTEMPTS` failed sign-ins from
