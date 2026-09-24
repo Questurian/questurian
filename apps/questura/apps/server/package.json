@@ -78,7 +78,6 @@
     "@payloadcms/db-postgres": "3.90.2",
     "@payloadcms/email-resend": "3.90.2",
     "@payloadcms/next": "3.90.2",
-    "@payloadcms/payload-cloud": "3.90.2",
     "@payloadcms/plugin-cloud-storage": "3.90.2",
     "@payloadcms/richtext-lexical": "3.90.2",
     "@payloadcms/ui": "3.90.2",
