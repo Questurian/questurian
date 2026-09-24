@@ -86,7 +86,7 @@
     "@types/pg": "^8.20.0",
     "@types/stripe": "^8.0.417",
     "bcryptjs": "^3.0.2",
-    "better-auth": "^1.6.11",
+    "better-auth": "1.6.33",
     "cross-env": "^7.0.3",
     "dotenv": "16.4.7",
     "graphql": "^16.8.1",
