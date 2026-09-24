@@ -3,7 +3,7 @@
 import { validateEmail, getFormTitle, getFormSubtitle } from '../../lib/auth-utils';
 import { useAuthForm } from '../../hooks/useAuthForm';
 import { useAuthSubmit } from '../../hooks/useAuthSubmit';
-import { isServiceUnavailableError, post } from '@/lib/api';
+import { isServiceUnavailableError, rateLimitedMessage, post } from '@/lib/api';
 import AuthFormLayout from './AuthFormLayout';
 import EmailStep from './EmailStep';
 import PasswordStep from './PasswordStep';
@@ -48,6 +48,12 @@ export default function EnhancedAuthForm({
       });
       authForm.proceedToPasswordStep(typeof result.exists === 'boolean' ? result.exists : undefined);
     } catch (error) {
+      // A limit is not an outage: say to wait, not that the site is down.
+      const limited = rateLimitedMessage(error);
+      if (limited) {
+        authForm.setErrors([{ message: limited }]);
+        return;
+      }
       if (isServiceUnavailableError(error)) {
         authForm.setErrors([{ message: 'Service is unavailable. Please try again later.' }]);
         return;
@@ -87,8 +93,10 @@ export default function EnhancedAuthForm({
     } catch (error) {
       console.error('Auth error:', error);
 
-      // Detect if this is a service unavailability error
-      if (isServiceUnavailableError(error)) {
+      const limited = rateLimitedMessage(error);
+      if (limited) {
+        authForm.setErrors([{ message: limited }]);
+      } else if (isServiceUnavailableError(error)) {
         authForm.setErrors([{ message: 'Service is unavailable. Please try again later.' }]);
       } else {
         authForm.setErrors([{ message: 'Network error. Please check your connection and try again.' }]);

@@ -291,3 +291,23 @@ export async function executeRequest<T>(options: {
     callerSignal?.removeEventListener('abort', onCallerAbort)
   }
 }
+
+/**
+ * What to tell a reader who has been rate limited (429), or `null` if this
+ * is not that. A limit is not an outage: "Service is unavailable" told
+ * someone retrying a mistyped email that the site was broken. The wait comes
+ * from the server's `Retry-After` when it sent one.
+ */
+export function rateLimitedMessage(error: unknown): string | null {
+  if (!(error instanceof RequestError) || error.status !== 429) return null
+
+  const seconds = error.retryAfterMs === null ? null : Math.max(1, Math.ceil(error.retryAfterMs / 1000))
+  const wait =
+    seconds === null
+      ? 'a minute'
+      : seconds < 60
+        ? `${seconds} second${seconds === 1 ? '' : 's'}`
+        : `${Math.ceil(seconds / 60)} minutes`
+
+  return `Too many attempts. Please wait ${wait} and try again.`
+}
