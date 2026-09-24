@@ -13,7 +13,7 @@
  * The readiness sandbox builds with loopback addresses on purpose
  * (`QUESTURA_BUILD_TARGET=readiness`), so there the scan says it is skipped.
  */
-import { scanBundle } from '../src/lib/build/bundleScan.mjs'
+import { scanBundle } from '../src/lib/release/bundleScan.mjs'
 
 if (process.env.QUESTURA_BUILD_TARGET?.trim() === 'readiness') {
   console.log('Bundle scan skipped: readiness sandbox build (QUESTURA_BUILD_TARGET=readiness).')

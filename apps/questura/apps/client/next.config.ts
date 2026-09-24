@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import createNextIntlPlugin from "next-intl/plugin";
 
-import { assertProductionBuildEnv } from "./src/lib/build/productionBuildEnv";
+import { assertProductionBuildEnv } from "./src/lib/release/productionBuildEnv";
 import { SECURITY_HEADERS } from "./src/lib/http/securityHeaders";
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
