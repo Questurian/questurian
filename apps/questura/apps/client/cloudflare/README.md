@@ -29,9 +29,15 @@ fails if either pin loosens.
 
 ```bash
 cd apps/questura/apps/client
-pnpm exec opennextjs-cloudflare build
+QUESTURA_BUILD_TARGET=readiness pnpm exec opennextjs-cloudflare build   # local only
 pnpm exec opennextjs-cloudflare preview --port 8790
 ```
+
+A production build refuses to start without real `https` addresses for the
+API and site and a `pk_live_` key (`src/lib/release/productionBuildEnv.ts`),
+then scans its output for `localhost` (`scripts/scan-client-bundle.mjs`).
+`QUESTURA_BUILD_TARGET=readiness` is how a local build says it is not one.
+The real build, with its settings, is H01 step 19.
 
 `preview` runs the built Worker on Miniflare. It creates nothing in a
 Cloudflare account. `deploy` and `upload` do, and neither is in this recipe.
