@@ -30,6 +30,7 @@
 
 import { createHash, createHmac, randomBytes } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { request as httpRequest } from 'node:http'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -55,6 +56,39 @@ function record(group: string, name: string, ok: boolean, detail: string): void 
 
 const BACKEND = `http://127.0.0.1:${STACK_PORTS.backend}`
 const CLIENT = `http://127.0.0.1:${STACK_PORTS.client}`
+
+/**
+ * A GET with the path sent byte for byte. `fetch` normalises it first (a `\`
+ * becomes `/`), which is what a browser does too, but a crafted link or a
+ * proxy can send the raw bytes, so the check sends them.
+ */
+function rawGet(origin: string, path: string, headers: Record<string, string> = {}): Promise<{ status: number; location: string | null }> {
+  const url = new URL(origin)
+  return new Promise((resolvePromise, reject) => {
+    const req = httpRequest({ host: url.hostname, port: url.port, path, method: 'GET', headers }, (res) => {
+      res.resume()
+      resolvePromise({ status: res.statusCode ?? 0, location: res.headers.location ?? null })
+    })
+    req.setTimeout(20_000, () => req.destroy(new Error(`timeout: ${path}`)))
+    req.on('error', reject)
+    req.end()
+  })
+}
+
+/** Follows redirects hop by hop; every hop must stay on `origin`. */
+async function redirectChain(origin: string, path: string, headers: Record<string, string> = {}) {
+  const hops: string[] = []
+  let current = path
+  for (let hop = 0; hop < 5; hop += 1) {
+    const { status, location } = await rawGet(origin, current, headers)
+    if (status < 300 || status >= 400 || !location) return { hops, status, offSite: false }
+    const target = new URL(location, origin)
+    hops.push(`${status} ${location}`)
+    if (target.origin !== new URL(origin).origin) return { hops, status, offSite: true }
+    current = `${target.pathname}${target.search}`
+  }
+  return { hops, status: 0, offSite: false }
+}
 
 // ---------------------------------------------------------------------------
 // Tokens the harness can make because it knows the sandbox's own secret.
@@ -224,6 +258,32 @@ async function main(): Promise<void> {
         html.includes(piece.markers.body) &&
         !html.includes(piece.markers.member!)
       record('public-page', `${piece.markers.title} public page: title+body marker, no member marker`, ok, `HTTP ${response.status}; member marker ${html.includes(piece.markers.member!) ? 'LEAKED' : 'absent'}; body marker ${html.includes(piece.markers.body) ? 'present' : 'absent'}`)
+    }
+
+    // --- Redirects never leave the site (launch fix plan item 17) ---------
+    // Next answers the trailing-slash spellings with its own same-site 308
+    // before middleware runs; middleware's sameSiteLocation is the backstop.
+    // The geo-redirect cookie did reach middleware: a country of /evil.com
+    // sent / to http://evil.com/x until item 17.
+    for (const path of ['//evil.com/', '/\\evil.com/', '/%2F%2Fevil.com/']) {
+      const chain = await redirectChain(CLIENT, path)
+      record('redirect', `${path} stays on the site`, !chain.offSite, chain.hops.join(' → ') || `HTTP ${chain.status}`)
+    }
+    {
+      const geo = (value: Record<string, string>) => ({ cookie: `questura-location-redirect=${encodeURIComponent(JSON.stringify(value))}` })
+      const [country, city] = manifest.cities[0].path.split('/').filter(Boolean)
+      const hostile = await redirectChain(CLIENT, '/', geo({ cityId: 'x', country: '/evil.com' }))
+      record('redirect', 'a geo cookie naming another host does not redirect off the site', !hostile.offSite && !hostile.hops.some((hop) => hop.includes('evil.com')), hostile.hops.join(' → ') || `HTTP ${hostile.status}`)
+      const home = await rawGet(CLIENT, '/', geo({ cityId: city, country }))
+      // `next start` reports its own host as localhost, so compare the path
+      // and port: the point is that a slug cookie still works.
+      const target = home.location ? new URL(home.location, CLIENT) : null
+      record(
+        'redirect',
+        'a real geo cookie still sends / to its city',
+        home.status === 307 && target?.pathname === `/${country}/${city}` && ['127.0.0.1', 'localhost'].includes(target.hostname) && target.port === String(STACK_PORTS.client),
+        `HTTP ${home.status} → ${home.location}`,
+      )
     }
 
     // --- Credential matrix (L02) --------------------------------------------
