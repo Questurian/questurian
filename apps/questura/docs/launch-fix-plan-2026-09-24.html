@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Launch Fix Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F5F0E8; --paper:#EFE9DE; --ink:#1F1B16; --muted:#6A6258; --rule:#D9CFBF;
+  --accent:#3B5BDB; --ok:#2E6B45; --ok-soft:#E1EDE3;
+  --warn:#9A5A00; --warn-soft:#F4E6CF; --bad:#A3322A; --bad-soft:#F3DEDA; --code:#E6DECF;
+  --display:"Playfair Display",Georgia,"Times New Roman",serif;
+  --body:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --ok:#7CC39A; --ok-soft:#1F2E25;
+  --warn:#E3AE62; --warn-soft:#33281A; --bad:#EE8C80; --bad-soft:#3A201D; --code:#2C2822;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --ok:#7CC39A; --ok-soft:#1F2E25;
+  --warn:#E3AE62; --warn-soft:#33281A; --bad:#EE8C80; --bad-soft:#3A201D; --code:#2C2822;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.6 var(--body);margin:0}
+.wrap{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:40px 80px}
+h1{font:600 2.2rem/1.12 var(--display);margin:0 0 10px;text-wrap:balance}
+h2{font:600 1.35rem/1.25 var(--display);margin:0;text-wrap:balance}
+h3{font:600 1.05rem/1.35 var(--body);margin:0}
+p{margin:0}
+ul,ol{margin:0;padding-left:20px;display:grid;gap:6px}
+.lede{color:var(--muted);max-width:66ch}
+code{font:500 .82rem/1.4 var(--mono);background:var(--code);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+pre{font:400 .8rem/1.55 var(--mono);background:var(--code);padding:10px 12px;border-radius:4px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+pre code{background:none;padding:0}
+a{color:var(--accent)}
+.label{font:600 .72rem/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:10px}
+.label::after{content:"";flex:1;height:1px;background:var(--rule)}
+section{display:grid;gap:14px;margin-top:48px}
+.table-scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--rule)}
+th{font:600 .7rem/1.2 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:600 .7rem/1 var(--body);padding:4px 7px;border-radius:999px;white-space:nowrap;background:var(--code);color:var(--muted);display:inline-block}
+.blocker{background:var(--bad-soft);color:var(--bad)}
+.should{background:var(--warn-soft);color:var(--warn)}
+.later{background:var(--ok-soft);color:var(--ok)}
+.item{background:var(--paper);border-left:3px solid var(--accent);padding:16px;display:grid;gap:10px;border-radius:0 4px 4px 0}
+.item .num{font:600 1.5rem/1 var(--display);color:var(--accent);min-width:2.2ch}
+.head{display:flex;gap:12px;align-items:baseline}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.k{font:600 .7rem/1.2 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.you{background:var(--warn-soft);padding:14px 16px;border-radius:4px;display:grid;gap:8px}
+.stop{background:var(--bad-soft);padding:14px 16px;border-radius:4px;display:grid;gap:8px}
+.good{background:var(--ok-soft);padding:14px 16px;border-radius:4px;display:grid;gap:8px}
+details{display:grid;gap:8px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.phase{font:600 1.1rem/1.3 var(--display);margin-top:8px}
+.muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+<p class="label">Plan · 2026-09-24</p>
+<h1>Launch fix plan</h1>
+<p class="lede">How to fix everything the <a href="test-gap-audit-2026-09-24.html">test gap audit</a> found: in what order, what depends on what, what can run side by side, the decisions only the owner can make (with a recommendation for each), and a short prompt per job. The audit holds the detailed "how" for each item, so every prompt here points at the audit's prompt and adds the amendments decided in this plan. Where the two differ, this plan wins.</p>
+
+<section>
+<p class="label">For you</p>
+<h2>The short version</h2>
+<div class="good">
+<ul>
+<li><strong>18 local jobs</strong> (audit prompts 0–17), each one PR, run one at a time on this laptop, plus <strong>4 checks on the real hosting</strong> during the quiet go-live (PL1–PL4).</li>
+<li><strong>The minimum before go-live is 12 of them</strong> (marked <span class="chip blocker">before go-live</span>). They stop outages, lost money, lost email and a blind launch. The other 6 are <span class="chip should">before announcing</span> or <span class="chip later">after launch</span>.</li>
+<li><strong>What's needed from you:</strong> nine small decisions, listed next with my recommendation for each. Two need an explicit yes before anyone builds (Sentry, and the load-test key). Everything else can go ahead on the recommendation unless you say otherwise.</li>
+<li><strong>Nothing here deploys, pays for anything or touches live data.</strong> The paid hosting only enters in Phase 5, with you present.</li>
+</ul>
+</div>
+</section>
+
+<section>
+<p class="label">Decisions</p>
+<h2>What you decide</h2>
+<div class="table-scroll"><table>
+<thead><tr><th>#</th><th>Question</th><th>My recommendation</th><th>Needed by</th></tr></thead>
+<tbody>
+<tr><td>D1</td><td>Where do errors go?</td><td><strong>Sentry, free tier.</strong> The audit leans toward no vendor (logs only). I disagree for a paranoid launch: Sentry texts or emails you the moment something breaks, with the exact line of code, and it costs nothing at this size. We still build the vendor-free parts (request ids, log redaction) either way. <em>New dependency and account: needs your yes. You create the account.</em></td><td>Item 3</td></tr>
+<tr><td>D2</td><td>Can visitors delete their own account at launch?</td><td><strong>No button at launch: "email us and we delete it within 30 days"</strong>, written on the account page and in the privacy text. A self-serve button comes after launch (item 14 builds everything else now).</td><td>Item 14</td></tr>
+<tr><td>D3</td><td>A special key so a load test through Cloudflare isn't counted as one visitor?</td><td><strong>Yes, with guard rails:</strong> off by default, 32+ characters, every use logged, only switched on during the test window, and <code>launch:verify</code> fails while it's on. <em>It's a deliberate bypass: needs your yes.</em></td><td>Item 9</td></tr>
+<tr><td>D4</td><td>10 email templates are never sent. Wire or delete?</td><td><strong>Wire the security ones</strong> (password changed, email changed → notice to the OLD address, Google account linked) and <strong>delete the rest</strong>. Keep "welcome" only if you want it; default is delete.</td><td>Item 4</td></tr>
+<tr><td>D5</td><td>A paused Stripe subscription: access or not?</td><td><strong>No access</strong> (Questura never offers pausing), but it still blocks a second checkout so nobody pays twice.</td><td>Item 11</td></tr>
+<tr><td>D6</td><td>The 2 live members paying the laptop's $0.50 price</td><td><strong>First check who they are.</strong> If they're your own test accounts: cancel and refund. If they're real readers: keep their price until they cancel (don't surprise-charge them), and note it in the cutover runbook.</td><td>Item 5, cutover day</td></tr>
+<tr><td>D7</td><td>How much data can you afford to lose, and how fast must a restore be?</td><td><strong>At most 5 minutes of data</strong> (Neon's point-in-time restore, kept 7 days) <strong>and back up within 1 hour</strong>, plus a daily copy stored outside Neon.</td><td>Item 12</td></tr>
+<tr><td>D8</td><td>Spending cap for the one real load test</td><td>You pick a number at the time, with usage alerts at 50% and 80%; the test stops at 80%.</td><td>PL3</td></tr>
+<tr><td>D9</td><td>What Redis does when it's full</td><td>Decide at go-live with the real memory numbers in hand (PL1 reports them). The one setting to avoid is "refuse writes when full", because that becomes a sign-in outage.</td><td>PL1</td></tr>
+</tbody></table></div>
+<p class="muted">D1 also covers part 1 of issue <a href="https://github.com/Questurian/questurian/issues/690">#690</a> (monitoring). The dashboard cockpit and the API Usage fix in #690 stay after launch.</p>
+</section>
+
+<section>
+<p class="label">Order</p>
+<h2>Six phases</h2>
+<div class="table-scroll"><table>
+<thead><tr><th>Phase</th><th>Items</th><th>Why this order</th></tr></thead>
+<tbody>
+<tr><td><strong>0 · Foundation</strong></td><td>0</td><td>Every later agent needs a sandbox that starts cleanly and runs the checks in order without false failures.</td></tr>
+<tr><td><strong>1 · Things that would break launch or lose money</strong></td><td>1, 2, 16, 17, 11, 4</td><td>The localhost trap (total outage), refunds and disputes (money), time zones (likely behind the account-page error), open redirect and 503s, failed-card dead ends, and email that works.</td></tr>
+<tr><td><strong>2 · Seeing problems</strong></td><td>3</td><td>Error reporting before anything goes near the real hosting, so the go-live checks are watched.</td></tr>
+<tr><td><strong>3 · Moving day</strong></td><td>10, 5, 12, 6</td><td>The API front door has to exist before cutover is rehearsed, and the launch-day kit comes last because it tests all of the above.</td></tr>
+<tr><td><strong>4 · Breadth of the safety net</strong></td><td>8, 7, 14, 13, 9, 15</td><td>Browser journeys first (they fix the image setup the speed budgets need). CI then runs them. The load baseline is taken last, so it measures the final code. Stryker runs alone at the end.</td></tr>
+<tr><td><strong>5 · Quiet go-live, you present</strong></td><td>PL1 → PL2 → PL3 → PL4</td><td>On the real hosting, after provisioning and deploying, before any announcement.</td></tr>
+</tbody></table></div>
+
+<h3 style="margin-top:8px">Dependencies that fix the order</h3>
+<ul>
+<li><strong>0 → everything that uses the sandbox.</strong></li>
+<li><strong>16 → 8:</strong> the <code>/account</code> hydration error (#418) is very likely the bare <code>toLocaleDateString()</code> in <code>membership.service.ts</code>. Fix time zones first, then item 8 confirms it and adds the test.</li>
+<li><strong>3 → 13, 17.2, PL4:</strong> web vitals, <code>global-error.tsx</code> and the alert drill all report into the sink item 3 creates.</li>
+<li><strong>1 → 7:</strong> CI runs item 1's bundle scan.</li>
+<li><strong>8 → 7, 13, 14:</strong> CI runs the new browser specs, speed budgets need item 8's real sandbox images, and item 14 adds a two-browser test on top of item 8.</li>
+<li><strong>2, 6 → PL2:</strong> your one real refund proves the Stripe fix, following item 6's step-by-step page.</li>
+<li><strong>10 → 5, 6, PL1:</strong> cutover and <code>launch:verify</code> need the origin secret to exist.</li>
+<li><strong>9 → PL3.</strong> <strong>12 → PL4</strong> (the restore drill follows item 12's runbook).</li>
+</ul>
+
+<h3 style="margin-top:8px">What can run side by side</h3>
+<p>The sandbox (fixed ports, most of the laptop's memory) takes <strong>one job at a time</strong>. These jobs don't need it, so each can run next to one that does:</p>
+<ul>
+<li><strong>Item 16</strong> (time zones): unit tests only.</li>
+<li><strong>Item 4</strong> (email): skip its optional sandbox assertion, or run that part last on its own.</li>
+<li><strong>Item 3</strong> (errors): code and unit tests. Run its one sandbox proof when the sandbox is free.</li>
+</ul>
+<p>Everything else is one at a time, in the order below. Keep one light job at most alongside a sandbox job, never two, because the desktop app crashed once today under memory pressure.</p>
+</section>
+
+<section>
+<p class="label">Every agent</p>
+<h2>Rules for every job</h2>
+<div class="stop">
+<ul>
+<li>Read <code>AGENTS.md</code>, this plan (the item and its amendments) and the matching audit prompt before starting. The plan wins where they differ. Use the caveman skill.</li>
+<li><strong>Never touch ports 5433 or 6379 on this laptop</strong> (live Postgres and Redis) or the <code>questura-postgres</code> / <code>questura-redis</code> containers. The sandbox is Postgres <code>:5442</code> and Redis <code>:6390</code>.</li>
+<li>Until item 0 lands: <code>export READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:5442/questura_readiness</code>, and put a <code>redis-server</code> shim first on <code>PATH</code> that runs <code>docker run --rm --name questura-readiness-redis -p 127.0.0.1:6390:6379 redis:7-alpine redis-server --save '' --appendonly no</code>. Start the Postgres container if it's missing: <code>docker run -d --name questura-readiness-pg --tmpfs /var/lib/postgresql/data -p 127.0.0.1:5442:5432 -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=questura_readiness postgres:16</code>.</li>
+<li><strong>Memory:</strong> about 7.5 GB, with the desktop app using ~1.5 GB. Never build while the readiness stack is up. Build with <code>NODE_OPTIONS="--no-deprecation --max-old-space-size=3072"</code>. Check <code>free -m</code> before each heavy job, and stop if less than 2,500 MB is available. Stop the stack when done.</li>
+<li><strong>Commit and push after each milestone</strong>, so a crash or usage limit loses nothing.</li>
+<li>No deploys, don't resume the laptop's live window, no live Stripe or Google, no paid services, no load against anything outside this machine. New dependencies need the owner's yes. Payload schema changes follow the AGENTS.md migration steps.</li>
+<li>If <code>readiness:routes</code> rewrites <code>docs/capacity/runs/&lt;date&gt;-surge-routes.json</code> and the run isn't evidence for your change, revert it.</li>
+<li><strong>Workflow files</strong> (<code>.github/workflows/*</code>): git's stored credential can't push them. Push with <code>git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push …</code>, since the gh login has the <code>workflow</code> scope.</li>
+<li><strong>Wait for CI in the foreground</strong> (two agents stalled on background waits). Repeat this until it prints DONE, then squash-merge with <code>gh pr merge &lt;N&gt; --squash --delete-branch</code> and <code>git checkout main &amp;&amp; git pull</code>:
+<pre><code>cd /home/webdev/Projects/questurian && for i in $(seq 1 55); do n=$(gh pr checks &lt;N&gt; 2&gt;/dev/null | wc -l); p=$(gh pr checks &lt;N&gt; 2&gt;/dev/null | grep -cE '\s(pending|queued|in_progress)\s'); [ "$n" -ge 8 ] &amp;&amp; [ "$p" -eq 0 ] &amp;&amp; { gh pr checks &lt;N&gt; | cut -f1,2; echo DONE; break; }; sleep 10; done</code></pre></li>
+<li>After merging: tick the item in the status table at the bottom of this file, in the same PR or a follow-up, and add any new check with its expected count to <code>docs/launch-day.md</code>.</li>
+</ul>
+</div>
+</section>
+
+<section>
+<p class="label">The jobs</p>
+<h2>Item by item</h2>
+
+<p class="phase">Phase 0 · Foundation</p>
+
+<div class="item">
+<div class="head"><span class="num">0</span><h3>Sandbox starts cleanly from a fresh session</h3></div>
+<div class="chips"><span class="chip blocker">before go-live</span><span class="chip">small · ~1 h</span><span class="chip">sandbox</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>No <code>redis-server</code> on this host, the default DB user doesn't exist in the container, and running the checks in launch-day order gives false 429 failures (faults 17/22).</p></div>
+<div><p class="k">Fix</p><p>A committed Redis fallback (docker, 6390 only), a working default DB URI, clean sandbox rate-limit counters per script, and a "Sandbox setup" section in <code>launch-day.md</code>.</p></div>
+<div><p class="k">Done when</p><p>From a clean state, launch-day step 2 passes in order in one go, then Playwright passes 20/20.</p></div>
+<div><p class="k">Amendments</p><p>Also make <code>pnpm readiness:stack -- up</code> start the <code>questura-readiness-pg</code> container if it's missing (tmpfs, 5442), so no agent needs a scratch-folder script. Then remove the "until item 0 lands" rule from this plan.</p></div>
+</div>
+</div>
+
+<p class="phase">Phase 1 · Things that would break launch or lose money</p>
+
+<div class="item">
+<div class="head"><span class="num">1</span><h3>Build and config traps: localhost, image host, workers.dev, canonical</h3></div>
+<div class="chips"><span class="chip blocker">before go-live</span><span class="chip">small · ~2 h</span><span class="chip">sandbox</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>The API address is baked in at build time and falls back to <code>localhost:4000</code>, and the checklist's build step doesn't pass it. The Stripe key would be empty, the image host is easy to set wrong, and a <code>workers.dev</code> copy of the site would be crawlable.</p></div>
+<div><p class="k">Fix</p><p>The build refuses to finish without real https addresses and a live Stripe key (the sandbox gets an explicit flag), a post-build scan for localhost, the image host is checked, <code>metadataBase</code> and absolute canonicals are added, <code>workers_dev</code> is turned off, and <code>launch:verify</code> gets host checks.</p></div>
+<div><p class="k">Done when</p><p>A build without the env fails, naming the variable. <code>readiness:adapter</code> still passes 13/13, and the new <code>launch:verify</code> checks have unit tests.</p></div>
+<div><p class="k">Amendments</p><p>The adapter smoke already refreshes its worktree (#688), so rely on it for the "built correctly" proof. Keep the guard's error message understandable to a non-developer.</p></div>
+</div>
+</div>
+
+<div class="item">
+<div class="head"><span class="num">2</span><h3>Refunds and disputes under Stripe's new data shape (basil)</h3></div>
+<div class="chips"><span class="chip blocker">before go-live</span><span class="chip">medium · half a day</span><span class="chip">sandbox</span><span class="chip">money</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>Stripe removed <code>invoice</code> from Charge (and PaymentIntent). A dispute probably revokes nothing today, and refunds break once the new webhook endpoint is on the same version. Tests pass because they use old-shape data. Confirmed: the pinned SDK's <code>Charge</code> type has no <code>invoice</code> field.</p></div>
+<div><p class="k">Fix</p><p>Resolve charge → invoice → subscription through <code>invoicePayments</code> (falling back to <code>charge.invoice</code> only when present). Add new-shape tests for full and partial refunds and for disputes created, won and lost. The Stripe fake learns charges, disputes and invoice payments, and <code>readiness:purchase</code> drives a refund and a dispute. The webhook verify script fails on an API-version mismatch.</p></div>
+<div><p class="k">Done when</p><p>New-shape tests fail on today's code and pass after the fix, <code>readiness:purchase</code> covers refund and dispute end to end, and the launch-day count is updated.</p></div>
+<div><p class="k">Amendments</p><p>Also search the whole payments feature for any other read of <code>.invoice</code> on a Charge or PaymentIntent, or <code>.charge</code>/<code>.payment_intent</code>/<code>.subscription</code> on an Invoice (confirmed absent from the pinned SDK's types; an invoice's subscription now lives at <code>parent.subscription_details.subscription</code>), and fix or pin each one with a test. The owner has no Stripe test key for this, so skip the optional fixture capture.</p></div>
+</div>
+</div>
+
+<div class="item">
+<div class="head"><span class="num">16</span><h3>Time zones in dates members see</h3></div>
+<div class="chips"><span class="chip blocker">before go-live</span><span class="chip">small · ~2 h</span><span class="chip later">no sandbox: can run alongside</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>Dates in emails, API messages and the account page use the server's time zone. Railway and Workers run in UTC, so "access ends" can be a day off, and server and browser can render different text, causing hydration errors.</p></div>
+<div><p class="k">Fix</p><p>One date helper per app: access dates in UTC with the month name, article dates in one fixed zone. Use it at every listed call site, and run the tests under two extreme time zones.</p></div>
+<div><p class="k">Done when</p><p>Tests pass under <code>TZ=UTC</code> and <code>TZ=Pacific/Kiritimati</code>, and no bare <code>toLocaleDateString()</code> is left in those areas (a grep proves it).</p></div>
+<div><p class="k">Amendments</p><p>Run this before item 8. Note in the PR whether it's the likely cause of the <code>/account</code> React #418 error, so item 8 can confirm it.</p></div>
+</div>
+</div>
+
+<div class="item">
+<div class="head"><span class="num">17</span><h3>Small correctness: a possible open redirect, a global error page, 500 → 503</h3></div>
+<div class="chips"><span class="chip blocker">before go-live</span><span class="chip">small · ~2 h</span><span class="chip">sandbox</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p><code>//evil.com/</code> might redirect off the site through the trailing-slash redirect (unverified). There's no client <code>global-error.tsx</code>, and a member article answers 500 instead of 503 while the DB is locked.</p></div>
+<div><p class="k">Fix</p><p>Test the three redirect spellings on <code>next start</code> and the OpenNext preview, and fix if any leaves the site. Add a plain, on-brand global error page. Make the member body return 503 with <code>Retry-After</code>, and add a fault check for it.</p></div>
+<div><p class="k">Done when</p><p>Unit and readiness tests cover each item, and the faults count is updated in <code>launch-day.md</code>.</p></div>
+<div><p class="k">Amendments</p><p>Build the global error page without a reporter call. Item 3 wires it into the sink.</p></div>
+</div>
+</div>
+
+<div class="item">
+<div class="head"><span class="num">11</span><h3>Dead ends for members with a failed card, and unusual Stripe states</h3></div>
+<div class="chips"><span class="chip blocker">before go-live</span><span class="chip">medium · ~1 day</span><span class="chip">sandbox</span><span class="chip">money</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>A member with a failed card gets no "update payment method" link. An expired member is offered an Upgrade that checkout refuses. Yearly members see "Monthly". A deleted Stripe customer causes 500s forever. A paused subscription keeps access and allows a second checkout. A subscription with no items wipes the paid-through date.</p></div>
+<div><p class="k">Fix</p><p>Failing test first for each (tdd skill), then fix: route both payment-issue states to the Stripe portal, show the real billing period, handle <code>customer.deleted</code>, apply D5 to paused subscriptions, and keep the last good date when a subscription has no items.</p></div>
+<div><p class="k">Done when</p><p>Each case has a test that failed before, and <code>readiness:purchase</code> drives <code>past_due</code> through the fake.</p></div>
+<div><p class="k">Amendments</p><p>D5: paused means no access, but it still counts as live for duplicate prevention. Prices on the site stay $12.99 / $79.99.</p></div>
+</div>
+</div>
+
+<div class="item">
+<div class="head"><span class="num">4</span><h3>Email: real sender, required key, tested templates, DNS runbook</h3></div>
+<div class="chips"><span class="chip blocker">before go-live</span><span class="chip">small · ~3 h</span><span class="chip later">no sandbox: can run alongside</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>Mail goes out from the placeholder <code>you@questurian.com</code>, with no SPF/DKIM/DMARC plan. A missing Resend key only shows up when a reset fails. No template is rendered in any test, and 10 are never sent.</p></div>
+<div><p class="k">Fix</p><p>A configurable sender, required in production, and a required Resend key. Render tests for every sent template (https links on the site host, no localhost, a plain-text part, fixed-zone dates). The email-changed notice goes to the old address, and <code>docs/procedures/email-domain.md</code> is written.</p></div>
+<div><p class="k">Done when</p><p><code>env:check</code> refuses a missing or off-domain sender, and every sent template has a render test.</p></div>
+<div><p class="k">Amendments</p><p>D4: wire password-changed, email-changed (old address) and Google-linked; delete the other unsent templates. The sandbox mailbox assertion is optional; if you do it, run it when the sandbox is free.</p></div>
+</div>
+</div>
+
+<p class="phase">Phase 2 · Seeing problems</p>
+
+<div class="item">
+<div class="head"><span class="num">3</span><h3>Error reporting, logs and request ids</h3></div>
+<div class="chips"><span class="chip blocker">before go-live</span><span class="chip">medium · ~1 day</span><span class="chip">needs D1 yes</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>No error reporting in either app, no <code>onRequestError</code>, Workers Logs off, no request ids, redaction left to each call site, no alerts, no uptime check.</p></div>
+<div><p class="k">Fix</p><p>Request id in and out and on every log line. A central redaction pass (email, cookie, authorization, stripe-signature). <code>global-error.tsx</code> reports and <code>error.tsx</code> reports in production. Workers Logs on. Errors go to Sentry (D1), with personal data scrubbed before sending. The cap07 alert table is mapped onto real alerts, plus one uptime check.</p></div>
+<div><p class="k">Done when</p><p>In each app, a forced error produces exactly one redacted report with the request id. In the sandbox, a thrown route shows up in <code>backend.log</code>. Sentry receives a test event from a local build using the owner's DSN, once the owner provides it.</p></div>
+<div><p class="k">Amendments</p><p><strong>D1 = Sentry</strong>, only after the owner's explicit yes. Check that Sentry supports both Next 16 (server) and OpenNext on Cloudflare Workers (client). If the Worker side isn't supported cleanly, use Sentry for the API and the audit's vendor-free beacon for the Worker. Never send cookies, emails or tokens. Write the alert list as a checklist in issue #690.</p></div>
+</div>
+</div>
+
+<p class="phase">Phase 3 · Moving day</p>
+
+<div class="item">
+<div class="head"><span class="num">10</span><h3>API front door: the in-app half of ADR-0016</h3></div>
+<div class="chips"><span class="chip blocker">before go-live</span><span class="chip">medium · half a day</span><span class="chip">sandbox</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>The chosen protection (Cloudflare in front plus a secret header) has no code yet. If it's done wrong, the edge rule blocks the site's own pages, or every render shares one rate-limit bucket.</p></div>
+<div><p class="k">Fix</p><p><code>ORIGIN_AUTH_SECRET</code> is checked in <code>src/proxy.ts</code> with a constant-time comparison and two modes. The header is stripped and never logged. The client's server-side fetches send it from a Worker secret. Unit, readiness and <code>launch:verify</code> checks are added.</p></div>
+<div><p class="k">Done when</p><p>With the secret set, the sandbox refuses a direct call without the header, and the client still renders every page in the route list.</p></div>
+<div><p class="k">Amendments</p><p>Keep <code>/api/health</code> open (liveness). Record the two unknowns that only the platform can answer (Transform Rule on Worker subrequests, and the IP they present) as PL1 items.</p></div>
+</div>
+</div>
+
+<div class="item">
+<div class="head"><span class="num">5</span><h3>Rehearse moving day, and write the cutover runbook</h3></div>
+<div class="chips"><span class="chip blocker">before go-live</span><span class="chip">medium · ~1 day</span><span class="chip">sandbox</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>New secrets on the new host silently break the writer pipeline's and Location Manager's API keys, and make stored Google tokens unreadable. The Postgres versions differ. Sign-ups and webhooks can land on the laptop mid-move. The laptop's webhook, nightly job and key would keep running afterwards.</p></div>
+<div><p class="k">Fix</p><p>Dump the sandbox, restore it into Postgres 17, migrate, and compare counts. Boot with both secrets rotated and prove password, Google and staff sign-in work, old service keys get 401 and new ones work, and old cookies get 401, never 500. Write <code>docs/procedures/cutover.md</code> with the exact order and the retirement steps.</p></div>
+<div><p class="k">Done when</p><p>The rehearsal passes end to end and the runbook lists every key to re-issue and where each client stores it.</p></div>
+<div><p class="k">Amendments</p><p>D6 goes in the runbook as an owner step: check who the two $0.50 members are, then cancel and refund (test accounts) or keep their price (real readers). Use a spare loopback port for Postgres 17, never 5432, 5433, 5442 or 6379.</p></div>
+</div>
+</div>
+
+<div class="item">
+<div class="head"><span class="num">12</span><h3>Backups, a migration guard on Railway, and a rollback runbook</h3></div>
+<div class="chips"><span class="chip blocker">before go-live</span><span class="chip">small–medium · half a day</span><span class="chip">local postgres:17</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>One manual backup exists, and a restore has never been timed. The destructive-SQL guard only runs on the laptop, and Railway has no pre-deploy step. Rolling back the website and the API separately is undocumented.</p></div>
+<div><p class="k">Fix</p><p>A committed <code>railway.json</code> (or documented fields) with a pre-deploy step that runs the guard, then migrations. A CI check blocks destructive migrations unless explicitly acknowledged. <code>docs/procedures/backup-restore-rollback.md</code> is written. The restore is proven on Postgres 17.</p></div>
+<div><p class="k">Done when</p><p><code>readiness:restore</code> passes against Postgres 17, and a test PR with a <code>DROP</code> turns CI red.</p></div>
+<div><p class="k">Amendments</p><p>D7: point-in-time restore for 7 days, at most 5 minutes of lost data, back up within 1 hour, plus a daily copy outside Neon. The CI check is a workflow change, so push it with the gh credential helper.</p></div>
+</div>
+</div>
+
+<div class="item">
+<div class="head"><span class="num">6</span><h3>Launch-day kit: the real-purchase page, cookie check, honest lockdown check</h3></div>
+<div class="chips"><span class="chip blocker">before go-live</span><span class="chip">medium · half a day</span><span class="chip">sandbox</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>The launch-day guide points at the laptop's payment page, which has no purchase-to-refund steps. The cookie check is named but never built. A DNS typo counts as "locked down", and leaving out flags silently drops checks from an all-green result.</p></div>
+<div><p class="k">Fix</p><p><code>live-checks/launch-purchase.html</code> covers the owner's one purchase → cancel → reactivate → cancel → refund, with the expected state at each step. A signed-in cookie check. <code>--bypass</code> and <code>--rate-limit-probe</code> become required. DNS or TLS errors report "unknown" and fail. <code>--edge-ip</code> is added for the direct-to-Railway bypass test.</p></div>
+<div><p class="k">Done when</p><p>Each change has unit tests, and <code>launch-day.md</code> step 5 points at the new page.</p></div>
+<div><p class="k">Amendments</p><p>Run after items 2 and 10, so the page's refund step and the edge check match the fixed code.</p></div>
+</div>
+</div>
+
+<p class="phase">Phase 4 · Breadth of the safety net</p>
+
+<div class="item">
+<div class="head"><span class="num">8</span><h3>Browser journeys, console errors, phone layout, slow network</h3></div>
+<div class="chips"><span class="chip should">before announcing</span><span class="chip">big · ~2 days</span><span class="chip">sandbox</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>Most of what a visitor does has never been clicked through in a browser: sign-up, checkout and return, password reset, the account page, cancelling, the phone layout, a slow connection. The account page throws React #418, and every sandbox image is broken.</p></div>
+<div><p class="k">Fix</p><p>The 12 journeys in the audit, a console-error gate on every page, sandbox images served from the fixture media server, and a stricter redirect test. Read-only specs can also run against the live site.</p></div>
+<div><p class="k">Done when</p><p>All journeys pass on Chromium and Firefox with zero unexpected console errors, and the #418 error is fixed with a test.</p></div>
+<div><p class="k">Amendments</p><p>Split into two PRs: (a) media fix, console gate and journeys 1–5; (b) journeys 6–12. After item 16, #418 may already be gone; if so, keep the test.</p></div>
+</div>
+</div>
+
+<div class="item">
+<div class="head"><span class="num">7</span><h3>Run the safety net in CI</h3></div>
+<div class="chips"><span class="chip should">before announcing</span><span class="chip">medium–big · ~1 day</span><span class="chip">CI</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>The big checks only run when someone starts them by hand, so after launch a change can break sign-up with CI still green.</p></div>
+<div><p class="k">Fix</p><p>CI adds the client and OpenNext builds, the bundle scan, lint for both apps, a readiness job (Postgres and Redis services) with Playwright, the 3 always-skipped client tests, and the k6 negative controls if they fit.</p></div>
+<div><p class="k">Done when</p><p>A throwaway commit that breaks one readiness check turns CI red (reverted before merge).</p></div>
+<div><p class="k">Amendments</p><p>Mind GitHub Actions minutes: a fast subset on PRs, and the full run on main, nightly and on demand. Use Postgres 17 in CI, matching Neon. Push the workflow change with the gh credential helper.</p></div>
+</div>
+</div>
+
+<div class="item">
+<div class="head"><span class="num">14</span><h3>Account lifecycle: deletion, sign out everywhere, email change</h3></div>
+<div class="chips"><span class="chip should">before announcing</span><span class="chip">medium · ~1 day</span><span class="chip">sandbox</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>No account deletion and no "sign out of all devices". A password change signs out other devices only because the browser asks. Email change and reset-link expiry are untested end to end.</p></div>
+<div><p class="k">Fix</p><p>Other sessions are revoked on the server when the password changes. A "sign out of all devices" action. Nightly reconcile fixes Stripe email drift. Readiness checks cover reset expiry, email change and sign-out everywhere, plus a two-browser Playwright test.</p></div>
+<div><p class="k">Done when</p><p>Each behaviour has a readiness or browser check.</p></div>
+<div><p class="k">Amendments</p><p>D2: no delete button at launch. Add the "email us to delete your account" line to the account page and privacy text, and a short internal procedure for handling a request (cancel Stripe, revoke sessions, delete or anonymise the profile).</p></div>
+</div>
+</div>
+
+<div class="item">
+<div class="head"><span class="num">13</span><h3>Speed budgets that fail CI</h3></div>
+<div class="chips"><span class="chip should">before announcing</span><span class="chip">medium · ~1 day</span><span class="chip">sandbox</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>No page-speed numbers (LCP/INP/CLS), no bundle or image-weight limits, and no per-route query-count limits. Slowness would creep in unnoticed.</p></div>
+<div><p class="k">Fix</p><p>A throttled mobile Playwright perf spec, a first-load JS growth check against a committed baseline, statement-count limits in <code>readiness:routes</code>, and <code>useReportWebVitals</code> reporting into the item 3 sink.</p></div>
+<div><p class="k">Done when</p><p>Budgets are set 10% above measured values (capped at LCP ≤ 2.5 s, CLS ≤ 0.1, JS ≤ 170 KB gzip per route), and CI runs them.</p></div>
+<div><p class="k">Amendments</p><p>After items 3 and 8. No Lighthouse CI unless the owner approves the dependency.</p></div>
+</div>
+</div>
+
+<div class="item">
+<div class="head"><span class="num">9</span><h3>A load test that tells the truth on the platform, and a fresh baseline</h3></div>
+<div class="chips"><span class="chip should">before announcing</span><span class="chip">medium · ~1 day</span><span class="chip">sandbox</span><span class="chip">needs D3 yes</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>Through Cloudflare, the whole k6 test counts as one visitor and hits per-address limits. Traffic shapes are missing (a viral spike on one article, crawlers, a cold start after deploy, a realistic signed-in share). Every baseline predates the upgrades.</p></div>
+<div><p class="k">Fix</p><p>The time-limited load identity (D3), the missing scenarios, and a post-upgrade baseline on the laptop sandbox, written up with before and after compared.</p></div>
+<div><p class="k">Done when</p><p><code>docs/capacity/runs/&lt;date&gt;-post-upgrade-baseline.md</code> exists and says plainly that these are laptop numbers, and <code>launch:verify</code> fails while a load key is set.</p></div>
+<div><p class="k">Amendments</p><p>Run this after every code item above has landed, so the baseline measures the code that ships. Nothing else runs during it.</p></div>
+</div>
+</div>
+
+<div class="item">
+<div class="head"><span class="num">15</span><h3>Tests that can't fail: mutation testing and behavioural guards</h3></div>
+<div class="chips"><span class="chip later">after launch is fine</span><span class="chip">medium · 1–2 days</span><span class="chip">heavy: runs alone</span></div>
+<div class="grid2">
+<div><p class="k">Problem</p><p>Stryker has never been run for real, and it can't fail. Some guards pass on a string match. 16 client tests check source text. One e2e guard compares two constants. Real Better Auth never runs in unit tests.</p></div>
+<div><p class="k">Fix</p><p>Mutation runs on five money and auth areas, one at a time, with surviving mutants killed and a break threshold set. Behavioural versions of the weak tests. One real Better Auth integration test.</p></div>
+<div><p class="k">Done when</p><p>Scores are recorded, <code>break</code> is set, and the weak tests are replaced.</p></div>
+<div><p class="k">Amendments</p><p>One PR per area is fine. Stryker runs with nothing else on the laptop. Start with (a) webhooks and (b) membership rights; the rest can come after launch.</p></div>
+</div>
+</div>
+
+<p class="phase">Phase 5 · Quiet go-live on the real hosting (you present)</p>
+<div class="you">
+<p>Order: provision (H01 checklist) → cutover (item 5 runbook) → deploy → <strong>PL1</strong> go-live verification → <strong>PL2</strong> Stripe settings check, then your one purchase and refund → <strong>PL3</strong> load test with your spending cap → <strong>PL4</strong> ops drills (a forced error, downtime alert, Redis restart, restore, rollbacks, cold start) → <strong>announce</strong>.</p>
+<p>The prompts are in the audit, "Prompts · on the real hosting". Every live action needs your yes to that specific step. Nothing is announced until all four pass.</p>
+</div>
+</section>
+
+<section>
+<p class="label">Gates</p>
+<h2>Go / no-go</h2>
+<div class="grid2">
+<div class="good">
+<p><strong>Ready to provision the paid hosting when:</strong></p>
+<ul>
+<li>items 0, 1, 2, 16, 17, 11, 4, 3, 10, 5, 12, 6 are merged;</li>
+<li>every launch-day check passes in order in one go (after item 0);</li>
+<li>D1, D6 and D7 are decided.</li>
+</ul>
+</div>
+<div class="good">
+<p><strong>Ready to announce when:</strong></p>
+<ul>
+<li>items 8, 7, 14, 13, 9 are merged and CI runs the safety net;</li>
+<li>PL1–PL4 have passed, each written up in <code>docs/capacity/runs/</code>;</li>
+<li>your real purchase and refund worked, and access was removed within a minute;</li>
+<li>a test alert reached your phone.</li>
+</ul>
+</div>
+</div>
+</section>
+
+<section>
+<p class="label">Prompt</p>
+<h2>One prompt for any item</h2>
+<p>Swap in the item number and paste into a fresh session. A coordinating session can also run the items as helper agents in this order, like the pre-launch plan.</p>
+<details open><summary>Prompt to paste</summary>
+<pre><code>You are doing item &lt;N&gt; of apps/questura/docs/launch-fix-plan-2026-09-24.html in the questurian monorepo (main checkout: /home/webdev/Projects/questurian, start from fresh main).
+Read, in full, before changing anything:
+1. AGENTS.md at the repo root.
+2. The plan's sections "Decisions", "Rules for every job" and item &lt;N&gt; (Problem / Fix / Done when / Amendments).
+3. Prompt &lt;N&gt; in apps/questura/docs/test-gap-audit-2026-09-24.html (the detailed how, with file and line references).
+Where the plan and the audit differ, the plan wins, and the decisions table is the owner's answer. If an item needs a decision marked "needs your yes" and the plan doesn't record the owner's yes, stop and ask instead of building.
+Do the work as one PR (or the split the amendments allow). Prove it the way "Done when" says, follow every rule in "Rules for every job" (live ports 5433/6379 never touched, memory limits, foreground CI wait, squash-merge yourself), tick item &lt;N&gt; in the plan's status table, and add any new check with its expected count to docs/launch-day.md.
+Report back briefly, in plain words: the PR number, what changed, before/after test counts, real bugs found, and anything left for the owner.</code></pre>
+</details>
+</section>
+
+<section>
+<p class="label">Status</p>
+<h2>Tracker</h2>
+<div class="table-scroll"><table>
+<thead><tr><th>Item</th><th>Phase</th><th>Tier</th><th>PR</th><th>Done</th></tr></thead>
+<tbody>
+<tr><td>0 Sandbox setup</td><td>0</td><td>before go-live</td><td></td><td>☐</td></tr>
+<tr><td>1 Build and config traps</td><td>1</td><td>before go-live</td><td></td><td>☐</td></tr>
+<tr><td>2 Refunds and disputes (basil)</td><td>1</td><td>before go-live</td><td></td><td>☐</td></tr>
+<tr><td>16 Time zones</td><td>1</td><td>before go-live</td><td></td><td>☐</td></tr>
+<tr><td>17 Small correctness</td><td>1</td><td>before go-live</td><td></td><td>☐</td></tr>
+<tr><td>11 Failed-card dead ends</td><td>1</td><td>before go-live</td><td></td><td>☐</td></tr>
+<tr><td>4 Email</td><td>1</td><td>before go-live</td><td></td><td>☐</td></tr>
+<tr><td>3 Error reporting</td><td>2</td><td>before go-live</td><td></td><td>☐</td></tr>
+<tr><td>10 API front door</td><td>3</td><td>before go-live</td><td></td><td>☐</td></tr>
+<tr><td>5 Cutover rehearsal</td><td>3</td><td>before go-live</td><td></td><td>☐</td></tr>
+<tr><td>12 Backups and rollback</td><td>3</td><td>before go-live</td><td></td><td>☐</td></tr>
+<tr><td>6 Launch-day kit</td><td>3</td><td>before go-live</td><td></td><td>☐</td></tr>
+<tr><td>8 Browser journeys</td><td>4</td><td>before announcing</td><td></td><td>☐</td></tr>
+<tr><td>7 Safety net in CI</td><td>4</td><td>before announcing</td><td></td><td>☐</td></tr>
+<tr><td>14 Account lifecycle</td><td>4</td><td>before announcing</td><td></td><td>☐</td></tr>
+<tr><td>13 Speed budgets</td><td>4</td><td>before announcing</td><td></td><td>☐</td></tr>
+<tr><td>9 Load test and baseline</td><td>4</td><td>before announcing</td><td></td><td>☐</td></tr>
+<tr><td>15 Test honesty</td><td>4</td><td>after launch is fine</td><td></td><td>☐</td></tr>
+<tr><td>PL1–PL4</td><td>5</td><td>before announcing</td><td></td><td>☐</td></tr>
+</tbody></table></div>
+</section>
+
+</main>
+</body>
+</html>
