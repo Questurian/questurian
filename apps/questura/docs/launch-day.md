@@ -75,7 +75,20 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
    pnpm --dir apps/questura/apps/server launch:verify -- \
      --client http://app.readiness.localhost:3100 \
      --api http://api.readiness.localhost:4100 \
-     --allow-http --home /zz-launch/harbor                  # expect all passed
+     --allow-http --home /zz-launch/harbor --no-image-check # expect 39/39 passed
+   ```
+
+   `--no-image-check` is for the sandbox only: its images point at a CDN host
+   that does not exist until launch fix plan item 8 serves them locally. It is
+   printed as skipped. Against the real site the image check always runs.
+
+   The client build itself refuses to start without real `https` addresses
+   and a `pk_live_` key, and fails if its output mentions `localhost`. The
+   sandbox build opts out by name (`QUESTURA_BUILD_TARGET=readiness`); the real
+   build is H01 step 19, which ends with:
+
+   ```bash
+   pnpm --dir apps/questura/apps/client scan:bundle   # expect: no localhost or loopback addresses in .next/static, .open-next/assets
    ```
 
 ## After the deploy
@@ -94,6 +107,11 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
    ($12.99 / $79.99), signed-out and foreign-origin callers on every payment
    route, webhook signature refusal, that the Railway origin does not serve
    the API, and that forged IP headers do not buy a fresh rate-limit budget.
+   On the home page, an article (the first in the sitemap) and an author page
+   it checks for `localhost`/`127.0.0.1`, that the canonical and `og:url` are
+   absolute on the site's host, that robots.txt and the sitemap name only this
+   site, that one image loads as `image/*`, that a made-up path is a real 404,
+   and that the site's JavaScript calls the `--api` origin.
    The last one uses up one caller's `/plans` budget for a minute.
 
 4. **The Stripe side** (live key, read-only):

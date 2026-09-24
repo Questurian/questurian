@@ -127,6 +127,9 @@ async function main(): Promise<void> {
     NEXT_PUBLIC_BACKEND_URL: loopbackBackend,
     BACKEND_URL_LOCAL: loopbackBackend,
     WRANGLER_SEND_METRICS: 'false',
+    // Capped like the stack's own builds: the stack is up while this builds,
+    // and an uncapped build has taken the desktop app down.
+    NODE_OPTIONS: '--no-deprecation --max-old-space-size=3072',
   }
   delete env.NEXT_DIST_DIR
   for (const name of ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID', 'CF_API_TOKEN']) delete env[name]
