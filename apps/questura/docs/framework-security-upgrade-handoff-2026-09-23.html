@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Framework Security Upgrade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F5F0E8; --paper:#EFE9DE; --ink:#1F1B16; --muted:#6A6258; --rule:#D9CFBF;
+  --accent:#3B5BDB; --ok:#2E6B45; --ok-soft:#E1EDE3;
+  --warn:#9A5A00; --warn-soft:#F4E6CF; --bad:#A3322A; --bad-soft:#F3DEDA; --code:#E6DECF;
+  --display:"Playfair Display",Georgia,"Times New Roman",serif;
+  --body:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --ok:#7CC39A; --ok-soft:#1F2E25;
+  --warn:#E3AE62; --warn-soft:#33281A; --bad:#EE8C80; --bad-soft:#3A201D; --code:#2C2822;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --ok:#7CC39A; --ok-soft:#1F2E25;
+  --warn:#E3AE62; --warn-soft:#33281A; --bad:#EE8C80; --bad-soft:#3A201D; --code:#2C2822;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.6 var(--body);margin:0}
+.wrap{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:40px 80px}
+h1{font:600 2.2rem/1.12 var(--display);margin:0 0 10px;text-wrap:balance}
+h2{font:600 1.35rem/1.25 var(--display);margin:0;text-wrap:balance}
+h3{font:600 1rem/1.35 var(--body);margin:0}
+p{margin:0}
+ul,ol{margin:0;padding-left:20px;display:grid;gap:6px}
+.lede{color:var(--muted);max-width:64ch}
+code{font:500 .82rem/1.4 var(--mono);background:var(--code);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+pre{font:400 .82rem/1.55 var(--mono);background:var(--code);padding:10px 12px;border-radius:4px;overflow-x:auto;margin:0}
+pre code{background:none;padding:0}
+a{color:var(--accent)}
+.label{font:600 .72rem/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:10px}
+.label::after{content:"";flex:1;height:1px;background:var(--rule)}
+section{display:grid;gap:14px;margin-top:48px}
+.table-scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--rule)}
+th{font:600 .72rem/1.2 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.chip{font:600 .72rem/1 var(--body);padding:4px 7px;border-radius:999px;white-space:nowrap;display:inline-block}
+.crit{background:var(--bad-soft);color:var(--bad)}
+.high{background:var(--warn-soft);color:var(--warn)}
+.easy{background:var(--ok-soft);color:var(--ok)}
+.step{background:var(--paper);border-left:3px solid var(--accent);padding:14px 16px;display:grid;gap:10px;border-radius:0 4px 4px 0}
+.note{background:var(--warn-soft);color:var(--ink);padding:12px 14px;border-radius:4px}
+.stop{background:var(--bad-soft);color:var(--ink);padding:12px 14px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+<p class="label">Handoff · 2026-09-23</p>
+<h1>Framework security upgrade</h1>
+<p class="lede">Next.js, Payload CMS and Better Auth have published security holes in the versions Questura runs, including two critical ones. This page gives another agent everything it needs to upgrade them safely. It covers what is wrong, what the target versions are, the order to do it in, and how to prove nothing broke. The owner has approved doing the upgrade.</p>
+
+<section>
+<p class="label">Why</p>
+<h2>What <code>pnpm audit</code> found</h2>
+<p>This was run from the monorepo root on 2026-09-23. It is filtered to <code>apps/questura/apps/server</code> and <code>apps/questura/apps/client</code>. The Next.js list applies to both apps, since both run <code>next@15.4.11</code>.</p>
+<div class="table-scroll"><table>
+<thead><tr><th>Package</th><th>Severity</th><th>Problem</th><th>Fixed in</th></tr></thead>
+<tbody>
+<tr><td><code>next</code></td><td><span class="chip crit">critical</span></td><td>Unauthenticated remote code execution in the Image Optimization API when AVIF files are used</td><td>15.5.24</td></tr>
+<tr><td><code>next</code></td><td><span class="chip crit">critical</span></td><td>Unauthenticated remote code execution on Windows-hosted servers (not our hosts, but the same patch)</td><td>15.5.24</td></tr>
+<tr><td><code>next</code></td><td><span class="chip high">high ×4</span></td><td>Middleware/proxy bypass: segment-prefetch routes (two advisories), dynamic route parameter injection, and Pages Router i18n</td><td>15.5.16–15.5.18</td></tr>
+<tr><td><code>next</code></td><td><span class="chip high">high ×3</span></td><td>SSRF: through rewrites with an attacker-controlled hostname, Server Actions on custom servers, and WebSocket upgrades</td><td>15.5.16–15.5.21</td></tr>
+<tr><td><code>next</code></td><td><span class="chip high">high ×4</span></td><td>Denial of service: Server Components (two advisories), Server Actions, and Cache Components connection exhaustion</td><td>15.5.15–15.5.21</td></tr>
+<tr><td><code>better-auth</code></td><td><span class="chip high">high</span></td><td>Stored XSS in the auth-server origin via <code>javascript:</code> redirects</td><td>1.6.13</td></tr>
+<tr><td><code>better-auth</code></td><td><span class="chip high">high</span></td><td>Account takeover via pre-account hijacking on magic link. Questura does not use magic link, but the same patch applies.</td><td>1.6.22</td></tr>
+<tr><td><code>drizzle-orm</code> (via <code>@payloadcms/drizzle</code>)</td><td><span class="chip high">high</span></td><td>SQL injection via improperly escaped SQL identifiers</td><td>0.45.2 (Payload 3.90.2 ships it)</td></tr>
+<tr><td><code>undici</code>, <code>ws</code>, <code>lodash</code> (via Payload's drizzle)</td><td><span class="chip high">high</span></td><td>WebSocket DoS and parser crashes; <code>_.template</code> code injection</td><td>Payload upgrade</td></tr>
+<tr><td>Build and lint tooling (<code>minimatch</code>, <code>flatted</code>, <code>brace-expansion</code>, <code>rollup</code>, <code>vite</code>, <code>sass</code>→<code>immutable</code>, <code>@opennextjs/aws</code>→<code>fast-xml-parser</code>)</td><td><span class="chip high">high</span></td><td>Mostly ReDoS or DoS in tools that run at build time, not in request handling</td><td>Tool bumps; lower priority</td></tr>
+</tbody></table></div>
+<p>Re-run the audit before starting, because new advisories land weekly:</p>
+<pre><code>pnpm audit --json &gt; /tmp/audit.json   # from the monorepo root, then filter paths to apps/questura/apps/(server|client)</code></pre>
+</section>
+
+<section>
+<p class="label">The catch</p>
+<h2>Why the server cannot just take a patch release</h2>
+<p>All of the Next.js fixes live on the 15.5 line (≥15.5.24) or on 16.3.3 and later. Payload's Next adapter does not accept 15.5 at all. Even the latest <code>@payloadcms/next@3.90.2</code> declares:</p>
+<pre><code>next: "&gt;=15.2.9 &lt;15.3.0 || &gt;=15.3.9 &lt;15.4.0 || &gt;=15.4.11 &lt;15.5.0 || &gt;=16.3.3 &lt;17.0.0"</code></pre>
+<p>15.4.11 is already the newest version in the 15.4 range, and it is still vulnerable. The server's only patched route is therefore <strong>Payload 3.90.2 with Next 16.3.3 or later</strong>. The client has no Payload, so it can take the small step to 15.5.26.</p>
+<div class="table-scroll"><table>
+<thead><tr><th>App</th><th>Today</th><th>Target</th><th>Size</th></tr></thead>
+<tbody>
+<tr><td>Client (<code>apps/client</code>, OpenNext on Cloudflare)</td><td>next 15.4.11, @opennextjs/cloudflare 1.18.1, react 19.1.0</td><td>next <strong>15.5.26</strong>, with OpenNext bumped only if 1.18.1 refuses it. <code>@opennextjs/cloudflare@1.20.6</code> accepts <code>&gt;=15.5.24 &lt;16 || &gt;=16.3.3</code>.</td><td><span class="chip easy">small</span></td></tr>
+<tr><td>Server (<code>apps/server</code>, Payload)</td><td>payload and all @payloadcms/* 3.79.1, next 15.4.11, react 19.2.0</td><td>payload and all @payloadcms/* <strong>3.90.2</strong>, next <strong>16.3.6</strong> (latest 16.3 at time of writing)</td><td><span class="chip crit">major</span></td></tr>
+<tr><td>Server auth</td><td>better-auth 1.6.11 (range <code>^1.6.11</code>, pinned by the lockfile)</td><td>better-auth <strong>1.6.33</strong>, the newest 1.6.x. Do not jump to 1.7 in the same PR.</td><td><span class="chip easy">small</span></td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<p class="label">Order</p>
+<h2>Three PRs, smallest first</h2>
+<p>Use one branch and one PR per step. Wait for green CI, then squash-merge. Run heavy jobs (builds, the readiness stack, Stryker) one at a time: the Linux laptop has 7.5 GB of RAM, and running two together has already caused out-of-memory kills.</p>
+
+<div class="step">
+<h3>PR 1: Better Auth 1.6.11 → 1.6.33 (server)</h3>
+<ul>
+<li>Read the Better Auth changelog from 1.6.12 to 1.6.33 for anything touching cookie cache, <code>ipAddressHeaders</code>, rate limiting, <code>X-Retry-After</code>, social sign-in or the Payload/Postgres adapter. The Questura code leans on several of these on purpose; see <code>src/features/visitor-auth/lib/current-principal.ts</code> and <code>client-identity.ts</code>.</li>
+<li>If the Better Auth tables change, follow the migration steps in <code>AGENTS.md</code> exactly. Stop and ask if <code>visitor_auth_*</code> tables would change unexpectedly.</li>
+<li>Prove it with the unit tests, then <code>readiness:auth</code> (29/29), <code>readiness:purchase</code> (22/22) and the Playwright suite.</li>
+</ul>
+</div>
+
+<div class="step">
+<h3>PR 2: Client Next 15.4.11 → 15.5.26</h3>
+<ul>
+<li>This stays within Next 15, so no async-API or config rewrite should be needed. Check the 15.5 release notes for anything touching <code>middleware.ts</code>, <code>experimental.isrFlushToDisk</code> or <code>next lint</code>. <code>next lint</code> is deprecated in 15.5 and the client's <code>lint</code> script uses it.</li>
+<li>Bump <code>eslint-config-next</code> to match.</li>
+<li>Prove it with <code>pnpm build</code> and the OpenNext build (<code>opennextjs-cloudflare build</code>), the readiness stack against the rebuilt client, and Playwright (20/20 on Chromium and Firefox).</li>
+</ul>
+</div>
+
+<div class="step">
+<h3>PR 3: Server Payload 3.79.1 → 3.90.2 and Next 15.4.11 → 16.3.x</h3>
+<p>Move every <code>@payloadcms/*</code> package and <code>payload</code> together, pinned to the same exact version. Payload refuses mixed versions. Split the work into commits in this order so a failure is easy to trace:</p>
+<ol>
+<li><strong>Payload to 3.90.2 on Next 15.4.11 first.</strong> 3.90.2 still accepts 15.4.11, so this isolates Payload's own changes. Read each minor's release notes (3.80–3.90) for breaking changes and required migrations.</li>
+<li><strong>Schema check.</strong> Run <code>pnpm db:migrate:create payload-3-90-upgrade &gt; /tmp/questura-migrate-create.log 2&gt;&amp;1</code> and follow the migration rules in <code>AGENTS.md</code>. If Payload generated nothing, delete the empty migration. If it generated destructive SQL, stop and ask the owner.</li>
+<li><strong>Then Next to 16.3.x</strong>, along with <code>react</code>/<code>react-dom</code> if Payload 3.90.2 asks for newer ones. Next 16 is a major release. Use the official upgrade guide (<code>npx @next/codemod@canary upgrade latest</code>, then read nextjs.org/docs/app/guides/upgrading/version-16) and verify each item below against it instead of trusting this list.</li>
+</ol>
+<p>Known Next 16 points that touch this server:</p>
+<ul>
+<li><strong>Turbopack is the default for <code>next build</code>.</strong> <code>apps/server/next.config.mjs</code> has a custom <code>webpack()</code> block (the <code>extensionAlias</code> for <code>.js</code> → <code>.ts</code>). Expect Next 16 to refuse to build with a webpack config, or to ignore it. Either move the alias to <code>turbopack.resolveExtensions</code>/<code>resolveAlias</code>, or build with <code>next build --webpack</code>. Payload's <code>withPayload</code> may already handle this in 3.90, so check.</li>
+<li><strong>The <code>eslint</code> key in <code>next.config</code> and <code>next lint</code> are removed.</strong> The server config has <code>eslint.ignoreDuringBuilds</code>; delete it. The server's <code>lint</code> script already calls <code>eslint .</code> directly.</li>
+<li><strong><code>middleware.ts</code> is renamed to <code>proxy.ts</code></strong> and the old name is deprecated. <code>apps/server/src/middleware.ts</code> exists. Rename it (the export becomes <code>proxy</code>) and keep the same <code>matcher</code>. Proxy runs on the Node runtime.</li>
+<li><strong>Synchronous request APIs are gone.</strong> <code>cookies()</code>, <code>headers()</code>, <code>draftMode()</code>, <code>params</code> and <code>searchParams</code> must be awaited. A grep on 2026-09-23 found no un-awaited calls in <code>src</code>, but the codemod will catch route handlers that read <code>params</code> synchronously.</li>
+<li><strong>Node ≥ 20.9.</strong> The laptop has Node 22.23. The engines field still allows 18; tighten it.</li>
+<li><strong><code>typescript.ignoreBuildErrors: true</code></strong> means the build will not catch type breakage. Run <code>pnpm --dir apps/questura/apps/server typecheck</code> yourself before and after, and compare the error count. CI does not typecheck yet; see "Run the Questura typecheck in CI" if that task has landed.</li>
+<li><strong>Security headers</strong> come from <code>async headers()</code> in <code>next.config.mjs</code> (<code>SECURITY_HEADERS</code>). Confirm they still appear on every response, including errors. <code>launch:verify</code> and <code>security-headers.test.ts</code> check this.</li>
+</ul>
+</div>
+</section>
+
+<section>
+<p class="label">Proof</p>
+<h2>What "nothing broke" means</h2>
+<p>A test harness exists to make this upgrade safe; it is in <code>docs/launch-day.md</code>. Run everything below before the upgrade to record the baseline, then again after each PR. The counts must match.</p>
+<pre><code># unit tests
+pnpm --dir apps/questura/apps/server test
+pnpm --dir apps/questura/apps/client test
+
+# production build of both apps in the readiness sandbox
+# (Postgres :5442, Redis :6390, fake Stripe :3191; see launch-day.md for setup)
+pnpm --dir apps/questura/apps/server readiness:stack -- up --build
+pnpm --dir apps/questura/apps/server readiness:routes     # 114/114
+pnpm --dir apps/questura/apps/server readiness:payments   # 43/43
+pnpm --dir apps/questura/apps/server readiness:purchase   # 22/22
+pnpm --dir apps/questura/apps/server readiness:auth       # 29/29
+pnpm --dir apps/questura/apps/server readiness:faults     # 18/18 (+3 KNOWN)
+pnpm --dir apps/questura/apps/server readiness:contracts  # all ok
+
+# browser tests against the sandbox
+pnpm --dir apps/questura/apps/e2e test                    # 20/20 chromium + firefox
+
+# the Payload admin still loads and saves (manual, in the sandbox):
+# sign in as staff, open an article, edit a field, save, reload</code></pre>
+<p>If <code>readiness:contracts</code> reports a changed response shape, Payload or Next changed what an endpoint returns. Find out why before running <code>--update</code>. The contract files in <code>apps/questura/contracts/</code> are what the client relies on.</p>
+</section>
+
+<section>
+<p class="label">Rules</p>
+<h2>Do not break these</h2>
+<div class="stop">
+<ul>
+<li><strong>Do not deploy</strong>, resume the Linux laptop's live window, or change live config. This work is sandbox-only.</li>
+<li><strong>Port 6379 and Postgres on 5433 on the laptop are live data.</strong> Never point a test at them or flush them. The sandbox uses 6390 and 5442.</li>
+<li><strong>No Stripe test mode as evidence</strong> about live, and never use the Mac's <code>stripe</code> CLI key. The fake Stripe (<code>scripts/readiness/stripe-stub.ts</code>) covers payments.</li>
+<li><strong>Do not enable Payload <code>push: true</code>.</strong> Schema changes go through migrations only, following <code>AGENTS.md</code>.</li>
+<li>Check row counts (<code>locations</code>, <code>articles</code>, <code>media_assets</code>, <code>media_sets</code>, <code>users</code>, <code>visitor_profiles</code>, <code>visitor_auth_*</code>) before running any migration against data you care about.</li>
+</ul>
+</div>
+<div class="note">
+<p><strong>If Payload 3.90 + Next 16 turns out to be too much in one go:</strong> Next 15.4.11 on the server is the exposure. The critical AVIF bug needs the image optimizer; check whether the server serves <code>/_next/image</code> at all. If it does not, set <code>images.unoptimized: true</code> as a stopgap. Tell the owner which advisories stay open. Do not sit on a half-finished upgrade.</p>
+</div>
+</section>
+
+<section>
+<p class="label">Context</p>
+<h2>Useful files</h2>
+<ul>
+<li><code>docs/launch-day.md</code>: every readiness command and its expected result</li>
+<li><code>docs/launch-test-harness-handoff-2026-09-23.html</code>: the harness this upgrade leans on</li>
+<li><code>apps/server/next.config.mjs</code>: webpack alias, eslint key, security headers</li>
+<li><code>apps/server/src/middleware.ts</code>: to become <code>proxy.ts</code> on Next 16</li>
+<li><code>apps/server/src/features/visitor-auth/</code>: Better Auth wiring, cookie cache and IP handling</li>
+<li><code>apps/server/stryker.config.json</code>: mutation tests (<code>pnpm mutation</code>), useful for spot checks, too heavy to run with anything else</li>
+</ul>
+</section>
+
+</main>
+</body>
+</html>
