@@ -55,7 +55,11 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
 
    It must say the server would boot. It also refuses leftover placeholders,
    test-mode Stripe keys, loopback databases, sandbox variables and one secret
-   used twice.
+   used twice, a missing Resend key, and a missing sender or one not on
+   questurian.com (`EMAIL_FROM_ADDRESS`).
+
+   Email DNS (SPF, DKIM, DMARC) must be verified in Resend before this:
+   `docs/procedures/email-domain.md`, steps 1 to 5.
 
 2. **Rehearse locally once more** (laptop, one heavy job at a time):
 
@@ -101,7 +105,12 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
 
    Stripe Dashboard → Webhooks → the new endpoint: recent deliveries all 200.
 
-5. **First real purchase, owner only.** One real card, one real charge, then
+5. **Email lands in the inbox.** Request a password reset for a Gmail and an
+   Outlook address you own. Both arrive in the inbox, from the configured
+   sender, and "show original" says SPF, DKIM and DMARC all **pass**
+   (`docs/procedures/email-domain.md`, step 6).
+
+6. **First real purchase, owner only.** One real card, one real charge, then
    a refund. Follow `live-checks/payments.html`, checking the database row
    and `/api/me` at each step, and end with the refund and the loss of access.
 
