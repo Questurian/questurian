@@ -113,7 +113,6 @@ function getLockPool(): Pool | null {
       application_name: applicationName('advisoryLock'),
       max: poolSizes().advisoryLock,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000, // Fail fast instead of hanging forever
       // `lock_timeout` does not cover advisory locks, so waiting for one was
       // bounded by nothing at all: a webhook could hold a connection until the
       // process died. This pool runs nothing but lock and unlock, so a

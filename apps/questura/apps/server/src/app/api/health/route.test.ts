@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { NextRequest } from 'next/server'
 
-const { find } = vi.hoisted(() => ({ find: vi.fn() }))
+const { query } = vi.hoisted(() => ({ query: vi.fn() }))
 
 vi.mock('payload', () => ({
-  getPayload: vi.fn(async () => ({ find })),
+  getPayload: vi.fn(async () => ({ db: { pool: { query } } })),
 }))
 
 vi.mock('@/payload.config', () => ({ default: {} }))
@@ -15,14 +15,14 @@ vi.mock('@/shared/utils/cors', () => ({
 }))
 
 const { GET } = await import('./route')
-const { resetHealthProbe, PROBE_TTL_MS } = await import('@/shared/observability/health-probe')
+const { resetHealthProbe, PROBE_TIMEOUT_MS, PROBE_TTL_MS } = await import('@/shared/observability/health-probe')
 const request = { headers: new Headers() } as NextRequest
 
 describe('GET /api/health', () => {
   beforeEach(() => {
     vi.stubEnv('QUESTURA_RELEASE_SHA', '')
-    find.mockReset()
-    find.mockResolvedValue({ docs: [] })
+    query.mockReset()
+    query.mockResolvedValue({ rows: [] })
     // The probe is sampled across requests, so each test starts from no
     // cached answer.
     resetHealthProbe()
@@ -43,12 +43,12 @@ describe('GET /api/health', () => {
       releaseSha: 'abc123',
       database: { status: 'connected' },
     })
-    expect(find).toHaveBeenCalledWith({ collection: 'users', limit: 1, depth: 0 })
+    expect(query).toHaveBeenCalledWith({ text: 'select 1', query_timeout: PROBE_TIMEOUT_MS })
   })
 
   it('retains release identity when the database is unhealthy', async () => {
     vi.stubEnv('QUESTURA_RELEASE_SHA', 'broken-release')
-    find.mockRejectedValue(new Error('database unavailable'))
+    query.mockRejectedValue(new Error('database unavailable'))
 
     const response = await GET(request)
 
@@ -70,7 +70,7 @@ describe('GET /api/health', () => {
   // each check holding a request open for a connection timeout.
   it('does not query the database once per request', async () => {
     await Promise.all([GET(request), GET(request), GET(request), GET(request)])
-    expect(find).toHaveBeenCalledTimes(1)
+    expect(query).toHaveBeenCalledTimes(1)
   })
 
   it('says how old the sampled answer is, so a reader can tell current from recent', async () => {

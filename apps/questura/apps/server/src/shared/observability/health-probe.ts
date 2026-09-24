@@ -1,7 +1,8 @@
 import config from '@/payload.config'
 
 /**
- * The database health probe, sampled.
+ * The database health probe, sampled: `select 1` under its own short limit,
+ * shared by `/api/health` and `/api/health/ready`.
  *
  * `/api/health` is the route a platform polls hardest, and it used to issue a
  * fresh query on every call from every instance. So a database under
@@ -20,6 +21,17 @@ import config from '@/payload.config'
 
 export const PROBE_TTL_MS = 2_000
 
+/**
+ * How long one probe may take before it counts as a failure.
+ *
+ * `select 1` takes a millisecond or two on a healthy database, so anything
+ * near this means the database, or the pool in front of it, is not serving.
+ * It is far shorter than the pool's own limits (`shared/database/timeouts.ts`)
+ * because a health answer that arrives after the platform's check has given
+ * up is no answer; the pool's limits still bound the query left behind.
+ */
+export const PROBE_TIMEOUT_MS = 2_000
+
 export type Probe = {
   at: number
   ok: boolean
@@ -35,12 +47,26 @@ function cache(): Cache {
   return (store.__questuraHealthProbe ??= {})
 }
 
+type Queryable = { query: (config: { text: string; query_timeout?: number }) => Promise<unknown> }
+
 async function probeDatabase(): Promise<Probe> {
   const startedAt = Date.now()
+  let timer: ReturnType<typeof setTimeout> | undefined
   try {
     const { getPayload } = await import('payload')
     const payload = await getPayload({ config })
-    await payload.find({ collection: 'users', limit: 1, depth: 0 })
+    const pool = (payload.db as unknown as { pool?: Queryable }).pool
+    if (!pool) throw new Error('No database pool')
+
+    // `query_timeout` bounds the query once it has a connection; the race
+    // bounds waiting for one, which the pool's connection timeout allows to
+    // take longer than a probe should.
+    await Promise.race([
+      pool.query({ text: 'select 1', query_timeout: PROBE_TIMEOUT_MS }),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Database probe timed out after ${PROBE_TIMEOUT_MS}ms`)), PROBE_TIMEOUT_MS)
+      }),
+    ])
     return { at: Date.now(), ok: true, responseTimeMs: Date.now() - startedAt, error: null }
   } catch (error) {
     return {
@@ -49,6 +75,8 @@ async function probeDatabase(): Promise<Probe> {
       responseTimeMs: Date.now() - startedAt,
       error: error instanceof Error ? error.message : 'Unknown error',
     }
+  } finally {
+    clearTimeout(timer)
   }
 }
 

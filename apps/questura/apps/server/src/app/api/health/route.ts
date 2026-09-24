@@ -11,7 +11,8 @@
  * result is cached for `PROBE_TTL_MS` and the response says how old it is, so
  * a reader can tell a current answer from a recent one.
  *
- * For a readiness check that costs nothing at all, use `/api/health/ready`.
+ * `/api/health/ready` shares the same sampled probe, so polling both costs
+ * the database no more than polling one.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
