@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pre-Launch Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F5F0E8; --paper:#EFE9DE; --ink:#1F1B16; --muted:#6A6258; --rule:#D9CFBF;
+  --accent:#3B5BDB; --ok:#2E6B45; --ok-soft:#E1EDE3;
+  --warn:#9A5A00; --warn-soft:#F4E6CF; --bad:#A3322A; --bad-soft:#F3DEDA; --code:#E6DECF;
+  --display:"Playfair Display",Georgia,"Times New Roman",serif;
+  --body:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --ok:#7CC39A; --ok-soft:#1F2E25;
+  --warn:#E3AE62; --warn-soft:#33281A; --bad:#EE8C80; --bad-soft:#3A201D; --code:#2C2822;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --ok:#7CC39A; --ok-soft:#1F2E25;
+  --warn:#E3AE62; --warn-soft:#33281A; --bad:#EE8C80; --bad-soft:#3A201D; --code:#2C2822;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.6 var(--body);margin:0}
+.wrap{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:40px 80px}
+h1{font:600 2.2rem/1.12 var(--display);margin:0 0 10px;text-wrap:balance}
+h2{font:600 1.35rem/1.25 var(--display);margin:0;text-wrap:balance}
+h3{font:600 1.05rem/1.35 var(--body);margin:0}
+p{margin:0}
+ul,ol{margin:0;padding-left:20px;display:grid;gap:6px}
+.lede{color:var(--muted);max-width:64ch}
+code{font:500 .82rem/1.4 var(--mono);background:var(--code);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+pre{font:400 .8rem/1.55 var(--mono);background:var(--code);padding:10px 12px;border-radius:4px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+pre code{background:none;padding:0}
+a{color:var(--accent)}
+.label{font:600 .72rem/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:10px}
+.label::after{content:"";flex:1;height:1px;background:var(--rule)}
+section{display:grid;gap:14px;margin-top:48px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:600 .72rem/1 var(--body);padding:4px 7px;border-radius:999px;white-space:nowrap;background:var(--code);color:var(--muted)}
+.small{background:var(--ok-soft);color:var(--ok)}
+.medium{background:var(--warn-soft);color:var(--warn)}
+.big{background:var(--bad-soft);color:var(--bad)}
+.step{background:var(--paper);border-left:3px solid var(--accent);padding:16px;display:grid;gap:10px;border-radius:0 4px 4px 0}
+.step .num{font:600 1.6rem/1 var(--display);color:var(--accent)}
+.head{display:flex;gap:12px;align-items:baseline}
+.you{background:var(--warn-soft);padding:14px 16px;border-radius:4px;display:grid;gap:8px}
+.stop{background:var(--bad-soft);padding:14px 16px;border-radius:4px;display:grid;gap:8px}
+details{display:grid;gap:8px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+<p class="label">Plan · 2026-09-24</p>
+<h1>Questura pre-launch plan</h1>
+<p class="lede">This is everything left before launch, in the order to do it. Each step is its own job with a prompt you can paste into a fresh AI session. The prompts are written so the new agent does not need this conversation. Most steps need nothing from you.</p>
+
+<section>
+<p class="label">For you</p>
+<h2>What actually needs you</h2>
+<div class="you">
+<p><strong>Right now: nothing.</strong> Start step 1 whenever you like.</p>
+<p><strong>Later, two small things. Both are optional, and neither blocks launch:</strong></p>
+<ul>
+<li><strong>Step 8:</strong> give the agent a Stripe <em>test-mode</em> key if you want recorded sample data. Skip it if not.</li>
+<li><strong>Step 9:</strong> sit with an agent for 10 minutes while it counts, read-only, whether the double-customer bug ever hit a real buyer on the laptop's live Stripe.</li>
+</ul>
+<p><strong>Decided for you, so you don't have to think about them now:</strong></p>
+<ul>
+<li><strong>How to protect the API on Railway:</strong> Cloudflare in front plus a secret header (ADR-0016). This gets set up when Railway is set up, not before.</li>
+<li><strong>HSTS "preload" (a stricter HTTPS setting):</strong> not now. Revisit a few weeks after launch, once the domains are stable, because it is hard to undo.</li>
+<li><strong>Safari browser tests:</strong> skipped. The laptop can't run them, and Chrome plus Firefox cover the same code.</li>
+</ul>
+</div>
+</section>
+
+<section>
+<p class="label">How to run this</p>
+<h2>One at a time, in a fresh session each</h2>
+<ul>
+<li><strong>Do the steps in order, one session each.</strong> Almost every step starts the same practice copy of the site on this laptop. It uses fixed ports and most of the laptop's memory, so two sessions running it at once will collide or crash. Step 1 is the only one that is safe to run alongside another.</li>
+<li><strong>Each step is one PR.</strong> The agent merges it itself after CI is green, then the next step starts from fresh <code>main</code>.</li>
+<li><strong>If a step goes sideways,</strong> the agent should stop and say so. Nothing here is urgent enough to force.</li>
+</ul>
+</section>
+
+<section>
+<p class="label">The steps</p>
+<h2>In order</h2>
+
+<div class="step">
+<div class="head"><span class="num">1</span><h3>Type check in CI</h3></div>
+<div class="chips"><span class="chip small">small · ~30 min</span><span class="chip">no sandbox needed</span></div>
+<p><strong>Why first:</strong> the server build is set to ignore type errors (<code>typescript.ignoreBuildErrors: true</code>), and CI doesn't type-check Questura. The big upgrade in step 6 will change a lot of types. Without this, breakage can merge green. Both apps type-check cleanly today (0 errors, checked 2026-09-24), so this is only CI wiring.</p>
+<details><summary>Prompt to paste</summary>
+<pre><code>In the questurian monorepo, add a Questura typecheck to CI (.github/workflows/ci.yml). Both apps already pass: `pnpm --dir apps/questura/apps/server typecheck` and `pnpm --dir apps/questura/apps/client typecheck` both exit 0 with no errors (checked 2026-09-24). Add a step to each app's existing CI job (or one small job), matching the style of the existing jobs, including their comments. Server needs `pnpm generate:types` first if the job doesn't already produce payload-types. Open one PR, wait for green CI, squash-merge it yourself. Follow AGENTS.md; use the caveman skill.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">2</span><h3>Database time limit and an honest health check</h3></div>
+<div class="chips"><span class="chip small">small–medium · ~2 h</span><span class="chip">uses sandbox</span></div>
+<p><strong>Why:</strong> if the database freezes (instead of going down cleanly), the API waits forever and pages spin. Meanwhile <code>/api/health/ready</code> keeps saying "ready", so the host never notices. <code>readiness:faults</code> already reproduces both problems; they show as its 3 KNOWN gaps.</p>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura server (apps/questura/apps/server, Payload 3.79 + @payloadcms/db-postgres). Two known gaps, reproduced by `pnpm readiness:faults` (listed as KNOWN, see scripts/readiness/fault-checks.ts):
+1. When Postgres is paused (not stopped), API requests hang forever: the pg pool has no client-side time limit.
+2. /api/health/ready stays 200 while the database is unreachable.
+
+Fix:
+- Give the pg pool a client-side limit, e.g. `query_timeout` and `connectionTimeoutMillis` in the db-postgres `pool` options, and also a server-side `statement_timeout`. Choose values by measuring: find the slowest legitimate query first (article pages, sitemap, admin list views, migrations). Migrations and long admin jobs must not be cut off. If they need a longer limit, exempt them explicitly.
+- Make /api/health/ready run a cheap DB probe (e.g. `select 1`) under its own short timeout and return 503 when it fails. Keep /api/health (liveness) DB-free, so a DB blip doesn't make the host restart the app.
+- Turn the KNOWN fault checks into real passing checks. Update the expected counts in docs/launch-day.md.
+
+Use the readiness sandbox exactly as docs/launch-day.md describes: Postgres :5442, Redis :6390. Never touch 5433 or 6379 on this laptop; those are live data. Run heavy jobs one at a time (7.5 GB RAM). Unit tests plus readiness:faults, readiness:routes and readiness:purchase must pass. One PR, green CI, squash-merge yourself. Follow AGENTS.md; use the caveman skill.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">3</span><h3>Google sign-in and staff/visitor separation tests</h3></div>
+<div class="chips"><span class="chip medium">medium · half a day</span><span class="chip">uses sandbox</span></div>
+<p><strong>Why before the upgrade:</strong> step 4 updates the sign-in library. These tests are the safety net for the part nothing covers yet:</p>
+<ul>
+<li>someone who signs up with a password and later uses Google with the same email;</li>
+<li>staff and visitor logins never leaking into each other.</li>
+</ul>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura launch test harness, item B4. Read apps/questura/docs/launch-test-harness-handoff-2026-09-23.html (section on auth), and docs/launch-day.md for how the readiness sandbox runs. Existing sign-in attacks are in apps/questura/apps/server/scripts/readiness/auth-checks.ts (29 checks), with Playwright specs in apps/questura/apps/e2e.
+
+Build readiness checks for:
+- Account linking with Google OAuth. Use a fake OAuth provider written inside the test harness (a tiny local HTTP server that speaks enough OIDC for Better Auth). Install no new packages. Cases: a password account, then Google with the same verified email; the same with an UNverified email, which must NOT silently link; Google first, then a password reset; two Google accounts attempting the same email; the state/nonce replayed or swapped between two browsers.
+- Staff (Payload `users`) vs visitor (Better Auth) isolation. A visitor cookie must never open /admin or staff APIs, a staff cookie must never count as a visitor member, and signing out of one must not sign out of the other.
+If a check finds a real bug, fix it in the same PR with a unit test, the same way PRs #671–#676 did.
+
+Rules: sandbox only (Postgres :5442, Redis :6390; never 5433/6379), heavy jobs one at a time, no deploys, no real Google/Stripe. Add the new command and its expected count to docs/launch-day.md. One PR, green CI, squash-merge yourself. Follow AGENTS.md; use the caveman skill.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">4</span><h3>Upgrade Better Auth (sign-in library)</h3></div>
+<div class="chips"><span class="chip small">small · ~1 h</span><span class="chip">uses sandbox</span></div>
+<p><strong>Why:</strong> two published security holes in 1.6.11, fixed in 1.6.33. It is a patch update within the same version line.</p>
+<details><summary>Prompt to paste</summary>
+<pre><code>Do PR 1 from apps/questura/docs/framework-security-upgrade-handoff-2026-09-23.html: Better Auth 1.6.11 → 1.6.33 in apps/questura/apps/server. Read that page fully first, including its Rules section. Record the baseline counts (unit tests, readiness:auth, readiness:purchase, the B4 linking checks, Playwright) BEFORE upgrading, then match them after. One PR, green CI, squash-merge yourself. Follow AGENTS.md; use the caveman skill.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">5</span><h3>Upgrade the website's Next.js</h3></div>
+<div class="chips"><span class="chip small">small · ~1–2 h</span><span class="chip">uses sandbox</span></div>
+<p><strong>Why:</strong> it closes the two critical and eleven high Next.js holes on the website side. It stays within Next 15 (15.4.11 → 15.5.26).</p>
+<details><summary>Prompt to paste</summary>
+<pre><code>Do PR 2 from apps/questura/docs/framework-security-upgrade-handoff-2026-09-23.html: client Next 15.4.11 → 15.5.26 (apps/questura/apps/client, OpenNext Cloudflare). Read that page fully first, including its Rules section. Record baseline counts before, match them after, and confirm the OpenNext Cloudflare build still succeeds. One PR, green CI, squash-merge yourself. Follow AGENTS.md; use the caveman skill.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">6</span><h3>Upgrade the API: Payload 3.90 and Next.js 16</h3></div>
+<div class="chips"><span class="chip big">big · 1–2 days</span><span class="chip">uses sandbox</span></div>
+<p><strong>Why:</strong> the same Next.js holes on the API. Payload won't run on the small fix, so the API has to move to Next 16, and Payload 3.90 is needed for that. The Payload upgrade also closes a SQL-injection hole in its database layer. Steps 1–5 exist to make this one safe.</p>
+<details><summary>Prompt to paste</summary>
+<pre><code>Do PR 3 from apps/questura/docs/framework-security-upgrade-handoff-2026-09-23.html: server Payload 3.79.1 → 3.90.2 and Next 15.4.11 → 16.3.x (apps/questura/apps/server). Read that page fully first, including its Rules and the "if it's too much" note. Work in the commit order it gives: Payload on Next 15.4.11 first, then the schema check via the AGENTS.md migration steps, then Next 16. Record every baseline count before starting; all must match after, and `pnpm typecheck` must stay at 0 errors. Check the Payload admin by hand in the sandbox: sign in as staff, edit an article, save. Stop and ask the owner if a migration contains destructive SQL or touches visitor_auth_* tables. One PR, green CI, squash-merge yourself. Follow AGENTS.md; use the caveman skill.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">7</span><h3>Leftover tool updates</h3></div>
+<div class="chips"><span class="chip small">small · ~1 h</span><span class="chip">no sandbox needed</span></div>
+<p><strong>Why:</strong> after step 6, re-run the security audit. What remains should be build and lint tools (minimatch, flatted, brace-expansion and similar). They matter much less, because they don't run when visitors use the site.</p>
+<details><summary>Prompt to paste</summary>
+<pre><code>Run `pnpm audit` from the questurian monorepo root and filter to paths under apps/questura/apps/(server|client). Fix what's left by bumping direct dependencies to patched versions, or with pnpm `overrides` where a transitive package is stuck. Don't take a new major version of anything without asking. List anything you couldn't fix and why. Tests and both typechecks must pass. One PR, green CI, squash-merge yourself. Follow AGENTS.md; use the caveman skill.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">8</span><h3>Recorded Stripe sample data (optional)</h3></div>
+<div class="chips"><span class="chip medium">needs you: a test-mode key</span></div>
+<p><strong>Why:</strong> the fake Stripe used in the tests is built from recorded Stripe replies. A few replies (unusual subscription states) can only be recorded from Stripe's test mode. AGENTS.md allows that one use. It's nice to have; the harness works without it.</p>
+<details><summary>Prompt to paste</summary>
+<pre><code>Questura launch test harness, item A3 (see apps/questura/docs/launch-test-harness-handoff-2026-09-23.html). The owner will provide a Stripe TEST-MODE secret key for this session only. Per AGENTS.md, the only allowed use of sk_test is capturing fixture JSON that gets committed. Say out loud when you use it and why, and never use the Mac stripe CLI device key. Capture the missing fixtures that apps/questura/apps/server/scripts/readiness/stripe-fake.ts needs, scrub them of personal data, commit them, and make the fake use them. Never draw conclusions about live Stripe from test mode. One PR, green CI, squash-merge yourself. Use the caveman skill.</code></pre>
+</details>
+</div>
+
+<div class="step">
+<div class="head"><span class="num">9</span><h3>Did the double-customer bug ever hit a real buyer? (optional)</h3></div>
+<div class="chips"><span class="chip medium">needs you present · read-only</span></div>
+<p><strong>Why:</strong> PR #671 fixed a bug where a double-clicked first purchase created two Stripe customers, which could mean charged but no membership. The fix is in. This only checks whether it ever happened on the laptop's live Stripe account before the fix. <span class="muted">The script from 2026-09-23 lived in a temporary folder and is gone, so the agent rebuilds it.</span></p>
+<details><summary>Prompt to paste</summary>
+<pre><code>READ-ONLY check on live Stripe, with the owner present. Use only apps/questura/scripts/stripe-live (never the Mac stripe CLI key, never test mode). Question: does any visitor have more than one Stripe customer, or a paid subscription on a customer the DB profile isn't linked to? (Background: bug fixed in PR #671.) List customers and subscriptions through stripe-live, group by the visitor id in customer metadata, and print COUNTS ONLY: no emails, names or ids in the output. Make no writes to Stripe or the DB. Show the owner the exact command before running it. If a real case turns up, report it and stop; the owner decides any refund or fix.</code></pre>
+</details>
+</div>
+
+</section>
+
+<section>
+<p class="label">After this</p>
+<h2>Launch day</h2>
+<p>Everything that can only be tested on the real hosting is already written down in <code>docs/launch-day.md</code>, with the exact commands and expected results. It covers the Cloudflare and Railway checks, the live Stripe webhook, and your first real purchase, which only you do. Nothing to do there until the hosting exists.</p>
+<div class="stop">
+<p><strong>Rules every agent follows</strong> (they're in AGENTS.md; repeated here because they are the ones that hurt):</p>
+<ul>
+<li>No deploys, and don't resume the laptop's live window, unless you say so.</li>
+<li>Ports 6379 and 5433 on the laptop are live Redis and Postgres. Never point tests at them.</li>
+<li>Live Stripe is real money. Test mode is never evidence about live.</li>
+<li>Database changes go through migrations. Stop and ask on anything destructive.</li>
+</ul>
+</div>
+</section>
+
+</main>
+</body>
+</html>
