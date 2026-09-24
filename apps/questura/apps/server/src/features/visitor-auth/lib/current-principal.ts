@@ -2,6 +2,7 @@ import { getVisitorAuthMethodsForUser } from './account-query'
 import type { VisitorAuthMethods } from './account-query'
 import { visitorAuth } from './better-auth'
 import { deriveVisitorMembership } from './membership-entitlement'
+import { visitorSessionToken } from './session-cookie'
 import type { MembershipSource } from './membership-entitlement'
 import { ensureVisitorProfileForAuthUser, findVisitorProfileByAuthUserId } from './visitor-profile'
 
@@ -62,10 +63,24 @@ async function resolveVisitorPrincipal(
   headers: Headers,
   options: PrincipalOptions = {},
 ): Promise<VisitorPrincipal | null> {
-  const visitorSession = await visitorAuth.api.getSession({
+  let visitorSession = await visitorAuth.api.getSession({
     headers,
     ...(options.freshSession ? { query: { disableCookieCache: true } } : {}),
   })
+
+  // Better Auth answers from a valid `session_data` cache cookie without
+  // checking it belongs to the `session_token` cookie beside it, so one
+  // visitor's cache cookie with another's token read as the first visitor
+  // (`pnpm readiness:auth`). When the session it returns is not the one the
+  // token names, ask the session store instead. Agreeing cookies, the normal
+  // case, cost nothing extra.
+  if (!options.freshSession && visitorSession?.session?.token) {
+    const signed = visitorSessionToken(headers)
+    const token = signed ? decodeURIComponent(signed).split('.')[0] : null
+    if (token !== visitorSession.session.token) {
+      visitorSession = await visitorAuth.api.getSession({ headers, query: { disableCookieCache: true } })
+    }
+  }
 
   if (visitorSession?.user) {
     const user = visitorSession.user

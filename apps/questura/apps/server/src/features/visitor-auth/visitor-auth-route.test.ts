@@ -156,6 +156,30 @@ describe('Visitor auth route', () => {
     })
   })
 
+  // Better Auth's own limiter sends `X-Retry-After`, which nothing reads; the
+  // client and any proxy read the standard `Retry-After`.
+  it('adds the standard Retry-After to Better Auth\'s rate-limit answers', async () => {
+    mocks.postHandler.mockResolvedValueOnce(
+      new Response(JSON.stringify({ message: 'Too many requests. Please try again later.' }), {
+        status: 429,
+        headers: { 'X-Retry-After': '37' },
+      }),
+    )
+
+    const response = await POST(createRequest('POST'))
+
+    expect(response.status).toBe(429)
+    expect(response.headers.get('retry-after')).toBe('37')
+  })
+
+  it('keeps a Retry-After that is already there', async () => {
+    mocks.postHandler.mockResolvedValueOnce(
+      new Response('', { status: 429, headers: { 'Retry-After': '5', 'X-Retry-After': '37' } }),
+    )
+
+    expect((await POST(createRequest('POST'))).headers.get('retry-after')).toBe('5')
+  })
+
   // Better Auth limits requests per address and path; nothing bounded how many
   // password hashes ran at once. The `auth` gate does, and its refusal keeps
   // the credentialed CORS headers and is never cacheable.

@@ -63,3 +63,31 @@ describe('password strength rule', () => {
     })
   })
 })
+
+describe('password strength rule, edges found against the real server', () => {
+  // A travel site's readers type in their own alphabets. `[A-Z]` refused
+  // `Ünïcødé-🔑-2026!` for having no uppercase letter.
+  it.each(['Ünïcødé-🔑-2026!', 'Ωmega-pass-1!', 'Ärger-und-2026!', 'Łódź-miasto-1!'])('counts uppercase in any alphabet: %s', (password) => {
+    expect(getPasswordStrengthError(password)).toBeNull()
+  })
+
+  it('still needs an uppercase letter of some alphabet', () => {
+    expect(getPasswordStrengthError('ünïcødé-🔑-2026!')).toContain('an uppercase letter')
+  })
+
+  // No keyboard or password manager produces these; a password that holds one
+  // is a paste accident or an attack on whatever stores or compares it.
+  it.each([
+    ['NUL', 'Abc1!defg\u0000'],
+    ['tab', 'Abc1!\tdefg'],
+    ['newline', 'Abc1!defg\n'],
+    ['escape', 'Abc1!\u001bdefg'],
+    ['DEL', 'Abc1!defg\u007f'],
+  ])('refuses a %s character', (_label, password) => {
+    expect(getPasswordStrengthError(password)).toBe('Password must not contain control characters.')
+  })
+
+  it('allows ordinary spaces', () => {
+    expect(getPasswordStrengthError('Correct Horse 1!')).toBeNull()
+  })
+})

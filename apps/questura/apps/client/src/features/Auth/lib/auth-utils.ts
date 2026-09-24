@@ -26,7 +26,8 @@ export const validatePasswordRequirements = (password: string): PasswordRequirem
   return {
     hasMinLength: password.length >= 8,
     hasNumber: /\d/.test(password),
-    hasUppercase: /[A-Z]/.test(password),
+    // Any alphabet, matching the server (`shared/lib/password-strength.ts`).
+    hasUppercase: /\p{Lu}/u.test(password),
     hasSymbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
   };
 };
