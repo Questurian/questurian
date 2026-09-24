@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "pnpm generate:types && cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
+    "build": "node -p \"process.versions.node+' '+require('os').cpus().length\" ; ls -la src/payload-types.ts || true; NODE_OPTIONS=--no-deprecation node --trace-exit --trace-uncaught --trace-warnings node_modules/payload/bin.js generate:types; echo GEN_EXIT=$?; ls -la src/payload-types.ts || true; NODE_OPTIONS=--no-deprecation node --disable-warning=ExperimentalWarning node_modules/payload/bin.js generate:types --disable-transpile; echo GEN2_EXIT=$?; ls -la src/payload-types.ts || true; exit 1",
     "dev": "node scripts/show-commands.cjs && cross-env NODE_OPTIONS='--no-deprecation --no-warnings=ExperimentalWarning' next dev -p 4000",
     "devsafe": "rm -rf .next && node scripts/show-commands.cjs && cross-env NODE_OPTIONS=--no-deprecation next dev -p 4000",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
