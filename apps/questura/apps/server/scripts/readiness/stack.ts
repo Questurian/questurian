@@ -190,7 +190,10 @@ function build(label: string, cwd: string, env: NodeJS.ProcessEnv, restore: stri
   const originals = new Map(restore.filter((file) => existsSync(resolve(cwd, file))).map((file) => [file, readFileSync(resolve(cwd, file))]))
   const log = resolve(STATE_DIR, `build-${label}.log`)
   console.log(`Building ${label} into ${STACK_DIST} (log: ${log}) …`)
-  const result = spawnSync('pnpm', ['build'], { cwd, env, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 })
+  // Capped heap: the laptop has ~7.5 GB and part of the stack is already up
+  // while the client builds. Uncapped, a build has taken the desktop app down.
+  const heap = [env.NODE_OPTIONS ?? '', '--max-old-space-size=3072'].filter(Boolean).join(' ')
+  const result = spawnSync('pnpm', ['build'], { cwd, env: { ...env, NODE_OPTIONS: heap }, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 })
   writeFileSync(log, (result.stdout ?? '') + (result.stderr ?? ''))
   for (const [file, bytes] of originals) writeFileSync(resolve(cwd, file), bytes)
   if (result.status !== 0) throw new Error(`The ${label} build failed (exit ${result.status}). See ${log}.`)
