@@ -181,6 +181,21 @@ APP_ROLLOUT_SURGE=0
 (1 + 0 + 1 job) × 41 + 5 reserve = 87. Adding the keys ahead of the deploy is
 safe; older releases ignore them.
 
+`~/questura/config/server.env` must also name the email sender before a
+release containing plan item 4 (2026-09-24) is deployed, or the server refuses
+to boot. `RESEND_API_KEY` was already required in practice; it is now checked
+at boot too. The sender must be on the site's domain
+(`docs/procedures/email-domain.md`):
+
+```
+EMAIL_FROM_ADDRESS=hello@questurian.com
+# optional
+EMAIL_FROM_NAME=Questurian
+EMAIL_REPLY_TO=
+```
+
+Adding them ahead of the deploy is safe; older releases ignore them.
+
 This migrates existing app env files into mode-0600 canonical config, extracts
 the existing Compose password into a mode-0600 `.env` without printing it,
 installs sanitized Compose/Tunnel config, and renders validated units under

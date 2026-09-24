@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createInfoBox, EMAIL_PARAGRAPH_STYLE } from './email-utils'
+import { buildGreeting, escapeHtml, sendEmail, wrapEmailContent, createFooter, createInfoBox, EMAIL_PARAGRAPH_STYLE } from './email-utils'
 import type { EmailResult, SubscriptionReactivatedEmailData } from '../types'
 import { formatAccessDate } from '@/shared/lib/dates'
 
@@ -15,7 +15,7 @@ export async function sendSubscriptionReactivatedEmail(
   const statusDetails = subscriptionType ? `
     <div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin: 20px 0;">
       <p style="font-size: 16px; line-height: 1.5; color: #333; margin: 0;">
-        <strong>Subscription:</strong> ${subscriptionType}
+        <strong>Subscription:</strong> ${escapeHtml(subscriptionType)}
       </p>
       <p style="font-size: 16px; line-height: 1.5; color: #333; margin: 10px 0 0 0;">
         <strong>Next Renewal:</strong> ${formatAccessDate(renewsAt) ?? 'Active'}

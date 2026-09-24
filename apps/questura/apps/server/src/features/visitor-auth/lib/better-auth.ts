@@ -15,8 +15,14 @@ import { normalizeEmail } from '@/shared/lib/normalize-email'
 import { VISITOR_AUTH_CLIENT_IP_HEADER } from './client-identity'
 import { googleProviderOptions } from './google-provider'
 import { redisSecondaryStorage } from './redis-secondary-storage'
+import { isGoogleLink, noticeEmailChanged, noticeGoogleLinked, noticePasswordChanged } from './security-notices'
 import { getVisitorPasswordError } from './visitor-password-guard'
-import { ensureVisitorProfileForAuthUser, splitDisplayName, updateVisitorProfileByAuthUserId } from './visitor-profile'
+import {
+  ensureVisitorProfileForAuthUser,
+  findVisitorProfileByAuthUserId,
+  splitDisplayName,
+  updateVisitorProfileByAuthUserId,
+} from './visitor-profile'
 import { rejectStaffEmailForVisitorAuth } from './visitor-staff-email-boundary'
 
 const databaseUrl = APP_CONFIG.database.uri
@@ -189,6 +195,10 @@ export const visitorAuth = betterAuth({
     },
     afterEmailVerification: async (user) => {
       const email = normalizeEmail(user.email)
+      // Read before the write: Better Auth hands this callback the user with
+      // the NEW address already saved, and the profile is the one place the
+      // previous address is still on record.
+      const previous = await findVisitorProfileByAuthUserId(user.id)
       const profile = await updateVisitorProfileByAuthUserId(user.id, { email })
 
       // This is also where an email *change* lands, and Stripe never learns of
@@ -199,6 +209,13 @@ export const visitorAuth = betterAuth({
         typeof profile?.stripeCustomerId === 'string' ? profile.stripeCustomerId : null,
         email
       )
+
+      // An email change: tell the OLD address (decision D4). No-op for the
+      // first verification after sign-up, where the address did not change.
+      await noticeEmailChanged({
+        previousEmail: typeof previous?.email === 'string' ? previous.email : null,
+        user,
+      })
     },
   },
   socialProviders: googleProvider,
@@ -252,6 +269,16 @@ export const visitorAuth = betterAuth({
       await rejectStaffEmailForVisitorAuth({ path: ctx.path, body: ctx.body })
     }),
     after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === '/change-password') {
+        // `returned` is the endpoint's response, or the APIError it threw
+        // (wrong current password, too short): only a success is news.
+        const returned = ctx.context.returned as { user?: { email?: string; name?: string | null } } | undefined
+        if (returned && !(returned instanceof Error) && returned.user?.email) {
+          await noticePasswordChanged({ email: returned.user.email, name: returned.user.name })
+        }
+        return
+      }
+
       if (!ctx.path.startsWith('/sign-up') && !ctx.path.startsWith('/callback')) {
         return
       }
@@ -265,6 +292,30 @@ export const visitorAuth = betterAuth({
         name: user.name,
       })
     }),
+  },
+  databaseHooks: {
+    account: {
+      create: {
+        // Linking Google is explicit only (`disableImplicitLinking`), through
+        // `link-social` from the account page, and every path that links ends
+        // in this row being created. A Google sign-up creates one too, which is
+        // why `isGoogleLink` asks whether the user already had another way in.
+        after: async (account, ctx) => {
+          if (account.providerId !== 'google' || !ctx) return
+          try {
+            const [accounts, user] = await Promise.all([
+              ctx.context.internalAdapter.findAccounts(account.userId),
+              ctx.context.internalAdapter.findUserById(account.userId),
+            ])
+            if (user && isGoogleLink(account, accounts)) {
+              await noticeGoogleLinked({ email: user.email, name: user.name })
+            }
+          } catch (error) {
+            console.error('⚠️ google-linked notice skipped:', error instanceof Error ? error.message : 'Unknown error')
+          }
+        },
+      },
+    },
   },
   advanced: {
     cookiePrefix: 'questura_visitor',

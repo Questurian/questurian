@@ -85,9 +85,11 @@ export default buildConfig({
       ...poolTimeoutOptions(servingTimeouts()),
     },
   }),
+  // Sender comes from EMAIL_FROM_ADDRESS / EMAIL_FROM_NAME, required on the
+  // site's domain in production (shared/config/email-sender.ts).
   email: resendAdapter({
-    defaultFromAddress: 'you@questurian.com',
-    defaultFromName: 'Questurian',
+    defaultFromAddress: APP_CONFIG.email.fromAddress,
+    defaultFromName: APP_CONFIG.email.fromName,
     apiKey: APP_CONFIG.email.apiKey,
   }),
   sharp: sharp as any,

@@ -34,6 +34,10 @@ export STRIPE_SECRET_KEY=sk_capacity_placeholder_not_a_key
 export STRIPE_WEBHOOK_SECRET=whsec_capacity_placeholder
 export STRIPE_PRICE_ID=price_capacity_placeholder
 export STRIPE_PRICE_ID_MONTHLY=price_capacity_placeholder
+# Mail is required in production. A placeholder key: nothing sends, and a
+# load run never touches sign-up or reset anyway.
+export RESEND_API_KEY=re_capacity_placeholder_not_a_key
+export EMAIL_FROM_ADDRESS=capacity@capacity-client.invalid
 # Connection budget, required in production. Two processes share the Mac's
 # Postgres during a measurement: this one and the developer's `pnpm dev`.
 export DATABASE_MAX_CONNECTIONS="${DATABASE_MAX_CONNECTIONS:-100}"

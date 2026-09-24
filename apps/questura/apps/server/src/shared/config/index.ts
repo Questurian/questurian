@@ -1,6 +1,7 @@
 import { APP_URLS } from './urls'
 import { readCookieDomain, resolveSessionCookieConfig } from './session-cookie'
 import { resolveTrustedProxyHeader } from './trusted-proxy'
+import { resolveEmailSender } from './email-sender'
 
 // Centralized application configuration
 
@@ -119,8 +120,15 @@ export const APP_CONFIG = {
   },
 
   // Email Configuration
+  // Sender rules and why the domain matters: `email-sender.ts`. Production
+  // must set EMAIL_FROM_ADDRESS and RESEND_API_KEY (`assert-production-config.ts`).
   email: {
     apiKey: process.env.RESEND_API_KEY || '',
+    ...resolveEmailSender({
+      EMAIL_FROM_ADDRESS: process.env.EMAIL_FROM_ADDRESS,
+      EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME,
+      EMAIL_REPLY_TO: process.env.EMAIL_REPLY_TO,
+    }),
   },
 
   // Bot Protection

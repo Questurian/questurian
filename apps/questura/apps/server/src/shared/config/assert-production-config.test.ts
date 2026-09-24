@@ -28,6 +28,9 @@ const VALID_PRODUCTION_ENV = {
   // Publishing is only durable if the frontend it publishes to is named.
   QUESTURA_CLIENT_URL: 'https://questurian.com',
   QUESTURA_REVALIDATION_SECRET: 'r'.repeat(32),
+  // Mail that arrives: a key, and a sender on the site's own domain.
+  RESEND_API_KEY: 're_placeholder_not_a_real_key',
+  EMAIL_FROM_ADDRESS: 'hello@questurian.com',
 }
 
 describe('production config assertion', () => {
@@ -67,6 +70,10 @@ describe('production config assertion', () => {
     vi.stubEnv('REFRESH_DISCONNECTED', '')
     vi.stubEnv('REFRESH_OUTBOX', '')
     vi.stubEnv('REFRESH_OUTBOX_DEGRADED_ACK', '')
+    vi.stubEnv('RESEND_API_KEY', '')
+    vi.stubEnv('EMAIL_FROM_ADDRESS', '')
+    vi.stubEnv('EMAIL_FROM_NAME', '')
+    vi.stubEnv('EMAIL_REPLY_TO', '')
   })
 
   afterEach(() => {
@@ -631,5 +638,92 @@ describe('publication configuration', () => {
     })
 
     expect(collectProductionConfigProblems()).toEqual([])
+  })
+})
+
+/**
+ * A missing Resend key used to boot fine and fail the first password reset.
+ * The sender was a hard-coded placeholder; it is now configured, and has to
+ * be on the domain SPF, DKIM and DMARC are published for.
+ */
+describe('email configuration', () => {
+  beforeEach(() => {
+    for (const name of ['RESEND_API_KEY', 'EMAIL_FROM_ADDRESS', 'EMAIL_FROM_NAME', 'EMAIL_REPLY_TO']) {
+      vi.stubEnv(name, '')
+    }
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it('refuses a production boot with no Resend key', async () => {
+    const { collectProductionConfigProblems } = await load({ ...VALID_PRODUCTION_ENV, RESEND_API_KEY: '' })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('RESEND_API_KEY is not set')
+  })
+
+  it('refuses a production boot with no sender', async () => {
+    const { collectProductionConfigProblems } = await load({ ...VALID_PRODUCTION_ENV, EMAIL_FROM_ADDRESS: '' })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('EMAIL_FROM_ADDRESS is not set')
+  })
+
+  it.each([
+    ['hello@gmail.com'],
+    ['hello@questurian.net'],
+    ['hello@notquesturian.com'],
+    ['onboarding@resend.dev'],
+  ])('refuses a sender off the site domain (%s)', async (address) => {
+    const { collectProductionConfigProblems } = await load({ ...VALID_PRODUCTION_ENV, EMAIL_FROM_ADDRESS: address })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain("not the site's domain questurian.com")
+  })
+
+  it.each([['Questurian <hello@questurian.com>'], ['hello'], ['a@questurian.com,b@questurian.com']])(
+    'refuses a sender that is not one plain address (%s)',
+    async (address) => {
+      const { collectProductionConfigProblems } = await load({ ...VALID_PRODUCTION_ENV, EMAIL_FROM_ADDRESS: address })
+
+      expect(collectProductionConfigProblems().join('\n')).toContain('EMAIL_FROM_ADDRESS is not a single email address')
+    }
+  )
+
+  it.each([['hello@questurian.com'], ['noreply@send.questurian.com'], ['Hello@Questurian.COM']])(
+    'accepts a sender on the site domain or a subdomain of it (%s)',
+    async (address) => {
+      const { collectProductionConfigProblems } = await load({
+        ...VALID_PRODUCTION_ENV,
+        NEXT_PUBLIC_APP_URL: 'https://www.questurian.com',
+        EMAIL_FROM_ADDRESS: address,
+      })
+
+      expect(collectProductionConfigProblems()).toEqual([])
+    }
+  )
+
+  it('accepts a reply-to on another domain, and refuses a malformed one', async () => {
+    const ok = await load({ ...VALID_PRODUCTION_ENV, EMAIL_REPLY_TO: 'owner@gmail.com' })
+    expect(ok.collectProductionConfigProblems()).toEqual([])
+
+    const bad = await load({ ...VALID_PRODUCTION_ENV, EMAIL_REPLY_TO: 'not an address' })
+    expect(bad.collectProductionConfigProblems().join('\n')).toContain('EMAIL_REPLY_TO is not a single email address')
+  })
+
+  it('refuses a sender name that would break the From header', async () => {
+    const { collectProductionConfigProblems } = await load({ ...VALID_PRODUCTION_ENV, EMAIL_FROM_NAME: 'Q <x@evil.com>' })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('EMAIL_FROM_NAME')
+  })
+
+  it('never puts the Resend key in the message', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      RESEND_API_KEY: 're_live_this-must-not-appear',
+      EMAIL_FROM_ADDRESS: 'x@gmail.com',
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).not.toContain('re_live_this')
   })
 })

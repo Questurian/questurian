@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { buildGreeting, sendEmail, wrapEmailContent, createFooter, createSectionBox, createInfoBox, EMAIL_PARAGRAPH_STYLE } from './email-utils'
+import { buildGreeting, escapeHtml, sendEmail, wrapEmailContent, createFooter, createSectionBox, createInfoBox, EMAIL_PARAGRAPH_STYLE } from './email-utils'
 import type { EmailResult, MembershipConfirmationEmailData } from '../types'
 import { formatAccessDate } from '@/shared/lib/dates'
 
@@ -21,7 +21,7 @@ export async function sendMembershipConfirmationEmail(
     ${createSectionBox(
       '🎉 Your Subscription Details',
       `<ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
-        ${subscriptionType ? `<li><strong>Plan:</strong> ${subscriptionType}</li>` : ''}
+        ${subscriptionType ? `<li><strong>Plan:</strong> ${escapeHtml(subscriptionType)}</li>` : ''}
         <li><strong>Access Valid Until:</strong> ${expirationDate}</li>
         <li><strong>Subscription Type:</strong> ${isRecurring ? 'Auto-renewing' : 'One-time'}</li>
         <li><strong>Status:</strong> <span style="color: #28a745; font-weight: bold;">Active</span></li>
