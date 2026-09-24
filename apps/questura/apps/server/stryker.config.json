@@ -1,0 +1,51 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "Launch harness D1. Mutation testing on the money and identity code: every surviving mutant is a wrong line no test would catch. `pnpm mutation` runs all of it (slow); `pnpm mutation -- --mutate <glob>` runs one area. Reports land in reports/mutation (gitignored).",
+  "plugins": [
+    "@stryker-mutator/vitest-runner"
+  ],
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vitest.config.ts",
+    "related": true
+  },
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/features/payments/lib/**/*.ts",
+    "src/features/payments/webhooks/**/*.ts",
+    "src/features/visitor-auth/lib/**/*.ts",
+    "src/shared/config/**/*.ts",
+    "src/shared/lib/client-address.ts",
+    "src/shared/lib/rate-limit-counter.ts",
+    "!**/*.test.ts",
+    "!**/*.fixture.ts",
+    "!**/__fixtures__/**"
+  ],
+  "ignorePatterns": [
+    ".next",
+    ".next-readiness",
+    "reports",
+    "coverage"
+  ],
+  "reporters": [
+    "clear-text",
+    "progress",
+    "html",
+    "json"
+  ],
+  "htmlReporter": {
+    "fileName": "reports/mutation/index.html"
+  },
+  "jsonReporter": {
+    "fileName": "reports/mutation/mutation.json"
+  },
+  "incremental": true,
+  "incrementalFile": "reports/mutation/stryker-incremental.json",
+  "concurrency": 4,
+  "timeoutMS": 30000,
+  "thresholds": {
+    "high": 90,
+    "low": 75,
+    "break": null
+  }
+}

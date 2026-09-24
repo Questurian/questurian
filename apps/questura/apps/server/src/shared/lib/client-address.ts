@@ -69,6 +69,9 @@ function parseIPv6(value: string): number[] | null {
 
 export function normalizeClientAddress(raw: string): string | null {
   const value = raw.trim().toLowerCase()
+  // Cheap early exit; the parsers below reject these too, so mutants here are
+  // equivalent and not worth a test.
+  // Stryker disable next-line all: redundant length guard, see above
   if (value.length === 0 || value.length > 45) return null
 
   if (IPV4.test(value)) return value
