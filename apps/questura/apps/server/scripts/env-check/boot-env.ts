@@ -121,6 +121,21 @@ export function platformProblems(env: Env): string[] {
     problems.push('STRIPE_PRICE_ID and STRIPE_PRICE_ID_MONTHLY are both set and differ. Unset STRIPE_PRICE_ID.')
   }
 
+  // Public image addresses are built from this host, so it must be the pull
+  // zone. The storage API host (storage.bunnycdn.com, or a regional
+  // ny.storage.bunnycdn.com) takes uploads with a key and serves nothing to
+  // a browser: every image on the site would be broken.
+  const imageHost = value('BUNNY_STORAGE_HOSTNAME')
+    .replace(/^https?:\/\//, '')
+    .replace(/[/:].*$/, '')
+    .toLowerCase()
+  if (imageHost === 'storage.bunnycdn.com' || imageHost.endsWith('.storage.bunnycdn.com')) {
+    problems.push(
+      `BUNNY_STORAGE_HOSTNAME is the Bunny storage API (${imageHost}). It must be the pull zone ` +
+        'that serves images to readers (e.g. questurian-cdn.b-cdn.net).'
+    )
+  }
+
   // A managed platform has no database or Redis on loopback. One there is a
   // local value copied across, and the process would fail or hit the wrong store.
   for (const key of ['DATABASE_URI', 'DATABASE_URI_UNPOOLED', 'REDIS_URL']) {

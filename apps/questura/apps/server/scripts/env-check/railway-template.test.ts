@@ -62,7 +62,7 @@ function filled(): Record<string, string> {
     GOOGLE_CLIENT_ID: 'synthetic.apps.googleusercontent.com',
     GOOGLE_CLIENT_SECRET: 'synthetic-google-secret',
     BUNNY_STORAGE_API_KEY: 'synthetic-bunny-key',
-    BUNNY_STORAGE_HOSTNAME: 'storage.bunnycdn.com',
+    BUNNY_STORAGE_HOSTNAME: 'questurian-cdn.b-cdn.net',
     BUNNY_STORAGE_ZONE_NAME: 'questura',
   }
 
@@ -176,6 +176,9 @@ describe('platform checks the boot check cannot make', () => {
     ['TRUSTED_PROXY', '<decide>', 'placeholder'],
     ['RESEND_API_KEY', 'sk_live_pasted_into_the_wrong_field', 'does not look like a Resend'],
     ['EMAIL_FROM_ADDRESS', '<e.g. hello@questurian.com>', 'placeholder'],
+    ['BUNNY_STORAGE_HOSTNAME', 'storage.bunnycdn.com', 'storage API'],
+    ['BUNNY_STORAGE_HOSTNAME', 'ny.storage.bunnycdn.com', 'storage API'],
+    ['BUNNY_STORAGE_HOSTNAME', 'https://storage.bunnycdn.com/', 'storage API'],
   ])('refuses %s=%s', (key, value, expected) => {
     expect(platformProblems({ ...base(), [key]: value }).join('\n')).toContain(expected)
   })

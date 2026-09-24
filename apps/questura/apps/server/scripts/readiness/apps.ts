@@ -108,6 +108,12 @@ function backendEnvDeclared(settings: AppSettings): NodeJS.ProcessEnv {
     // "after the publish" observation ambiguous.
     REFRESH_WORKER_INTERVAL_MS: String(settings.workerIntervalMs ?? 0),
 
+    // Production refuses to boot without an image host. The sandbox has no
+    // CDN, so this resolves nowhere, as the empty value did before
+    // (`https:///media/…`). Pointing it at the fixture media server is
+    // launch fix plan item 8.
+    BUNNY_STORAGE_HOSTNAME: 'readiness-media.invalid',
+
     STRIPE_SECRET_KEY: 'sk_readiness_placeholder_not_a_key',
     STRIPE_WEBHOOK_SECRET: SANDBOX_WEBHOOK_SECRET,
     // Production requires a Resend key and a sender on the site's domain. A

@@ -261,6 +261,18 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
     problems.push(problem)
   }
 
+  // Every public image address is built from this host
+  // (`features/media/lib/bunny-public-url.ts`). Unset, each one becomes
+  // `https:///media/<file>`, which a browser reads as a host named "media":
+  // every photo on the site broken, and nothing fails. It is the pull zone
+  // (questurian-cdn.b-cdn.net), not the storage API; `env:check` refuses that.
+  if (!(process.env.BUNNY_STORAGE_HOSTNAME?.trim())) {
+    problems.push(
+      'BUNNY_STORAGE_HOSTNAME is not set — every image address is built from it, so every ' +
+        'photo on the site would be broken. Set the Bunny pull zone host (e.g. questurian-cdn.b-cdn.net).'
+    )
+  }
+
   // Session-level advisory locks and transaction pooling are incompatible, and
   // the incompatibility is silent: `pg_advisory_lock` holds its lock for the
   // life of the session, and under PgBouncer transaction pooling a session is
