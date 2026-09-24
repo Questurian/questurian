@@ -1,4 +1,4 @@
-import type { Breadcrumb, ErrorEvent, EventHint } from '@sentry/nextjs'
+import type { Breadcrumb, ErrorEvent } from '@sentry/nextjs'
 import type { Instrumentation } from 'next'
 
 import { logger } from '@/shared/utils/logger'
@@ -35,10 +35,32 @@ export type SentryClient = Pick<
   'init' | 'withScope' | 'captureRequestError' | 'captureMessage' | 'captureException' | 'flush'
 >
 
-let sentry: SentryClient | null = null
+/**
+ * The started SDK lives on `globalThis`, not in this module. Next bundles
+ * `instrumentation.ts` (which starts it) separately from each route (which
+ * report through it), so each has its own copy of this module; a module-level
+ * variable set at boot was still `null` in `/api/client-errors`. Found by
+ * running the route against a local ingest, not by a unit test.
+ */
+const slot = globalThis as unknown as { __questuraSentry?: SentryClient | null }
+
+const sentryState = {
+  get client(): SentryClient | null {
+    return slot.__questuraSentry ?? null
+  },
+  set client(value: SentryClient | null) {
+    slot.__questuraSentry = value
+  },
+}
 
 /** Headers worth keeping on an event. Everything else is dropped, not redacted. */
-const HEADER_ALLOWLIST = new Set(['user-agent', 'content-type', 'accept', 'referer', REQUEST_ID_HEADER])
+const HEADER_ALLOWLIST = new Set([
+  'user-agent',
+  'content-type',
+  'accept',
+  'referer',
+  REQUEST_ID_HEADER,
+])
 
 /** The Sentry options for this environment, or `null` when there is no DSN. */
 export function sentryOptions(env: Env = process.env) {
@@ -48,7 +70,8 @@ export function sentryOptions(env: Env = process.env) {
   return {
     dsn,
     environment:
-      env.SENTRY_ENVIRONMENT?.trim() || (env.NODE_ENV === 'production' ? 'production' : 'development'),
+      env.SENTRY_ENVIRONMENT?.trim() ||
+      (env.NODE_ENV === 'production' ? 'production' : 'development'),
     release: env.QUESTURA_RELEASE_SHA?.trim() || undefined,
     // No IP addresses, cookies or request bodies, whatever an integration would like.
     sendDefaultPii: false,
@@ -57,7 +80,7 @@ export function sentryOptions(env: Env = process.env) {
     // Tracing is a separate decision with its own cost and quota.
     maxBreadcrumbs: 30,
     initialScope: { tags: { service: 'questura-server' } },
-    beforeSend: (event: ErrorEvent, _hint: EventHint) => scrubEvent(event),
+    beforeSend: (event: ErrorEvent) => scrubEvent(event),
     beforeBreadcrumb: (breadcrumb: Breadcrumb) => scrubBreadcrumb(breadcrumb),
   }
 }
@@ -76,7 +99,7 @@ export async function initErrorReporting(env: Env = process.env): Promise<boolea
         ? loaded
         : ((loaded as unknown as { default: SentryClient }).default ?? loaded)
     mod.init(options)
-    sentry = mod
+    sentryState.client = mod
     logger.info('Error reporting on', { sink: 'sentry', environment: options.environment })
     return true
   } catch (error) {
@@ -88,17 +111,17 @@ export async function initErrorReporting(env: Env = process.env): Promise<boolea
 }
 
 export function errorReportingEnabled(): boolean {
-  return sentry !== null
+  return sentryState.client !== null
 }
 
 /** The started SDK, or `null` when reporting is off. */
 export function sentryClient(): SentryClient | null {
-  return sentry
+  return sentryState.client
 }
 
 /** Test seam. */
 export function setSentryClientForTests(client: SentryClient | null): void {
-  sentry = client
+  sentryState.client = client
 }
 
 /** A URL with its query string and fragment removed: tokens travel there. */
@@ -159,19 +182,27 @@ export function scrubEvent<T extends ErrorEvent>(event: T): T {
           // Local variables go. The source lines around each frame stay (they
           // are what makes a report readable) but are redacted like any other
           // text: source can hold a literal address or key too.
-          frames: value.stacktrace.frames?.map(({ vars: _vars, ...frame }) => ({
-            ...frame,
-            ...(frame.context_line !== undefined ? { context_line: redactString(frame.context_line) } : {}),
-            ...(frame.pre_context ? { pre_context: frame.pre_context.map(redactString) } : {}),
-            ...(frame.post_context ? { post_context: frame.post_context.map(redactString) } : {}),
-          })),
+          frames: value.stacktrace.frames?.map((original) => {
+            const frame = { ...original }
+            delete frame.vars
+            return {
+              ...frame,
+              ...(frame.context_line !== undefined
+                ? { context_line: redactString(frame.context_line) }
+                : {}),
+              ...(frame.pre_context ? { pre_context: frame.pre_context.map(redactString) } : {}),
+              ...(frame.post_context ? { post_context: frame.post_context.map(redactString) } : {}),
+            }
+          }),
         },
       })),
     }
   }
 
   if (out.breadcrumbs) {
-    out.breadcrumbs = out.breadcrumbs.map((crumb) => scrubBreadcrumb(crumb)).filter(Boolean) as Breadcrumb[]
+    out.breadcrumbs = out.breadcrumbs
+      .map((crumb) => scrubBreadcrumb(crumb))
+      .filter(Boolean) as Breadcrumb[]
   }
 
   return out
@@ -203,7 +234,11 @@ function headerValue(headers: RequestInfo['headers'], name: string): string | un
  * request id, neither carrying the query string, a cookie or a header value
  * outside the allowlist.
  */
-export function reportRequestError(error: unknown, request: RequestInfo, context: ErrorContext): void {
+export function reportRequestError(
+  error: unknown,
+  request: RequestInfo,
+  context: ErrorContext,
+): void {
   const requestId = wellFormedRequestId(headerValue(request.headers, REQUEST_ID_HEADER))
   const digest = (error as { digest?: unknown } | null)?.digest
 
@@ -218,7 +253,7 @@ export function reportRequestError(error: unknown, request: RequestInfo, context
     error,
   })
 
-  const client = sentry
+  const client = sentryState.client
   if (!client) return
 
   try {
@@ -231,7 +266,11 @@ export function reportRequestError(error: unknown, request: RequestInfo, context
 
     client.withScope((scope) => {
       if (requestId) scope.setTag('request_id', requestId)
-      client.captureRequestError(error, { ...request, path: pathOnly(request.path) ?? '', headers }, context)
+      client.captureRequestError(
+        error,
+        { ...request, path: pathOnly(request.path) ?? '', headers },
+        context,
+      )
     })
   } catch {
     // Already logged above; the reporter must never turn one error into two.
@@ -266,7 +305,7 @@ export function reportClientError(report: ClientErrorReport, serverRequestId?: s
     reportRequestId: serverRequestId,
   })
 
-  const client = sentry
+  const client = sentryState.client
   if (!client) return
 
   try {
@@ -293,5 +332,6 @@ export function reportClientError(report: ClientErrorReport, serverRequestId?: s
 
 /** Wait for queued events to leave, e.g. before a script exits. */
 export async function flushErrorReporting(timeoutMs = 5000): Promise<boolean> {
-  return sentry ? sentry.flush(timeoutMs) : true
+  const client = sentryState.client
+  return client ? client.flush(timeoutMs) : true
 }

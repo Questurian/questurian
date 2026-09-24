@@ -86,6 +86,18 @@ describe('initErrorReporting', () => {
   })
 })
 
+describe('the started SDK', () => {
+  it('is shared by every copy of this module, as Next bundles one per route', async () => {
+    const { client } = fakeSentry()
+    setSentryClientForTests(client as unknown as SentryClient)
+
+    vi.resetModules()
+    const fresh = await import('./error-reporting')
+
+    expect(fresh.sentryClient()).toBe(client)
+  })
+})
+
 describe('scrubEvent', () => {
   const event = {
     type: undefined,

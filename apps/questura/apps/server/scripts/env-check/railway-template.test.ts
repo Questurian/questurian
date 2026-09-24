@@ -64,6 +64,7 @@ function filled(): Record<string, string> {
     BUNNY_STORAGE_API_KEY: 'synthetic-bunny-key',
     BUNNY_STORAGE_HOSTNAME: 'questurian-cdn.b-cdn.net',
     BUNNY_STORAGE_ZONE_NAME: 'questura',
+    SENTRY_DSN: 'https://0123456789abcdef@o123456.ingest.us.sentry.io/4500000000000001',
   }
 
   return Object.fromEntries(
@@ -179,6 +180,10 @@ describe('platform checks the boot check cannot make', () => {
     ['BUNNY_STORAGE_HOSTNAME', 'storage.bunnycdn.com', 'storage API'],
     ['BUNNY_STORAGE_HOSTNAME', 'ny.storage.bunnycdn.com', 'storage API'],
     ['BUNNY_STORAGE_HOSTNAME', 'https://storage.bunnycdn.com/', 'storage API'],
+    // Plan item 3: no DSN means nobody is alerted; a DSN must be Sentry's shape.
+    ['SENTRY_DSN', '', 'SENTRY_DSN is not set'],
+    ['SENTRY_DSN', 'http://key@127.0.0.1:9000/1', 'does not look like a Sentry DSN'],
+    ['SENTRY_DSN', 'not-a-dsn', 'does not look like a Sentry DSN'],
   ])('refuses %s=%s', (key, value, expected) => {
     expect(platformProblems({ ...base(), [key]: value }).join('\n')).toContain(expected)
   })

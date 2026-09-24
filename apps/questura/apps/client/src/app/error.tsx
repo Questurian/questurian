@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react';
 
+import { reportBrowserError } from '@/lib/observability/reportBrowserError';
+
 export default function Error({
   error,
   reset,
@@ -10,11 +12,11 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log error for monitoring/debugging
-    // In production, this would send to an error tracking service
     if (process.env.NODE_ENV === 'development') {
       console.error('Application error:', error);
     }
+    // Production only; lib/observability/reportBrowserError.ts.
+    reportBrowserError(error, 'error');
   }, [error]);
 
   return (

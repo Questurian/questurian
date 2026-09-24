@@ -115,6 +115,16 @@ export function platformProblems(env: Env): string[] {
     problems.push('RESEND_API_KEY does not look like a Resend API key (re_...).')
   }
 
+  // Error reporting (launch fix plan item 3). The server boots without it, on
+  // purpose: development, the sandbox and CI never set it. A real platform
+  // without it has errors in its logs that nobody is told about.
+  const sentryDsn = value('SENTRY_DSN')
+  if (!sentryDsn) {
+    problems.push('SENTRY_DSN is not set: errors would reach the logs only, and nobody is alerted (docs/procedures/sentry-setup.md).')
+  } else if (!PLACEHOLDER.test(sentryDsn) && !/^https:\/\/[A-Za-z0-9]+@[A-Za-z0-9.-]+\/\d+$/.test(sentryDsn)) {
+    problems.push('SENTRY_DSN does not look like a Sentry DSN (https://<key>@<host>/<project id>).')
+  }
+
   const monthly = value('STRIPE_PRICE_ID_MONTHLY')
   const legacy = value('STRIPE_PRICE_ID')
   if (monthly && legacy && monthly !== legacy) {
