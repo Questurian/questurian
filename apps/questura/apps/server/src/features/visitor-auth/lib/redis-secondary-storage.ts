@@ -45,6 +45,9 @@ function getRedis(): Redis {
   return redis
 }
 
+/** The same client, for the session revocation list (`session-revocations.ts`). */
+export const visitorAuthRedis = getRedis
+
 export const redisSecondaryStorage = {
   async get(key: string): Promise<string | null> {
     return getRedis().get(key)

@@ -2,6 +2,7 @@ import { getVisitorAuthMethodsForUser } from './account-query'
 import type { VisitorAuthMethods } from './account-query'
 import { visitorAuth } from './better-auth'
 import { deriveVisitorMembership } from './membership-entitlement'
+import { sessionRevocations } from './session-revocations'
 import { visitorSessionToken } from './session-cookie'
 import type { VisitorMembership } from './membership-entitlement'
 import { ensureVisitorProfileForAuthUser, findVisitorProfileByAuthUserId } from './visitor-profile'
@@ -48,35 +49,54 @@ function unauthenticated(): VisitorPrincipalResult {
 
 type PrincipalOptions = {
   /**
-   * Skip the five-minute session cookie cache and check the session store, so
-   * a session revoked on another device is refused at once. For routes that
-   * move money or change a subscription.
+   * Always check the session store, never the five-minute cookie copy. For
+   * routes that move money or change a subscription. Other routes trust the
+   * copy unless the reader had a session revoked recently
+   * (`lookupVisitorSession`), so a revoked session ends within about a
+   * second everywhere.
    */
   freshSession?: boolean
+}
+
+/**
+ * The session behind these headers, or null.
+ *
+ * Better Auth answers from its signed five-minute cookie copy when it can
+ * (`cookieCache`). Two cases go to the session store instead:
+ *
+ *  - the copy is not the session the token cookie names. Better Auth answers
+ *    from a valid `session_data` cookie without checking it belongs to the
+ *    `session_token` beside it, so one visitor's cache cookie with another's
+ *    token read as the first visitor (`pnpm readiness:auth`);
+ *  - the reader had a session revoked in the last few minutes (password
+ *    change or reset, "sign out of all devices", sign-out). Without this a
+ *    revoked device stayed signed in for up to five minutes
+ *    (`session-revocations.ts`).
+ *
+ * Agreeing cookies of a reader with no recent revocation, the normal case,
+ * cost nothing extra.
+ */
+export async function lookupVisitorSession(headers: Headers, options: PrincipalOptions = {}) {
+  const fresh = () => visitorAuth.api.getSession({ headers, query: { disableCookieCache: true } })
+  if (options.freshSession) return fresh()
+
+  const visitorSession = await visitorAuth.api.getSession({ headers })
+  if (!visitorSession?.session?.token) return visitorSession
+
+  const signed = visitorSessionToken(headers)
+  const token = signed ? decodeURIComponent(signed).split('.')[0] : null
+  if (token !== visitorSession.session.token) return fresh()
+
+  if (await sessionRevocations.isRecentlyRevoked(visitorSession.user.id)) return fresh()
+
+  return visitorSession
 }
 
 async function resolveVisitorPrincipal(
   headers: Headers,
   options: PrincipalOptions = {},
 ): Promise<VisitorPrincipal | null> {
-  let visitorSession = await visitorAuth.api.getSession({
-    headers,
-    ...(options.freshSession ? { query: { disableCookieCache: true } } : {}),
-  })
-
-  // Better Auth answers from a valid `session_data` cache cookie without
-  // checking it belongs to the `session_token` cookie beside it, so one
-  // visitor's cache cookie with another's token read as the first visitor
-  // (`pnpm readiness:auth`). When the session it returns is not the one the
-  // token names, ask the session store instead. Agreeing cookies, the normal
-  // case, cost nothing extra.
-  if (!options.freshSession && visitorSession?.session?.token) {
-    const signed = visitorSessionToken(headers)
-    const token = signed ? decodeURIComponent(signed).split('.')[0] : null
-    if (token !== visitorSession.session.token) {
-      visitorSession = await visitorAuth.api.getSession({ headers, query: { disableCookieCache: true } })
-    }
-  }
+  const visitorSession = await lookupVisitorSession(headers, options)
 
   if (visitorSession?.user) {
     const user = visitorSession.user
@@ -124,7 +144,7 @@ export async function getCurrentPrincipal(
  * `listUserAccounts({ headers })`, which would resolve the session again.
  */
 export async function getCurrentAuthMethods(headers: Headers): Promise<VisitorAuthMethods | null> {
-  const visitorSession = await visitorAuth.api.getSession({ headers })
+  const visitorSession = await lookupVisitorSession(headers)
   if (!visitorSession?.user) return null
   return getVisitorAuthMethodsForUser(visitorSession.user.id)
 }

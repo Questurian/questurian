@@ -15,6 +15,7 @@ import { normalizeEmail } from '@/shared/lib/normalize-email'
 import { VISITOR_AUTH_CLIENT_IP_HEADER } from './client-identity'
 import { googleProviderOptions } from './google-provider'
 import { redisSecondaryStorage } from './redis-secondary-storage'
+import { SESSION_COOKIE_CACHE_SECONDS, sessionRevocations } from './session-revocations'
 import { isGoogleLink, noticeEmailChanged, noticeGoogleLinked, noticePasswordChanged } from './security-notices'
 import { getVisitorPasswordError } from './visitor-password-guard'
 import {
@@ -37,6 +38,34 @@ if (APP_CONFIG.isProduction && !APP_CONFIG.redis.url) {
 
 if (APP_CONFIG.isProduction && APP_CONFIG.turnstile.enabled && !APP_CONFIG.turnstile.secretKey) {
   throw new Error('TURNSTILE_SECRET_KEY is required when Visitor auth bot protection is enabled')
+}
+
+/**
+ * Endpoints that end sessions other than by a password change or reset:
+ * sign-out, and "sign out of all devices" with its narrower siblings.
+ */
+const REVOKING_PATHS = new Set(['/sign-out', '/revoke-sessions', '/revoke-other-sessions', '/revoke-session'])
+
+/**
+ * Whose session the request's token cookie names, read the way `sign-out`
+ * reads it (signed cookie, then the store). Null for no or a bad cookie.
+ */
+async function sessionUserId(ctx: {
+  getSignedCookie: (name: string, secret: string) => Promise<string | null | false>
+  context: {
+    secret: string
+    authCookies: { sessionToken: { name: string } }
+    internalAdapter: { findSession: (token: string) => Promise<{ session: { userId: string } } | null> }
+  }
+}): Promise<string | null> {
+  try {
+    const token = await ctx.getSignedCookie(ctx.context.authCookies.sessionToken.name, ctx.context.secret)
+    if (!token) return null
+    const found = await ctx.context.internalAdapter.findSession(token)
+    return found?.session.userId ?? null
+  } catch {
+    return null
+  }
 }
 
 const googleProvider =
@@ -94,14 +123,18 @@ export const visitorAuth = betterAuth({
     // miss, so the cost is a write at sign-in and refresh, not a read per page.
     storeSessionInDatabase: true,
     // A signed copy of the session in the reader's own cookie, trusted for
-    // five minutes, so most `/api/me` calls skip the session store. The price:
-    // a session revoked elsewhere (password change or reset signs out other
-    // devices) keeps working for up to five minutes on those devices. Payment
-    // routes and the paid article body opt out and always check the store
-    // (`freshSession`).
+    // five minutes, so most `/api/me` calls skip the session store. On its own
+    // that meant a session revoked elsewhere (password change or reset, "sign
+    // out of all devices", sign-out) kept working for up to five minutes on
+    // the device holding the copy. Every revocation below is now recorded in
+    // `sessionRevocations`, and a reader on that short list is checked against
+    // the store instead (`lookupVisitorSession`), so a revoked session ends
+    // within about a second. Payment routes and the paid article body always
+    // check the store (`freshSession`); Better Auth's own endpoints do too
+    // (the `before` hook).
     cookieCache: {
       enabled: true,
-      maxAge: 5 * 60,
+      maxAge: SESSION_COOKIE_CACHE_SECONDS,
     },
   },
   account: {
@@ -154,6 +187,11 @@ export const visitorAuth = betterAuth({
     minPasswordLength: 8,
     maxPasswordLength: 128,
     revokeSessionsOnPasswordReset: true,
+    // Runs just before Better Auth deletes every session of the reader, so the
+    // devices holding a cookie copy are checked against the store from now on.
+    onPasswordReset: async ({ user }) => {
+      await sessionRevocations.record(user.id)
+    },
     sendResetPassword: async ({ user, url }) => {
       const payload = await getPayload({ config })
       const { firstName, lastName } = splitDisplayName(user.name)
@@ -267,13 +305,43 @@ export const visitorAuth = betterAuth({
       }
 
       await rejectStaffEmailForVisitorAuth({ path: ctx.path, body: ctx.body })
+
+      // Paths that end sessions: remember whose, so the other devices' cookie
+      // copies stop being trusted (`session-revocations.ts`). Recorded before
+      // the sessions go; the list outlives the cookie copies either way.
+      if (REVOKING_PATHS.has(ctx.path)) {
+        const userId = await sessionUserId(ctx)
+        if (userId) await sessionRevocations.record(userId)
+      }
+
+      // Better Auth's own endpoints (link or unlink Google, change email, list
+      // accounts, and every one reached over HTTP) read the session from the
+      // store, never the five-minute cookie copy: they are rare, and a revoked
+      // device must not keep using them. `/api/me` and the other app routes
+      // call `getSession` directly and decide in `lookupVisitorSession`.
+      const query = ctx.path !== '/get-session' || ctx.request
+        ? { ...(ctx.query as object | undefined), disableCookieCache: true }
+        : undefined
+
+      // A password change ends every other session, whatever the caller asks.
+      // It used to happen only because the account page sent
+      // `revokeOtherSessions: true`.
+      const body = ctx.path === '/change-password'
+        ? { ...(ctx.body as object), revokeOtherSessions: true }
+        : undefined
+
+      if (query || body) {
+        return { context: { ...(query ? { query } : {}), ...(body ? { body } : {}) } }
+      }
     }),
     after: createAuthMiddleware(async (ctx) => {
       if (ctx.path === '/change-password') {
         // `returned` is the endpoint's response, or the APIError it threw
         // (wrong current password, too short): only a success is news.
-        const returned = ctx.context.returned as { user?: { email?: string; name?: string | null } } | undefined
+        const returned = ctx.context.returned as { user?: { id?: string; email?: string; name?: string | null } } | undefined
         if (returned && !(returned instanceof Error) && returned.user?.email) {
+          // Other sessions were revoked (forced above); this device got a new one.
+          if (returned.user.id) await sessionRevocations.record(returned.user.id)
           await noticePasswordChanged({ email: returned.user.email, name: returned.user.name })
         }
         return
