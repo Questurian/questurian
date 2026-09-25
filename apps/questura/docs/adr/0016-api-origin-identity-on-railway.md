@@ -163,7 +163,12 @@ header name: any caller at Railway's edge picks their own bucket.
   4110, so every other suite goes through the door; `readiness:front-door`
   proves the lock at 4110 and that every page in the launch route list renders
   with the stand-in adding nothing to the site's renders. Launch day:
-  `launch:verify --origin-edge <Railway edge>` must see 403.
+  `launch:verify --edge-ip <Railway edge IP>` (or `--origin-edge <origin>`,
+  the same probe) must see 403. Since launch fix plan item 6 the probe is
+  required against the real site, `--bypass` too, and a DNS, TLS or
+  connection error on either is "unknown" and fails rather than counting as
+  locked; the edge probe ignores the certificate, as a caller skipping
+  Cloudflare would.
 - **Still platform-only (PL1).** Whether the Transform Rule reaches Worker
   subrequests, and which client address those subrequests present to the API
   (the render token gives public reads their own bucket either way, but other

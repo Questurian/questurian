@@ -109,8 +109,8 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
    pnpm --dir apps/questura/apps/server launch:verify -- \
      --client http://app.readiness.localhost:3100 \
      --api http://api.readiness.localhost:4100 \
-     --origin-edge http://127.0.0.1:4110 \
-     --allow-http --home /zz-launch/harbor --no-image-check # expect 41/41 passed
+     --bypass http://127.0.0.1:4110 --edge-ip 127.0.0.1:4110 \
+     --local --allow-http --home /zz-launch/harbor --no-image-check # expect 42/42 passed, then NOT RUN: rate-limit probe, image check, cookie check
    pnpm --dir apps/questura/apps/server readiness:restore    # expect 35/35: dump, restore, boot, search, member sign-in on the restored database
    READINESS_CUTOVER_TARGET_URI=postgres://postgres@127.0.0.1:5463/questura_readiness_cutover \
    READINESS_PG_BINDIR=<dir with pg_dump/psql 17> \
@@ -139,7 +139,17 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
 
    `--no-image-check` is for the sandbox only: its images point at a CDN host
    that does not exist until launch fix plan item 8 serves them locally. It is
-   printed as skipped. Against the real site the image check always runs.
+   printed as NOT RUN. Against the real site the image check always runs.
+
+   `--local` is also sandbox-only, and refused for any host that is not this
+   machine. It is what lets the sandbox leave out `--rate-limit-probe`, which
+   fails there by design (the Cloudflare stand-in does not overwrite
+   `CF-Connecting-IP`, so forged addresses do buy fresh budgets: the hole
+   ADR-0016 closes on the platform). Both lockdown probes still run in the
+   sandbox, against the locked backend on 4110. Without `--local`, a run that
+   leaves out `--bypass`, `--edge-ip`/`--origin-edge` or `--rate-limit-probe`
+   refuses to start (exit 2). The optional signed-in cookie check proved 10/10
+   in the sandbox with `member-b`'s session (52/52 in all).
 
    The client build itself refuses to start without real `https` addresses
    and a `pk_live_` key, and fails if its output mentions `localhost`. The
@@ -155,20 +165,47 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
 3. **Run the launch checks against the real domains.** Read-only.
 
    ```bash
-   pnpm --dir apps/questura/apps/server launch:verify -- \
+   dig +short <the CNAME target api.questurian.com points Cloudflare at>   # Railway's edge address
+   read -rs LAUNCH_VERIFY_COOKIE && export LAUNCH_VERIFY_COOKIE           # paste the test account's session cookie, not echoed
+   LAUNCH_VERIFY_COOKIE_MEMBER=no pnpm --dir apps/questura/apps/server launch:verify -- \
      --client https://www.questurian.com \
      --api https://api.questurian.com \
      --bypass https://<service>.up.railway.app \
-     --origin-edge https://<target api.questurian.com's DNS record points at> \
-     --rate-limit-probe
+     --edge-ip <Railway's edge address from dig> \
+     --rate-limit-probe            # expect every check passed and no NOT RUN line
    ```
+
+   `--bypass`, `--edge-ip` (or `--origin-edge <origin>`, the same probe given
+   as an address rather than an IP; give one, not both) and
+   `--rate-limit-probe` are required: leaving one out refuses to start instead
+   of dropping those checks from an all-green result. Only an answer proves a
+   lock. A DNS, TLS or connection error on either lockdown probe is reported
+   as `unknown: DNS (…)`, `unknown: TLS (…)` or `unknown: connection refused`
+   and fails: it means the address is wrong, not that the origin is locked. A
+   generated domain you deleted still answers Railway's own 404 at its edge,
+   which passes (confirm that on the day, PL1). The edge probe ignores the
+   certificate, as a caller skipping Cloudflare would.
+
+   **The signed-in cookie check** needs a dedicated test account: sign up once
+   on the real site with an address you own (not your purchase account, not a
+   member), then copy its session cookie: DevTools → Network → the `me`
+   request → Cookies → the value of `__Secure-questura_visitor.session_token`.
+   It is read from the environment at run time and never printed; never
+   commit or paste it anywhere else. It checks the cookies are `__Secure-`,
+   `HttpOnly`, `Secure`, `SameSite=Lax` and host-only on the API host (no
+   `Domain`: the site reads membership through `/api/me`, never the cookie),
+   that signed-in `/api/me` is `no-store` with `Vary: Cookie`, and that the
+   account reads as the member state you declare in
+   `LAUNCH_VERIFY_COOKIE_MEMBER`. Without the cookie the run still passes and
+   prints `NOT RUN: the signed-in cookie check`.
 
    It checks https and HSTS, framing headers, health, the advertised prices
    ($12.99 / $79.99), signed-out and foreign-origin callers on every payment
    route, webhook signature refusal, that the Railway origin does not serve
    the API, that a caller who connects to Railway's edge as
    `api.questurian.com` without the origin secret gets 403 (H01 step 8), and
-   that forged IP headers do not buy a fresh rate-limit budget.
+   that forged IP headers do not buy a fresh rate-limit budget, and the
+   signed-in cookie contract.
    On the home page, an article (the first in the sitemap) and an author page
    it checks for `localhost`/`127.0.0.1`, that the canonical and `og:url` are
    absolute on the site's host, that robots.txt and the sitemap name only this
@@ -200,9 +237,16 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
    sender, and "show original" says SPF, DKIM and DMARC all **pass**
    (`docs/procedures/email-domain.md`, step 6).
 
-6. **First real purchase, owner only.** One real card, one real charge, then
-   a refund. Follow `live-checks/payments.html`, checking the database row
-   and `/api/me` at each step, and end with the refund and the loss of access.
+6. **First real purchase, owner only.** One real card, one real $12.99
+   charge, then a full refund. Follow `live-checks/launch-purchase.html`:
+   purchase → return page → member article → account page → portal (change
+   nothing) → cancel → reactivate → cancel → refund in the Dashboard, with the
+   expected database row, `/api/me`, Stripe state and email after each step.
+   Within a minute of the refund, access is gone **and** the subscription is
+   cancelled in Stripe; then the reconcile dry run shows 0 changes. The page
+   also lists what never to do (no dispute, no second card, no test mode as
+   evidence, no load on checkout). `live-checks/payments.html` is the laptop's
+   page and does not apply here.
 
 ## If a check fails
 

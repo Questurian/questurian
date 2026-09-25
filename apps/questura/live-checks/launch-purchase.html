@@ -1,0 +1,220 @@
+<title>Launch Purchase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F5F0E8; --paper:#EFE9DE; --ink:#1F1B16; --muted:#6A6258; --rule:#D9CFBF;
+  --accent:#3B5BDB; --accent-soft:#E3E7F7; --ok:#2E6B45; --ok-soft:#E1EDE3; --warn:#9A5A00; --warn-soft:#F4E6CF;
+  --code:#E6DECF;
+  --display:"Playfair Display",Georgia,"Times New Roman",serif;
+  --body:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --accent-soft:#262C44; --ok:#7CC39A; --ok-soft:#1F2E25; --warn:#E3AE62; --warn-soft:#33281A; --code:#2C2822;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#1A1814; --paper:#23201B; --ink:#EEE7DB; --muted:#A89E90; --rule:#3A342C;
+  --accent:#8FA3F2; --accent-soft:#262C44; --ok:#7CC39A; --ok-soft:#1F2E25; --warn:#E3AE62; --warn-soft:#33281A; --code:#2C2822;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.6 var(--body)}
+.wrap{max-width:820px;margin:0 auto;padding-inline:16px;padding-block:40px 80px}
+h1{font:600 2.1rem/1.15 var(--display);margin:0 0 8px;text-wrap:balance}
+h2{font:600 1.3rem/1.25 var(--display);margin:0 0 4px;text-wrap:balance}
+p{margin:0}
+.lede{color:var(--muted);max-width:62ch}
+code,kbd{font:500 .82rem/1.4 var(--mono);background:var(--code);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+pre{font:400 .82rem/1.55 var(--mono);background:var(--code);padding:10px 12px;border-radius:4px;overflow-x:auto;margin:8px 0 0}
+pre code{background:none;padding:0}
+.label{font:600 .72rem/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:10px}
+.label::after{content:"";flex:1;height:1px;background:var(--rule)}
+section{display:grid;gap:14px;margin-top:44px}
+.status{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font:600 .75rem/1 var(--body);padding:6px 9px;border-radius:999px;background:var(--paper);color:var(--muted)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.progress{display:flex;align-items:center;gap:12px;margin-top:22px;font:500 .85rem var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{flex:1;height:6px;background:var(--paper);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+.stop{background:var(--warn-soft);border-left:3px solid var(--warn);padding:12px 14px;border-radius:0 4px 4px 0;display:grid;gap:6px}
+.stop strong{color:var(--warn)}
+ol.steps{margin:0;padding-left:20px;display:grid;gap:10px}
+.group{display:grid;gap:2px}
+.group h3{font:600 .95rem/1.3 var(--body);margin:10px 0 4px}
+.check{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--rule)}
+.check:last-child{border-bottom:1px solid var(--rule)}
+.check input{width:18px;height:18px;margin:3px 0 0;accent-color:var(--accent)}
+.check input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.check label{cursor:pointer;min-width:0}
+.check .why{display:block;color:var(--muted);font-size:.86rem;margin-top:2px}
+.check input:checked + label > span:first-child{text-decoration:line-through;text-decoration-color:var(--muted);color:var(--muted)}
+.pr{font:500 .75rem var(--mono);color:var(--accent);white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+.tablewrap{overflow-x:auto}
+th,td{text-align:left;padding:8px 8px 8px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font:600 .72rem var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+td.res{color:var(--ok);font-weight:500;white-space:nowrap}
+a{color:var(--accent)}
+.foot{margin-top:40px;color:var(--muted);font-size:.85rem}
+.state{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;margin-top:8px;padding:8px 10px;background:var(--paper);border-radius:4px;font-size:.84rem}
+.state dl{display:grid;grid-template-columns:minmax(7.5rem,max-content) minmax(0,1fr);gap:2px 12px;margin:0}
+.state dt{color:var(--muted);font:600 .7rem/1.7 var(--body);letter-spacing:.06em;text-transform:uppercase}
+.state dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.never{margin:0;padding-left:20px;display:grid;gap:6px}
+section>*,ol.steps>li,.never>li{min-width:0}
+@media (max-width:480px){.state dl{grid-template-columns:minmax(0,1fr)}.state dt{margin-top:4px}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>The launch purchase</h1>
+    <p class="lede">The owner's one real purchase on the new platform, from checkout to refund, with what the database row, <code>/api/me</code> and Stripe should say after each step. It proves, with real money and the live Stripe account, what the sandbox proved with a fake one (<code>readiness:purchase</code>, 54/54). This is <code>docs/launch-day.md</code> step 6 and plan item PL2.</p>
+    <div class="status">
+      <span class="chip ok">Sandbox: purchase, refund, dispute 54/54</span>
+      <span class="chip ok">Refund ends access and billing (item 2)</span>
+      <span class="chip warn">Real card, real $12.99</span>
+      <span class="chip warn">Owner only</span>
+    </div>
+    <div class="progress"><span id="count">0 of 0 done</span><div class="bar"><i id="fill"></i></div><button id="reset" type="button" style="font:500 .8rem var(--body);background:none;border:1px solid var(--rule);color:var(--muted);border-radius:4px;padding:4px 8px;cursor:pointer">Clear ticks</button></div>
+  </header>
+
+  <section>
+    <div class="label">Before you start</div>
+    <div class="stop">
+      <p><strong>This spends real money.</strong> One monthly membership at the catalog price, $12.99, on your own card, refunded in full at the end. Stripe keeps its processing fee on the charge; the rest comes back to the card within a few days.</p>
+      <p><strong>Only the owner runs it, and only once.</strong> An agent may build or read this page, never click through it.</p>
+      <p><strong>If a step doesn't match, stop there.</strong> Don't edit the row, don't resend webhook events, don't "fix" it in the admin. Read the endpoint's deliveries, then see "If something doesn't match" below.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Reading the state</div>
+    <h2>Two places, after every step</h2>
+    <ol class="steps">
+      <li><strong>The row.</strong> Neon console → the production branch → SQL Editor. Read-only:
+        <pre><code>select subscription_status, paid_through_at, dunning_grace_until, cancel_at_period_end,
+       billing_interval, subscription_paused, stripe_customer_id, stripe_subscription_id
+from visitor_profiles where email = '<var>your email</var>';</code></pre></li>
+      <li><strong><code>/api/me</code>.</strong> On any <code>www.questurian.com</code> page, signed in: DevTools → Console, then
+        <pre><code>fetch('https://api.questurian.com/api/me', {credentials: 'include'}).then(r =&gt; r.json()).then(m =&gt; console.log(m.principal?.membership))</code></pre>
+        Opening the address in a tab does not work: the API refuses a cookie without the site's Origin (403 "Origin not allowed."). The site's own call is in DevTools → Network as well.</li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="label">Ready</div>
+    <h2>Before the card comes out</h2>
+    <div class="group" data-group>
+      <div class="check"><input type="checkbox" id="b-green"><label for="b-green"><span>Launch-day steps 1 to 5 are green, and today is an owner-present window</span><span class="why">This comes after <code>launch:verify</code> (every check, nothing NOT RUN except the cookie check if you skipped it), <code>verify:stripe-webhook-events</code> (no <code>MISSING</code>, not <code>DISABLED</code>) and a reconcile dry run with 0 changes. If any of them is red, a wrong result below means nothing.</span></label></div>
+      <div class="check"><input type="checkbox" id="b-account"><label for="b-account"><span>Signed in on <code>www.questurian.com</code> with <strong>your own</strong> account, which is not a member</span><span class="why">A fresh account, or one whose row reads <code>none</code>. Not one of the two laptop members on the $0.50 price (cutover step 15), and not the dedicated <code>launch:verify</code> test account.</span><span class="state"><dl><dt>row</dt><dd><code>subscription_status = none</code>, <code>paid_through_at</code> empty, <code>stripe_subscription_id</code> empty</dd><dt>/api/me</dt><dd><code>authenticated: true</code>, <code>membership.active: false</code>, <code>status: "none"</code></dd></dl></span></label></div>
+      <div class="check"><input type="checkbox" id="b-live"><label for="b-live"><span>Stripe Dashboard is in <strong>live</strong> mode, open on Payments and on Developers → Webhooks → the <code>api.questurian.com</code> endpoint</span><span class="why">No "Test mode" badge anywhere. You will read deliveries from that endpoint after each step.</span></label></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">The purchase</div>
+    <h2>Purchase → cancel → reactivate → cancel → refund</h2>
+    <p class="lede">In this order. Each step says what to do, then what the row, <code>/api/me</code>, Stripe and your inbox should show once it lands (a few seconds; up to a minute for the refund).</p>
+    <div class="group" data-group>
+      <div class="check"><input type="checkbox" id="s-checkout"><label for="s-checkout"><span>Checkout: <code>/purchase/monthly</code> → <em>Subscribe Now - $12.99/month</em>. Stripe's page shows <strong>Questurian Membership, $12.99 per month</strong>. Pay with your own card</span><span class="why">The platform charges the catalog price; the laptop's $0.50 is gone (<code>docs/membership-pricing.md</code>). If Stripe's page shows $0.50 or any other amount, <strong>close it without paying</strong> and stop: the server is pointed at the wrong price. One card, one attempt: if it declines, stop and read Stripe's reason rather than trying another card.</span></label></div>
+      <div class="check"><input type="checkbox" id="s-return"><label for="s-return"><span>The return page, <code>/subscription/success</code>, says <em>Welcome to Premium!</em> within a few seconds</span><span class="why">"Confirming your subscription..." for a moment is normal: it waits for the webhook. "Payment received" that stays means the webhook has not landed; check the endpoint's deliveries before going on.</span><span class="state"><dl><dt>row</dt><dd><code>subscription_status = active</code>, <code>paid_through_at</code> ≈ one month from now (Stripe's current period end), <code>billing_interval = month</code>, <code>cancel_at_period_end = false</code>, <code>subscription_paused = false</code>, both Stripe ids filled</dd><dt>/api/me</dt><dd><code>membership.active: true</code>, <code>status: "active"</code>, <code>interval: "month"</code>, <code>cancelAtPeriodEnd: false</code>, <code>expiresAt</code> = the row's <code>paid_through_at</code></dd><dt>Stripe</dt><dd>Payment <em>Succeeded</em> $12.99; subscription <em>Active</em>; deliveries <code>checkout.session.completed</code>, <code>customer.subscription.created</code>, <code>invoice.payment_succeeded</code> all <code>200</code></dd><dt>email</dt><dd>"Welcome to Questurian Premium - Your Subscription is Active" from the site, plus Stripe's receipt if receipts are on</dd></dl></span></label></div>
+      <div class="check"><input type="checkbox" id="s-article"><label for="s-article"><span>A member article opens in full, and the navbar no longer offers Subscribe</span><span class="why">The paid body is fetched with a fresh session check (<code>freshSession</code>), not the 5-minute cookie cache, so it opens straight away.</span></label></div>
+      <div class="check"><input type="checkbox" id="s-account"><label for="s-account"><span>Account page, Membership: <em>Premium Member</em>, "Your premium membership renews on <var>date</var>"</span><span class="why">The date is Stripe's next invoice date for the subscription, and matches the row's <code>paid_through_at</code> day. Links: <em>Update Payment Method</em> and <em>Cancel Subscription</em>.</span></label></div>
+      <div class="check"><input type="checkbox" id="s-portal"><label for="s-portal"><span><em>Update Payment Method</em> opens the Stripe customer portal. Look, change nothing, then return</span><span class="why">The portal shows Questurian Membership at $12.99/month. Its return link lands on <code>/account</code>. Changing the card or plan here is a different test; don't.</span><span class="state"><dl><dt>row</dt><dd>unchanged</dd><dt>/api/me</dt><dd>unchanged</dd></dl></span></label></div>
+      <div class="check"><input type="checkbox" id="s-cancel1"><label for="s-cancel1"><span><em>Cancel Subscription</em> → <em>Yes, Cancel Subscription</em></span><span class="why">Cancel at period end: you keep what you paid for. The card becomes <em>Premium - Expiring</em>, "will expire on <var>date</var>", with a <em>Reactivate</em> button. The member article still opens.</span><span class="state"><dl><dt>row</dt><dd><code>subscription_status = active</code>, <code>cancel_at_period_end = true</code>, <code>paid_through_at</code> unchanged</dd><dt>/api/me</dt><dd><code>active: true</code>, <code>cancelAtPeriodEnd: true</code></dd><dt>Stripe</dt><dd>subscription <em>Cancels <var>date</var></em>; <code>customer.subscription.updated</code> <code>200</code></dd><dt>email</dt><dd>"Subscription Cancelled - Questurian"</dd></dl></span></label></div>
+      <div class="check"><input type="checkbox" id="s-reactivate"><label for="s-reactivate"><span><em>Reactivate</em></span><span class="why">The card is back to <em>Premium Member</em>, "renews on <var>date</var>". No new charge: nothing appears in Payments.</span><span class="state"><dl><dt>row</dt><dd><code>cancel_at_period_end = false</code>, everything else as after checkout</dd><dt>/api/me</dt><dd><code>active: true</code>, <code>cancelAtPeriodEnd: false</code></dd><dt>Stripe</dt><dd>subscription <em>Active</em> with no cancel date; <code>customer.subscription.updated</code> <code>200</code></dd><dt>email</dt><dd>"Subscription Reactivated - Questurian"</dd></dl></span></label></div>
+      <div class="check"><input type="checkbox" id="s-cancel2"><label for="s-cancel2"><span><em>Cancel Subscription</em> again</span><span class="why">Same as the first cancel. This is the state most refunds will meet: someone who cancelled and then asked for their money.</span><span class="state"><dl><dt>row</dt><dd><code>cancel_at_period_end = true</code>, <code>paid_through_at</code> unchanged</dd><dt>/api/me</dt><dd><code>active: true</code>, <code>cancelAtPeriodEnd: true</code></dd><dt>email</dt><dd>a second "Subscription Cancelled - Questurian"</dd></dl></span></label></div>
+      <div class="check"><input type="checkbox" id="s-refund"><label for="s-refund"><span>Stripe Dashboard → Payments → the $12.99 payment → <em>Refund</em> → the <strong>full</strong> amount → <em>Refund</em></span><span class="why">The Dashboard is where support refunds (<code>docs/procedures/refund-a-membership.md</code>). Don't also cancel anything, anywhere: the site cancels the subscription itself. A partial refund is ignored on purpose, so it proves nothing.</span></label></div>
+      <div class="check"><input type="checkbox" id="s-gone"><label for="s-gone"><span><strong>Within a minute:</strong> access is gone <strong>and</strong> the subscription is cancelled in Stripe</span><span class="why">This is the basil fix (launch fix plan item 2). Before it, a refund on the current Stripe API left access on and kept billing. Both halves matter: access gone but billing still scheduled means the card is charged next month.</span><span class="state"><dl><dt>row</dt><dd><code>subscription_status = cancelled</code>, <code>paid_through_at</code> empty, <code>dunning_grace_until</code> empty</dd><dt>/api/me</dt><dd><code>active: false</code>, <code>status: "cancelled"</code>, <code>expiresAt: null</code></dd><dt>site</dt><dd>the member article shows the paywall again; the account page says <em>Membership Cancelled</em> with <em>Upgrade</em>; the navbar offers Subscribe</dd><dt>Stripe</dt><dd>payment <em>Refunded</em>; subscription <em>Canceled</em> now, not "Cancels <var>date</var>"; its metadata has <code>access_revoked = true</code>, <code>access_revoked_reason = refund</code>; <code>charge.refunded</code> and <code>customer.subscription.deleted</code> <code>200</code></dd><dt>email</dt><dd>none from the site: you were already cancelling, and that was announced. Stripe's refund receipt if receipts are on</dd></dl></span></label></div>
+      <div class="check"><input type="checkbox" id="s-reconcile"><label for="s-reconcile"><span>The reconcile dry run shows <strong>0 changes</strong></span><span class="why">Same command and environment as launch-day step 4. Anything listed means the site and Stripe disagree about you after the refund; read it, don't apply it.<pre><code>QUESTURA_RECONCILE_APPLY=0 pnpm --dir apps/questura/apps/server reconcile:nightly</code></pre></span></label></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Never</div>
+    <h2>What this page never does</h2>
+    <ul class="never">
+      <li><strong>No dispute.</strong> Not even to "test" it. A dispute costs a fee whatever the outcome, counts against the account, and cannot be withdrawn. The dispute path is proven in the sandbox.</li>
+      <li><strong>No second card and no second purchase.</strong> A decline is read, not retried with another card. Subscribe again after the refund would open a new Checkout page; close it.</li>
+      <li><strong>No test mode as evidence.</strong> Test mode has its own products, prices and customers. A result there says nothing about this account. Never the Mac's <code>stripe</code> CLI key.</li>
+      <li><strong>No load on checkout.</strong> No scripts, no repeated clicks, no load test against any payment route.</li>
+      <li><strong>No partial refund</strong> in place of the full one. It is ignored on purpose, so it proves nothing and leaves a charge behind.</li>
+      <li><strong>Not on the laptop members' accounts.</strong> The two $0.50 subscriptions are cutover step 15's decision, not this test.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="label">If something doesn't match</div>
+    <h2>Where to look</h2>
+    <ol class="steps">
+      <li><strong>Deliveries first.</strong> Stripe → Webhooks → the <code>api.questurian.com</code> endpoint. A red delivery names the status the API answered. <code>400</code>: the signing secret on Railway is not this endpoint's. <code>403</code>: the request skipped Cloudflare's origin header (the endpoint URL must be <code>https://api.questurian.com/api/payments/webhooks/stripe</code>). <code>500</code>: read the API log and Sentry for that request id.</li>
+      <li><strong>Access still on a minute after the refund</strong>, with <code>charge.refunded</code> delivered <code>200</code>: the refund was partial, or it landed on a charge that is not the membership's. Check the amount first.</li>
+      <li><strong>Access gone, subscription still active in Stripe:</strong> the cancel after the refund failed. Cancel it by hand in the Dashboard now so the card is not charged next month, then open an issue with the API log for that delivery.</li>
+      <li><strong>Anything else:</strong> the reconcile dry run lists the disagreement. Stop, and open an issue with the step, the row, <code>/api/me</code> and the delivery log.</li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="label">After</div>
+    <h2>Record it</h2>
+    <div class="group" data-group>
+      <div class="check"><input type="checkbox" id="r-record"><label for="r-record"><span>Write the result on the launch-day issue or PR: pass, or the first step that didn't match and what it showed</span><span class="why">Include the Stripe payment and subscription ids (not the card, not the customer's email) and the date. Then move this file's row to <strong>Done</strong> in <code>live-checks/README.md</code>.</span></label></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Already proven in the sandbox</div>
+    <h2>No need to redo these with real money</h2>
+    <p class="lede">The readiness sandbox runs the production builds against a fake Stripe that answers in the pinned API version's shapes (basil), with every webhook signed. <code>pnpm readiness:purchase</code>, 54/54.</p>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Check</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>A double click on Subscribe makes one Checkout Session; a second checkout is refused while a subscription is live</td><td class="res">pass</td></tr>
+        <tr><td>Cancel asks Stripe to stop at period end; still a member until then; locked after the period, and Subscribe works again</td><td class="res">pass</td></tr>
+        <tr><td>A partial refund changes nothing; a full refund ends the membership and stops the billing; the member body locks</td><td class="res">pass</td></tr>
+        <tr><td>Refund charges carry no <code>invoice</code> (basil); the invoice is found through its invoice payment</td><td class="res">pass</td></tr>
+        <tr><td>A dispute suspends access and keeps billing; won, it comes back; lost, it stays ended and billing stops</td><td class="res">pass</td></tr>
+        <tr><td>Subscribe after a refund or a cancellation opens a new Checkout page, never the paid one</td><td class="res">pass</td></tr>
+        <tr><td>A failed renewal (past_due, grace, portal), paused, and a deleted customer</td><td class="res">pass</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <p class="foot">Launch fix plan item 6. Refund procedure: <code>docs/procedures/refund-a-membership.md</code>. Moving day: <code>docs/procedures/cutover.md</code>. Ticks are saved in this browser only.</p>
+</div>
+
+<script>
+(function(){
+  var KEY='launch-purchase-live-checks';
+  var boxes=[].slice.call(document.querySelectorAll('.check input[type=checkbox]'));
+  var saved={};
+  try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){saved={}}
+  function update(){
+    var done=boxes.filter(function(b){return b.checked}).length;
+    document.getElementById('count').textContent=done+' of '+boxes.length+' done';
+    document.getElementById('fill').style.width=(boxes.length?done/boxes.length*100:0)+'%';
+  }
+  boxes.forEach(function(b){
+    b.checked=!!saved[b.id];
+    b.addEventListener('change',function(){
+      saved[b.id]=b.checked;
+      try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}
+      update();
+    });
+  });
+  document.getElementById('reset').addEventListener('click',function(){
+    boxes.forEach(function(b){b.checked=false});saved={};
+    try{localStorage.removeItem(KEY)}catch(e){}
+    update();
+  });
+  update();
+})();
+</script>

@@ -126,7 +126,8 @@ Cloudflare in front of the API, the origin locked by a shared secret.
    Railway (step 10), the Worker (step 17), and the Transform Rule below.
 3. DNS: `api.questurian.com` proxied (orange cloud) in the `questurian.com`
    zone, pointing at the target Railway gives for the custom domain. Write
-   that target down: it is `--origin-edge` for `launch:verify` on the day.
+   that target down: on the day, `dig +short <target>` gives the address for
+   `launch:verify --edge-ip` (or pass `--origin-edge https://<target>`).
 4. Cloudflare → Rules → Transform Rules → *Modify Request Header*: when
    hostname equals `api.questurian.com`, **set** static header
    `X-Questura-Origin-Auth` to the secret. *Set*, not *add*, so a caller's
