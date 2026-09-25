@@ -27,6 +27,23 @@ Stripe/Google. From a fresh session it needs only `docker`:
   PATH, `stack up` runs it as the `questura-readiness-redis` container
   (`redis:7-alpine`, no persistence), which is also what `readiness:faults`
   pauses. `stack down` removes it.
+- **Without docker** (the owner's Mac): run Node 22, as CI does. On Node 24
+  every sign-in answers 500 (`new Request(request)` in `withClientIdentity`
+  throws "Cannot read private member #state"). Start your own throwaway
+  Postgres 16 on 5442 before `stack up`, which then uses it and seeds it:
+
+  ```bash
+  export LC_ALL=en_US.UTF-8 PG=/opt/homebrew/opt/postgresql@16/bin D=/tmp/questura-readiness-pg16
+  $PG/initdb -D $D -U postgres --auth=trust -E UTF8 --locale=C
+  $PG/pg_ctl -D $D -o "-p 5442 -k /tmp -c listen_addresses=127.0.0.1 -c fsync=off" -l $D/server.log -w start
+  $PG/createdb -h 127.0.0.1 -p 5442 -U postgres questura_readiness
+  ```
+
+  Stop it with `$PG/pg_ctl -D $D stop`; delete `$D` to start over. macOS
+  does not resolve `*.localhost` for Node, so `launch:verify --local` and
+  sandbox Playwright runs send those names to 127.0.0.1 themselves
+  (`loopback-names.ts`). `readiness:faults`, `readiness:restore` and
+  `readiness:cutover` still need docker; CI's `full-ci` run covers them.
 - **Front door.** The API's port 4100 is a stand-in for Cloudflare
   (`front-door-edge.ts`) that adds the origin secret, as the Transform Rule
   will; the backend itself listens on 4110 with `ORIGIN_AUTH_SECRET` set and
