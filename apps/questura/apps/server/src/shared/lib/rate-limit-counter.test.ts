@@ -198,6 +198,31 @@ describe('shared rate-limit counter', () => {
       )
     })
 
+    // Decision D3 (launch fix plan item 9): an approved load test's signed
+    // synthetic address wins over the proxy's, for every limiter at once.
+    it('counts a signed load identity as its synthetic address while the key is set, and only then', async () => {
+      const { signLoadIdentity } = await import('@/shared/http/load-identity')
+      const key = 'load-test-key-for-unit-tests-0123456789abcdef'
+      const headers = new Headers({
+        'cf-connecting-ip': '192.0.2.1',
+        'x-questura-load-identity': `198.18.3.7;${signLoadIdentity(key, '198.18.3.7')}`,
+      })
+
+      const off = await loadCounter({ NODE_ENV: 'development', TRUSTED_PROXY: 'cloudflare' })
+      expect(off.getClientIp(headers)).toBe('192.0.2.1')
+
+      const on = await loadCounter({
+        NODE_ENV: 'development',
+        TRUSTED_PROXY: 'cloudflare',
+        LOAD_TEST_KEY: key,
+        LOAD_TEST_UNTIL: new Date(Date.now() + 3_600_000).toISOString(),
+      })
+      expect(on.getClientIp(headers)).toBe('198.18.3.7')
+
+      const forged = new Headers({ 'cf-connecting-ip': '192.0.2.1', 'x-questura-load-identity': `198.18.3.7;${'0'.repeat(64)}` })
+      expect(on.getClientIp(forged)).toBe('192.0.2.1')
+    })
+
     it('counts an IPv6 caller per /64', async () => {
       const { getClientIp } = await loadCounter({
         NODE_ENV: 'development',

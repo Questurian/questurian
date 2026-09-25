@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
 
 import { TRUSTED_PROXY_HEADERS } from '@/shared/config/trusted-proxy'
+import { LOAD_IDENTITY_HEADER } from '@/shared/http/load-identity'
 
 /**
  * The in-app half of the API front door (ADR-0016 option A).
@@ -102,4 +103,6 @@ export const CLIENT_ADDRESS_HEADERS: readonly string[] = [
   ...Object.values(TRUSTED_PROXY_HEADERS),
   'x-forwarded-for',
   'x-real-ip',
+  // A caller who skipped Cloudflare does not get to be a load test either.
+  LOAD_IDENTITY_HEADER,
 ]

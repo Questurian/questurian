@@ -64,6 +64,8 @@ export type Target = {
    * Read from `LAUNCH_VERIFY_COOKIE` at run time; never committed or logged.
    */
   cookie?: { header: string; member: boolean }
+  /** `LOAD_TEST_KEY` is set in the environment running the checks (never its value). */
+  loadTestKeyInShell?: boolean
 }
 
 export type Result = { group: string; name: string; ok: boolean; detail: string }
@@ -165,6 +167,26 @@ export async function runChecks(target: Target, fetchImpl: Fetch = fetch, edgeIm
   // --- Health -------------------------------------------------------------------
   const ready = await get(fetchImpl, `${target.api}/api/health/ready`)
   record('health', 'API /api/health/ready answers 200', ready.status === 200, `HTTP ${ready.status}`)
+
+  // --- Load identity (decision D3, launch fix plan item 9) ----------------------
+  // A load-test key is a deliberate bypass of the per-address limits, for one
+  // approved window. Launch is not verified while one is set: on the API
+  // (`/api/health/ready` says `loadIdentity: "off"`, and an API too old to say
+  // is not assumed off) or in the shell running this, where it is left over
+  // from driving the test.
+  const readyBody = (await ready.clone().json().catch(() => null)) as { loadIdentity?: unknown } | null
+  record(
+    'load test',
+    'the API has no load-test key set (load identity off)',
+    readyBody?.loadIdentity === 'off',
+    `loadIdentity=${JSON.stringify(readyBody?.loadIdentity ?? 'not reported')}; remove LOAD_TEST_KEY and LOAD_TEST_UNTIL from the API and redeploy`,
+  )
+  record(
+    'load test',
+    'this shell has no LOAD_TEST_KEY',
+    !target.loadTestKeyInShell,
+    target.loadTestKeyInShell ? 'LOAD_TEST_KEY is set here: unset it, the test window is over' : 'unset',
+  )
 
   // The root redirects to a default city; follow it, but only on this site.
   const home = await fetchImpl(`${target.client}${target.homePath ?? '/'}`, { redirect: 'follow' })

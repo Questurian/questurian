@@ -4,6 +4,7 @@ import { APP_CONFIG } from '@/shared/config'
 import { redisSecondaryStorage } from '@/features/visitor-auth/lib/redis-secondary-storage'
 import { CircuitBreaker } from './circuit-breaker'
 import { normalizeClientAddress } from './client-address'
+import { loadIdentityAddress } from '@/shared/http/load-identity'
 
 /**
  * The fixed-window counter shared by every rate limiter in the app.
@@ -163,6 +164,12 @@ export const UNIDENTIFIED_CLIENT = 'unknown'
  * than escaping the limit entirely.
  */
 export function getClientIp(headers: Headers): string {
+  // An approved load test's signed synthetic address, only while
+  // LOAD_TEST_KEY is set and its window is open, and only ever an address in
+  // the benchmarking range no reader has (`load-identity.ts`, decision D3).
+  const synthetic = loadIdentityAddress(headers)
+  if (synthetic) return synthetic
+
   const trustedHeader = APP_CONFIG.trustedProxy.header
 
   if (trustedHeader) {

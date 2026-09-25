@@ -6,7 +6,9 @@ import {
   originAuthVerdict,
   readOriginAuthConfig,
 } from '@/shared/http/origin-auth'
+import { loadIdentityVerdict, readLoadTestConfig } from '@/shared/http/load-identity'
 import { REQUEST_ID_HEADER, acceptOrCreateRequestId } from '@/shared/observability/request-id'
+import { logger } from '@/shared/utils/logger'
 
 const IS_DEVELOPMENT = process.env.NODE_ENV === 'development'
 
@@ -46,11 +48,28 @@ export function proxy(req: NextRequest) {
   headers.delete(ORIGIN_AUTH_HEADER)
   if (verdict === 'missing' || verdict === 'wrong') {
     for (const name of CLIENT_ADDRESS_HEADERS) headers.delete(name)
+  } else {
+    logLoadIdentityUse(req, requestId)
   }
 
   const response = NextResponse.next({ request: { headers } })
   response.headers.set(REQUEST_ID_HEADER, requestId)
   return response
+}
+
+/**
+ * Every use of the load identity is logged, once per request (decision D3,
+ * `shared/http/load-identity.ts`): accepted, with the synthetic address it
+ * was counted as, or refused and why. With no key set the header means
+ * nothing and writes nothing, so it cannot be used to fill the logs.
+ */
+function logLoadIdentityUse(req: NextRequest, requestId: string): void {
+  const load = loadIdentityVerdict(req.headers, readLoadTestConfig(), Date.now())
+  if (load.kind === 'accepted') {
+    logger.info('Load identity used', { requestId, address: load.address, method: req.method, path: req.nextUrl.pathname })
+  } else if (load.kind === 'refused') {
+    logger.warn('Load identity refused', { requestId, reason: load.reason, method: req.method, path: req.nextUrl.pathname })
+  }
 }
 
 export const config = {

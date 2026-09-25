@@ -478,6 +478,26 @@ describe('production config assertion', () => {
     expect(problems.join(' ')).not.toContain('short-origin-secret')
   })
 
+  // Decision D3 (launch fix plan item 9): the load identity is off unless set,
+  // 32+ characters, and for one window only.
+  it('refuses a short load-test key or one with no window, without printing the key', async () => {
+    const until = new Date(Date.now() + 3_600_000).toISOString()
+    expect((await load({ ...VALID_PRODUCTION_ENV, LOAD_TEST_KEY: 'l'.repeat(32), LOAD_TEST_UNTIL: until })).collectProductionConfigProblems()).toEqual([])
+    vi.unstubAllEnvs()
+    const short = (await load({ ...VALID_PRODUCTION_ENV, LOAD_TEST_KEY: 'short-load-key', LOAD_TEST_UNTIL: until })).collectProductionConfigProblems()
+    expect(short).toEqual([expect.stringContaining('LOAD_TEST_KEY is shorter than 32 characters')])
+    expect(short.join(' ')).not.toContain('short-load-key')
+    vi.unstubAllEnvs()
+    expect((await load({ ...VALID_PRODUCTION_ENV, LOAD_TEST_KEY: 'l'.repeat(32) })).collectProductionConfigProblems()).toEqual([
+      expect.stringContaining('LOAD_TEST_UNTIL'),
+    ])
+    vi.unstubAllEnvs()
+    const tooLong = new Date(Date.now() + 13 * 3_600_000).toISOString()
+    expect((await load({ ...VALID_PRODUCTION_ENV, LOAD_TEST_KEY: 'l'.repeat(32), LOAD_TEST_UNTIL: tooLong })).collectProductionConfigProblems()).toEqual([
+      expect.stringContaining('hours away'),
+    ])
+  })
+
   it('refuses a misspelt origin mode, and a mode with no secret', async () => {
     vi.stubEnv('ORIGIN_AUTH_SECRET', '')
     expect(

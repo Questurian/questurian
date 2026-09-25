@@ -39,6 +39,22 @@ describe('GET /api/health/ready', () => {
     await expect(response.json()).resolves.toMatchObject({ ready: true, reason: null, database: { reachable: true } })
   })
 
+  // Decision D3: launch:verify reads this and fails on anything but `off`.
+  it('reports the load identity as off unless a load-test key is set', async () => {
+    markReady()
+    await expect((await GET()).json()).resolves.toMatchObject({ loadIdentity: 'off' })
+
+    vi.stubEnv('LOAD_TEST_KEY', 'load-test-key-for-unit-tests-0123456789abcdef')
+    vi.stubEnv('LOAD_TEST_UNTIL', new Date(Date.now() + 3_600_000).toISOString())
+    try {
+      await expect((await GET()).json()).resolves.toMatchObject({ loadIdentity: 'on' })
+      vi.stubEnv('LOAD_TEST_UNTIL', new Date(Date.now() - 1_000).toISOString())
+      await expect((await GET()).json()).resolves.toMatchObject({ loadIdentity: 'expired' })
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
   it('asks the database the cheapest question there is, under its own short limit', async () => {
     markReady()
     await GET()

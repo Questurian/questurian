@@ -12,6 +12,7 @@ import { clientBaseUrl, revalidationDisconnected, revalidationSecret } from '@/f
 import { looksTransactionPooled } from '@/shared/database/pooled-uri'
 import { describePoolBudget, poolBudget } from '@/shared/database/pool-budget'
 import { fleetManifestProblems } from '@/shared/database/fleet-manifest'
+import { loadTestConfigProblems } from '@/shared/http/load-identity'
 
 /**
  * Fail fast on a production boot that is still carrying development defaults.
@@ -349,6 +350,10 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
   if (renderToken && renderToken.length < 32) {
     problems.push('QUESTURA_RENDER_TOKEN is shorter than 32 characters.')
   }
+
+  // The load identity (decision D3, `shared/http/load-identity.ts`): off
+  // unless set, 32+ characters, and only for one window that ends soon.
+  problems.push(...loadTestConfigProblems())
 
   // The front door (ADR-0016, `shared/http/origin-auth.ts`). Optional here:
   // the laptop's origin is reachable only through its own tunnel, so it runs

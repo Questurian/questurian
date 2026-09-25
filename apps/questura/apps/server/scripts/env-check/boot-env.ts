@@ -72,6 +72,7 @@ const SECRET_NAMES = [
   'REFRESH_WORKER_SECRET',
   'DB_STATS_SECRET',
   'EXCHANGE_RATE_SYNC_SECRET',
+  'LOAD_TEST_KEY',
 ] as const
 
 function hostOf(uri: string): string | null {

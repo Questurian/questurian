@@ -144,4 +144,13 @@ describe('launch:verify options', () => {
       expect(target(ALL, { LAUNCH_VERIFY_COOKIE: 'tok.sig', LAUNCH_VERIFY_COOKIE_MEMBER: 'No' }).cookie?.member).toBe(false)
     })
   })
+
+  // Decision D3: only whether it is set crosses into the target, never the key.
+  it('notes a LOAD_TEST_KEY in the environment without keeping its value', () => {
+    const parsed = parseOptions(ALL, { LOAD_TEST_KEY: 'k'.repeat(40) })
+    expect('target' in parsed && parsed.target.loadTestKeyInShell).toBe(true)
+    expect(JSON.stringify(parsed)).not.toContain('k'.repeat(40))
+    const unset = parseOptions(ALL, {})
+    expect('target' in unset && unset.target.loadTestKeyInShell).toBe(false)
+  })
 })
