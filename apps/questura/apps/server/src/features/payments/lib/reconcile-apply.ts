@@ -54,6 +54,9 @@ export type ProfileSnapshot = {
   cancelAtPeriodEnd?: boolean | null
   paidThroughAt?: string | null
   dunningGraceUntil?: string | null
+  subscriptionPaused?: boolean | null
+  /** Read only to carry it through an unreadable price; never diffed. */
+  billingInterval?: string | null
 }
 
 /** What a fresh Stripe read says a profile should mirror. */
@@ -137,6 +140,9 @@ export function diffProfileAgainst(
     if (profile.subscriptionStatus !== state.subscriptionStatus) {
       changes.subscriptionStatus = state.subscriptionStatus
     }
+    if (Boolean(profile.subscriptionPaused) !== state.subscriptionPaused) {
+      changes.subscriptionPaused = state.subscriptionPaused
+    }
     if (Boolean(profile.cancelAtPeriodEnd) !== state.cancelAtPeriodEnd) {
       changes.cancelAtPeriodEnd = state.cancelAtPeriodEnd
     }
@@ -146,6 +152,10 @@ export function diffProfileAgainst(
     if ((profile.dunningGraceUntil ?? null) !== state.dunningGraceUntil) {
       changes.dunningGraceUntil = state.dunningGraceUntil
     }
+    // `billingInterval` is deliberately not compared: it is a display label,
+    // not drift, and counting it would make the launch-day dry run ("0
+    // changes") report every member from before it existed. The next
+    // subscription event records it.
   }
 
   return changes

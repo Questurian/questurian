@@ -5,6 +5,8 @@ export type MembershipFields = {
   paidThroughAt?: string | null
   dunningGraceUntil?: string | null
   cancelAtPeriodEnd?: boolean | null
+  billingInterval?: string | null
+  subscriptionPaused?: boolean | null
 }
 
 export type VisitorMembership = {
@@ -14,6 +16,8 @@ export type VisitorMembership = {
   expiresAt: string | null
   graceUntil: string | null
   cancelAtPeriodEnd: boolean
+  /** How often the subscription bills; null until a resync has recorded it. */
+  interval: 'month' | 'year' | null
 }
 
 function isFuture(value: string | null | undefined): boolean {
@@ -46,9 +50,12 @@ export function deriveVisitorMembership(profile: MembershipFields | null | undef
   return {
     active,
     source: active ? 'stripe' : null,
-    status: profile?.subscriptionStatus ?? 'none',
+    // D5: a paused subscription is stored as past_due plus a flag (see
+    // VisitorProfiles); the client is told it is paused.
+    status: profile?.subscriptionPaused ? 'paused' : (profile?.subscriptionStatus ?? 'none'),
     expiresAt: profile?.paidThroughAt ?? null,
     graceUntil: profile?.dunningGraceUntil ?? null,
     cancelAtPeriodEnd: Boolean(profile?.cancelAtPeriodEnd),
+    interval: profile?.billingInterval === 'month' || profile?.billingInterval === 'year' ? profile.billingInterval : null,
   }
 }

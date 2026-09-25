@@ -119,9 +119,38 @@ export async function resolveStripeCustomerForVisitor(params: {
     .update(JSON.stringify([visitorAuthUserId, createParams.email, createParams.name, createParams.metadata.visitorProfileId]))
     .digest('hex')}`
 
-  const customer = await stripe.customers.create(createParams, { idempotencyKey })
+  //
+  // Stripe replays that first customer even after it has been deleted, so a
+  // customer deleted in the Dashboard within a day of its creation would be
+  // handed straight back, and every checkout on it refused. A deleted one is
+  // stepped past with a key that names it: still one customer per double
+  // click (launch fix plan item 11).
+  let key = idempotencyKey
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const customer = await stripe.customers.create(createParams, { idempotencyKey: key })
+    if (!(await isDeletedStripeCustomer(customer.id))) return { customerId: customer.id, created: true }
+    key = `${idempotencyKey}:after:${customer.id}`
+  }
 
-  return { customerId: customer.id, created: true }
+  throw new Error('Stripe keeps replaying deleted customers for this visitor')
+}
+
+/**
+ * Whether Stripe reports the customer deleted. Only asked on rare paths. A
+ * failed read answers "no": the worst case is the old behaviour, not a refused
+ * checkout or a failed webhook over a courtesy check.
+ */
+export async function isDeletedStripeCustomer(customerId: string): Promise<boolean> {
+  try {
+    const customer = await stripe.customers.retrieve(customerId)
+    return Boolean((customer as { deleted?: boolean }).deleted)
+  } catch (error) {
+    console.warn('Could not check whether the Stripe customer is deleted', {
+      customerId,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return false
+  }
 }
 
 const LIVE_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
@@ -129,6 +158,10 @@ const LIVE_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
   'trialing',
   'past_due',
   'unpaid',
+  // D5 (launch fix plan): a paused subscription grants no access, but it has
+  // not ended. Resuming it bills again, so a second one bought meanwhile
+  // would be a double charge.
+  'paused',
 ])
 
 /**

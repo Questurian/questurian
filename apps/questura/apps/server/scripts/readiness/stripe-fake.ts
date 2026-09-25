@@ -54,9 +54,9 @@ const DAY = 24 * 60 * 60
 
 export type FakeResponse = { status: number; body: unknown }
 
-function missing(kind: string, id: string): FakeResponse {
+function missing(kind: string, id: string, status = 404): FakeResponse {
   return {
-    status: 404,
+    status,
     body: { error: { type: 'invalid_request_error', code: 'resource_missing', message: `No such ${kind}: '${id}'` } },
   }
 }
@@ -99,6 +99,8 @@ export function parseStripeForm(body: string): Record<string, unknown> {
 
 export class FakeStripeAccount {
   customers = new Map<string, StripeObject>()
+  /** Customers deleted in the "Dashboard" (`deleteCustomer`). */
+  deletedCustomers = new Set<string>()
   sessions = new Map<string, StripeObject>()
   subscriptions = new Map<string, StripeObject>()
   invoices = new Map<string, StripeObject>()
@@ -117,6 +119,7 @@ export class FakeStripeAccount {
 
   reset(): void {
     this.customers.clear()
+    this.deletedCustomers.clear()
     this.sessions.clear()
     this.subscriptions.clear()
     this.invoices.clear()
@@ -143,8 +146,9 @@ export class FakeStripeAccount {
 
     // --- customers
     if (method === 'GET' && path === '/v1/customers') {
+      // Stripe leaves deleted customers out of a list.
       const email = url.searchParams.get('email')
-      return ok(list([...this.customers.values()].filter((c) => !email || c.email === email), path))
+      return ok(list([...this.customers.values()].filter((c) => !this.deletedCustomers.has(c.id) && (!email || c.email === email)), path))
     }
     if (method === 'POST' && path === '/v1/customers') {
       const customer: StripeObject = { id: newId('cus'), object: 'customer', created: now(), metadata: {}, ...params }
@@ -152,6 +156,8 @@ export class FakeStripeAccount {
       return remember(ok(customer))
     }
     if ((match = /^\/v1\/customers\/([^/]+)$/.exec(path))) {
+      // A deleted customer still answers a read, as a stub that says so.
+      if (this.deletedCustomers.has(match[1]!)) return ok({ id: match[1]!, object: 'customer', deleted: true })
       const customer = this.customers.get(match[1]!)
       if (!customer) return missing('customer', match[1]!)
       if (method === 'POST') Object.assign(customer, params)
@@ -160,6 +166,7 @@ export class FakeStripeAccount {
 
     // --- checkout
     if (method === 'POST' && path === '/v1/checkout/sessions') {
+      if (this.deletedCustomers.has(String(params.customer))) return remember(missing('customer', String(params.customer), 400))
       this.checkoutCreates += 1
       const lineItems = params.line_items as Array<{ price?: string }> | undefined
       const priceId = lineItems?.[0]?.price ?? ''
@@ -187,7 +194,12 @@ export class FakeStripeAccount {
       this.sessions.set(id, session)
       return remember(ok(this.publicSession(session)))
     }
+    if ((match = /^\/v1\/checkout\/sessions\/([^/]+)$/.exec(path)) && method === 'GET') {
+      const session = this.sessions.get(match[1]!)
+      return session ? ok(this.publicSession(session)) : missing('checkout.session', match[1]!)
+    }
     if (method === 'POST' && path === '/v1/billing_portal/sessions') {
+      if (this.deletedCustomers.has(String(params.customer))) return missing('customer', String(params.customer), 400)
       return ok({ id: newId('bps'), object: 'billing_portal.session', customer: params.customer, url: `http://127.0.0.1:3191/__fake/portal/${String(params.customer)}` })
     }
 
@@ -418,10 +430,10 @@ export class FakeStripeAccount {
   }
 
   /**
-   * Control: the same buyer starts checkout again later. The app's own
-   * checkout replays one session per plan for five minutes (its idempotency
-   * bucket), so a harness that buys twice inside that window uses this for the
-   * second session: same customer, price and metadata, new id, open.
+   * Control: a second open session like an earlier one: same customer, price
+   * and metadata, new id. The app's checkout no longer needs it (since launch
+   * fix plan item 11 it steps past a replayed session that was already paid),
+   * but it stays for harnesses that want a session without going through it.
    */
   reopenCheckout(sessionId: string): StripeObject | null {
     const session = this.sessions.get(sessionId)
@@ -439,6 +451,23 @@ export class FakeStripeAccount {
     }
     this.sessions.set(id, reopened)
     return this.publicSession(reopened)
+  }
+
+  /**
+   * Control: a customer deleted in the Dashboard. Stripe cancels its
+   * subscriptions as it goes, then refuses new work on it. Returns the customer
+   * as `customer.deleted` carries it, and the subscriptions it cancelled.
+   */
+  deleteCustomer(customerId: string): { customer: StripeObject; subscriptions: StripeObject[] } | null {
+    const owned = [...this.subscriptions.values()].filter((s) => s.customer === customerId)
+    // A customer the harness made straight through `/v1/checkout/sessions`
+    // (no `/v1/customers` call) is known only through its subscriptions.
+    const customer = this.customers.get(customerId) ?? (owned.length > 0 ? { id: customerId, object: 'customer' } : null)
+    if (!customer) return null
+    const cancelled = owned.filter((s) => s.status !== 'canceled')
+    for (const subscription of cancelled) this.cancel(subscription)
+    this.deletedCustomers.add(customerId)
+    return { customer: { ...customer, deleted: true }, subscriptions: cancelled }
   }
 
   /** Control: change a subscription the way Stripe's billing would have. */

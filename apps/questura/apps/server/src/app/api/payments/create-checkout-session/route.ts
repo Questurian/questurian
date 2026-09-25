@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type Stripe from 'stripe'
 import { stripe } from '@/payments/lib/stripe'
 import { resolveStripeCustomerForVisitor, findLiveSubscription } from '@/payments/lib/customer-linkage'
 import { APP_CONFIG, APP_URLS } from '@/shared/config'
@@ -68,6 +69,63 @@ function sanitizeReferralId(value: unknown): string | null {
     return null
   }
   return trimmed
+}
+
+/** How many used sessions one request will step past before giving up. */
+const MAX_USED_SESSION_SKIPS = 5
+
+/**
+ * Create a Checkout Session, never handing back one that can no longer be paid.
+ *
+ * The idempotency key (see `checkout-idempotency.ts`) replays one session per
+ * request shape for five minutes, and Stripe replays the *original response*,
+ * which still reads `open` however the session has moved on since. A visitor
+ * who paid, was refunded or cancelled, and pressed Subscribe again inside that
+ * window was handed the page they had already paid on (found in launch fix
+ * plan item 2). So the session is read back, and a completed or expired one is
+ * stepped past with a key that names it: still deterministic, so a double
+ * click after a refund still collapses to one new session.
+ *
+ * Returns null only if every retry is also used, which needs several paid and
+ * reversed checkouts inside five minutes; the caller answers 503.
+ */
+async function createUnusedCheckoutSession(
+  params: Stripe.Checkout.SessionCreateParams,
+  idempotencyKey: string
+): Promise<Stripe.Checkout.Session | null> {
+  let key = idempotencyKey
+
+  for (let attempt = 0; attempt <= MAX_USED_SESSION_SKIPS; attempt += 1) {
+    const session = await stripe.checkout.sessions.create(params, { idempotencyKey: key })
+    const status = await currentSessionStatus(session)
+
+    if (status === 'open') return session
+
+    logger.warn('Checkout replayed a session that can no longer be paid; opening a new one', {
+      sessionStatus: status,
+    })
+    key = `${idempotencyKey}:after:${session.id}`
+  }
+
+  logger.error('Checkout stepped past too many used sessions; refusing for now')
+  return null
+}
+
+/**
+ * The session's status now, not as the replayed response remembers it. A read
+ * that fails is taken as `open`: the worst case is the old behaviour, a
+ * stale page, rather than a refused sale.
+ */
+async function currentSessionStatus(session: Stripe.Checkout.Session): Promise<string> {
+  try {
+    const current = await stripe.checkout.sessions.retrieve(session.id)
+    return current.status ?? 'open'
+  } catch (error) {
+    logger.warn('Could not read back the Checkout Session; using it as created', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return 'open'
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -263,7 +321,7 @@ export async function POST(req: NextRequest) {
       forceThreeDSecure,
     })
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await createUnusedCheckoutSession({
       customer: stripeCustomerId,
       mode: 'subscription', // KEY: subscription mode, not payment
       line_items: [{
@@ -316,7 +374,14 @@ export async function POST(req: NextRequest) {
       ...(forceThreeDSecure
         ? { payment_method_options: { card: { request_three_d_secure: 'challenge' as const } } }
         : {}),
-    }, { idempotencyKey })
+    }, idempotencyKey)
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Checkout is busy for this account. Please try again in a few minutes.' },
+        { status: 503, headers: { ...corsHeaders, 'Retry-After': '300' } }
+      )
+    }
 
     logger.info('Created checkout session')
 

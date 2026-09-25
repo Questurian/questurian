@@ -34,11 +34,43 @@ export function getBillingInfo(user: User | null, entitled: boolean): BillingInf
   if (user.subscriptionRenewsAt) {
     return {
       nextBilling: formatDate(user.subscriptionRenewsAt),
-      billingPeriod: 'Monthly',
+      billingPeriod: BILLING_PERIOD_LABELS[user.billingInterval ?? ''] ?? null,
     };
   }
 
   return null;
+}
+
+/**
+ * What the member actually pays for. This was the literal 'Monthly', so a
+ * yearly member was told they bill monthly. Unknown (a profile no webhook has
+ * touched since the server started recording it) shows nothing rather than a
+ * guess.
+ */
+const BILLING_PERIOD_LABELS: Readonly<Record<string, string>> = {
+  month: 'Monthly',
+  year: 'Yearly',
+};
+
+/**
+ * Whether the card shows its billing links, and whether "Update Payment
+ * Method" (the Stripe portal) is one of them.
+ *
+ * The links used to hang off the billing summary, which exists only for an
+ * entitled `active` subscription, so the payment-issue card told the visitor to
+ * update their payment method and gave them no way to.
+ */
+export function getMembershipLinks(
+  state: MembershipState,
+  billingInfo: BillingInfo | null,
+  entitled: boolean,
+): { showActionLinks: boolean; canUpdatePayment: boolean } {
+  const canUpdatePayment = state.showUpdatePayment || (entitled && Boolean(billingInfo));
+
+  return {
+    showActionLinks: Boolean(billingInfo) || canUpdatePayment || state.showCancelButton,
+    canUpdatePayment,
+  };
 }
 
 /**
@@ -59,6 +91,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
       showCancelButton: false,
       showUpgradeButton: true,
       showReactivateButton: false,
+      showUpdatePayment: false,
     };
   }
 
@@ -78,6 +111,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
           showCancelButton: false,
           showUpgradeButton: false,
           showReactivateButton: true,
+          showUpdatePayment: false,
         };
       }
 
@@ -90,6 +124,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
           showCancelButton: true,
           showUpgradeButton: false,
           showReactivateButton: false,
+          showUpdatePayment: true,
         };
       }
 
@@ -101,6 +136,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
         showCancelButton: true,
         showUpgradeButton: false,
         showReactivateButton: false,
+        showUpdatePayment: true,
       };
 
     // A failed renewal is a payment problem, not the end of a membership.
@@ -111,6 +147,26 @@ function membershipStateFromStatus(user: User | null): MembershipState {
       const graceEnds = user.dunningGraceUntil ? new Date(user.dunningGraceUntil) : null;
       const stillCovered = Boolean(graceEnds && graceEnds > now);
 
+      // Only a renewal that once collected opens a grace. `incomplete` (a first
+      // checkout that never confirmed) also reads `past_due` but never has one;
+      // checkout does not count it as live, so buying again is its way out.
+      if (!graceEnds) {
+        return {
+          type: 'expired',
+          label: 'Membership Incomplete',
+          badgeClass: 'bg-[#fff3e0] text-[#e65100] border border-[#ffe0b2]',
+          description: 'Your last checkout did not complete, so no membership was started. Subscribe again to join.',
+          showCancelButton: false,
+          showUpgradeButton: true,
+          showReactivateButton: false,
+          showUpdatePayment: false,
+        };
+      }
+
+      // Both dunning states go to the Stripe portal. The subscription is still
+      // alive and Stripe is still retrying it, so checkout refuses a second one
+      // (a past_due subscription counts as live): an Upgrade button here could
+      // only answer 400. A new card in the portal is what recovers it.
       return {
         type: stillCovered ? 'payment_issue' : 'expired',
         label: stillCovered ? 'Premium - Payment Issue' : 'Membership Expired',
@@ -119,10 +175,27 @@ function membershipStateFromStatus(user: User | null): MembershipState {
           ? `We could not take your last payment. Your access continues until ${formatAccessDate(graceEnds)} while we retry — update your payment method to keep it.`
           : 'We could not take your last payment and your premium access has ended. Update your payment method to restore it.',
         showCancelButton: stillCovered,
-        showUpgradeButton: !stillCovered,
+        showUpgradeButton: false,
         showReactivateButton: false,
+        showUpdatePayment: true,
       };
     }
+
+    // D5 (launch fix plan): Questura never offers pausing, so a paused
+    // subscription grants nothing. It still counts as live at checkout, so
+    // nobody pays twice; the portal is where it is managed or cancelled.
+    case 'paused':
+      return {
+        type: 'paused',
+        label: 'Membership Paused',
+        badgeClass: 'bg-[#fff3e0] text-[#e65100] border border-[#ffe0b2]',
+        description:
+          'Your membership is paused, so premium access is off. Use "Update Payment Method" below to manage or cancel it, or contact us to resume it.',
+        showCancelButton: false,
+        showUpgradeButton: false,
+        showReactivateButton: false,
+        showUpdatePayment: true,
+      };
 
     case 'canceled':
     case 'cancelled':
@@ -135,6 +208,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
           showCancelButton: false,
           showUpgradeButton: true,
           showReactivateButton: false,
+          showUpdatePayment: false,
         };
       }
 
@@ -151,6 +225,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
           // subscription still exists.
           showUpgradeButton: true,
           showReactivateButton: false,
+          showUpdatePayment: false,
         };
       }
 
@@ -162,6 +237,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
         showCancelButton: false,
         showUpgradeButton: true,
         showReactivateButton: false,
+        showUpdatePayment: false,
       };
 
     case 'inactive':
@@ -173,6 +249,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
         showCancelButton: false,
         showUpgradeButton: true,
         showReactivateButton: false,
+        showUpdatePayment: false,
       };
 
     default:
@@ -184,6 +261,7 @@ function membershipStateFromStatus(user: User | null): MembershipState {
         showCancelButton: false,
         showUpgradeButton: true,
         showReactivateButton: false,
+        showUpdatePayment: false,
       };
   }
 }
@@ -223,6 +301,7 @@ function accessPausedState(): MembershipState {
     showCancelButton: false,
     showUpgradeButton: false,
     showReactivateButton: false,
+    showUpdatePayment: true,
   };
 }
 

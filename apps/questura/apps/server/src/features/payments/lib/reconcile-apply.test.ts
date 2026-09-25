@@ -24,11 +24,15 @@ const PAID_STATE = {
   cancelAtPeriodEnd: false,
   paidThroughAt: '2026-03-01T00:00:00.000Z',
   dunningGraceUntil: null,
+  billingInterval: null,
+  subscriptionPaused: false,
 }
 
 const REVOKED_STATE = {
   subscriptionStatus: 'active' as const,
   cancelAtPeriodEnd: false,
+  billingInterval: null,
+  subscriptionPaused: false,
   paidThroughAt: null,
   dunningGraceUntil: null,
 }
@@ -103,6 +107,18 @@ describe('diffProfileAgainst', () => {
     })
 
     expect(changes).toEqual({ stripeCustomerId: 'cus_1' })
+  })
+
+  // The interval is a display label, not drift: the launch-day dry run must
+  // still say 0 changes for members recorded before it existed.
+  it('does not count a missing billing interval as drift', () => {
+    const changes = diffProfileAgainst(profile(), {
+      customerId: 'cus_1',
+      subscriptionId: 'sub_1',
+      state: { ...PAID_STATE, billingInterval: 'year' },
+    })
+
+    expect(changes).toEqual({})
   })
 
   it('writes nothing when the profile already matches Stripe', () => {

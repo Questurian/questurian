@@ -19,7 +19,9 @@ export type MembershipType =
    * Access is gone while the subscription keeps billing, so the card has to say
    * so rather than read the status enum's `active`.
    */
-  | 'access_paused';
+  | 'access_paused'
+  /** Stripe paused the subscription. No access (D5), and no second checkout. */
+  | 'paused';
 
 export interface MembershipState {
   type: MembershipType;
@@ -29,11 +31,14 @@ export interface MembershipState {
   showCancelButton: boolean;
   showUpgradeButton: boolean;
   showReactivateButton: boolean;
+  /** Offer the Stripe portal ("Update Payment Method"). */
+  showUpdatePayment: boolean;
 }
 
 export interface BillingInfo {
   nextBilling: string;
-  billingPeriod: string;
+  /** Null when the server does not know the interval yet. */
+  billingPeriod: string | null;
 }
 
 export interface MembershipAlertsProps {

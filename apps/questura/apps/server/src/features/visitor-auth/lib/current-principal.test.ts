@@ -165,6 +165,7 @@ describe('Current principal', () => {
           expiresAt: paidThroughAt,
           graceUntil: null,
           cancelAtPeriodEnd: false,
+          interval: null,
         },
       },
     })

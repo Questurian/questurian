@@ -11,6 +11,7 @@ import {
   handleDisputeCreated,
   handleDisputeClosed,
 } from './handlers/charge-revocation'
+import { handleCustomerDeleted } from './handlers/customer-deleted'
 import type { HandledStripeEventType } from './event-contract'
 
 export {
@@ -65,4 +66,7 @@ export const STRIPE_WEBHOOK_HANDLERS: Record<
   'charge.dispute.created': (event) => handleDisputeCreated(event.data.object as Stripe.Dispute),
 
   'charge.dispute.closed': (event) => handleDisputeClosed(event.data.object as Stripe.Dispute),
+
+  'customer.deleted': (event) =>
+    handleCustomerDeleted(event.data.object as Stripe.Customer | Stripe.DeletedCustomer),
 }

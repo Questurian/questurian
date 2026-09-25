@@ -14,6 +14,7 @@ describe('deriveVisitorMembership', () => {
       expiresAt: FUTURE,
       graceUntil: null,
       cancelAtPeriodEnd: false,
+      interval: null,
     })
   })
 
@@ -84,7 +85,20 @@ describe('deriveVisitorMembership', () => {
       expiresAt: null,
       graceUntil: null,
       cancelAtPeriodEnd: false,
+      interval: null,
     })
+  })
+
+  // Launch fix plan item 11: the account page shows the real billing period.
+  it('passes the billing interval through, and nothing that is not one', () => {
+    expect(deriveVisitorMembership({ subscriptionStatus: 'active', billingInterval: 'year' }).interval).toBe('year')
+    expect(deriveVisitorMembership({ subscriptionStatus: 'active', billingInterval: 'week' }).interval).toBeNull()
+  })
+
+  // D5: stored as past_due plus a flag, told to the client as paused.
+  it('reports a paused subscription as paused', () => {
+    expect(deriveVisitorMembership({ subscriptionStatus: 'past_due', subscriptionPaused: true }).status).toBe('paused')
+    expect(deriveVisitorMembership({ subscriptionStatus: 'past_due', subscriptionPaused: false }).status).toBe('past_due')
   })
 
   it('defaults a missing status to none and does not grant entitlement', () => {

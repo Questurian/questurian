@@ -17,6 +17,7 @@ describe('stripe webhook event contract', () => {
       'charge.dispute.created',
       'charge.refunded',
       'checkout.session.completed',
+      'customer.deleted',
       'customer.subscription.created',
       'customer.subscription.deleted',
       'customer.subscription.updated',

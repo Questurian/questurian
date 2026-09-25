@@ -22,6 +22,24 @@
 import { connect } from 'node:net'
 
 export async function flushSandboxRedis(redisUrl: string): Promise<void> {
+  await sendToSandboxRedis(redisUrl, ['FLUSHDB'])
+}
+
+/**
+ * Delete only the keys matching `pattern`, for a harness that must keep the
+ * rest: visitor sessions live in this Redis too (Better Auth secondary
+ * storage), so a mid-run FLUSHDB signs every harness identity out.
+ */
+export async function clearSandboxRedisKeys(redisUrl: string, pattern: string): Promise<void> {
+  const script = "for _, key in ipairs(redis.call('KEYS', ARGV[1])) do redis.call('DEL', key) end return 1"
+  await sendToSandboxRedis(redisUrl, ['EVAL', script, '0', pattern])
+}
+
+function resp(args: string[]): string {
+  return `*${args.length}\r\n${args.map((arg) => `$${Buffer.byteLength(arg)}\r\n${arg}\r\n`).join('')}`
+}
+
+async function sendToSandboxRedis(redisUrl: string, command: string[]): Promise<void> {
   const url = new URL(redisUrl)
 
   if (!['127.0.0.1', 'localhost', '::1'].includes(url.hostname)) {
@@ -33,7 +51,7 @@ export async function flushSandboxRedis(redisUrl: string): Promise<void> {
 
   await new Promise<void>((done, fail) => {
     const socket = connect({ host: url.hostname, port: Number(url.port) }, () => {
-      socket.write('*1\r\n$7\r\nFLUSHDB\r\n')
+      socket.write(resp(command))
     })
     socket.on('data', () => {
       socket.end()

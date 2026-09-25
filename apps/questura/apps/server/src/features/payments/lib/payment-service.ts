@@ -271,6 +271,10 @@ export async function reactivateUserSubscription(authUserId: string): Promise<{
  */
 export function mapStripeStatusToInternal(stripeStatus: string): 'active' | 'cancelled' | 'past_due' {
   switch (stripeStatus) {
+    // D5 (launch fix plan): not a membership, not over. The profile's
+    // `subscriptionPaused` flag is what tells the account page it is paused.
+    case 'paused':
+      return 'past_due'
     case 'active':
     case 'trialing':
       return 'active'

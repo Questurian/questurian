@@ -91,7 +91,7 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
    pnpm --dir apps/questura/apps/server readiness:stack -- up --build
    pnpm --dir apps/questura/apps/server readiness:routes     # expect 119/119: includes redirects never leaving the site
    pnpm --dir apps/questura/apps/server readiness:payments   # expect 43/43
-   pnpm --dir apps/questura/apps/server readiness:purchase   # expect 38/38: a whole purchase, refunds and disputes, fake Stripe (basil-shaped)
+   pnpm --dir apps/questura/apps/server readiness:purchase   # expect 54/54: a whole purchase, refunds and disputes, a failed card (past_due, grace, portal), paused, a deleted customer, fake Stripe (basil-shaped)
    pnpm --dir apps/questura/apps/server readiness:auth       # expect 29/29: sign-in and sessions, attacked
    pnpm --dir apps/questura/apps/server readiness:oauth      # expect 71/71: Google linking (fake Google), staff/visitor isolation
    pnpm --dir apps/questura/apps/server readiness:faults     # expect 26/26: Stripe, Redis, Postgres failing (Postgres frozen: 503 in ~17 s, ready 503 in ~2 s; articles locked: member body 503 + Retry-After in ~5 s)
@@ -162,7 +162,7 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
 4. **The Stripe side** (live key, read-only):
 
    ```bash
-   pnpm --dir apps/questura/apps/server verify:stripe-webhook-events   # no MISSING, not DISABLED
+   pnpm --dir apps/questura/apps/server verify:stripe-webhook-events   # no MISSING, not DISABLED (customer.deleted included, since item 11)
    QUESTURA_RECONCILE_APPLY=0 pnpm --dir apps/questura/apps/server reconcile:nightly   # 0 changes
    ```
 

@@ -75,4 +75,34 @@ describe('readiness fake Stripe account', () => {
     expect(get(account, `/v1/charges/${charge.id}`).body).toMatchObject({ disputed: true })
     expect(account.closeDispute(dispute.id, 'lost')).toMatchObject({ status: 'lost' })
   })
+
+  // Launch fix plan item 11. Stripe replays an idempotent create with the
+  // response it first gave, so only a read shows a session has since been paid.
+  it('replays a create as first answered, and a read shows the session now', () => {
+    const account = new FakeStripeAccount(PRICES)
+    const create = () =>
+      account.handle('POST', new URL('http://127.0.0.1/v1/checkout/sessions'), 'customer=cus_1&mode=subscription&line_items[0][price]=price_m', {
+        idempotencyKey: 'k1',
+      })!
+    const id = (create().body as { id: string }).id
+    account.completeCheckout(id)
+
+    expect(create().body).toMatchObject({ id, status: 'open' })
+    expect(get(account, `/v1/checkout/sessions/${id}`).body).toMatchObject({ id, status: 'complete' })
+  })
+
+  // Deleting a customer in the Dashboard cancels its subscriptions, and Stripe
+  // then refuses new work on it while still answering a read with a stub.
+  it('deletes a customer the way Stripe does', () => {
+    const { account, subscription } = paidAccount()
+
+    account.deleteCustomer('cus_1')
+
+    expect(account.subscriptions.get(subscription.id)?.status).toBe('canceled')
+    expect(get(account, '/v1/customers/cus_1').body).toEqual({ id: 'cus_1', object: 'customer', deleted: true })
+    const refused = account.handle('POST', new URL('http://127.0.0.1/v1/checkout/sessions'), 'customer=cus_1&mode=subscription&line_items[0][price]=price_m', {})!
+    expect(refused.status).toBe(400)
+    const portal = account.handle('POST', new URL('http://127.0.0.1/v1/billing_portal/sessions'), 'customer=cus_1', {})!
+    expect(portal.status).toBe(400)
+  })
 })

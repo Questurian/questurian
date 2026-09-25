@@ -1,4 +1,5 @@
 import { logger } from '@/shared/utils/logger'
+import { isDeletedStripeCustomer } from './customer-linkage'
 import {
   findVisitorProfileByAuthUserId,
   findVisitorProfileByStripeCustomerId,
@@ -61,6 +62,19 @@ export async function resolveProfileForStripeCustomer(
     return null
   }
 
+  // A customer deleted in Stripe is unlinked by `customer.deleted`, and Stripe
+  // does not promise that event arrives after the subscription events the
+  // deletion also raises. Stitching the dead customer back on here would undo
+  // the unlink, and checkout and the portal would 500 for this visitor again.
+  // The profile is still the right one to act on; only the repair is skipped.
+  if (await isDeletedStripeCustomer(stripeCustomerId)) {
+    logger.warn('Not restoring a Stripe linkage to a deleted customer', {
+      stripeCustomerId,
+      profileId: byAuthUser.id,
+    })
+    return byAuthUser
+  }
+
   try {
     await updateVisitorProfileByAuthUserId(fallbackVisitorAuthUserId, { stripeCustomerId })
 
@@ -80,3 +94,4 @@ export async function resolveProfileForStripeCustomer(
 
   return { ...byAuthUser, stripeCustomerId }
 }
+

@@ -134,6 +134,10 @@ export class StripeStub {
         const reopened = this.account.reopenCheckout(control[1]!)
         return reopened ? send(200, reopened) : send(404, { error: 'no such session' })
       }
+      if ((control = /^\/__fake\/customers\/([^/]+)\/delete$/.exec(url.pathname)) && req.method === 'POST') {
+        const deleted = this.account.deleteCustomer(control[1]!)
+        return deleted ? send(200, deleted) : send(404, { error: 'no such customer' })
+      }
       if ((control = /^\/__fake\/subscriptions\/([^/]+)$/.exec(url.pathname)) && req.method === 'POST') {
         const patched = this.account.patchSubscription(control[1]!, JSON.parse(body || '{}'))
         return patched ? send(200, patched) : send(404, { error: 'no such subscription' })
