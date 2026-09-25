@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { ACCOUNTS, MEMBER_ARTICLE, SANDBOX, expect, expectSignedIn, signIn, test } from './fixtures'
+import { ACCOUNTS, HOME_PATH, MEMBER_ARTICLE, SANDBOX, expect, expectSignedIn, freshEmail, signIn, signUp, test } from './fixtures'
 
 /**
  * `/account` threw React error #418 (a hydration mismatch) in the production
@@ -46,3 +46,20 @@ for (const [label, account] of [
     expect(errors.filter((message) => /#418|hydrat/i.test(message))).toEqual([])
   })
 }
+
+test('#418: a reader reloading /account over and over never gets a hydration error', async ({ page }) => {
+  // The second cause (launch fix plan item 8b): Next streamed metadata into a
+  // hidden <div> ahead of <html>, and on a fast load it was sometimes missing
+  // from the client's tree when hydration began. About one load in thirty
+  // threw #418 at the (private) layout's first element. Fixed by blocking
+  // metadata for every reader (`htmlLimitedBots` in next.config.ts).
+  test.skip(!SANDBOX, 'creates a reader: sandbox only')
+  const errors = pageErrors(page)
+  await page.goto(HOME_PATH)
+  await signUp(page, freshEmail('reload'))
+  for (let load = 0; load < 25; load += 1) {
+    await page.goto('/account')
+    await expect(page.getByRole('heading', { name: 'Your Account' })).toBeVisible()
+  }
+  expect(errors.filter((message) => /#418|hydrat/i.test(message))).toEqual([])
+})

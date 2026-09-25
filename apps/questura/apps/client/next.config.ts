@@ -17,6 +17,16 @@ const nextConfig: NextConfig = {
   // unpublished page for up to a year. A week bounds that and still rides out
   // a long backend outage on stale pages.
   expireTime: 7 * 24 * 60 * 60,
+  // Metadata goes in <head>, resolved before the page is sent, for every
+  // reader, as Next already does for search bots. Next's default streams it
+  // for everyone else, into a hidden <div> React renders ahead of <html>; on
+  // a fast load that div was sometimes not yet in the client's tree when
+  // hydration began, React matched the page against it, and the whole page
+  // was thrown away and rendered again (minified React error #418 on
+  // /account, about one load in thirty; launch fix plan item 8). The price is
+  // that a dynamic page's <head> waits for its metadata, which the page
+  // fetches anyway; prerendered pages are unaffected.
+  htmlLimitedBots: /./,
   // Frontend calls backend directly at NEXT_PUBLIC_BACKEND_URL
   // No API proxy needed - cookies work natively on same domain (localhost or questurian.com)
   // Keep ISR output in memory so production traffic cannot mutate immutable
