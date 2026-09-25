@@ -22,7 +22,8 @@
  *    the client, whose server-side calls the edge forwards **without** adding
  *    the header — the pessimistic answer to the Worker-subrequest unknown. The
  *    edge's counters must show render calls arriving, all with the key, and
- *    none refused.
+ *    none refused. Drafts and missing paths answer exactly 404, itineraries
+ *    included (see `front-door-render.ts`).
  *  - **Never logged.** The secret appears in no stack log.
  */
 
@@ -31,6 +32,7 @@ import { request as httpRequest } from 'node:http'
 import { randomBytes } from 'node:crypto'
 
 import type { EdgeStats } from './front-door-edge'
+import { judgeRender } from './front-door-render'
 import { LAUNCH_MANIFEST_PATH, type LaunchManifest } from './launch-corpus'
 import { assertPreflight } from './preflight'
 import { sandboxSettings } from './sandbox'
@@ -163,22 +165,8 @@ async function main(): Promise<void> {
     const response = await fetch(`${CLIENT}${page.path}`, { redirect: 'manual' })
     const html = await response.text()
     for (const match of html.matchAll(/href="(\/authors\/[a-z0-9-]+)"/g)) authorPaths.add(match[1]!)
-    const markerOk = page.marker ? html.includes(page.marker) : true
-    const leaked = page.absent ? html.includes(page.absent) : false
-    // A route with a loading.tsx (itineraries) streams its shell before the
-    // page calls notFound(), so the status is already 200: Next then sends the
-    // not-found page with noindex. Not a front-door matter, and nothing of the
-    // draft is in it; accepted here only with both markers of that path.
-    const streamedNotFound =
-      page.expect === 404 && response.status === 200 && /<meta name="robots" content="noindex"/.test(html) && html.includes('NEXT_HTTP_ERROR_FALLBACK;404')
-    const statusOk = response.status === page.expect || streamedNotFound
-    record(
-      'renders',
-      `${page.label} → ${page.expect}`,
-      statusOk && markerOk && !leaked,
-      `HTTP ${response.status}${streamedNotFound ? ' (streamed not-found, noindex)' : ''}${page.marker ? `, marker ${markerOk ? 'present' : 'absent'}` : ''}${leaked ? ', DRAFT CONTENT LEAKED' : ''}`,
-    )
-    if (streamedNotFound) console.log(`        note: ${page.path} is a streamed not-found (HTTP 200 + noindex)`)
+    const verdict = judgeRender(page, response.status, html)
+    record('renders', `${page.label} → ${page.expect}`, verdict.ok, verdict.detail)
   }
   for (const page of pages) await load(page)
   record('renders', 'the pages link to at least one author page', authorPaths.size > 0, `${authorPaths.size} linked`)
