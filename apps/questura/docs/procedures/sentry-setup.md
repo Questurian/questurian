@@ -8,8 +8,14 @@ happens to look. With it, Sentry emails (or texts, with the app) the moment
 something breaks, with the line of code. Decision D1 in the launch fix plan.
 
 Written 2026-09-24 (launch fix plan, item 3). The code is merged and off: it
-does nothing until `SENTRY_DSN` is set. No real Sentry project exists yet, and
-no agent has sent an event to one.
+does nothing until `SENTRY_DSN` is set.
+
+**State, 2026-09-25:** the owner's organization is `questurian` (slug
+`questurian-5x`, US region), with one project, `questura-server`. Step 4 is
+proved: test event `b210b926…` arrived with `[email]` and `[redacted]` and
+none of the originals (the address, the cookie value, the fake key). The owner
+still does step 3 (the agent's token has no `org:write`) and step 6; steps 5
+and 7 are go-live. The DSN is in the project's Client Keys, never in the repo.
 
 ---
 
