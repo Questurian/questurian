@@ -132,7 +132,7 @@ async function main(): Promise<void> {
   try {
     // Start from a non-member whatever an earlier run left behind.
     await pool.query(
-      `UPDATE visitor_profiles SET stripe_customer_id = NULL, stripe_subscription_id = NULL, subscription_status = 'none', paid_through_at = NULL, dunning_grace_until = NULL, cancel_at_period_end = false, billing_interval = NULL
+      `UPDATE visitor_profiles SET stripe_customer_id = NULL, stripe_subscription_id = NULL, subscription_status = 'none', paid_through_at = NULL, dunning_grace_until = NULL, cancel_at_period_end = false, billing_interval = NULL, subscription_paused = false
        WHERE email IN ('nonmember@example.com', 'member-b@example.com')`,
     )
 
