@@ -264,7 +264,8 @@ async function main() {
   const blocked = plan.filter(({ risks }) => risks.length > 0)
   if (blocked.length > 0) {
     throw new Error(
-      'Risky migration blocked. Follow the manual migration procedure, then rerun deployment.',
+      'Risky migration blocked. Follow the manual migration procedure ' +
+        '(apps/questura/docs/procedures/backup-restore-rollback.md), then rerun deployment.',
     )
   }
 }

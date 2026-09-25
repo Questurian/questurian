@@ -35,9 +35,28 @@
  *
  * A rehearsal of the procedure: not PITR, not a managed backup, not a
  * statement about how long a provider restore takes.
+ *
+ * **Postgres major.** Production is Neon on Postgres 17; the sandbox
+ * container is 16. The run records the server and client versions, and
+ * refuses a `pg_dump` older than the server (it cannot dump it faithfully).
+ * `READINESS_PG_BINDIR` names the directory holding `pg_dump`/`psql` when the
+ * ones on PATH are too old, and `READINESS_RESTORE_EXPECT_MAJOR=17` makes the
+ * major a gate. The restore reads the dump from stdin, so a client wrapper
+ * (e.g. `docker run -i postgres:17 psql`) works as well as a local binary.
+ *
+ * **`--db-only`.** Gates 3 and 6 and the HTTP half of gate 4 need the stack's
+ * server build. With `--db-only` the run needs only Postgres: 1, 2, 5, 7 and
+ * the index rebuild still run, the rest are listed as skipped, and the run is
+ * written as partial evidence — never as a full pass. It is how the restore is
+ * proven on a throwaway Postgres 17 while the sandbox stack is busy:
+ *
+ *   READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:<port>/questura_readiness \
+ *   READINESS_PG_BINDIR=<dir with pg_dump/psql 17> READINESS_RESTORE_EXPECT_MAJOR=17 \
+ *     pnpm readiness:restore -- --db-only
  */
 
 import { execFileSync, spawnSync } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -57,6 +76,39 @@ const TARGET = 'questura_readiness_restore'
 const CONTROL = 'questura_readiness_scratch'
 const RESTORED_PORT = 4102
 const RUNS = resolve(process.cwd(), '../../docs/capacity/runs')
+const DB_ONLY = process.argv.slice(2).includes('--db-only')
+const PG_BINDIR = process.env.READINESS_PG_BINDIR?.trim()
+const EXPECT_MAJOR = process.env.READINESS_RESTORE_EXPECT_MAJOR?.trim()
+
+const skipped: string[] = []
+function skip(label: string): void {
+  skipped.push(label)
+  console.log(`skip ${label} — needs the stack (run without --db-only)`)
+}
+
+function pgTool(name: 'pg_dump' | 'psql'): string {
+  return PG_BINDIR ? join(PG_BINDIR, name) : name
+}
+
+/** Major version of a client tool, from `<tool> --version`. */
+function toolVersion(name: 'pg_dump' | 'psql'): string {
+  const output = execFileSync(pgTool(name), ['--version'], { encoding: 'utf8' })
+  const match = output.match(/(\d+)(?:\.(\d+))?/)
+  if (!match) throw new Error(`Cannot read the ${name} version from: ${output.trim()}`)
+  return match[2] ? `${match[1]}.${match[2]}` : match[1]!
+}
+
+async function serverVersion(database: string): Promise<string> {
+  const client = new Client({ connectionString: uriFor(database) })
+  await client.connect()
+  try {
+    return String((await client.query('SHOW server_version')).rows[0].server_version).split(' ')[0]!
+  } finally {
+    await client.end()
+  }
+}
+
+const major = (version: string): number => Number.parseInt(version, 10)
 
 type Check = { ok: boolean; label: string; detail?: string }
 const checks: Check[] = []
@@ -93,7 +145,9 @@ async function recreate(database: string): Promise<void> {
 
 /** Restore a plain dump. Throws on the first SQL error; the whole restore is one transaction. */
 function restore(database: string, dumpPath: string): { ok: boolean; stderr: string } {
-  const result = spawnSync('psql', ['-q', '-X', '-v', 'ON_ERROR_STOP=1', '--single-transaction', ...connection(database), '-f', dumpPath], {
+  // stdin rather than `-f`, so a containerised psql needs no shared path.
+  const result = spawnSync(pgTool('psql'), ['-q', '-X', '-v', 'ON_ERROR_STOP=1', '--single-transaction', ...connection(database)], {
+    input: readFileSync(dumpPath),
     encoding: 'utf8',
     maxBuffer: 256 * 1024 * 1024,
   })
@@ -131,10 +185,26 @@ async function main(): Promise<void> {
     if (!(ALLOWED_DATABASES as readonly string[]).includes(database)) throw new Error(`${database} is not on the disposable allowlist.`)
   }
   assertPreflight({ ...sandboxSettings(), databaseUri: uriFor(TARGET) })
-  const stack = readStackState()
-  if (!stack) throw new Error('The restored-service gate boots the stack’s server build: run `pnpm readiness:stack -- up` first.')
+  const stack = DB_ONLY ? null : readStackState()
+  if (!DB_ONLY && !stack) {
+    throw new Error('The restored-service gate boots the stack’s server build: run `pnpm readiness:stack -- up` first (or `-- --db-only` for the database half).')
+  }
   const manifest = JSON.parse(readFileSync(LAUNCH_MANIFEST_PATH, 'utf8')) as LaunchManifest
   const work = mkdtempSync(join(tmpdir(), 'questura-restore-'))
+
+  // --- 0. Versions: which Postgres, and a client that can dump it ------------
+  const versions = {
+    source: await serverVersion(SOURCE),
+    pgDump: toolVersion('pg_dump'),
+    psql: toolVersion('psql'),
+    target: '',
+  }
+  if (major(versions.pgDump) < major(versions.source)) {
+    throw new Error(
+      `pg_dump ${versions.pgDump} cannot dump a Postgres ${versions.source} server. ` +
+        'Point READINESS_PG_BINDIR at a pg_dump/psql of the same major or newer.',
+    )
+  }
 
   // An obligation owed at dump time is the thing most likely to be lost.
   // Scheduled an hour ahead so the stack's own worker, which is draining the
@@ -155,8 +225,9 @@ async function main(): Promise<void> {
   const dumpPath = join(work, 'dump.sql')
   writeFileSync(
     dumpPath,
-    execFileSync('pg_dump', [...connection(SOURCE), '--no-owner', '--no-privileges'], { encoding: 'utf8', maxBuffer: 1024 * 1024 * 1024 }),
+    execFileSync(pgTool('pg_dump'), [...connection(SOURCE), '--no-owner', '--no-privileges'], { encoding: 'utf8', maxBuffer: 1024 * 1024 * 1024 }),
   )
+  const dumpMs = Date.now() - startedAt
 
   // --- 1. Error-stop, and the control that proves it ----------------------
   const corrupt = join(work, 'corrupt.sql')
@@ -173,8 +244,14 @@ async function main(): Promise<void> {
   check(leftover.rows[0].n === 0, 'and the refused restore left nothing behind (single transaction)', `${leftover.rows[0].n} tables`)
 
   await recreate(TARGET)
+  versions.target = await serverVersion(TARGET)
+  if (EXPECT_MAJOR) {
+    check(major(versions.target) === Number(EXPECT_MAJOR), `the restore target runs Postgres ${EXPECT_MAJOR}`, `server ${versions.target}, pg_dump ${versions.pgDump}, psql ${versions.psql}`)
+  }
+  const restoreStartedAt = Date.now()
   const restored = restore(TARGET, dumpPath)
   check(restored.ok, 'the real dump restores with ON_ERROR_STOP', restored.stderr)
+  const restoreOnlyMs = Date.now() - restoreStartedAt
   const restoreMs = Date.now() - startedAt
 
   // --- 2. Counts and owed work ------------------------------------------------
@@ -188,26 +265,31 @@ async function main(): Promise<void> {
   // --- 3. Boot the app on the restored database -------------------------------
   const receiver = new FaultReceiver()
   const receiverPort = await receiver.listen()
-  const settings = {
+  const revalidationSecret = stack?.secrets.revalidation ?? randomBytes(24).toString('hex')
+  receiver.expectedSecret = revalidationSecret
+  const settings = stack && {
     ports: { backend: RESTORED_PORT, client: receiverPort },
     databaseUri: uriFor(TARGET),
     redisUri: `redis://127.0.0.1:${STACK_PORTS.redis}`,
     dist: STACK_DIST,
-    revalidationSecret: stack.secrets.revalidation,
+    revalidationSecret,
     dbStatsSecret: stack.secrets.dbStats,
     instanceId: 'readiness-restored-backend',
     browser: { clientOrigin: stack.origins.client, backendOrigin: 'http://api-restored.readiness.localhost:4102' },
     outboundLog: stack.outboundLog,
     stripeStubUrl: `http://127.0.0.1:${STACK_PORTS.stripe}`,
   }
-  receiver.expectedSecret = settings.revalidationSecret
-  const backend = startApp('restored', SERVER_DIR(), RESTORED_PORT, backendEnv(settings))
+  const backend = settings ? startApp('restored', SERVER_DIR(), RESTORED_PORT, backendEnv(settings)) : null
   const base = `http://127.0.0.1:${RESTORED_PORT}`
 
   try {
-    const ready = await waitForApp(`${base}/api/me`, 120_000)
-    check(ready, 'the backend boots on the restored database')
-    if (!ready) throw new Error('The restored backend did not start; later gates would measure nothing.')
+    if (backend) {
+      const ready = await waitForApp(`${base}/api/me`, 120_000)
+      check(ready, 'the backend boots on the restored database')
+      if (!ready) throw new Error('The restored backend did not start; later gates would measure nothing.')
+    } else {
+      skip('the backend boots on the restored database')
+    }
 
     // --- 4. Search: the gate must fail on an empty index, pass after rebuild ---
     // An empty index still answers — the route falls back to a slower corpus
@@ -225,11 +307,13 @@ async function main(): Promise<void> {
       return response.status === 200 && fromIndex && body?.totalDocs === 1 && body.items?.[0]?.href === needle.path
     }
     await target.query('TRUNCATE public_search_documents')
-    check(!(await searchGate()), 'control: with the index emptied, the search gate fails (the fallback answer is not the index)')
+    if (backend) check(!(await searchGate()), 'control: with the index emptied, the search gate fails (the fallback answer is not the index)')
+    else skip('control: with the index emptied, the search gate fails (the fallback answer is not the index)')
     const { rebuildSearchIndex } = await import('../../src/features/articles/public/search-index/service')
     const rows = await rebuildSearchIndex(target as never)
     check(rows === published.length, 'the search index rebuilds from the restored corpus', `${rows} rows for ${published.length} published pieces`)
-    check(await searchGate(), 'a marker search returns exactly the expected piece, from the index')
+    if (backend) check(await searchGate(), 'a marker search returns exactly the expected piece, from the index')
+    else skip('a marker search returns exactly the expected piece, from the index')
     const orphans = await target.query(
       `SELECT count(*)::int AS n FROM public_search_documents s
        WHERE s.type_key = 'articles' AND NOT EXISTS (SELECT 1 FROM articles a WHERE a.id = s.doc_id AND a.status = 'published')`,
@@ -242,40 +326,47 @@ async function main(): Promise<void> {
     // Owed work replayed now, as an operator finishing a restore would.
     await target.query(`UPDATE refresh_jobs SET next_attempt_at = now() WHERE status = 'pending'`)
     process.env.QUESTURA_CLIENT_URL = `http://127.0.0.1:${receiverPort}`
-    process.env.QUESTURA_REVALIDATION_SECRET = settings.revalidationSecret
+    process.env.QUESTURA_REVALIDATION_SECRET = revalidationSecret
     const { drainRefreshJobs } = await import('../../src/features/refresh-outbox/worker')
     for (let pass = 0; pass < 10 && (await owed()) > 0; pass += 1) await drainRefreshJobs(target as never, { maxJobs: 500 })
     check((await owed()) === 0, 'after draining, nothing is owed')
     check(receiver.allPaths().has('/restore-probe'), 'the obligation owed at dump time was delivered')
 
     // --- 6. Public and private responses -----------------------------------------
-    const article = await fetch(`${base}/api/public/articles/by-canonical-path?path=${encodeURIComponent(needle.path)}&lang=en`, {
-      headers: { 'cf-connecting-ip': '192.0.2.201' },
-    })
-    const articleText = await article.text()
-    check(
-      article.status === 200 && articleText.includes(needle.markers.title) && articleText.includes(needle.markers.body),
-      'a public article read carries its title and body markers',
-      `HTTP ${article.status}`,
-    )
+    if (backend && stack) {
+      const article = await fetch(`${base}/api/public/articles/by-canonical-path?path=${encodeURIComponent(needle.path)}&lang=en`, {
+        headers: { 'cf-connecting-ip': '192.0.2.201' },
+      })
+      const articleText = await article.text()
+      check(
+        article.status === 200 && articleText.includes(needle.markers.title) && articleText.includes(needle.markers.body),
+        'a public article read carries its title and body markers',
+        `HTTP ${article.status}`,
+      )
 
-    const memberA = manifest.identities.find((identity) => identity.label === 'member-a')!
-    const cookie = await signIn(base, stack.origins.client, memberA.email, '192.0.2.202')
-    const me = (await (await fetch(`${base}/api/me`, { headers: { origin: stack.origins.client, cookie } })).json()) as {
-      principal?: { email?: string; membership?: { active?: boolean } }
+      const memberA = manifest.identities.find((identity) => identity.label === 'member-a')!
+      const cookie = await signIn(base, stack.origins.client, memberA.email, '192.0.2.202')
+      const me = (await (await fetch(`${base}/api/me`, { headers: { origin: stack.origins.client, cookie } })).json()) as {
+        principal?: { email?: string; membership?: { active?: boolean } }
+      }
+      check(me.principal?.email === memberA.email && me.principal?.membership?.active === true, 'member A signs in with the restored password and is exactly member A')
+      const gated = published.find((piece) => piece.access === 'member')!
+      const body = await fetch(`${base}/api/public/articles/full?type=${gated.type}&id=${gated.id}&lang=en`, {
+        headers: { origin: stack.origins.client, cookie, 'cf-connecting-ip': '192.0.2.203' },
+      })
+      check(body.status === 200 && (await body.text()).includes(gated.markers.member!), 'the restored member body is served to the restored member')
+      const refs = (await (await fetch(`${base}/api/account/bookmarks/refs`, { headers: { origin: stack.origins.client, cookie } })).json()) as {
+        refs?: Array<{ targetType: string; targetId: number }>
+      }
+      const got = (refs.refs ?? []).map((ref) => `${ref.targetType}:${ref.targetId}`).sort()
+      const want = memberA.bookmarks.map((ref) => `${ref.targetType}:${ref.targetId}`).sort()
+      check(JSON.stringify(got) === JSON.stringify(want), 'member A’s restored bookmarks are exactly A’s', got.join(','))
+    } else {
+      skip('a public article read carries its title and body markers')
+      skip('member A signs in with the restored password and is exactly member A')
+      skip('the restored member body is served to the restored member')
+      skip('member A’s restored bookmarks are exactly A’s')
     }
-    check(me.principal?.email === memberA.email && me.principal?.membership?.active === true, 'member A signs in with the restored password and is exactly member A')
-    const gated = published.find((piece) => piece.access === 'member')!
-    const body = await fetch(`${base}/api/public/articles/full?type=${gated.type}&id=${gated.id}&lang=en`, {
-      headers: { origin: stack.origins.client, cookie, 'cf-connecting-ip': '192.0.2.203' },
-    })
-    check(body.status === 200 && (await body.text()).includes(gated.markers.member!), 'the restored member body is served to the restored member')
-    const refs = (await (await fetch(`${base}/api/account/bookmarks/refs`, { headers: { origin: stack.origins.client, cookie } })).json()) as {
-      refs?: Array<{ targetType: string; targetId: number }>
-    }
-    const got = (refs.refs ?? []).map((ref) => `${ref.targetType}:${ref.targetId}`).sort()
-    const want = memberA.bookmarks.map((ref) => `${ref.targetType}:${ref.targetId}`).sort()
-    check(JSON.stringify(got) === JSON.stringify(want), 'member A’s restored bookmarks are exactly A’s', got.join(','))
 
     // --- 7. Relations -----------------------------------------------------------
     const relation = async (label: string, sql: string) => {
@@ -304,33 +395,44 @@ async function main(): Promise<void> {
          AND NOT EXISTS (SELECT 1 FROM media_assets a WHERE a.id = x.header_section_featured_image_id)`,
     )
   } finally {
-    backend.kill('SIGTERM')
+    backend?.kill('SIGTERM')
     await receiver.close()
     await target.end()
   }
 
   const failed = checks.filter((entry) => !entry.ok)
   const stamp = new Date().toISOString().slice(0, 10)
+  // A --db-only run is partial evidence and is written under its own name, so
+  // it can never be read as (or overwrite) a full restored-service run.
+  const suffix = DB_ONLY ? `-db-only-pg${major(versions.target)}` : ''
   writeFileSync(
-    resolve(RUNS, `${stamp}-surge-L09-restore.json`),
+    resolve(RUNS, `${stamp}-surge-L09-restore${suffix}.json`),
     JSON.stringify(
       {
-        kind: 'surge-restore-rehearsal',
+        kind: DB_ONLY ? 'surge-restore-rehearsal-db-only' : 'surge-restore-rehearsal',
         takenAt: new Date().toISOString(),
         source: sourceIdentity(),
         from: SOURCE,
         to: TARGET,
+        postgres: versions,
         restoreMs,
+        dumpMs,
+        restoreOnlyMs,
         countsBefore: before,
         countsAfter: after,
         result: { total: checks.length, passed: checks.length - failed.length },
         checks,
+        skipped,
       },
       null,
       2,
     ) + '\n',
   )
-  console.log(`\nRestore took ${restoreMs} ms on this Mac. ${checks.length - failed.length}/${checks.length} checks passed.`)
+  console.log(
+    `\nPostgres ${versions.source} → ${versions.target} (pg_dump ${versions.pgDump}). Dump ${dumpMs} ms, restore ${restoreOnlyMs} ms, ` +
+      `${restoreMs} ms end to end with the refused control. ${checks.length - failed.length}/${checks.length} checks passed.`,
+  )
+  if (skipped.length > 0) console.log(`PARTIAL: ${skipped.length} restored-service gates skipped (--db-only). This is not a full restore proof.`)
   if (failed.length > 0) process.exit(1)
   process.exit(0)
 }

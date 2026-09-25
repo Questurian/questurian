@@ -70,6 +70,21 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
      pnpm --dir apps/questura/apps/server sentry:test-event   # expect "Sent test event <id>": 1 event in Sentry, [email]/[redacted] in it, no originals
    ```
 
+   **Backups and the migration guard are on before the first deploy.** Follow
+   the one-time setup in `docs/procedures/backup-restore-rollback.md`: Neon
+   history retention reads **7 days**, the R2 bucket and its 30-day rule
+   exist, and the manual run of *Questura daily backup* ends with
+   `Stored questura-<stamp>.dump in the off-Neon bucket` (1 dump and 1
+   `.sha256` in the bucket). Railway's *Config-as-code* path is
+   `/apps/questura/infra/railway/railway.json`. The first deploy's log must
+   show the pre-deploy step `Checking pending database migrations`.
+   Both guard suites pass:
+
+   ```bash
+   pnpm --dir apps/questura/apps/server test:deploy     # expect 13 passed: migration guard + PR migration check
+   pnpm --dir apps/questura/apps/server test:softprod   # ends "railway pre-deploy tests passed", "daily backup tests passed"
+   ```
+
 2. **Rehearse locally once more** (laptop, one heavy job at a time):
 
    ```bash
@@ -85,6 +100,17 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
      --client http://app.readiness.localhost:3100 \
      --api http://api.readiness.localhost:4100 \
      --allow-http --home /zz-launch/harbor --no-image-check # expect 39/39 passed
+   pnpm --dir apps/questura/apps/server readiness:restore    # expect 35/35: dump, restore, boot, search, member sign-in on the restored database
+   ```
+
+   The restore on Neon's Postgres major (17), without the stack, on a
+   throwaway container (`docs/procedures/backup-restore-rollback.md`,
+   "Measured so far"):
+
+   ```bash
+   READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:<spare port>/questura_readiness \
+   READINESS_PG_BINDIR=<dir with pg_dump/psql 17> READINESS_RESTORE_EXPECT_MAJOR=17 \
+     pnpm --dir apps/questura/apps/server readiness:restore -- --db-only   # expect 29/29, 7 skipped, "PARTIAL"
    ```
 
    `--no-image-check` is for the sandbox only: its images point at a CDN host
@@ -153,6 +179,8 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
 
 ## If a check fails
 
-Stop and read the failure; each one names what it saw. `rollback` on the
-platform restores the previous deploy. Nothing in steps 1–4 writes anything,
+Stop and read the failure; each one names what it saw. Roll back the side
+that broke (the Worker first if both, or if you can't tell). A code rollback
+never reverses a migration. For restoring data, see
+`docs/procedures/backup-restore-rollback.md`. Nothing in steps 1–4 writes anything,
 so re-running them is always safe.

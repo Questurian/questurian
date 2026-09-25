@@ -75,7 +75,10 @@ truth for anything.
   `users`, `visitor_profiles` and the `visitor_auth_*` tables against the source
 - **Set up real backups.** What exists today is one 1.8 MB `pg_dump -Fc` sitting
   on the same disk as the database it came from, taken by hand. That is not a
-  backup, and after launch it is customer data.
+  backup, and after launch it is customer data. The targets (D7: Neon
+  point-in-time restore kept 7 days, at most 5 minutes lost, serving again
+  within 1 hour, plus a daily copy in Cloudflare R2) and the one-time setup
+  are in `docs/procedures/backup-restore-rollback.md`.
 
 Media is on Bunny and does not move with the database.
 
