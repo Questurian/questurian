@@ -180,6 +180,9 @@ jobs:
           state=/tmp/questura-readiness/stack.json
           export QUESTURA_RENDER_TOKEN="$(jq -r .secrets.renderToken "$state")"
           export QUESTURA_REVALIDATION_SECRET="$(jq -r .secrets.revalidation "$state")"
+          # Pre-renders carry the render token, so the front door adds no
+          # origin secret to them: the site sends its own, as on Cloudflare.
+          export ORIGIN_AUTH_SECRET="$(jq -r .secrets.originAuth "$state")"
           NODE_EXTRA_CA_CERTS="$tls/cert.pem" \
           NODE_OPTIONS='--max-old-space-size=3072' \
           NEXT_PUBLIC_BACKEND_URL=https://api.questura-ci.invalid \

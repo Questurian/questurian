@@ -16,7 +16,7 @@
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 
 type Report = {
   numTotalTests: number
@@ -24,7 +24,12 @@ type Report = {
   numFailedTests: number
   numPendingTests: number
   numTodoTests: number
-  testResults: Array<{ name: string; status: string; assertionResults: Array<{ status: string; title: string }> }>
+  testResults: Array<{
+    name: string
+    status: string
+    message?: string
+    assertionResults: Array<{ status: string; title: string; failureMessages?: string[] }>
+  }>
 }
 
 const out = join(mkdtempSync(join(tmpdir(), 'readiness-required-')), 'report.json')
@@ -50,6 +55,16 @@ console.log(
     `${report.numPendingTests + report.numTodoTests} skipped/pending. ` +
     `Integration: ${integrationFiles.length} files, ${integrationTests.length} tests, ${skipped.length} not executed.`,
 )
+
+// The JSON reporter prints nothing on the console, so name what failed here;
+// otherwise a red CI run says "1 failed" and the report stays on the runner.
+for (const file of report.testResults) {
+  for (const test of file.assertionResults.filter((result) => result.status === 'failed')) {
+    console.error(`  FAIL ${relative(process.cwd(), file.name)} › ${test.title}`)
+    for (const message of test.failureMessages ?? []) console.error(`       ${message.split('\n').slice(0, 6).join('\n       ')}`)
+  }
+  if (file.status === 'failed' && file.assertionResults.length === 0) console.error(`  FAIL ${relative(process.cwd(), file.name)}: ${file.message ?? 'did not load'}`)
+}
 
 const problems: string[] = []
 if (run.status !== 0 || report.numFailedTests > 0) problems.push('tests failed')
