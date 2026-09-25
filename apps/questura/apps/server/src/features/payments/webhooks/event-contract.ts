@@ -23,6 +23,9 @@ export const HANDLED_STRIPE_EVENT_TYPES = [
   'charge.refunded',
   'charge.dispute.created',
   'charge.dispute.closed',
+  // Without it a customer deleted in the Dashboard stays linked, and checkout
+  // and the portal answer 500 for that visitor forever (launch fix plan 11).
+  'customer.deleted',
 ] as const
 
 export type HandledStripeEventType = (typeof HANDLED_STRIPE_EVENT_TYPES)[number]

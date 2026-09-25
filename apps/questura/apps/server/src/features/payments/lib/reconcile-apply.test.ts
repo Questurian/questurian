@@ -24,11 +24,13 @@ const PAID_STATE = {
   cancelAtPeriodEnd: false,
   paidThroughAt: '2026-03-01T00:00:00.000Z',
   dunningGraceUntil: null,
+  billingInterval: null,
 }
 
 const REVOKED_STATE = {
   subscriptionStatus: 'active' as const,
   cancelAtPeriodEnd: false,
+  billingInterval: null,
   paidThroughAt: null,
   dunningGraceUntil: null,
 }
@@ -103,6 +105,18 @@ describe('diffProfileAgainst', () => {
     })
 
     expect(changes).toEqual({ stripeCustomerId: 'cus_1' })
+  })
+
+  // Launch fix plan item 11: the nightly run backfills the interval the
+  // account page shows, for profiles no webhook has touched since it existed.
+  it('records a billing interval the profile does not have yet', () => {
+    const changes = diffProfileAgainst(profile(), {
+      customerId: 'cus_1',
+      subscriptionId: 'sub_1',
+      state: { ...PAID_STATE, billingInterval: 'year' },
+    })
+
+    expect(changes).toEqual({ billingInterval: 'year' })
   })
 
   it('writes nothing when the profile already matches Stripe', () => {

@@ -69,6 +69,7 @@ const store = {
   charges: new Map<string, Charge>(),
   refunds: [] as Array<{ key: string | undefined; target: string }>,
   cancelCalls: [] as string[],
+  deletedCustomers: new Set<string>(),
 }
 
 // Built by the SDK's own error class so the fake rejects exactly as a real
@@ -85,6 +86,11 @@ function clone<T>(value: T): T {
 }
 
 const fakeStripe = {
+  customers: {
+    // A deleted customer is still retrievable, as a stub that says so.
+    retrieve: async (id: string) =>
+      store.deletedCustomers.has(id) ? { id, object: 'customer', deleted: true } : { id, object: 'customer' },
+  },
   webhooks: {
     // Signature verification is covered elsewhere; here the body IS the event.
     constructEvent: (body: string) => JSON.parse(body),
@@ -379,6 +385,7 @@ beforeEach(() => {
   store.charges.clear()
   store.refunds = []
   store.cancelCalls = []
+  store.deletedCustomers.clear()
   db['visitor-profiles'] = [
     {
       id: 1,
@@ -991,40 +998,58 @@ describe('resync ownership when the profile points at the dead subscription', ()
 // ---------------------------------------------------------------------------
 
 describe('unusual subscription shapes', () => {
-  it('P1: a paused subscription', async () => {
+  // D5 (launch fix plan item 11): Questura never offers pausing, so a paused
+  // subscription grants nothing. It still counts as live for duplicate
+  // prevention (`customer-linkage.ts`), so the visitor cannot buy a second one.
+  it('P1: a paused subscription grants no access', async () => {
     const sub = makeSub('sub_A', { status: 'paused', latest_invoice: 'in_1' })
     store.subs.set(sub.id, sub)
     store.invoices.set('in_1', makeInvoice('in_1'))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
-
-    await deliver('customer.subscription.updated', sub)
-
-    // Documents today's behaviour, which is NOT obviously the wanted one:
-    // `paused` has no case in `mapStripeStatusToInternal` and is absent from
-    // `UNPAID_CURRENT_PERIOD`, so a paused subscription keeps access to the
-    // full period end. Only reachable if pause-collection is enabled in the
-    // portal or Dashboard. Flip this assertion when that behaviour is decided.
-    expect(profile().subscriptionStatus).toBe('past_due')
-    expect(entitled()).toBe(true)
-  })
-
-  it('P2: a subscription with no items must not silently zero the paid date', async () => {
-    const sub = makeSub('sub_A', { items: { data: [] }, latest_invoice: 'in_1' })
-    store.subs.set(sub.id, sub)
-    store.invoices.set('in_1', makeInvoice('in_1'))
-    db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
+    db['visitor-profiles'][0].subscriptionStatus = 'active'
     db['visitor-profiles'][0].paidThroughAt = new Date(Date.now() + 20 * DAY * 1000).toISOString()
 
     await deliver('customer.subscription.updated', sub)
 
-    // Documents today's behaviour. `getSubscriptionPeriodSeconds` logs a warn
-    // and returns nulls, and the null is then written over a valid paid-through
-    // date — so an unresolvable period revokes a paying member instantly, and
-    // does it to every member at once if the shape ever changes. That is the
-    // opposite of `canceledPeriodWasPaid`'s stated rule that silence must never
-    // revoke access. Flip this assertion if the write is made non-destructive.
-    expect(profile().paidThroughAt).toBeNull()
+    expect(profile().subscriptionStatus).toBe('paused')
+    expect(profile().dunningGraceUntil).toBeNull()
     expect(entitled()).toBe(false)
+  })
+
+  // Launch fix plan item 11: an unresolvable period used to write null over a
+  // valid paid-through date, revoking a paying member instantly, and every
+  // member at once if the shape ever changed. Silence never revokes access.
+  it('P2: a subscription with no items keeps the last good paid date', async () => {
+    const sub = makeSub('sub_A', { items: { data: [] }, latest_invoice: 'in_1' })
+    store.subs.set(sub.id, sub)
+    store.invoices.set('in_1', makeInvoice('in_1'))
+    const paidThrough = new Date(Date.now() + 20 * DAY * 1000).toISOString()
+    db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
+    db['visitor-profiles'][0].subscriptionStatus = 'active'
+    db['visitor-profiles'][0].paidThroughAt = paidThrough
+    db['visitor-profiles'][0].billingInterval = 'year'
+
+    await deliver('customer.subscription.updated', sub)
+
+    expect(profile().paidThroughAt).toBe(paidThrough)
+    expect(profile().billingInterval).toBe('year')
+    expect(entitled()).toBe(true)
+  })
+
+  // Launch fix plan item 11: the account page said "Monthly" to yearly members.
+  it('P2b: records how often the subscription bills', async () => {
+    const start = now() - DAY
+    const sub = makeSub('sub_A', {
+      latest_invoice: 'in_1',
+      items: { data: [{ current_period_start: start, current_period_end: start + 365 * DAY, price: { recurring: { interval: 'year', interval_count: 1 } } }] },
+    })
+    store.subs.set(sub.id, sub)
+    store.invoices.set('in_1', makeInvoice('in_1'))
+
+    await deliver('customer.subscription.created', sub)
+
+    expect(profile().billingInterval).toBe('year')
+    expect(deriveVisitorMembership(profile() as never).interval).toBe('year')
   })
 
   it('P3: grace when Stripe schedules its retry a long way out', async () => {
@@ -1231,5 +1256,47 @@ describe('captured Stripe payloads through the real route', () => {
     ])
     expect(profile().stripeSubscriptionId).toBe(incompleteFixture.subscriptionId)
     expect(profile().subscriptionStatus).toBe('active')
+  })
+})
+
+// Launch fix plan item 11. Deleting a customer in Stripe left the profile
+// pointing at it, so checkout and the billing portal answered 500 for that
+// visitor forever.
+describe('customer deleted in Stripe', () => {
+  it('C1: customer.deleted clears the dead customer from the profile', async () => {
+    db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
+    store.deletedCustomers.add('cus_1')
+
+    const res = await deliver('customer.deleted', { id: 'cus_1', object: 'customer', email: 'buyer@test.com', metadata: { visitorAuthUserId: 'auth_1' } })
+
+    expect(res.status).toBe(200)
+    expect(profile().stripeCustomerId).toBeNull()
+  })
+
+  it('C2: a customer.deleted for nobody we know is acknowledged, not retried', async () => {
+    const res = await deliver('customer.deleted', { id: 'cus_stranger', object: 'customer', metadata: {} })
+
+    expect(res.status).toBe(200)
+    expect(profile().stripeCustomerId).toBe('cus_1')
+  })
+
+  // Stripe cancels the customer's subscriptions as it deletes it, and does not
+  // promise the order of the two events. When the subscription's arrives
+  // second, the metadata fallback in `resolveProfileForStripeCustomer` must not
+  // stitch the dead customer back on.
+  it('C3: a later subscription event does not re-link the deleted customer', async () => {
+    const sub = makeSub('sub_A', { status: 'canceled', ended_at: now(), latest_invoice: 'in_1' })
+    store.subs.set(sub.id, sub)
+    store.invoices.set('in_1', makeInvoice('in_1'))
+    db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
+    db['visitor-profiles'][0].subscriptionStatus = 'active'
+    store.deletedCustomers.add('cus_1')
+
+    await deliver('customer.deleted', { id: 'cus_1', object: 'customer', metadata: {} })
+    const res = await deliver('customer.subscription.deleted', sub)
+
+    expect(res.status).toBe(200)
+    expect(profile().stripeCustomerId).toBeNull()
+    expect(profile().subscriptionStatus).toBe('cancelled')
   })
 })

@@ -269,8 +269,15 @@ export async function reactivateUserSubscription(authUserId: string): Promise<{
 /**
  * Maps Stripe subscription status to our internal subscription status
  */
-export function mapStripeStatusToInternal(stripeStatus: string): 'active' | 'cancelled' | 'past_due' {
+export function mapStripeStatusToInternal(
+  stripeStatus: string
+): 'active' | 'cancelled' | 'past_due' | 'paused' {
   switch (stripeStatus) {
+    // D5 (launch fix plan): its own status, so the account page can say
+    // "paused" and point at the portal rather than sell a second subscription
+    // that checkout would refuse.
+    case 'paused':
+      return 'paused'
     case 'active':
     case 'trialing':
       return 'active'

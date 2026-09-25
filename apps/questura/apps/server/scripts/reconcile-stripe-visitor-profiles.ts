@@ -329,6 +329,8 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
     const state = subscription
       ? deriveSubscriptionState(subscription, {
           previousDunningGraceUntil: profile.dunningGraceUntil,
+          previousPaidThroughAt: profile.paidThroughAt,
+          previousBillingInterval: profile.billingInterval,
           nextPaymentAttempt: nextPaymentAttemptOf(subscription),
         })
       : null
@@ -526,6 +528,8 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
         state: subscription
           ? deriveSubscriptionState(subscription, {
               previousDunningGraceUntil: profile.dunningGraceUntil,
+              previousPaidThroughAt: profile.paidThroughAt,
+              previousBillingInterval: profile.billingInterval,
               nextPaymentAttempt: nextPaymentAttemptOf(subscription),
             })
           : null,

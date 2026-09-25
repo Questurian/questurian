@@ -5,6 +5,7 @@ export type MembershipFields = {
   paidThroughAt?: string | null
   dunningGraceUntil?: string | null
   cancelAtPeriodEnd?: boolean | null
+  billingInterval?: string | null
 }
 
 export type VisitorMembership = {
@@ -14,6 +15,8 @@ export type VisitorMembership = {
   expiresAt: string | null
   graceUntil: string | null
   cancelAtPeriodEnd: boolean
+  /** How often the subscription bills; null until a resync has recorded it. */
+  interval: 'month' | 'year' | null
 }
 
 function isFuture(value: string | null | undefined): boolean {
@@ -50,5 +53,6 @@ export function deriveVisitorMembership(profile: MembershipFields | null | undef
     expiresAt: profile?.paidThroughAt ?? null,
     graceUntil: profile?.dunningGraceUntil ?? null,
     cancelAtPeriodEnd: Boolean(profile?.cancelAtPeriodEnd),
+    interval: profile?.billingInterval === 'month' || profile?.billingInterval === 'year' ? profile.billingInterval : null,
   }
 }

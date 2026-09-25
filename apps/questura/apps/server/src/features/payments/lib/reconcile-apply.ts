@@ -54,6 +54,7 @@ export type ProfileSnapshot = {
   cancelAtPeriodEnd?: boolean | null
   paidThroughAt?: string | null
   dunningGraceUntil?: string | null
+  billingInterval?: string | null
 }
 
 /** What a fresh Stripe read says a profile should mirror. */
@@ -145,6 +146,10 @@ export function diffProfileAgainst(
     }
     if ((profile.dunningGraceUntil ?? null) !== state.dunningGraceUntil) {
       changes.dunningGraceUntil = state.dunningGraceUntil
+    }
+    // Display only, and never cleared: an unreadable price keeps what is there.
+    if (state.billingInterval && profile.billingInterval !== state.billingInterval) {
+      changes.billingInterval = state.billingInterval
     }
   }
 

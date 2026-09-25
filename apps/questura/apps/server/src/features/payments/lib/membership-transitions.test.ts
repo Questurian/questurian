@@ -23,6 +23,7 @@ function state(over: Partial<DerivedSubscriptionState> = {}): DerivedSubscriptio
     cancelAtPeriodEnd: false,
     paidThroughAt: future(),
     dunningGraceUntil: null,
+    billingInterval: 'month',
     ...over,
   }
 }

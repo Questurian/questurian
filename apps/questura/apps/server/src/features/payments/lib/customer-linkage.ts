@@ -129,6 +129,10 @@ const LIVE_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
   'trialing',
   'past_due',
   'unpaid',
+  // D5 (launch fix plan): a paused subscription grants no access, but it has
+  // not ended. Resuming it bills again, so a second one bought meanwhile
+  // would be a double charge.
+  'paused',
 ])
 
 /**

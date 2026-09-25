@@ -93,11 +93,15 @@ const UNPAID_CURRENT_PERIOD = new Set<Stripe.Subscription.Status>([
   'incomplete_expired',
 ])
 
+export type BillingInterval = 'month' | 'year'
+
 export type DerivedSubscriptionState = {
-  subscriptionStatus: 'none' | 'active' | 'cancelled' | 'past_due'
+  subscriptionStatus: 'none' | 'active' | 'cancelled' | 'past_due' | 'paused'
   cancelAtPeriodEnd: boolean
   paidThroughAt: string | null
   dunningGraceUntil: string | null
+  /** How often it bills, for the account page. Null only when never known. */
+  billingInterval: BillingInterval | null
 }
 
 export type DeriveContext = {
@@ -118,6 +122,13 @@ export type DeriveContext = {
    * reads the metadata as usual. See `payments/lib/access-revocation.ts`.
    */
   accessRevoked?: AccessRevocation | null
+  /**
+   * The profile's current paid-through date, kept when the subscription's
+   * period cannot be read (no items). Silence never revokes access.
+   */
+  previousPaidThroughAt?: string | null
+  /** The profile's current interval, kept when the price cannot be read. */
+  previousBillingInterval?: string | null
 }
 
 /**
@@ -222,6 +233,11 @@ function resolvePaidThrough(subscription: Stripe.Subscription): Date | null {
 
   if (UNPAID_CURRENT_PERIOD.has(subscription.status)) return start
 
+  // D5 (launch fix plan): Questura never offers pausing, so a paused
+  // subscription grants nothing. The period start is already behind us, so
+  // access stops now, and comes back on its own when Stripe resumes it.
+  if (subscription.status === 'paused') return start
+
   if (subscription.status === 'canceled') {
     return canceledPeriodWasPaid(subscription, end) ? end : start
   }
@@ -262,6 +278,22 @@ function resolveDunningGrace(
   return new Date(Math.max(fixedWindow, coversRetry)).toISOString()
 }
 
+function asBillingInterval(value: unknown): BillingInterval | null {
+  return value === 'month' || value === 'year' ? value : null
+}
+
+/**
+ * The interval the subscription's price bills at. Read from the item, like the
+ * period: the price's `recurring.interval`, or the legacy `plan.interval`.
+ */
+export function getSubscriptionBillingInterval(subscription: Stripe.Subscription): BillingInterval | null {
+  const item = subscription.items?.data?.[0] as
+    | { price?: { recurring?: { interval?: unknown } | null } | null; plan?: { interval?: unknown } | null }
+    | undefined
+
+  return asBillingInterval(item?.price?.recurring?.interval) ?? asBillingInterval(item?.plan?.interval)
+}
+
 /**
  * Turn a freshly fetched Stripe subscription into the profile fields it implies.
  * Pure: every input is an argument, so it is testable against captured payloads.
@@ -277,21 +309,47 @@ export function deriveSubscriptionState(
       ? context.accessRevoked
       : readAccessRevocation(subscription)
 
+  const billingInterval =
+    getSubscriptionBillingInterval(subscription) ?? asBillingInterval(context.previousBillingInterval)
+
   if (revocation) {
     return {
       subscriptionStatus,
       cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
       paidThroughAt: null,
       dunningGraceUntil: null,
+      billingInterval,
     }
   }
-
-  const paidThrough = resolvePaidThrough(subscription)
 
   return {
     subscriptionStatus,
     cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
-    paidThroughAt: paidThrough ? paidThrough.toISOString() : null,
+    paidThroughAt: resolvePaidThroughAt(subscription, context),
+    // Paused grants nothing (D5), so it opens no grace either.
     dunningGraceUntil: resolveDunningGrace(subscription.status, context),
+    billingInterval,
   }
+}
+
+/**
+ * The paid-through date to write. When the period cannot be read at all (a
+ * subscription with no items), the profile's last good date stands: writing
+ * null there revoked a paying member instantly, and would revoke every member
+ * at once if Stripe's shape ever changed. `getSubscriptionPeriodSeconds` has
+ * already logged it.
+ */
+function resolvePaidThroughAt(subscription: Stripe.Subscription, context: DeriveContext): string | null {
+  const { start, end } = getSubscriptionPeriodSeconds(subscription)
+
+  if (start === null && end === null) {
+    logger.warn('Keeping the last paid-through date: the subscription period is unreadable', {
+      subscriptionId: subscription.id,
+      kept: context.previousPaidThroughAt ?? null,
+    })
+    return context.previousPaidThroughAt ?? null
+  }
+
+  const paidThrough = resolvePaidThrough(subscription)
+  return paidThrough ? paidThrough.toISOString() : null
 }

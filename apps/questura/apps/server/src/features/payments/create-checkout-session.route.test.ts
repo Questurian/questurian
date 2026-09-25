@@ -264,6 +264,29 @@ describe('create checkout session route auth guard', () => {
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled()
   })
 
+  // D5 (launch fix plan): a paused subscription grants no access, but it has
+  // not ended, and resuming it would bill alongside a second one.
+  it('refuses checkout when Stripe holds a paused subscription', async () => {
+    mocks.requireVisitorPrincipal.mockResolvedValue({
+      principal: { id: 'visitor_123', email: 'visitor@example.com', profileId: 10 },
+      error: null,
+      status: 200,
+    })
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
+      id: 10,
+      subscriptionStatus: 'paused',
+      stripeCustomerId: 'cus_123',
+    })
+    mocks.stripeSubscriptionList.mockResolvedValue({
+      data: [{ id: 'sub_paused', status: 'paused' }],
+    })
+
+    const response = await POST(createRequest())
+
+    expect(response.status).toBe(400)
+    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled()
+  })
+
   it('refuses checkout when Stripe is live even if the local profile looks empty', async () => {
     mocks.requireVisitorPrincipal.mockResolvedValue({
       principal: { id: 'visitor_123', email: 'visitor@example.com', profileId: 10 },

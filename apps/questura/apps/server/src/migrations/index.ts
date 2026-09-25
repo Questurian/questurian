@@ -47,6 +47,7 @@ import * as migration_20260920_140000_public_search_documents from './20260920_1
 import * as migration_20260921_214514_refresh_jobs_outbox from './20260921_214514_refresh_jobs_outbox'
 import * as migration_20260922_063804_refresh_jobs_fencing from './20260922_063804_refresh_jobs_fencing'
 import * as migration_20260924_145915_payload_3_90_upgrade from './20260924_145915_payload_3_90_upgrade'
+import * as migration_20260925_032952_visitor_billing_interval_and_paused from './20260925_032952_visitor_billing_interval_and_paused'
 
 export const migrations = [
   {
@@ -293,5 +294,10 @@ export const migrations = [
     up: migration_20260924_145915_payload_3_90_upgrade.up,
     down: migration_20260924_145915_payload_3_90_upgrade.down,
     name: '20260924_145915_payload_3_90_upgrade',
+  },
+  {
+    up: migration_20260925_032952_visitor_billing_interval_and_paused.up,
+    down: migration_20260925_032952_visitor_billing_interval_and_paused.down,
+    name: '20260925_032952_visitor_billing_interval_and_paused',
   },
 ]

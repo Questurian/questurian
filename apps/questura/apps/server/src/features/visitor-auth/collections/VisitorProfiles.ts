@@ -118,6 +118,8 @@ export const VisitorProfiles: CollectionConfig = {
         { label: 'Active', value: 'active' },
         { label: 'Cancelled', value: 'cancelled' },
         { label: 'Past Due', value: 'past_due' },
+        // D5 (launch fix plan): no access, and still blocks a second checkout.
+        { label: 'Paused', value: 'paused' },
       ],
       access: membershipFieldAccess,
       admin: {
@@ -148,6 +150,19 @@ export const VisitorProfiles: CollectionConfig = {
           },
         },
       ],
+    },
+    {
+      name: 'billingInterval',
+      type: 'select',
+      options: [
+        { label: 'Monthly', value: 'month' },
+        { label: 'Yearly', value: 'year' },
+      ],
+      access: membershipFieldAccess,
+      admin: {
+        readOnly: true,
+        description: 'How often the subscription bills, from its Stripe price. Shown on the account page.',
+      },
     },
     {
       name: 'cancelAtPeriodEnd',

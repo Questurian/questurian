@@ -253,6 +253,8 @@ export async function resyncSubscription(
 
     const state = deriveSubscriptionState(subscription, {
       previousDunningGraceUntil: profile.dunningGraceUntil,
+      previousPaidThroughAt: profile.paidThroughAt,
+      previousBillingInterval: profile.billingInterval,
       nextPaymentAttempt: nextPaymentAttemptOf(subscription),
       // Spread so an absent option stays absent: `accessRevoked: undefined`
       // and `accessRevoked: null` mean different things to the deriver.
