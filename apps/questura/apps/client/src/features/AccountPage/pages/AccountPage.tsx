@@ -9,6 +9,7 @@ import { PasswordSection } from "../components/Password/PasswordSection";
 import { ConnectedAccountsSection } from "../components/ConnectedAccounts/ConnectedAccountsSection";
 import { MembershipSection } from "../components/Membership/MembershipSection";
 import { BookmarksSection } from "../components/Bookmarks/BookmarksSection";
+import { DevicesAndDataSection } from "../components/Devices/DevicesAndDataSection";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { SuspenseBoundary } from "@/components/shared/SuspenseBoundary";
@@ -103,6 +104,8 @@ function AccountContent() {
           <MembershipSection user={user} />
 
           <BookmarksSection />
+
+          <DevicesAndDataSection />
         </div>
       </section>
     </div>
