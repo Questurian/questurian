@@ -108,3 +108,41 @@ test('onAnswer hears each published answer, not failures or superseded lookups',
   await store.read()
   assert.deepEqual(heard, ['user-a', 'anon'])
 })
+
+test('expire(): the same reader after a membership change is asked again, inside maxAgeMs', async () => {
+  let answer = A
+  let now = 0
+  const store = new IdentityStore({ fetcher: async () => answer, now: () => now })
+  let told = 0
+  store.subscribe(() => (told += 1))
+
+  await store.read()
+  answer = { authenticated: true, principal: { id: 'user-a', membership: { active: false } } }
+  now = 200
+  // Within maxAgeMs the old answer is reused...
+  assert.equal((await store.read({ maxAgeMs: 1_000 })).principal.membership.active, true)
+  // ...until the change is announced.
+  store.expire()
+  assert.equal((await store.read({ maxAgeMs: 1_000 })).principal.membership.active, false)
+  assert.equal(store.requests, 2)
+  assert.equal(told, 0, 'the reader did not change, so subscribers are not told')
+})
+
+test('expire(): an answer already in flight is not stored', async () => {
+  const before = deferred()
+  let calls = 0
+  const store = new IdentityStore({
+    fetcher: () => {
+      calls += 1
+      return calls === 1 ? before.promise : Promise.resolve(B)
+    },
+  })
+  const early = store.read()
+  store.expire()
+  const fresh = await store.read({ maxAgeMs: 30_000 })
+  before.resolve(A)
+  await early
+  assert.equal(fresh.principal.id, 'user-b')
+  assert.equal((await store.read({ maxAgeMs: 30_000 })).principal.id, 'user-b')
+  assert.equal(calls, 2)
+})

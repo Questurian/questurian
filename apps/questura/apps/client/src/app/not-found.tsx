@@ -1,8 +1,26 @@
 import Link from '@/components/navigation/PublicLink';
+import { PublicChrome } from '@/components/layout/PublicChrome';
+import { SiteFonts } from '@/components/layout/SiteFonts';
 
+/**
+ * The one not-found page. Next renders it inside the root layout only, so it
+ * brings the site's own navigation and footer: a reader who followed a dead
+ * link can go on from here, not only "home" (launch fix plan item 8,
+ * journey 10).
+ */
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-5">
+    <SiteFonts>
+      <PublicChrome>
+        <NotFoundCard />
+      </PublicChrome>
+    </SiteFonts>
+  );
+}
+
+function NotFoundCard() {
+  return (
+    <div className="min-h-[70vh] flex items-center justify-center px-5">
       <div className="w-full max-w-md">
         <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-8 text-center">
           <h1 className="font-display text-[2.1rem] text-[#1A1A1A]">

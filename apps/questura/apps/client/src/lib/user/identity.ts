@@ -25,6 +25,10 @@
  *    result, so a slow response for reader A can never land after reader B
  *    signed in. Subscribers are told, so the gated body and the bookmark store
  *    re-read instead of holding the previous reader's state.
+ *  - **Expiry.** `expire()` (the same reader, whose membership just changed:
+ *    cancel, reactivate, checkout) drops the reused answer and any lookup
+ *    already in flight, so the next read asks the server. The reader is the
+ *    same, so subscribers are not told.
  *
  * Dependency-free apart from the injected fetcher, so node:test can run it.
  */
@@ -76,7 +80,9 @@ export class IdentitySuperseded extends Error {
 
 export class IdentityStore {
   private generation = 0
-  private inFlight: { generation: number; promise: Promise<IdentityResponse> } | null = null
+  /** Bumped by `expire()`: an answer from before it is never stored. */
+  private epoch = 0
+  private inFlight: { generation: number; epoch: number; promise: Promise<IdentityResponse> } | null = null
   private last: { generation: number; at: number; value: IdentityResponse } | null = null
   private readonly listeners = new Set<Listener>()
   private readonly fetcher: Fetcher
@@ -104,23 +110,24 @@ export class IdentityStore {
   async read(options: { maxAgeMs?: number } = {}): Promise<IdentityResponse> {
     const maxAgeMs = options.maxAgeMs ?? 0
     const generation = this.generation
+    const epoch = this.epoch
 
     if (this.last && this.last.generation === generation && this.now() - this.last.at <= maxAgeMs) {
       return this.last.value
     }
 
     let entry = this.inFlight
-    if (!entry || entry.generation !== generation) {
+    if (!entry || entry.generation !== generation || entry.epoch !== epoch) {
       this.requests += 1
       // A failure is never stored: only an answer is.
       const promise = this.fetcher(undefined).then((value) => {
-        if (this.generation === generation) {
+        if (this.generation === generation && this.epoch === epoch) {
           this.last = { generation, at: this.now(), value }
           this.onAnswer?.(value)
         }
         return value
       })
-      const started = { generation, promise }
+      const started = { generation, epoch, promise }
       entry = started
       this.inFlight = started
       const clear = () => {
@@ -140,6 +147,19 @@ export class IdentityStore {
     this.last = null
     this.inFlight = null
     for (const listener of this.listeners) listener(this.generation)
+  }
+
+  /**
+   * The same reader, but what the server says about them just changed (a
+   * cancel, a reactivation, a checkout). The next read asks the server even
+   * inside `maxAgeMs`; an answer already on its way is not stored. Without
+   * this, the account page re-read the answer it loaded with and put a
+   * cancelled membership back to "renews on" (launch fix plan item 8).
+   */
+  expire(): void {
+    this.epoch += 1
+    this.last = null
+    this.inFlight = null
   }
 
   /** Called with the new generation whenever the reader may have changed. */

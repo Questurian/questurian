@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/react-query';
+import { identityStore } from '@/lib/user/currentIdentity';
 import type { User } from '@/lib/user/types';
 
 import type { UserMutationContext } from '../types/subscription-mutations.types';
@@ -35,7 +36,14 @@ export function rollbackUserMutation(
   }
 }
 
+/**
+ * Re-ask the server who the reader is, after something changed their
+ * membership. The identity store reuses a recent `/api/me` answer, so without
+ * `expire()` the refetch could return the answer the page loaded with and put
+ * a just-cancelled membership back to "renews on" (launch fix plan item 8).
+ */
 export function invalidateUser(queryClient: QueryClient): void {
+  identityStore.expire();
   queryClient.invalidateQueries({ queryKey: queryKeys.userMe() });
 }
 

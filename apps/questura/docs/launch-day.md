@@ -46,6 +46,11 @@ Stripe/Google. From a fresh session it needs only `docker`:
   second build while a stack is up, and run `readiness:stack -- down` when
   finished.
 
+- **Faults at the front door.** `POST http://127.0.0.1:4100/__edge/fault`
+  with `{"status": 503, "match": "<text>"}` makes the Cloudflare stand-in
+  answer that status itself for every API request whose path and query
+  contain the text; `null` clears it. Journey 10 uses it for one article.
+  Off unless set; only 5xx statuses are accepted.
 - **Images.** Every image address points at the fixture media server,
   `http://media.readiness.localhost:3190` (`READINESS_MEDIA_ORIGIN`, honoured
   only with `READINESS_SANDBOX=1` and only for loopback http; `env:check`
@@ -56,18 +61,23 @@ Stripe/Google. From a fresh session it needs only `docker`:
 After step 2, the browser journeys run against the same stack:
 
 ```bash
-pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --project=firefox   # expect 38 passed (19 tests × 2 engines)
+pnpm --dir apps/questura/apps/e2e exec playwright test --project='chromium*' --project='firefox*'   # expect 75 passed, 1 skipped (30 tests × 2 engines, journey 12 is Chromium only, + journeys 1–3 on 2 phones × 2 engines)
 ```
 
-What they cover (launch fix plan item 8; part (b), journeys 6–12, adds to
-this):
+What they cover (launch fix plan item 8):
 
 | Spec | Tests | What |
 |---|---|---|
-| `browse.spec.ts` | 1 | Journey 1: home → city → article → author → back; every image decodes |
+| `browse.spec.ts` | 1 | Journey 1: home → city → article → author → back; every image decodes, nothing wider than the screen |
 | `join.spec.ts` | 2 | Journey 2: paywall → plans at $12.99 / $79.99 with the article carried along; sign-up, verification mail, fake Checkout, signed webhook, back on the open article |
 | `accounts.spec.ts` | 3 | Journeys 3–5: password sign-up / in / out; Google through the fake provider; password reset (other sessions end, the link works once, an expired link is refused) |
-| `account.spec.ts` | 3 | `/account` hydrates without React #418, signed out, as a member and as a non-member |
+| `settings.spec.ts` | 2 | Journey 6: change password (this browser stays in, the other is signed out, the old password is refused, the notice mail arrives); journey 7: change email through the mailbox (sign-in moves to the new address, the old one is told) |
+| `billing.spec.ts` | 3 | Journey 8: a monthly and a yearly member's account page (plan, renewal date, Monthly / Yearly); cancel, then reactivate |
+| `find.spec.ts` | 2 | Journey 9: bookmark an article, find it in Bookmarks, remove it; search from the menu, open the result, a query with no match |
+| `errors.spec.ts` | 3 | Journey 10: a made-up address and a missing article are real 404s with the site's menu and footer; an article the API cannot serve (503 at the front door) shows the branded error page (HTTP 500), not a blank or bare one |
+| `slow.spec.ts` | 1 | Journey 12: journey 1 on Slow 3G + 4× slower CPU (Chromium only), inside 180 s |
+| phone projects | 4 per phone and engine | Journey 11: journeys 1–3 on Pixel 7 and iPhone 13 screens (`chromium-*` emulate the phone fully; `firefox-*` get its screen, density, touch and user agent), with no horizontal scroll on any page |
+| `account.spec.ts` | 3 | `/account` hydrates without React #418, signed out, as a member and as a non-member (four loads each, at most one error: see below) |
 | `membership.spec.ts` | 3 | The paywall, member sign-in and sign-out, a non-member |
 | `session.spec.ts` | 2 | Session cookie flags; a wrong password |
 | `redirects.spec.ts` | 5 | `?returnTo=` never leaves the site and lands exactly on the safe fallback |
@@ -75,11 +85,19 @@ this):
 Every page in every spec fails on a console error, an uncaught page error or
 a failed request (a network failure or any response of 400 or more), apart
 from an explicit allowlist in `tests/fixtures.ts`, each entry with its reason.
+One entry is a known React 19.1 hydration race: about one fast page load in
+seventy, React throws #418 while a layout hydrates and recovers by rendering
+the page again in the browser (the reader still gets the page). It is allowed
+once per browser context, so a real mismatch, which fails every load, still
+fails. A Suspense boundary under the layouts stops the race but made every
+404 answer 200, so it was not kept.
 In the sandbox the browsers cannot reach anything but this machine (a
 black-hole proxy for every other host). The read-only specs (`browse`, the
-first `join` test, `account`, `membership`, `session`, `redirects`) also run
-against the real site with `E2E_BASE_URL` and the dedicated test account; the
-rest skip themselves there.
+first `join` test, `account`, `membership`, `session`, `redirects`, the 404s
+in `errors`, `slow`, search in `find` when `E2E_SEARCH_QUERY` /
+`E2E_SEARCH_PATH` are set, and the phone projects' journey 1 and first
+journey 2 test) also run against the real site with `E2E_BASE_URL` and the
+dedicated test account; the rest skip themselves there.
 
 ## Before the first deploy
 
@@ -254,7 +272,8 @@ rest skip themselves there.
    ```bash
    E2E_BASE_URL=https://www.questurian.com E2E_MEMBER_ARTICLE=<a member article path> E2E_MEMBER_TEXT=<text only members see> \
    E2E_MEMBER_EMAIL=… E2E_MEMBER_PASSWORD=… E2E_NONMEMBER_EMAIL=… E2E_NONMEMBER_PASSWORD=… \
-     pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --project=firefox   # expect no failures; the sandbox-only tests show as skipped
+   E2E_SEARCH_QUERY=<a query with exactly one result> E2E_SEARCH_PATH=<the path it opens> \
+     pnpm --dir apps/questura/apps/e2e exec playwright test --project='chromium*' --project='firefox*'   # expect no failures; the sandbox-only tests show as skipped
    ```
 
    Every API response carries a request id, and errors reach Sentry:

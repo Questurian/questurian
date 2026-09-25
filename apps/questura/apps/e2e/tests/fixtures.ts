@@ -57,7 +57,8 @@ export function freshEmail(label: string): string {
  * console line is left to the response check, which names the URL and works
  * the same in Firefox (which logs nothing).
  */
-type Allowance = { pattern: RegExp; why: string }
+/** `once`: allowed a single time per browser context; a second match is a failure. */
+type Allowance = { pattern: RegExp; why: string; once?: boolean }
 
 const ALWAYS_ALLOWED: Allowance[] = [
   {
@@ -75,6 +76,20 @@ const ALWAYS_ALLOWED: Allowance[] = [
     // still caught, by the response check.
     pattern: /^console: Failed to fetch RSC payload for \S+\. Falling back to browser navigation\./,
     why: 'Next falling back to an ordinary page load',
+  },
+  {
+    // React 19.1 sometimes replays a layout's <div> mid-hydration without
+    // rewinding its hydration cursor (a client component's code arriving at
+    // that moment), throws #418 and recovers by rendering the page again in
+    // the browser; the reader still gets the page (launch fix plan item 8b:
+    // 3 in 168 fast /account loads, also seen once on /zz-launch in Firefox).
+    // No safe fix exists here: a Suspense boundary under the layouts stops it
+    // but turns every 404 into a 200. Allowed once per context only, so a real
+    // mismatch, which fails every load, still fails the gate; account.spec.ts
+    // checks /account over repeated loads.
+    pattern: /^pageerror: Minified React error #418;/,
+    why: 'a rare, recovered React hydration race',
+    once: true,
   },
   ...(SANDBOX
     ? [
@@ -163,7 +178,12 @@ export function allowProblems(target: Page | BrowserContext, pattern: RegExp, wh
 export function unexpectedProblems(context: BrowserContext): string[] {
   const gate = gates.get(context)
   if (!gate) return []
-  return gate.problems.filter((problem) => !gate.allowed.some(({ pattern }) => pattern.test(problem)))
+  const spent = new Set<Allowance>()
+  return gate.problems.filter((problem) => {
+    const allowance = gate.allowed.find((each) => each.pattern.test(problem) && !(each.once && spent.has(each)))
+    if (allowance?.once) spent.add(allowance)
+    return !allowance
+  })
 }
 
 const REDIRECT_TARGETS = /^\/api\/visitor-auth\/(callback\/|verify-email|reset-password\/)/
@@ -183,12 +203,27 @@ export { expect }
 
 // ---------------------------------------------------------------- helpers
 
+/** The header's Sign in button that is on screen (phone and desktop headers differ). */
+export function signInButton(page: Page) {
+  return page.getByRole('button', { name: 'Sign in' }).locator('visible=true').first()
+}
+
 export async function signIn(page: Page, account: { email: string; password: string }) {
-  await page.getByRole('button', { name: 'Sign in' }).first().click()
+  await signInButton(page).click()
   await page.locator('input[name=email]').fill(account.email)
   await page.getByRole('button', { name: /continue/i }).click()
   await page.locator('input[name=password]').fill(account.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).last().click()
+}
+
+/** Creates a password account from the header and waits for the signed-in header. */
+export async function signUp(page: Page, email: string, password = NEW_PASSWORD) {
+  await signInButton(page).click()
+  await page.locator('input[name=email]').fill(email)
+  await page.getByRole('button', { name: /continue/i }).click()
+  await page.locator('input[name=password]').fill(password)
+  await page.getByRole('button', { name: 'Create account' }).click()
+  await expectSignedIn(page)
 }
 
 export async function expectSignedIn(page: Page) {
@@ -213,7 +248,7 @@ export async function signOut(page: Page) {
  * page first so lazy images load, then expects at least one image and no
  * broken one.
  */
-export async function expectImagesDecode(page: Page) {
+export async function expectImagesDecode(page: Page, timeout = 10_000) {
   await page.evaluate(async () => {
     for (let y = 0; y < document.body.scrollHeight; y += Math.max(200, window.innerHeight / 2)) {
       window.scrollTo(0, y)
@@ -231,9 +266,32 @@ export async function expectImagesDecode(page: Page) {
             broken: photos.filter((image) => !image.complete || image.naturalWidth === 0).map((image) => image.currentSrc),
           }
         }),
-      { message: 'every image on the page decodes', timeout: 10_000 },
+      { message: 'every image on the page decodes', timeout },
     )
     .toEqual({ count: expect.any(Number), broken: [] })
   const count = await page.evaluate(() => [...document.images].filter((image) => image.currentSrc && !image.currentSrc.startsWith('data:')).length)
   expect(count, 'the page shows at least one image').toBeGreaterThan(0)
+}
+
+/**
+ * The page fits the screen: nothing sticks out sideways, so a phone reader
+ * never scrolls horizontally (launch fix plan item 8, journey 11). Cheap, so
+ * the journeys check it on every page and every screen size.
+ */
+export async function expectNoHorizontalScroll(page: Page) {
+  const { scrollWidth, clientWidth, widest } = await page.evaluate(() => {
+    const root = document.documentElement
+    // The element sticking out furthest, to name it in the failure.
+    let widest = ''
+    let right = root.clientWidth
+    for (const element of document.body.querySelectorAll('*')) {
+      const box = element.getBoundingClientRect()
+      if (box.width > 0 && box.right > right + 1) {
+        right = box.right
+        widest = `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}.${String(element.className).split(' ').slice(0, 3).join('.')} (right edge ${Math.round(box.right)}px)`
+      }
+    }
+    return { scrollWidth: root.scrollWidth, clientWidth: root.clientWidth, widest }
+  })
+  expect(scrollWidth, `no horizontal scroll on ${new URL(page.url()).pathname}${widest ? `; widest: ${widest}` : ''}`).toBeLessThanOrEqual(clientWidth)
 }
