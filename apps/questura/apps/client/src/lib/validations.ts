@@ -18,8 +18,6 @@ import type { User } from '@/lib/user/types';
 const PROBE_ORIGIN = 'https://redirect-check.invalid';
 
 export function isValidRedirectPath(path: string): boolean {
-  // RED-PROOF (launch fix plan item 7): throwaway break, reverted before merge.
-  if (/^(https?:)?\/\//i.test(path)) return true;
   if (!path) return false;
 
   // Only allow relative paths starting with /
