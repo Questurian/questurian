@@ -56,4 +56,33 @@ describe('POST /api/media-sets/from-source', () => {
     })
     expect(mocks.assemble).not.toHaveBeenCalled()
   })
+
+  it('answers 415, not 500, when the body is not multipart', async () => {
+    mocks.auth.mockResolvedValue({
+      user: { id: 1, collection: 'service-accounts', name: LOCATION_MANAGER_SERVICE_ACCOUNT },
+    })
+    const response = await POST(
+      new NextRequest('http://localhost:4000/api/media-sets/from-source', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      }),
+    )
+
+    expect(response.status).toBe(415)
+    expect(mocks.assemble).not.toHaveBeenCalled()
+  })
+
+  it('answers 401 before reading the body when there is no identity', async () => {
+    mocks.auth.mockResolvedValue({ user: null })
+    const response = await POST(
+      new NextRequest('http://localhost:4000/api/media-sets/from-source', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      }),
+    )
+
+    expect(response.status).toBe(401)
+  })
 })

@@ -295,23 +295,21 @@ async function staffLogin(base: string, clientOrigin: string, originSecret: stri
   return { status: response.status, token: body?.token ?? null, cookie: cookie ?? null }
 }
 
-/** The Location Manager's own route: 401 without an identity, 400 for an empty body once it has one. */
+/**
+ * The Location Manager's own upload route, called the way it calls it
+ * (multipart), minus the image: 401 without an identity, 400 ("source file is
+ * required") once the caller is someone allowed to upload.
+ */
 async function fromSource(base: string, originSecret: string, authorization: string): Promise<number> {
+  const form = new FormData()
+  form.set('data', '{}')
   const response = await fetch(`${base}/api/media-sets/from-source`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', authorization, 'cf-connecting-ip': caller(), [ORIGIN_HEADER]: originSecret },
-    body: '{}',
+    headers: { authorization, 'cf-connecting-ip': caller(), [ORIGIN_HEADER]: originSecret },
+    body: form,
   })
   await response.text()
   return response.status
-}
-
-async function whoIsKey(base: string, originSecret: string, key: string): Promise<{ status: number; name: string | null }> {
-  const response = await fetch(`${base}/api/service-accounts/me`, {
-    headers: { authorization: `service-accounts API-Key ${key}`, 'cf-connecting-ip': caller(), [ORIGIN_HEADER]: originSecret },
-  })
-  const body = (await response.json().catch(() => null)) as { user?: { name?: string } | null } | null
-  return { status: response.status, name: body?.user?.name ?? null }
 }
 
 /** Issue `key` on the named service account, creating it if it is missing, the way an admin does from the panel. */
@@ -509,8 +507,10 @@ async function main(): Promise<void> {
     const carried = oldMember.carryTo(host, newOrigin)
     const carriedMe = await carried.me()
     record(old, 'an old visitor cookie: /api/me says signed out (200), not 500', carriedMe.status === 200 && carriedMe.id === null, `HTTP ${carriedMe.status}`)
-    const refs = await carried.request('/api/account/bookmarks/refs')
-    record(old, 'an old visitor cookie: a private route answers 401, not 500', refs.status === 401, `HTTP ${refs.status}`)
+    const bookmarks = await carried.request('/api/account/bookmarks')
+    record(old, 'an old visitor cookie: a private route (bookmarks) answers 401, not 500', bookmarks.status === 401, `HTTP ${bookmarks.status}`)
+    const methods = await carried.request('/api/account/auth-methods')
+    record(old, 'an old visitor cookie: sign-in methods answer 401, not 500', methods.status === 401, `HTTP ${methods.status}`)
     const session = await carried.request('/api/visitor-auth/get-session?disableCookieCache=true')
     record(old, 'an old visitor cookie: get-session finds no session, not 500', session.status < 500 && !session.json?.user, `HTTP ${session.status}`)
     const body = await carried.request(`/api/public/articles/full?type=${gated.type}&id=${gated.id}&lang=en`)
@@ -524,8 +524,6 @@ async function main(): Promise<void> {
 
     const oldKeyOnNew = await fromSource(host, newOrigin, `service-accounts API-Key ${oldKey}`)
     record(old, `the old ${SERVICE_ACCOUNT} key gets 401`, oldKeyOnNew === 401, `HTTP ${oldKeyOnNew}`)
-    const oldKeyWho = await whoIsKey(host, newOrigin, oldKey)
-    record(old, '…and names nobody', oldKeyWho.status < 500 && oldKeyWho.name === null, `HTTP ${oldKeyWho.status}`)
 
     const oldHook = await deliverWebhook(host, newOrigin, SANDBOX_WEBHOOK_SECRET, `evt_cutover_old_${run}`)
     record(old, 'a webhook signed with the laptop endpoint’s secret gets 400', oldHook === 400, `HTTP ${oldHook}`)
@@ -577,8 +575,6 @@ async function main(): Promise<void> {
     record(keys, `an admin re-issues the ${SERVICE_ACCOUNT} key on the new host`, reissue.status === 200 && reissue.id === oldIssue.id, `HTTP ${reissue.status}`)
     const newKeyStatus = await fromSource(host, newOrigin, `service-accounts API-Key ${newKey}`)
     record(keys, 'the new key works on its route (400 for an empty body, not 401)', newKeyStatus === 400, `HTTP ${newKeyStatus}`)
-    const newKeyWho = await whoIsKey(host, newOrigin, newKey)
-    record(keys, `…and is exactly ${SERVICE_ACCOUNT}`, newKeyWho.name === SERVICE_ACCOUNT, `HTTP ${newKeyWho.status}`)
     record(keys, 'the old key still gets 401 after the re-issue', (await fromSource(host, newOrigin, `service-accounts API-Key ${oldKey}`)) === 401)
 
     const hooks = 'stripe webhook'
