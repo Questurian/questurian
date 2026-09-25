@@ -2,8 +2,10 @@
  * The sandbox's two stores as docker containers, so a fresh session on a host
  * with docker needs nothing else installed (launch fix plan, item 0).
  *
- *  - **Postgres** is `questura-readiness-pg` on 127.0.0.1:5442: `postgres:16`,
- *    data on a tmpfs, trust auth, database `questura_readiness`. `stack up`
+ *  - **Postgres** is `questura-readiness-pg` on 127.0.0.1:5442: `postgres:16`
+ *    (the laptop's major) unless `READINESS_POSTGRES_IMAGE` names another
+ *    official `postgres:<major>` image — CI sets `postgres:17`, Neon's major —
+ *    with data on a tmpfs, trust auth, database `questura_readiness`. `stack up`
  *    starts it if it is missing, stopped or left paused by a crashed
  *    `readiness:faults`, and only when the sandbox URI points at 5442 — a URI
  *    aimed anywhere else (CI's service container, a Mac's own Postgres) is
@@ -52,8 +54,24 @@ export function redisDockerArgs(port: number): string[] {
   ]
 }
 
+const POSTGRES_IMAGE = /^postgres:\d+(\.\d+)?(-alpine)?$/
+
+/**
+ * The image the sandbox Postgres runs: `postgres:16` by default, or
+ * `READINESS_POSTGRES_IMAGE`. Only the official image, by major (or
+ * major.minor), is accepted, so the setting cannot pull something arbitrary.
+ */
+export function sandboxPostgresImage(env: NodeJS.ProcessEnv = process.env): string {
+  const image = env.READINESS_POSTGRES_IMAGE?.trim()
+  if (!image) return SANDBOX_POSTGRES.image
+  if (!POSTGRES_IMAGE.test(image)) {
+    throw new Error(`READINESS_POSTGRES_IMAGE is "${image}". It must be an official postgres image by version, e.g. postgres:17.`)
+  }
+  return image
+}
+
 /** `docker run` arguments for the sandbox Postgres. Detached, data on a tmpfs. */
-export function postgresDockerArgs(port: number): string[] {
+export function postgresDockerArgs(port: number, env: NodeJS.ProcessEnv = process.env): string[] {
   if (port !== SANDBOX_POSTGRES.port) {
     throw new Error(`Refusing to run the sandbox Postgres on port ${port}: it only ever runs on ${SANDBOX_POSTGRES.port}.`)
   }
@@ -63,7 +81,7 @@ export function postgresDockerArgs(port: number): string[] {
     '-p', `127.0.0.1:${port}:5432`,
     '-e', 'POSTGRES_HOST_AUTH_METHOD=trust',
     '-e', `POSTGRES_DB=${SANDBOX_POSTGRES.database}`,
-    SANDBOX_POSTGRES.image,
+    sandboxPostgresImage(env),
   ]
 }
 
@@ -120,6 +138,16 @@ export async function ensureSandboxPostgres(): Promise<'running' | 'unpaused' | 
 
   let action: 'running' | 'unpaused' | 'started' | 'created'
   const status = containerStatus(SANDBOX_POSTGRES.container)
+  const wanted = sandboxPostgresImage()
+  if (status !== 'missing') {
+    const image = spawnSync('docker', ['inspect', '-f', '{{.Config.Image}}', SANDBOX_POSTGRES.container], { encoding: 'utf8' }).stdout.trim()
+    if (image && image !== wanted) {
+      throw new Error(
+        `${SANDBOX_POSTGRES.container} runs ${image}, not ${wanted}. Its data is on a tmpfs and disposable: ` +
+          `\`docker rm -f ${SANDBOX_POSTGRES.container}\` and run \`stack up\` again to get ${wanted}.`,
+      )
+    }
+  }
   if (status === 'running') {
     action = 'running'
   } else if (status === 'paused') {
