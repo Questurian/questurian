@@ -154,13 +154,12 @@ refused.
 
 **9. Load the database — from a dump, not from migrations.**
 
-```bash
-# from a machine that can reach both
-pg_dump -h <source-host> -d <source-db> --no-owner --no-privileges > questura.sql
-psql "<neon-direct-connection-string>" -v ON_ERROR_STOP=1 -f questura.sql
-```
-
-Then, and only then, `pnpm db:migrate` to bring it forward.
+This is moving day, and it has its own runbook with the exact commands, the
+order, the counts to compare and the owner steps:
+`docs/procedures/cutover.md` (steps 4 to 8). In short: park the laptop, dump
+it, restore into Neon with a Postgres **17** client
+(`psql -v ON_ERROR_STOP=1 --single-transaction`), compare counts, and let the
+first deploy's pre-deploy step bring it forward with `pnpm db:migrate`.
 
 Running `db:migrate` against an empty Neon database fails in the first
 migration. That is not a bug to work around at 2am; it is a known property of
@@ -196,8 +195,8 @@ Required. Boot refuses without these:
 | `REDIS_URL` | Railway Redis private URL |
 | `QUESTURA_CLIENT_URL` | the frontend origin, where publications are delivered |
 | `QUESTURA_REVALIDATION_SECRET` | generate one now; Cloudflare gets the same value in step 16 |
-| `PAYLOAD_SECRET` | a fresh 64-character secret, not the laptop's |
-| `BETTER_AUTH_SECRET` | a fresh one, not `PAYLOAD_SECRET` |
+| `PAYLOAD_SECRET` | a fresh 64-character secret, not the laptop's. It signs staff out once and turns off every service-account key until re-issued (`docs/procedures/cutover.md`) |
+| `BETTER_AUTH_SECRET` | a fresh one, not `PAYLOAD_SECRET`. It signs every reader out once (`docs/procedures/cutover.md`) |
 | `PAYLOAD_COOKIE_DOMAIN` | step 11 |
 | `PAYLOAD_COOKIE_REQUIRED_HOSTS` | step 11 |
 | `STRIPE_SECRET_KEY` | live restricted key |

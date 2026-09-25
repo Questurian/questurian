@@ -120,7 +120,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const formData = await req.formData()
+    // A body that is not multipart (JSON, empty, malformed) is the caller's
+    // mistake, not ours: 415 rather than the 500 `formData()` would throw into.
+    let formData: FormData
+    try {
+      formData = await req.formData()
+    } catch {
+      return NextResponse.json(
+        { message: 'expected a multipart/form-data body with "source" and "data" fields' },
+        { status: 415, headers },
+      )
+    }
     const sourceField = formData.get('source')
     const dataField = formData.get('data')
 

@@ -404,7 +404,9 @@ async function main(): Promise<void> {
   const stamp = new Date().toISOString().slice(0, 10)
   // A --db-only run is partial evidence and is written under its own name, so
   // it can never be read as (or overwrite) a full restored-service run.
-  const suffix = DB_ONLY ? `-db-only-pg${major(versions.target)}` : ''
+  // A full run on a major other than the sandbox's is named by that major too,
+  // so a Postgres 17 proof never overwrites the day's ordinary run.
+  const suffix = DB_ONLY ? `-db-only-pg${major(versions.target)}` : EXPECT_MAJOR ? `-pg${major(versions.target)}` : ''
   writeFileSync(
     resolve(RUNS, `${stamp}-surge-L09-restore${suffix}.json`),
     JSON.stringify(

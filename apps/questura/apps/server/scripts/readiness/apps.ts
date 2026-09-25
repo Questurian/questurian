@@ -27,6 +27,12 @@ import { neutraliseDotenv, withFakeProviderRoute, withOutboundGuard } from './sa
 /** The sandbox backend's webhook signing secret. A placeholder: no Stripe endpoint has it. */
 export const SANDBOX_WEBHOOK_SECRET = 'whsec_readiness_placeholder'
 
+/** The sandbox's fixed signing secrets. Placeholders, never a real host's. */
+export const SANDBOX_SECRETS = {
+  payload: 'readiness-payload-secret-not-a-real-one-0123456789abcdef0123',
+  betterAuth: 'readiness-visitor-secret-not-a-real-one-0123456789abcdef01',
+} as const
+
 export type AppPorts = { backend: number; client: number }
 
 export type AppSettings = {
@@ -69,6 +75,12 @@ export type AppSettings = {
    * `oauth-fake-route.cjs` so its calls to Google and Resend land there.
    */
   fakeProviderUrl?: string
+  /**
+   * Secrets a new host would have instead of the sandbox's fixed ones
+   * (`readiness:cutover`, launch fix plan item 5). Absent: the fixed values
+   * every other harness shares.
+   */
+  rotated?: { payloadSecret: string; betterAuthSecret: string; stripeWebhookSecret: string }
 }
 
 export const backendUrl = (settings: AppSettings): string => `http://127.0.0.1:${settings.ports.backend}`
@@ -105,8 +117,8 @@ function backendEnvDeclared(settings: AppSettings): NodeJS.ProcessEnv {
 
     TRUSTED_PROXY: 'cloudflare',
     PAYLOAD_COOKIE_DOMAIN: 'host-only',
-    PAYLOAD_SECRET: 'readiness-payload-secret-not-a-real-one-0123456789abcdef0123',
-    BETTER_AUTH_SECRET: 'readiness-visitor-secret-not-a-real-one-0123456789abcdef01',
+    PAYLOAD_SECRET: settings.rotated?.payloadSecret ?? SANDBOX_SECRETS.payload,
+    BETTER_AUTH_SECRET: settings.rotated?.betterAuthSecret ?? SANDBOX_SECRETS.betterAuth,
 
     // The real client, not a receiver.
     QUESTURA_CLIENT_URL: clientUrl(settings),
@@ -122,7 +134,7 @@ function backendEnvDeclared(settings: AppSettings): NodeJS.ProcessEnv {
     BUNNY_STORAGE_HOSTNAME: 'readiness-media.invalid',
 
     STRIPE_SECRET_KEY: 'sk_readiness_placeholder_not_a_key',
-    STRIPE_WEBHOOK_SECRET: SANDBOX_WEBHOOK_SECRET,
+    STRIPE_WEBHOOK_SECRET: settings.rotated?.stripeWebhookSecret ?? SANDBOX_WEBHOOK_SECRET,
     // Production requires a Resend key and a sender on the site's domain. A
     // placeholder key reaches nothing: the outbound guard blocks api.resend.com,
     // and with the fake provider loaded the mail lands in its mailbox instead.

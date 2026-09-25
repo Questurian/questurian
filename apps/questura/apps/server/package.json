@@ -74,6 +74,7 @@
     "readiness:required": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/required-integrations.ts",
     "readiness:adapter": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/adapter-smoke.ts",
     "readiness:restore": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/restore-rehearsal.ts",
+    "readiness:cutover": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/readiness/cutover-rehearsal.ts",
     "sentry:test-event": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/sentry-test-event.ts"
   },
   "dependencies": {
