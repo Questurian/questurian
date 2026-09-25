@@ -15,12 +15,19 @@
  *    on PATH. `readiness:faults` pauses this exact container to take Redis
  *    down, so the name is not cosmetic.
  *
+ * A host with no docker (the owner's Mac) can run its own Postgres 16 on
+ * 127.0.0.1:5442 with trust auth and the sandbox database; `stack up` then
+ * uses it as is. `readiness:faults` still needs docker, because it pauses the
+ * Redis container.
+ *
  * Both refuse any port but their own. 5433 and 6379 on the laptop are the
  * live Postgres and Redis (`questura-postgres`, `questura-redis`); nothing
  * here names, inspects or stops a container that is not on `SANDBOX_CONTAINERS`.
  */
 
 import { execFileSync, spawnSync } from 'node:child_process'
+
+import { Client } from 'pg'
 
 export const SANDBOX_POSTGRES = {
   container: 'questura-readiness-pg',
@@ -117,6 +124,25 @@ export function removeContainer(name: string): void {
   spawnSync('docker', ['rm', '-f', name], { stdio: 'ignore' })
 }
 
+/** Is a Postgres the host runs itself already serving the sandbox database on 5442? */
+async function hostPostgresAnswers(): Promise<boolean> {
+  const client = new Client({
+    host: '127.0.0.1',
+    port: SANDBOX_POSTGRES.port,
+    user: 'postgres',
+    database: SANDBOX_POSTGRES.database,
+    connectionTimeoutMillis: 2_000,
+  })
+  try {
+    await client.connect()
+    return true
+  } catch {
+    return false
+  } finally {
+    await client.end().catch(() => {})
+  }
+}
+
 function pgReady(): boolean {
   return (
     spawnSync('docker', ['exec', SANDBOX_POSTGRES.container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres', '-d', SANDBOX_POSTGRES.database], {
@@ -131,8 +157,10 @@ function pgReady(): boolean {
  */
 export async function ensureSandboxPostgres(): Promise<'running' | 'unpaused' | 'started' | 'created'> {
   if (!binaryOnPath('docker')) {
+    if (await hostPostgresAnswers()) return 'running'
     throw new Error(
-      `The sandbox Postgres (${SANDBOX_POSTGRES.container}, 127.0.0.1:${SANDBOX_POSTGRES.port}) needs docker, and docker is not on PATH.`,
+      `The sandbox Postgres (${SANDBOX_POSTGRES.container}, 127.0.0.1:${SANDBOX_POSTGRES.port}) needs docker, and docker is not on PATH. ` +
+        `Without docker, run your own Postgres 16 on 127.0.0.1:${SANDBOX_POSTGRES.port} with trust auth and a database named ${SANDBOX_POSTGRES.database}.`,
     )
   }
 

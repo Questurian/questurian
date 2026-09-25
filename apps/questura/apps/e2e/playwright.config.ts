@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+import { resolveLocalhostNamesToLoopback } from './tests/loopback-names'
+
 /**
  * Real-browser tests (launch harness B1).
  *
@@ -21,6 +23,7 @@ import { defineConfig, devices } from '@playwright/test'
  * which runs both desktop engines and the phone projects below.
  */
 const SANDBOX = !process.env.E2E_BASE_URL
+if (SANDBOX) resolveLocalhostNamesToLoopback()
 
 /**
  * Journey 11 (launch fix plan item 8): journeys 1–3 on two phones. Chromium

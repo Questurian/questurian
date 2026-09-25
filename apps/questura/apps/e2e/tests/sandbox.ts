@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { createHmac, randomBytes } from 'node:crypto'
 
 import type { Page } from '@playwright/test'
@@ -65,15 +65,21 @@ export async function deliverWebhook(type: string, object: unknown): Promise<num
 }
 
 /**
- * SQL against the sandbox database, through the sandbox container only. The
- * name is fixed: this never reaches `questura-postgres` (the live data).
+ * SQL against the sandbox database only: through the sandbox container, or,
+ * on a host with no docker, through `psql` to that host's own sandbox
+ * Postgres on 127.0.0.1:5442. Neither can reach `questura-postgres` (the live
+ * data) or any other port.
  */
 export function sandboxSql(sql: string): string {
-  return execFileSync(
-    'docker',
-    ['exec', '-i', 'questura-readiness-pg', 'psql', '-U', 'postgres', '-d', 'questura_readiness', '-v', 'ON_ERROR_STOP=1', '-At', '-c', sql],
-    { encoding: 'utf8', timeout: 15_000 },
-  ).trim()
+  const psql = ['-d', 'questura_readiness', '-v', 'ON_ERROR_STOP=1', '-At', '-c', sql]
+  const [command, args] = hasDocker()
+    ? ['docker', ['exec', '-i', 'questura-readiness-pg', 'psql', '-U', 'postgres', ...psql]]
+    : ['psql', ['-h', '127.0.0.1', '-p', '5442', '-U', 'postgres', ...psql]]
+  return execFileSync(command, args, { encoding: 'utf8', timeout: 15_000 }).trim()
+}
+
+function hasDocker(): boolean {
+  return spawnSync('sh', ['-c', 'command -v docker'], { stdio: 'ignore' }).status === 0
 }
 
 /** Make every outstanding verification token (reset, email) of this reader expire now. */

@@ -57,6 +57,7 @@
  * to run (bad or missing options).
  */
 import { MANUAL_STEPS, notRun, runChecks } from './checks'
+import { resolveLocalhostNamesToLoopback } from './loopback-names'
 import { parseOptions } from './options'
 
 async function main(): Promise<void> {
@@ -66,6 +67,7 @@ async function main(): Promise<void> {
     process.exit(2)
   }
   const { target } = parsed
+  if (parsed.local) resolveLocalhostNamesToLoopback()
 
   const results = await runChecks(target)
   const failed = results.filter((result) => !result.ok)
