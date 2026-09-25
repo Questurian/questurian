@@ -12,7 +12,7 @@
       "cancelAtPeriodEnd": true,
       "expiresAt": "string",
       "graceUntil": null,
-      "interval": "string",
+      "interval": null,
       "source": "string",
       "status": "string"
     },

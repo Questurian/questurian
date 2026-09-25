@@ -109,16 +109,16 @@ describe('diffProfileAgainst', () => {
     expect(changes).toEqual({ stripeCustomerId: 'cus_1' })
   })
 
-  // Launch fix plan item 11: the nightly run backfills the interval the
-  // account page shows, for profiles no webhook has touched since it existed.
-  it('records a billing interval the profile does not have yet', () => {
+  // The interval is a display label, not drift: the launch-day dry run must
+  // still say 0 changes for members recorded before it existed.
+  it('does not count a missing billing interval as drift', () => {
     const changes = diffProfileAgainst(profile(), {
       customerId: 'cus_1',
       subscriptionId: 'sub_1',
       state: { ...PAID_STATE, billingInterval: 'year' },
     })
 
-    expect(changes).toEqual({ billingInterval: 'year' })
+    expect(changes).toEqual({})
   })
 
   it('writes nothing when the profile already matches Stripe', () => {

@@ -50,6 +50,7 @@ import { signIn } from './identities'
 import { LAUNCH_MANIFEST_PATH, type LaunchManifest } from './launch-corpus'
 import { assertPreflight } from './preflight'
 import { sandboxSettings } from './sandbox'
+import { clearSandboxRedisKeys } from './sandbox-redis'
 import { freshRateLimits, readStackState, STACK_PORTS } from './stack'
 import { readFileSync } from 'node:fs'
 
@@ -317,8 +318,13 @@ async function main(): Promise<void> {
     record(money, 'each of them found its invoice through an invoice payment', lookups >= 5, `lookups=${lookups}`)
 
     // ------------------------------------------ a failed card (item 11)
-    // The buyer again: `member-b` has to end the run as a member.
+    // The buyer again: `member-b` has to end the run as a member. This section
+    // checks out ~9 more times than the per-visitor budget (8 a minute) allows
+    // on top of what came before; the limiter is proved elsewhere, so its
+    // counters (and only those: sessions share this Redis) start again here.
     const card = 'failed card'
+    const clearCheckoutBudget = () => clearSandboxRedisKeys(`redis://127.0.0.1:${STACK_PORTS.redis}`, 'payments:rate-limit:*')
+    await clearCheckoutBudget()
     const monthly = (await (await checkout(buyer)).json()) as { url?: string }
     const cardBuy = await pay(String(monthly.url).split('/').pop()!, 'nonmember@example.com')
     const monthlyMembership = await membership(buyer)
@@ -341,6 +347,7 @@ async function main(): Promise<void> {
     const dunningPortal = await portal(buyer)
     record(card, 'the billing portal opens, to update the card', dunningPortal.status === 200 && Boolean(((await dunningPortal.json()) as Json).url), `HTTP ${dunningPortal.status}`)
 
+    await clearCheckoutBudget()
     // Days pass and the grace runs out while Stripe is still retrying.
     await pool.query(`UPDATE visitor_profiles SET dunning_grace_until = now() - interval '1 minute' WHERE email = 'nonmember@example.com'`)
     const lapsed = await membership(buyer)
