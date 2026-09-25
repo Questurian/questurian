@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
+import { signLoadIdentity } from '@/shared/http/load-identity'
 import { proxy } from './proxy'
 
 /**
@@ -167,6 +168,80 @@ describe('proxy origin lock', () => {
       const response = call('/api/me', { 'x-questura-origin-auth': SECRET, 'cf-connecting-ip': '198.51.100.7' })
       expect(response.headers.get('x-middleware-request-cf-connecting-ip')).toBe('198.51.100.7')
       expect(forwarded(response)).not.toContain('x-questura-origin-auth')
+    })
+  })
+})
+
+/**
+ * Decision D3's "every use is logged" (launch fix plan item 9): one line per
+ * request that carries the load identity while a key is set, accepted or
+ * refused; nothing at all while it is off.
+ */
+describe('proxy load identity log', () => {
+  const KEY = 'load-test-key-for-unit-tests-0123456789abcdef'
+  const signed = (address: string) => `${address};${signLoadIdentity(KEY, address)}`
+  let lines: Array<Record<string, unknown>>
+
+  beforeEach(() => {
+    lines = []
+    vi.spyOn(console, 'log').mockImplementation((line: unknown) => {
+      if (typeof line === 'string' && line.startsWith('{')) lines.push(JSON.parse(line))
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllEnvs()
+  })
+
+  const call = (headers: Record<string, string>) => proxy(new NextRequest('http://localhost:4000/api/me', { headers }))
+  const loadLines = () => lines.filter((line) => String(line.message).startsWith('Load identity'))
+
+  it('writes nothing while the key is off, whatever the header says', () => {
+    call({ 'x-questura-load-identity': signed('198.18.0.5') })
+    call({ 'x-questura-load-identity': 'junk' })
+    expect(loadLines()).toEqual([])
+  })
+
+  describe('with a key set', () => {
+    beforeEach(() => {
+      vi.stubEnv('LOAD_TEST_KEY', KEY)
+      vi.stubEnv('LOAD_TEST_UNTIL', new Date(Date.now() + 3_600_000).toISOString())
+    })
+
+    it('logs each accepted use once, with the address it counts as and the request id', () => {
+      const response = call({ 'x-questura-load-identity': signed('198.18.0.5') })
+      expect(loadLines()).toEqual([
+        expect.objectContaining({
+          level: 'info',
+          message: 'Load identity used',
+          address: '198.18.0.5',
+          path: '/api/me',
+          requestId: response.headers.get('x-request-id'),
+        }),
+      ])
+    })
+
+    it('logs a refused use with the reason', () => {
+      call({ 'x-questura-load-identity': `198.18.0.5;${'0'.repeat(64)}` })
+      call({ 'x-questura-load-identity': signed('203.0.113.7') })
+      expect(loadLines().map((line) => [line.level, line.message, line.reason])).toEqual([
+        ['warn', 'Load identity refused', 'wrong signature'],
+        ['warn', 'Load identity refused', 'not an address in 198.18.0.0/15'],
+      ])
+    })
+
+    it('logs nothing for a request without the header', () => {
+      call({ 'cf-connecting-ip': '198.51.100.7' })
+      expect(loadLines()).toEqual([])
+    })
+
+    it('strips it, unlogged, from a caller who skipped Cloudflare (unidentified mode)', () => {
+      vi.stubEnv('ORIGIN_AUTH_SECRET', 'origin-secret-for-tests-0123456789abcdef')
+      vi.stubEnv('ORIGIN_AUTH_MODE', 'unidentified')
+      const response = call({ 'x-questura-load-identity': signed('198.18.0.5') })
+      expect(response.headers.get('x-middleware-request-x-questura-load-identity')).toBeNull()
+      expect(loadLines()).toEqual([])
     })
   })
 })

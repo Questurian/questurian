@@ -4,6 +4,7 @@
  *   pnpm readiness:stack -- up --build   # Postgres, Redis, media, backend, client; builds first
  *   pnpm readiness:stack -- up --build-client  # rebuild only the client
  *   pnpm readiness:stack -- up           # reuse the last .next-readiness builds
+ *   pnpm readiness:stack -- up --load-test-window 90  # backend with a load-test key for 90 min
  *   pnpm readiness:stack -- status
  *   pnpm readiness:stack -- down         # stops only what `up` started
  *
@@ -101,7 +102,18 @@ export type StackState = {
   ports: typeof STACK_PORTS
   processes: StackProcess[]
   /** `originAuth` is absent in state files older than launch fix plan item 10. */
-  secrets: { revalidation: string; dbStats: string; renderToken: string; originAuth?: string }
+  secrets: {
+    revalidation: string
+    dbStats: string
+    renderToken: string
+    originAuth?: string
+    /**
+     * Only with `--load-test-window`: the backend's `LOAD_TEST_KEY` and the
+     * end of its window (decision D3, `src/shared/http/load-identity.ts`).
+     * Off by default, like the platform.
+     */
+    loadTest?: { key: string; until: string }
+  }
   origins: { client: string; backend: string }
   outboundLog: string
   neutralised: { server: string[]; client: string[] }
@@ -134,6 +146,7 @@ export function stackAppSettings(state: Pick<StackState, 'secrets' | 'origins' |
     browser: { clientOrigin: state.origins.client, backendOrigin: state.origins.backend },
     renderToken: state.secrets.renderToken,
     originAuthSecret: state.secrets.originAuth,
+    loadTest: state.secrets.loadTest,
     outboundLog: state.outboundLog,
     workerIntervalMs: 5_000,
     stripeStubUrl: `http://127.0.0.1:${STACK_PORTS.stripe}`,
@@ -225,7 +238,7 @@ async function waitForPort(port: number, timeoutMs: number): Promise<boolean> {
   return false
 }
 
-export async function stackUp(options: { build: boolean; buildClient?: boolean }): Promise<StackState> {
+export async function stackUp(options: { build: boolean; buildClient?: boolean; loadTestWindowMinutes?: number }): Promise<StackState> {
   const sandbox = sandboxSettings()
   assertPreflight(sandbox)
   if (readStackState()) throw new Error('A stack is already recorded. Run `pnpm readiness:stack -- down` first.')
@@ -263,6 +276,14 @@ export async function stackUp(options: { build: boolean; buildClient?: boolean }
       dbStats: randomBytes(24).toString('hex'),
       renderToken: randomBytes(24).toString('hex'),
       originAuth: randomBytes(24).toString('hex'),
+      ...(options.loadTestWindowMinutes
+        ? {
+            loadTest: {
+              key: randomBytes(24).toString('hex'),
+              until: new Date(Date.now() + options.loadTestWindowMinutes * 60_000).toISOString(),
+            },
+          }
+        : {}),
     },
     origins: {
       client: `http://app.readiness.localhost:${STACK_PORTS.client}`,
@@ -449,7 +470,13 @@ async function main(): Promise<void> {
   const command = argv[0] ?? 'status'
 
   if (command === 'up') {
-    const state = await stackUp({ build: argv.includes('--build'), buildClient: argv.includes('--build-client') })
+    const windowAt = argv.indexOf('--load-test-window')
+    const loadTestWindowMinutes = windowAt >= 0 ? Number(argv[windowAt + 1]) : undefined
+    if (loadTestWindowMinutes !== undefined && !(Number.isInteger(loadTestWindowMinutes) && loadTestWindowMinutes >= 1 && loadTestWindowMinutes <= 720)) {
+      throw new Error('--load-test-window wants whole minutes, 1 to 720 (the server refuses a window over 12 hours).')
+    }
+    const state = await stackUp({ build: argv.includes('--build'), buildClient: argv.includes('--build-client'), loadTestWindowMinutes })
+    if (state.secrets.loadTest) console.log(`Load identity ON until ${state.secrets.loadTest.until} (key in ${STATE_FILE}).`)
     console.log(
       `Stack up from ${state.source.sha.slice(0, 8)}${state.source.dirty ? ' (dirty)' : ''}: ` +
         `client ${state.origins.client}, backend ${state.origins.backend}, media :${STACK_PORTS.media}, redis :${STACK_PORTS.redis}. ` +

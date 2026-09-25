@@ -61,6 +61,8 @@ type Behaviour = Partial<{
   meMember: boolean
   signedInMeCache: string
   signedInMeVary: string
+  // Load identity (decision D3)
+  loadIdentity: string | null
 }>
 
 const SESSION_COOKIE = '__Secure-questura_visitor.session_token=tok.sig%3D'
@@ -101,6 +103,7 @@ function fakeServer(behaviour: Behaviour = {}): typeof fetch {
     meMember: true,
     signedInMeCache: 'private, no-store',
     signedInMeVary: 'Origin, Cookie',
+    loadIdentity: 'off' as string | null,
     ...behaviour,
   }
   const head = (canonical: string | null, ogUrl: string | null) =>
@@ -154,7 +157,7 @@ function fakeServer(behaviour: Behaviour = {}): typeof fetch {
     }
     switch (url.pathname) {
       case '/api/health/ready':
-        return Response.json({ ready: true }, { headers: base })
+        return Response.json({ ready: true, ...(b.loadIdentity === null ? {} : { loadIdentity: b.loadIdentity }) }, { headers: base })
       case '/api/payments/plans':
         plansCalls += 1
         if (b.rateLimited && plansCalls > 31) return new Response('', { status: 429 })
@@ -216,10 +219,21 @@ describe('launch-verify checks', () => {
     ['image host serves a web page', { imageType: 'text/html' }, /image/],
     ['a soft 404', { unknownPathStatus: 200 }, /404/],
     ['bundle calls another API', { chunkApi: 'http://localhost:4000' }, /script the home page loads/],
+    ['a load-test key set on the API', { loadIdentity: 'on' }, /load-test key/],
+    ['a load-test key left behind after its window', { loadIdentity: 'expired' }, /load-test key/],
+    ['an invalid load-test key', { loadIdentity: 'invalid' }, /load-test key/],
+    ['an API that does not say whether a load-test key is set', { loadIdentity: null }, /load-test key/],
   ])('%s fails the matching check', async (_label, behaviour, pattern) => {
     const failed = await failures(behaviour)
     expect(failed.length).toBeGreaterThan(0)
     for (const name of failed) expect(name).toMatch(pattern)
+  })
+
+  // Decision D3: launch:verify fails while a load-test key is set.
+  it('fails while LOAD_TEST_KEY is still set in the shell running it, and never shows the value', async () => {
+    const results = await runChecks({ ...TARGET, loadTestKeyInShell: true }, fakeServer({}))
+    const failed = results.filter((r) => !r.ok)
+    expect(failed.map((r) => r.name)).toEqual(['this shell has no LOAD_TEST_KEY'])
   })
 
   it('finds the article in the sitemap and the author on the article', async () => {

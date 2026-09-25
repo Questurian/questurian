@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { workerHealth } from '@/features/refresh-outbox/lifecycle'
+import { loadIdentityState } from '@/shared/http/load-identity'
 import { sampledDatabaseProbe } from '@/shared/observability/health-probe'
 import { readinessState } from '@/shared/observability/readiness'
 
@@ -48,6 +49,10 @@ export async function GET() {
         : null,
       releaseSha: process.env.QUESTURA_RELEASE_SHA || 'unknown',
       refreshWorker: workerHealth(),
+      // `off` unless an approved load test's key is set (decision D3).
+      // `launch:verify` fails on anything else, so a forgotten key cannot
+      // outlive its window unnoticed.
+      loadIdentity: loadIdentityState(),
     },
     { status: ready ? 200 : 503, headers: NO_STORE },
   )

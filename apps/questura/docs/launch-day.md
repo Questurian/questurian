@@ -145,7 +145,7 @@ Questura safety net → Run workflow), and on a pull request labelled
 
 | Check | What, and the count it expects |
 |---|---|
-| Questura readiness stack and browsers | `readiness:stack -- up --build` on **Postgres 17** (Neon's major; the laptop sandbox stays on 16), then the first-load JS budget (below), then step 2 in order with the counts above: routes 121, payments 43, purchase 54, auth 29, oauth 71, faults 26, contracts all ok, front-door 96, `launch:verify` 43, restore 36 (17 → 17), cutover 66; then Playwright in Chromium and Firefox, speed budgets included (88 passed, 6 skipped); then the production client build through OpenNext with the guard on and `scan:bundle` |
+| Questura readiness stack and browsers | `readiness:stack -- up --build` on **Postgres 17** (Neon's major; the laptop sandbox stays on 16), then the first-load JS budget (below), then step 2 in order with the counts above: routes 121, payments 43, purchase 54, auth 29, oauth 71, faults 26, contracts all ok, front-door 96, `launch:verify` 45, restore 36 (17 → 17), cutover 66; then Playwright in Chromium and Firefox, speed budgets included (88 passed, 6 skipped); then the production client build through OpenNext with the guard on and `scan:bundle` |
 | Questura k6 negative controls | every load-test proof gate, preflight refusal and supervisor stop rule fails when its fault is injected into a loopback fake target |
 
 Every check step in the stack job runs even when an earlier one fails, so one
@@ -312,7 +312,7 @@ the owner's yes.
      --api http://api.readiness.localhost:4100 \
      --bypass http://127.0.0.1:4110 --edge-ip 127.0.0.1:4110 \
      --local --allow-http --home /zz-launch/harbor \
-     --media http://media.readiness.localhost:3190 # expect 43/43 passed, then NOT RUN: rate-limit probe, cookie check
+     --media http://media.readiness.localhost:3190 # expect 45/45 passed (2 are "no load-test key set"), then NOT RUN: rate-limit probe, cookie check
    pnpm --dir apps/questura/apps/server readiness:restore    # expect 35/35: dump, restore, boot, search, member sign-in on the restored database
    READINESS_CUTOVER_TARGET_URI=postgres://postgres@127.0.0.1:5463/questura_readiness_cutover \
    READINESS_PG_BINDIR=<dir with pg_dump/psql 17> \
@@ -354,7 +354,7 @@ the owner's yes.
    sandbox, against the locked backend on 4110. Without `--local`, a run that
    leaves out `--bypass`, `--edge-ip`/`--origin-edge` or `--rate-limit-probe`
    refuses to start (exit 2). The optional signed-in cookie check proved 10/10
-   in the sandbox with `member-b`'s session (53/53 in all).
+   in the sandbox with `member-b`'s session (53/53 in all at the time; 55 since item 9 added the two load-test key checks).
 
    The client build itself refuses to start without real `https` addresses
    and a `pk_live_` key, and fails if its output mentions `localhost`. The

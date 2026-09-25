@@ -41,7 +41,7 @@ The owner wants to be hands-off:
 | 7 Safety net in CI | merged | #710 |
 | **14 Account lifecycle** | **draft: finish it** (readiness proven, Playwright re-run left) | #711 |
 | 13 Speed budgets | merged | #715 |
-| **9 Load test and baseline** | not started | none |
+| 9 Load test and baseline | merged | #716 |
 | **15 Test honesty (mutation)** | not started. The coordinator moved it to **after launch** (the plan allows this) | none |
 | PL1–PL4 | Phase 5, on real hosting with the owner present. **Not part of this run** | none |
 
@@ -241,7 +241,7 @@ These are the counts on `main`; `launch-day.md` is the source of truth. #711 cha
 | contracts | all ok |
 | front-door | 96 |
 | cutover | 66 |
-| launch:verify | 43 (53 with the cookie check) |
+| launch:verify | 45 (55 with the cookie check; +2 load-test key checks, item 9) |
 | restore | 35 (36 on Postgres 17) |
 | Playwright | 75 passed + 1 skipped |
 | client unit tests | 324 |

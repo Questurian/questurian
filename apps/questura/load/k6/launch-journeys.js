@@ -24,13 +24,15 @@
 //
 // Env: RATE (journeys/s, default 5), DURATION (default 60s), STAGES
 // (comma list of rate:duration for a step profile, overrides RATE/DURATION),
-// MAX_VUS (default 200). Nothing here pays, mails or signs anyone up.
+// MAX_VUS (default 200), SIGNED_IN_SHARE (0–1: the share of journeys made by
+// a signed-in reader; unset keeps the weights below, about 29% signed in).
+// Nothing here pays, mails or signs anyone up.
 
 import http from 'k6/http'
 import { check } from 'k6'
 
 import { BASE_URL, ORIGIN, gates, pick } from './lib/config.js'
-import { bookmarkRefs, clientAddress, identity, memberBody, page } from './lib/requests.js'
+import { addressHeaders, bookmarkRefs, identity, memberBody, page } from './lib/requests.js'
 import { WORKLOAD } from './lib/workload.js'
 
 if (!WORKLOAD || WORKLOAD.version !== 2) throw new Error('launch-journeys needs a version 2 workload (node lib/build-launch-workload.mjs)')
@@ -107,13 +109,28 @@ const JOURNEYS = [
 ]
 const TOTAL = JOURNEYS.reduce((sum, [, weight]) => sum + weight, 0)
 
-function chooseJourney() {
-  let roll = Math.random() * TOTAL
-  for (const [name, weight] of JOURNEYS) {
+// A realistic launch has far fewer signed-in readers than the default mix
+// (launch fix plan item 9: "a 1–3% signed-in share next to today's ~25%").
+// With SIGNED_IN_SHARE set, a journey is first signed in or not with that
+// probability, then chosen by weight within its side. `gated-reader` has a
+// signed-in half and an anonymous half, so it appears on both sides.
+const SIGNED_IN_SHARE = __ENV.SIGNED_IN_SHARE === undefined || __ENV.SIGNED_IN_SHARE === '' ? null : Number(__ENV.SIGNED_IN_SHARE)
+if (SIGNED_IN_SHARE !== null && !(SIGNED_IN_SHARE >= 0 && SIGNED_IN_SHARE <= 1)) throw new Error(`SIGNED_IN_SHARE=${__ENV.SIGNED_IN_SHARE} must be between 0 and 1`)
+const SIGNED_IN_JOURNEYS = [['gated-member', 12], ['saved-items', 8], ['gated-reader:signed-in', 7]]
+const ANONYMOUS_JOURNEYS = [['free-landing', 40], ['gated-reader:anonymous', 7], ['repeat-visit', 12], ['search', 8]]
+
+function byWeight(list) {
+  let roll = Math.random() * list.reduce((sum, [, weight]) => sum + weight, 0)
+  for (const [name, weight] of list) {
     roll -= weight
     if (roll < 0) return name
   }
-  return JOURNEYS[0][0]
+  return list[0][0]
+}
+
+function chooseJourney() {
+  if (SIGNED_IN_SHARE !== null) return byWeight(Math.random() < SIGNED_IN_SHARE ? SIGNED_IN_JOURNEYS : ANONYMOUS_JOURNEYS)
+  return byWeight(JOURNEYS)
 }
 
 function member() {
@@ -121,7 +138,7 @@ function member() {
 }
 
 export default function () {
-  const journey = chooseJourney()
+  const [journey, side] = chooseJourney().split(':')
   const tags = { journey }
 
   if (journey === 'free-landing') {
@@ -144,7 +161,7 @@ export default function () {
   }
 
   if (journey === 'gated-reader') {
-    const signedIn = Math.random() < 0.5
+    const signedIn = side ? side === 'signed-in' : Math.random() < 0.5
     const label = signedIn ? 'nonmember' : 'anonymous'
     const cookie = signedIn ? SESSIONS.nonmember : undefined
     const target = pick(gated)
@@ -173,7 +190,7 @@ export default function () {
     const cookie = SESSIONS[label]
     bookmarkRefs(cookie, label, { tags })
     const response = http.get(`${BASE_URL}/api/account/bookmarks?page=1&pageSize=20`, {
-      headers: { Origin: ORIGIN, Cookie: cookie, 'cf-connecting-ip': clientAddress() },
+      headers: { Origin: ORIGIN, Cookie: cookie, ...addressHeaders() },
       tags: { kind: 'dynamic', name: 'bookmark-list', signed_in: 'true', ...tags },
     })
     check(response, { 'saved items answered 200': (r) => r.status === 200 }, tags)
@@ -192,7 +209,7 @@ export function bookmarkWrite() {
     // under test; a 429 here is recorded as a refusal, not hidden.
     const cookie = SESSIONS.nonmember
     const target = pick(free)
-    const headers = { Origin: ORIGIN, Cookie: cookie, 'cf-connecting-ip': clientAddress(), 'content-type': 'application/json' }
+    const headers = { Origin: ORIGIN, Cookie: cookie, ...addressHeaders(), 'content-type': 'application/json' }
     const writeTags = { kind: 'dynamic', name: 'bookmark-write', signed_in: 'true', ...tags }
     const add = http.post(`${BASE_URL}/api/account/bookmarks`, JSON.stringify({ targetType: target.type, targetId: target.id }), { headers, tags: writeTags })
     const remove = http.del(`${BASE_URL}/api/account/bookmarks?targetType=${target.type}&targetId=${target.id}`, null, { headers, tags: writeTags })
@@ -209,7 +226,7 @@ export function signIn() {
       `${BASE_URL}/api/visitor-auth/sign-in/email`,
       JSON.stringify({ email: WORKLOAD.identities.nonmember.email, password: __ENV.SYNTHETIC_PASSWORD || 'Readiness-Synthetic-2026!' }),
       {
-        headers: { Origin: ORIGIN, 'content-type': 'application/json', 'cf-connecting-ip': clientAddress() },
+        headers: { Origin: ORIGIN, 'content-type': 'application/json', ...addressHeaders() },
         tags: { kind: 'dynamic', name: 'sign-in', signed_in: 'false', ...tags },
       },
     )

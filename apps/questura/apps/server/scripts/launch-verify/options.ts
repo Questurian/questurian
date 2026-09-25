@@ -164,6 +164,7 @@ export function parseOptions(argv: string[], env: Record<string, string | undefi
       imageCheck: !flag('no-image-check'),
       ...(media ? { mediaHost: new URL(media).host } : {}),
       cookie,
+      loadTestKeyInShell: Boolean(env.LOAD_TEST_KEY?.trim()),
     },
   }
 }
