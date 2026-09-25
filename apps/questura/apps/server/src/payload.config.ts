@@ -38,6 +38,7 @@ import { APP_CONFIG, APP_URLS } from './shared/config'
 import { RefreshJobs } from './features/refresh-outbox/collection'
 import { applicationName } from './shared/database/fleet-manifest'
 import { poolSizes } from './shared/database/pool-budget'
+import { withHandledInitializing } from './shared/database/handled-initializing'
 import { anonymousApiBoundsPlugin } from './shared/payload/anonymous-api-bounds'
 import { poolTimeoutOptions, servingTimeouts } from './shared/database/timeouts'
 const filename = fileURLToPath(import.meta.url)
@@ -63,7 +64,9 @@ export default buildConfig({
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
-  db: postgresAdapter({
+  // Wrapped so an unreachable database is one logged failure per boot retry,
+  // not a reasonless unhandled rejection (shared/database/handled-initializing.ts).
+  db: withHandledInitializing(postgresAdapter({
     push: false,
     pool: {
       connectionString: APP_CONFIG.database.uri,
@@ -84,7 +87,7 @@ export default buildConfig({
       // shared/database/timeouts.ts.
       ...poolTimeoutOptions(servingTimeouts()),
     },
-  }),
+  })),
   // Sender comes from EMAIL_FROM_ADDRESS / EMAIL_FROM_NAME, required on the
   // site's domain in production (shared/config/email-sender.ts).
   email: resendAdapter({

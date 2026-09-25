@@ -1,5 +1,6 @@
 import { config } from '@/lib/config'
 import { publicCacheTags, publicFetchOptions } from '@/lib/cache/public-cache'
+import { readPublicResponse } from '@/lib/cache/readPublicResponse'
 
 export type CountryCity = {
   slug: string
@@ -24,8 +25,7 @@ export async function fetchCountryCities(
     publicFetchOptions([publicCacheTags.countryCities(country), publicCacheTags.sitemap()]),
   )
 
-  if (res.status === 404) return null
-  if (!res.ok) throw new Error(`Failed to fetch country cities: ${res.status}`)
-
-  return res.json() as Promise<CountryCitiesResponse>
+  // 404 and 400 are "no such country"; anything else fails the render
+  // (lib/cache/readPublicResponse.ts).
+  return readPublicResponse<CountryCitiesResponse>(res, 'country cities')
 }
