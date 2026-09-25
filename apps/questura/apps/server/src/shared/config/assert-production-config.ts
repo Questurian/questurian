@@ -7,6 +7,7 @@ import {
 } from './session-cookie'
 import { TRUSTED_PROXY_NAMES } from './trusted-proxy'
 import { emailSenderProblems } from './email-sender'
+import { isOriginAuthMode, MIN_ORIGIN_AUTH_SECRET_LENGTH, ORIGIN_AUTH_MODES } from '@/shared/http/origin-auth'
 import { clientBaseUrl, revalidationDisconnected, revalidationSecret } from '@/features/public-revalidation/revalidation/env'
 import { looksTransactionPooled } from '@/shared/database/pooled-uri'
 import { describePoolBudget, poolBudget } from '@/shared/database/pool-budget'
@@ -347,6 +348,23 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
   const renderToken = process.env.QUESTURA_RENDER_TOKEN?.trim()
   if (renderToken && renderToken.length < 32) {
     problems.push('QUESTURA_RENDER_TOKEN is shorter than 32 characters.')
+  }
+
+  // The front door (ADR-0016, `shared/http/origin-auth.ts`). Optional here:
+  // the laptop's origin is reachable only through its own tunnel, so it runs
+  // without one. `env:check` requires it for Railway, where the origin is
+  // reachable by anyone. A short one is a guessable key to the origin; a mode
+  // with no secret, or a misspelt mode, is a lock somebody believes is on.
+  const originSecret = process.env.ORIGIN_AUTH_SECRET?.trim()
+  const originMode = process.env.ORIGIN_AUTH_MODE?.trim().toLowerCase()
+  if (originSecret && originSecret.length < MIN_ORIGIN_AUTH_SECRET_LENGTH) {
+    problems.push(`ORIGIN_AUTH_SECRET is shorter than ${MIN_ORIGIN_AUTH_SECRET_LENGTH} characters.`)
+  }
+  if (originMode && !isOriginAuthMode(originMode)) {
+    problems.push(`ORIGIN_AUTH_MODE is set to an unknown value — expected one of: ${ORIGIN_AUTH_MODES.join(', ')}.`)
+  }
+  if (originMode && !originSecret) {
+    problems.push('ORIGIN_AUTH_MODE is set but ORIGIN_AUTH_SECRET is not, so the origin lock is off.')
   }
 
   // Pool maxima are per process, autoscaling multiplies them, a rolling deploy

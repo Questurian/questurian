@@ -101,6 +101,7 @@ Recommended:
 | Variable | Purpose |
 |---|---|
 | `QUESTURA_RENDER_TOKEN` (both apps, 32+ chars) | Frontend renders get their own bounded bucket |
+| `ORIGIN_AUTH_SECRET` (both apps and the Cloudflare Transform Rule, 32+ chars) | The API front door (ADR-0016): the origin refuses callers who skip Cloudflare. `env:check` requires it for Railway |
 | `REFRESH_WORKER_SECRET` | Protects `/api/internal/refresh-jobs` |
 | `EXCHANGE_RATE_SYNC_SECRET` | Protects the daily rates sync |
 | `DB_STATS_SECRET` | Protects `/api/internal/db-stats` |

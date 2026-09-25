@@ -54,7 +54,7 @@ export async function searchLocations(q: string): Promise<LocationSearchItem[]> 
   if (trimmed.length < 2) return []
 
   const url = `${config.backendUrl}/api/public/locations/search?q=${encodeURIComponent(trimmed)}`
-  const res = await fetch(url, { next: { revalidate: 300 } })
+  const res = await fetch(url, { headers: renderHeaders(), next: { revalidate: 300 } })
 
   if (!res.ok) return []
 

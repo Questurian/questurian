@@ -10,7 +10,14 @@
  * What it guarantees, and how each guarantee is enforced rather than hoped:
  *
  *  - **Ports.** Redis 6390, fixture media 3190, Stripe stub 3191, fake
- *    Google and mailbox 3192 (`oauth-fake.ts`), backend 4100, client 3100.
+ *    Google and mailbox 3192 (`oauth-fake.ts`), API 4100, client 3100.
+ *  - **Front door.** The API's port 4100 is `front-door-edge.ts`, standing
+ *    in for Cloudflare: it adds the origin secret, as the Transform Rule
+ *    will. The backend itself listens on 4110 with `ORIGIN_AUTH_SECRET` set,
+ *    so a call straight to 4110 is a call that skipped Cloudflare and is
+ *    refused (ADR-0016, launch fix plan item 10). Every harness keeps
+ *    calling 4100 and goes through the door, as readers, Stripe and Google
+ *    will; `readiness:front-door` calls 4110 to prove the lock.
  *    Each is TCP-probed first; anything listening is a refusal, never
  *    something to attach to. Development ports (3000/4000/5432/6379) are
  *    refused by preflight.
@@ -74,7 +81,7 @@ import {
 import { flushSandboxRedis } from './sandbox-redis'
 import { dotenvNames } from './sandbox-env'
 
-export const STACK_PORTS = { client: 3100, backend: 4100, media: 3190, stripe: 3191, oauth: 3192, redis: 6390 } as const
+export const STACK_PORTS = { client: 3100, backend: 4100, origin: 4110, media: 3190, stripe: 3191, oauth: 3192, redis: 6390 } as const
 export const STACK_DIST = '.next-readiness'
 export const STATE_DIR = resolve(tmpdir(), 'questura-readiness')
 const STATE_FILE = resolve(STATE_DIR, 'stack.json')
@@ -86,7 +93,8 @@ export type StackState = {
   source: ReturnType<typeof sourceIdentity>
   ports: typeof STACK_PORTS
   processes: StackProcess[]
-  secrets: { revalidation: string; dbStats: string; renderToken: string }
+  /** `originAuth` is absent in state files older than launch fix plan item 10. */
+  secrets: { revalidation: string; dbStats: string; renderToken: string; originAuth?: string }
   origins: { client: string; backend: string }
   outboundLog: string
   neutralised: { server: string[]; client: string[] }
@@ -118,6 +126,7 @@ export function stackAppSettings(state: Pick<StackState, 'secrets' | 'origins' |
     instanceId: 'readiness-stack-backend',
     browser: { clientOrigin: state.origins.client, backendOrigin: state.origins.backend },
     renderToken: state.secrets.renderToken,
+    originAuthSecret: state.secrets.originAuth,
     outboundLog: state.outboundLog,
     workerIntervalMs: 5_000,
     stripeStubUrl: `http://127.0.0.1:${STACK_PORTS.stripe}`,
@@ -245,6 +254,7 @@ export async function stackUp(options: { build: boolean; buildClient?: boolean }
       revalidation: randomBytes(24).toString('hex'),
       dbStats: randomBytes(24).toString('hex'),
       renderToken: randomBytes(24).toString('hex'),
+      originAuth: randomBytes(24).toString('hex'),
     },
     origins: {
       client: `http://app.readiness.localhost:${STACK_PORTS.client}`,
@@ -315,14 +325,27 @@ export async function stackUp(options: { build: boolean; buildClient?: boolean }
 
     if (options.build) build('server', SERVER_DIR(), backendEnv(settings), ['tsconfig.json', 'src/payload-types.ts'])
 
+    // The front door first, so the API's public port is never the bare backend.
     state.processes.push(
-      launch('backend', 'node_modules/.bin/next', ['start', '-p', String(STACK_PORTS.backend), '-H', '127.0.0.1'], {
+      launch('edge', process.execPath, ['--import', 'tsx', 'scripts/readiness/front-door-edge.ts', String(STACK_PORTS.backend), String(STACK_PORTS.origin)], {
         cwd: SERVER_DIR(),
-        env: { ...backendEnv(settings), PORT: String(STACK_PORTS.backend) },
-        marker: `next start -p ${STACK_PORTS.backend}`,
+        env: { PATH: process.env.PATH, HOME: process.env.HOME, NODE_ENV: 'production', READINESS_EDGE_ORIGIN_SECRET: state.secrets.originAuth },
+        marker: 'front-door-edge.ts',
       }),
     )
     record()
+    if (!(await waitForPort(STACK_PORTS.backend, 15_000))) throw new Error(`The front-door edge did not start on ${STACK_PORTS.backend}.`)
+
+    state.processes.push(
+      launch('backend', 'node_modules/.bin/next', ['start', '-p', String(STACK_PORTS.origin), '-H', '127.0.0.1'], {
+        cwd: SERVER_DIR(),
+        env: { ...backendEnv(settings), PORT: String(STACK_PORTS.origin) },
+        marker: `next start -p ${STACK_PORTS.origin}`,
+      }),
+    )
+    record()
+    // Through the door: straight at 4110 a 403 would count as "up". Until the
+    // backend listens, the edge answers 502, which does not.
     if (!(await waitForApp(`http://127.0.0.1:${STACK_PORTS.backend}/api/me`, 120_000))) {
       throw new Error(`The backend did not become ready. See ${resolve(STATE_DIR, 'backend.log')}.`)
     }

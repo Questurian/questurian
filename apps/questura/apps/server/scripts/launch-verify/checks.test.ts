@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { loopbackAddresses, pageAddresses, runChecks, type Target } from './checks'
+import { type EdgeRequest, loopbackAddresses, pageAddresses, runChecks, type Target } from './checks'
 
 /**
  * The launch-day runner, against a fake server. A healthy server passes
@@ -221,6 +221,59 @@ describe('launch-verify checks', () => {
     expect(await failures({ bypassStatus: 200 }, target)).toEqual([
       'the platform origin https://bypass.example.test does not serve the API',
     ])
+  })
+
+  it('the bypass probe asks a locked route, not the health pair the app answers without the secret', async () => {
+    const asked: string[] = []
+    const server = fakeServer({ bypassStatus: 403 })
+    await runChecks({ ...TARGET, bypassOrigin: 'https://bypass.example.test' }, ((input: string | URL | Request, init?: RequestInit) => {
+      asked.push(String(input))
+      return server(input, init)
+    }) as typeof fetch)
+    expect(asked.filter((url) => url.startsWith('https://bypass.example.test'))).toEqual(['https://bypass.example.test/api/me'])
+  })
+
+  describe('the front door (plan item 10)', () => {
+    const target = { originEdge: 'https://edge.example.test' }
+    const edge = (answer: (headers: Record<string, string>) => { status: number } | 'unreachable') => {
+      const seen: Array<{ url: string; hostName: string; headers: Record<string, string> }> = []
+      const impl: EdgeRequest = async (url, init) => {
+        seen.push({ url, hostName: init.hostName, headers: init.headers ?? {} })
+        return answer(init.headers ?? {})
+      }
+      return { impl, seen }
+    }
+    const run = async (impl: EdgeRequest) =>
+      (await runChecks({ ...TARGET, ...target }, fakeServer(), impl)).filter((r) => r.group === 'front door')
+
+    it('passes when the edge refuses both callers, and names the API host to it', async () => {
+      const { impl, seen } = edge(() => ({ status: 403 }))
+      const results = await run(impl)
+      expect(results.map((r) => r.ok)).toEqual([true, true])
+      expect(seen.map((s) => [s.url, s.hostName])).toEqual([
+        ['https://edge.example.test/api/me', 'api.example.test'],
+        ['https://edge.example.test/api/me', 'api.example.test'],
+      ])
+      expect(seen[0]!.headers['x-questura-origin-auth']).toBeUndefined()
+      expect(seen[0]!.headers['cf-connecting-ip']).toBeDefined()
+      expect(seen[1]!.headers['x-questura-origin-auth']).toBe('launch-verify-not-the-secret')
+    })
+
+    it('fails when the edge serves a caller who skipped Cloudflare', async () => {
+      expect((await run(edge(() => ({ status: 200 })).impl)).map((r) => r.ok)).toEqual([false, false])
+      expect((await run(edge((h) => ({ status: h['x-questura-origin-auth'] ? 200 : 403 })).impl)).map((r) => r.ok)).toEqual([true, false])
+    })
+
+    it('does not count an unreachable edge as locked: only a refusal proves it', async () => {
+      const results = await run(edge(() => 'unreachable').impl)
+      expect(results.map((r) => r.ok)).toEqual([false, false])
+      expect(results[0]!.detail).toContain('check the address')
+    })
+
+    it('is not run without --origin-edge', async () => {
+      const results = await runChecks(TARGET, fakeServer(), edge(() => ({ status: 200 })).impl)
+      expect(results.some((r) => r.group === 'front door')).toBe(false)
+    })
   })
 
   it('the rate-limit probe fails when forged addresses buy fresh budgets', async () => {

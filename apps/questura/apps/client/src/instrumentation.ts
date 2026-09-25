@@ -1,6 +1,7 @@
 import type { Instrumentation } from 'next';
 
 import { getBackendUrl } from './lib/api/api-config';
+import { renderHeaders } from './lib/cache/public-cache';
 import { buildErrorReport, pickRequestId, sendWorkerReport, workerLogLine } from './lib/observability/errorReport';
 
 /**
@@ -31,7 +32,8 @@ export const onRequestError: Instrumentation.onRequestError = async (error, requ
     );
 
     if (process.env.NODE_ENV === 'production') {
-      await sendWorkerReport(report, { backendUrl: getBackendUrl() });
+      // The Worker's own headers, so the report passes the front door (ADR-0016).
+      await sendWorkerReport(report, { backendUrl: getBackendUrl(), headers: renderHeaders() });
     }
   } catch {
     // The request has already failed; reporting it must not fail it twice.

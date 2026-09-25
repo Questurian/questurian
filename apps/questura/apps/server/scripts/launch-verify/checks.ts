@@ -18,6 +18,14 @@ export type Target = {
   api: string
   /** A platform-generated origin that must not serve the API (C2). */
   bypassOrigin?: string
+  /**
+   * Where a caller who skips Cloudflare connects: the target the API's DNS
+   * record points Cloudflare at (Railway's edge for the custom domain), or
+   * the backend's own port in the sandbox. Requests there name the API's
+   * host (Host header and TLS SNI) and carry no origin secret, and must be
+   * refused (ADR-0016, launch fix plan item 10).
+   */
+  originEdge?: string
   /** Advertised catalog prices, in cents. */
   expectPrices: { monthly: number; yearly: number }
   allowHttp: boolean
@@ -46,6 +54,39 @@ export type Result = { group: string; name: string; ok: boolean; detail: string 
 
 type Fetch = typeof fetch
 
+/** One request to `url`, presenting `hostName` as the host (Host header and SNI). */
+export type EdgeRequest = (
+  url: string,
+  init: { method?: string; headers?: Record<string, string>; hostName: string },
+) => Promise<{ status: number } | 'unreachable'>
+
+export const edgeRequest: EdgeRequest = async (url, init) => {
+  const { request: httpRequest } = await import('node:http')
+  const { request: httpsRequest } = await import('node:https')
+  const target = new URL(url)
+  const secure = target.protocol === 'https:'
+  const send = secure ? httpsRequest : httpRequest
+  return new Promise((resolvePromise) => {
+    const req = send(
+      {
+        host: target.hostname,
+        port: target.port || (secure ? 443 : 80),
+        path: `${target.pathname}${target.search}`,
+        method: init.method ?? 'GET',
+        headers: { ...init.headers, host: init.hostName },
+        ...(secure ? { servername: init.hostName.replace(/:\d+$/, '') } : {}),
+      },
+      (res) => {
+        res.resume()
+        resolvePromise({ status: res.statusCode ?? 0 })
+      },
+    )
+    req.setTimeout(10_000, () => req.destroy())
+    req.on('error', () => resolvePromise('unreachable'))
+    req.end()
+  })
+}
+
 const PAYMENT_POST_ROUTES = [
   'create-checkout-session',
   'create-portal-session',
@@ -61,7 +102,7 @@ function header(response: Response, name: string): string {
   return response.headers.get(name) ?? ''
 }
 
-export async function runChecks(target: Target, fetchImpl: Fetch = fetch): Promise<Result[]> {
+export async function runChecks(target: Target, fetchImpl: Fetch = fetch, edgeImpl: EdgeRequest = edgeRequest): Promise<Result[]> {
   const results: Result[] = []
   const record = (group: string, name: string, ok: boolean, detail = '') =>
     results.push({ group, name, ok, detail })
@@ -206,12 +247,36 @@ export async function runChecks(target: Target, fetchImpl: Fetch = fetch): Promi
   if (target.bypassOrigin) {
     let status = 'unreachable'
     try {
-      const direct = await get(fetchImpl, `${target.bypassOrigin}/api/health/ready`, { signal: AbortSignal.timeout(10_000) })
+      // Not /api/health/ready: the app answers the health pair without the
+      // origin secret (Railway's healthcheck calls it on the container), so
+      // only a route the lock covers says whether the API is served.
+      const direct = await get(fetchImpl, `${target.bypassOrigin}/api/me`, { signal: AbortSignal.timeout(10_000) })
       status = `HTTP ${direct.status}`
     } catch {
       // unreachable is the pass
     }
     record('lockdown', `the platform origin ${target.bypassOrigin} does not serve the API`, status === 'unreachable' || /HTTP 4\d\d/.test(status), status)
+  }
+
+  // --- Front door (ADR-0016, launch fix plan item 10) ---------------------------
+  // The API's DNS record points Cloudflare at Railway's edge, which routes by
+  // host name. Anyone can connect there, name the API and skip Cloudflare,
+  // forged CF-Connecting-IP included. The edge rule and the app must refuse.
+  if (target.originEdge) {
+    const hostName = new URL(target.api).host
+    for (const [label, headers] of [
+      ['a caller who skips Cloudflare is refused (no origin header, forged CF-Connecting-IP)', { 'cf-connecting-ip': '203.0.113.7' }],
+      ['a caller with a wrong origin header is refused', { 'x-questura-origin-auth': 'launch-verify-not-the-secret', 'cf-connecting-ip': '203.0.113.8' }],
+    ] as const) {
+      const answer = await edgeImpl(`${target.originEdge}/api/me`, { headers: { ...headers, origin: target.client }, hostName })
+      const status = answer === 'unreachable' ? 'unreachable' : `HTTP ${answer.status}`
+      record(
+        'front door',
+        label,
+        answer !== 'unreachable' && answer.status === 403,
+        `${status} from ${target.originEdge} as ${hostName}${answer === 'unreachable' ? ' (check the address: the lock is only proven by a refusal)' : ''}`,
+      )
+    }
   }
 
   // --- Rate-limit probe (B3, opt-in) ---------------------------------------------

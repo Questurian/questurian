@@ -460,6 +460,35 @@ describe('production config assertion', () => {
     ])
   })
 
+  // The front door (ADR-0016). Optional at boot, because the laptop runs
+  // without one; required for Railway by env:check.
+  it('boots with no origin secret, and with a long enough one', async () => {
+    vi.stubEnv('ORIGIN_AUTH_SECRET', '')
+    vi.stubEnv('ORIGIN_AUTH_MODE', '')
+    expect((await load(VALID_PRODUCTION_ENV)).collectProductionConfigProblems()).toEqual([])
+    expect(
+      (await load({ ...VALID_PRODUCTION_ENV, ORIGIN_AUTH_SECRET: 'o'.repeat(32), ORIGIN_AUTH_MODE: 'unidentified' })).collectProductionConfigProblems(),
+    ).toEqual([])
+  })
+
+  it('refuses a short origin secret without printing it', async () => {
+    const { collectProductionConfigProblems } = await load({ ...VALID_PRODUCTION_ENV, ORIGIN_AUTH_SECRET: ' short-origin-secret ' })
+    const problems = collectProductionConfigProblems()
+    expect(problems).toEqual([expect.stringContaining('ORIGIN_AUTH_SECRET is shorter than 32 characters')])
+    expect(problems.join(' ')).not.toContain('short-origin-secret')
+  })
+
+  it('refuses a misspelt origin mode, and a mode with no secret', async () => {
+    vi.stubEnv('ORIGIN_AUTH_SECRET', '')
+    expect(
+      (await load({ ...VALID_PRODUCTION_ENV, ORIGIN_AUTH_SECRET: 'o'.repeat(32), ORIGIN_AUTH_MODE: 'block' })).collectProductionConfigProblems(),
+    ).toEqual([expect.stringContaining('ORIGIN_AUTH_MODE is set to an unknown value')])
+    vi.stubEnv('ORIGIN_AUTH_SECRET', '')
+    expect((await load({ ...VALID_PRODUCTION_ENV, ORIGIN_AUTH_MODE: 'refuse' })).collectProductionConfigProblems()).toEqual([
+      expect.stringContaining('ORIGIN_AUTH_SECRET is not'),
+    ])
+  })
+
   it('reports every problem at once rather than one per boot', async () => {
     const { collectProductionConfigProblems } = await load({
       NODE_ENV: 'production',

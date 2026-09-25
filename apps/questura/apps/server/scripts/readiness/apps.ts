@@ -51,6 +51,12 @@ export type AppSettings = {
   browser?: { clientOrigin: string; backendOrigin: string }
   /** Shared render token (32+ chars), generated per run. */
   renderToken?: string
+  /**
+   * The front door's key (ADR-0016), generated per run. Set on both apps:
+   * the backend refuses a request without it, the client sends it on every
+   * server-side call. Absent: the lock is off, as in development.
+   */
+  originAuthSecret?: string
   /** Where sandbox children append refused outbound attempts. */
   outboundLog?: string
   /** Run the refresh worker in-process at this interval. Default 0: the harness drains. */
@@ -95,6 +101,7 @@ function backendEnvDeclared(settings: AppSettings): NodeJS.ProcessEnv {
     BACKEND_URL_LOCAL: origins?.backendOrigin ?? 'https://readiness-server.invalid',
     CORS_ALLOWED_ORIGINS: origins?.clientOrigin ?? 'https://readiness-client.invalid',
     ...(settings.renderToken ? { QUESTURA_RENDER_TOKEN: settings.renderToken } : {}),
+    ...(settings.originAuthSecret ? { ORIGIN_AUTH_SECRET: settings.originAuthSecret } : {}),
 
     TRUSTED_PROXY: 'cloudflare',
     PAYLOAD_COOKIE_DOMAIN: 'host-only',
@@ -169,6 +176,7 @@ export function clientEnv(settings: AppSettings, options: { build?: boolean } = 
     NEXT_PUBLIC_FRONTEND_URL: origins?.clientOrigin ?? clientUrl(settings),
     QUESTURA_REVALIDATION_SECRET: settings.revalidationSecret,
     ...(settings.renderToken ? { QUESTURA_RENDER_TOKEN: settings.renderToken } : {}),
+    ...(settings.originAuthSecret ? { ORIGIN_AUTH_SECRET: settings.originAuthSecret } : {}),
   }
   // The client refuses a production build with loopback addresses and no
   // live Stripe key (`productionBuildEnv.ts`), and scans its output for them.

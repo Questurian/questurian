@@ -51,8 +51,8 @@ says nothing about its cause.
 
 ### Local secrets
 
-`.dev.vars` (gitignored) holds `QUESTURA_REVALIDATION_SECRET` and
-`QUESTURA_RENDER_TOKEN` for the preview. Real values are set with
+`.dev.vars` (gitignored) holds `QUESTURA_REVALIDATION_SECRET`,
+`QUESTURA_RENDER_TOKEN` and `ORIGIN_AUTH_SECRET` for the preview. Real values are set with
 `wrangler secret put` and never committed.
 
 ## What must be provisioned before a real deploy (H01)
@@ -86,6 +86,13 @@ override builds, starts, serves, and does not purge.
   `NEXT_PUBLIC_`; a render token in a browser bundle is a published bypass of
   the per-IP public read limits. (Verified absent from the built assets with
   a canary value — see the evidence file.)
+- `ORIGIN_AUTH_SECRET` — the API front door's key (ADR-0016), the same
+  value as the backend's and the Cloudflare Transform Rule's. Every
+  server-side call to the API sends it as `X-Questura-Origin-Auth`
+  (`renderHeaders()` in `src/lib/cache/public-cache.ts`), because whether the
+  Transform Rule reaches the Worker's own subrequests is a platform unknown.
+  Missing while the backend has it: every page that needs the API fails to
+  render. Server-only, like the render token.
 - `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ZONE_ID` — cache purge only. Cache
   Purge permission on this zone and nothing else.
 

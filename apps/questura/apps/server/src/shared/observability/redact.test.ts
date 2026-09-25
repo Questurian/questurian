@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { REDACTED, REDACTED_EMAIL, isSensitiveKey, redact, redactString } from './redact'
 
@@ -94,5 +94,44 @@ describe('redact', () => {
     let deep: Record<string, unknown> = { leaf: true }
     for (let i = 0; i < 20; i++) deep = { child: deep }
     expect(JSON.stringify(redact(deep))).toContain('[truncated]')
+  })
+})
+
+/**
+ * The origin secret (ADR-0016, launch fix plan item 10). `proxy.ts` strips
+ * the header before any route runs; these are the locks behind that one.
+ */
+describe('the origin secret', () => {
+  const SECRET = 'origin-secret-for-tests-0123456789abcdef'
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('is removed by header name, in any spelling', () => {
+    for (const key of ['x-questura-origin-auth', 'X-Questura-Origin-Auth', 'x_questura_origin_auth', 'originAuth']) {
+      expect(isSensitiveKey(key), key).toBe(true)
+    }
+    const headers = new Headers({ 'x-questura-origin-auth': SECRET, 'user-agent': 'curl' })
+    expect(redact(headers)).toEqual({ 'x-questura-origin-auth': REDACTED, 'user-agent': 'curl' })
+    expect(redact({ headers: { 'X-Questura-Origin-Auth': SECRET } })).toEqual({ headers: { 'X-Questura-Origin-Auth': REDACTED } })
+  })
+
+  it('is removed when the header is written into a message', () => {
+    expect(redactString(`forwarded with x-questura-origin-auth: ${SECRET} and more`)).toBe(
+      `forwarded with x-questura-origin-auth: ${REDACTED} and more`,
+    )
+    expect(redactString(`{"x-questura-origin-auth":"${SECRET}"}`)).toBe(`{"x-questura-origin-auth":"${REDACTED}"}`)
+  })
+
+  it('is removed by value wherever it appears, once configured', () => {
+    vi.stubEnv('ORIGIN_AUTH_SECRET', SECRET)
+    expect(redactString(`fetch failed: ${SECRET}`)).toBe(`fetch failed: ${REDACTED}`)
+    expect(redact({ message: `a${SECRET}b`, nested: [`${SECRET}`] })).toEqual({ message: `a${REDACTED}b`, nested: [REDACTED] })
+  })
+
+  it('does not treat a short configured value as something to hunt for', () => {
+    vi.stubEnv('ORIGIN_AUTH_SECRET', 'a')
+    expect(redactString('a banana')).toBe('a banana')
   })
 })

@@ -68,6 +68,7 @@ const SECRET_NAMES = [
   'BETTER_AUTH_SECRET',
   'QUESTURA_REVALIDATION_SECRET',
   'QUESTURA_RENDER_TOKEN',
+  'ORIGIN_AUTH_SECRET',
   'REFRESH_WORKER_SECRET',
   'DB_STATS_SECRET',
   'EXCHANGE_RATE_SYNC_SECRET',
@@ -123,6 +124,17 @@ export function platformProblems(env: Env): string[] {
     problems.push('SENTRY_DSN is not set: errors would reach the logs only, and nobody is alerted (docs/procedures/sentry-setup.md).')
   } else if (!PLACEHOLDER.test(sentryDsn) && !/^https:\/\/[A-Za-z0-9]+@[A-Za-z0-9.-]+\/\d+$/.test(sentryDsn)) {
     problems.push('SENTRY_DSN does not look like a Sentry DSN (https://<key>@<host>/<project id>).')
+  }
+
+  // The front door (ADR-0016, launch fix plan item 10). Boot allows it unset,
+  // because the laptop's origin sits behind its own tunnel. A Railway service
+  // does not: anyone can reach its edge, name the API's host and forge
+  // CF-Connecting-IP. Without the secret the app cannot tell them apart.
+  if (!value('ORIGIN_AUTH_SECRET')) {
+    problems.push(
+      'ORIGIN_AUTH_SECRET is not set: the API would serve callers who skip Cloudflare, with any address ' +
+        'they claim (docs/adr/0016-api-origin-identity-on-railway.md).'
+    )
   }
 
   const monthly = value('STRIPE_PRICE_ID_MONTHLY')
