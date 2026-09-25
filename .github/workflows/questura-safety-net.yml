@@ -99,6 +99,16 @@ jobs:
         id: stack
         run: pnpm --dir apps/questura/apps/server readiness:stack -- up --build
 
+      # Speed budgets (launch fix plan item 13): each route's first-load
+      # JavaScript from the sandbox build, against the committed baseline in
+      # apps/questura/perf/budgets.json. The page-speed half (LCP, CLS, an
+      # INP proxy, image bytes on a throttled phone) is speed.spec.ts, in the
+      # browser step; the statement half is in readiness:routes.
+      - name: First-load JS budget
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        working-directory: apps/questura/apps/client
+        run: NEXT_DIST_DIR=.next-readiness node scripts/check-first-load-js.mjs
+
       - name: readiness:routes
         if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
         run: pnpm --dir apps/questura/apps/server readiness:routes

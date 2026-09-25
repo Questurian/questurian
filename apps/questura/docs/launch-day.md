@@ -78,7 +78,7 @@ Stripe/Google. From a fresh session it needs only `docker`:
 After step 2, the browser journeys run against the same stack:
 
 ```bash
-pnpm --dir apps/questura/apps/e2e exec playwright test --project='chromium*' --project='firefox*'   # expect 81 passed, 1 skipped (33 tests × 2 engines, journey 12 is Chromium only, + journeys 1–3 on 2 phones × 2 engines)
+pnpm --dir apps/questura/apps/e2e exec playwright test --project='chromium*' --project='firefox*'   # expect 88 passed, 6 skipped (39 tests × 2 engines, journey 12 and five of the six speed tests are Chromium only, + journeys 1–3 on 2 phones × 2 engines)
 ```
 
 What they cover (launch fix plan items 8 and 14):
@@ -92,7 +92,8 @@ What they cover (launch fix plan items 8 and 14):
 | `billing.spec.ts` | 3 | Journey 8: a monthly and a yearly member's account page (plan, renewal date, Monthly / Yearly); cancel, then reactivate |
 | `find.spec.ts` | 2 | Journey 9: bookmark an article, find it in Bookmarks, remove it; search from the menu, open the result, a query with no match |
 | `errors.spec.ts` | 3 | Journey 10: a made-up address and a missing article are real 404s with the site's menu and footer; an article the API cannot serve (503 at the front door) shows the branded error page (HTTP 500), not a blank or bare one |
-| `slow.spec.ts` | 1 | Journey 12: journey 1 on Slow 3G + 4× slower CPU (Chromium only), inside 180 s |
+| `slow.spec.ts` | 1 | Journey 12: journey 1 on Slow 3G + 4× slower CPU (Chromium only), inside its speed budget (46 s in the sandbox; 180 s against the real site) |
+| `speed.spec.ts` | 6 | Speed budgets (item 13): home, a city, an article and `/join` cold on a throttled phone, held to `perf/budgets.json`; the budgets are all under their caps or say why not; the web vitals beacon reaches the API (see "Speed budgets" below) |
 | phone projects | 4 per phone and engine | Journey 11: journeys 1–3 on Pixel 7 and iPhone 13 screens (`chromium-*` emulate the phone fully; `firefox-*` get its screen, density, touch and user agent), with no horizontal scroll on any page |
 | `account.spec.ts` | 3 | `/account` hydrates without React #418, signed out, as a member and as a non-member (four loads each, at most one error: see below) |
 | `membership.spec.ts` | 3 | The paywall, member sign-in and sign-out, a non-member |
@@ -129,10 +130,10 @@ without anyone starting the sandbox by hand. It runs in two halves.
 | Check | What |
 |---|---|
 | Questura softprod scripts | the laptop deploy scripts' own tests |
-| Questura server tests | `test:deploy` and `test:int` (about 2,670) |
+| Questura server tests | `test:deploy` and `test:int` (about 2,690) |
 | Questura server build | Payload build, generated types unchanged, server typecheck |
 | Questura readiness integrations | `readiness:required` against Postgres 17 and Redis services; each failing test is named |
-| Questura client tests | 324 tests, **0 skipped** (the job fails on any skip), plus the k6 supervisor policy test |
+| Questura client tests | 332 tests, **0 skipped** (the job fails on any skip), plus the k6 supervisor policy test |
 | Questura lint | server and client ESLint |
 | Questura client typecheck | `tsc` for the client |
 | Writer frontend / Writer backend | the ai-blog-writer app, not Questura |
@@ -144,7 +145,7 @@ Questura safety net → Run workflow), and on a pull request labelled
 
 | Check | What, and the count it expects |
 |---|---|
-| Questura readiness stack and browsers | `readiness:stack -- up --build` on **Postgres 17** (Neon's major; the laptop sandbox stays on 16), then step 2 in order with the counts above: routes 119, payments 43, purchase 54, auth 29, oauth 71, faults 26, contracts all ok, front-door 96, `launch:verify` 43, restore 36 (17 → 17), cutover 66; then Playwright in Chromium and Firefox (81 passed, 1 skipped); then the production client build through OpenNext with the guard on and `scan:bundle` |
+| Questura readiness stack and browsers | `readiness:stack -- up --build` on **Postgres 17** (Neon's major; the laptop sandbox stays on 16), then the first-load JS budget (below), then step 2 in order with the counts above: routes 121, payments 43, purchase 54, auth 29, oauth 71, faults 26, contracts all ok, front-door 96, `launch:verify` 43, restore 36 (17 → 17), cutover 66; then Playwright in Chromium and Firefox, speed budgets included (88 passed, 6 skipped); then the production client build through OpenNext with the guard on and `scan:bundle` |
 | Questura k6 negative controls | every load-test proof gate, preflight refusal and supervisor stop rule fails when its fault is injected into a loopback fake target |
 
 Every check step in the stack job runs even when an earlier one fails, so one
@@ -165,6 +166,91 @@ accept an outside address. CI went red in two places: client tests (2 of
 324 failed) and the browser journeys (`redirects.spec.ts`, 4 failed in
 Chromium and Firefox). `readiness:routes` stayed green: it tests the server
 routes, not the client's `returnTo` check. The revert went green.
+
+### Speed budgets
+
+Launch fix plan item 13. Slowness fails CI instead of creeping in. Every
+number lives in `apps/questura/perf/budgets.json`, and each budget is 10%
+above what was measured, under the plan's caps (LCP 2.5 s, CLS 0.1,
+170 kB of first-load JavaScript per route). Where a route is already over a
+cap, the budget holds it where it is and says why (`overCap`), so it cannot
+get worse unnoticed and stays on the list to fix.
+
+| Check | Where it runs | Budget | Measured on |
+|---|---|---|---|
+| First-load JS per route (`check:first-load-js`) | safety net, right after the stack build | each route's committed baseline + 10%, at most 170 kB gzip; over the cap: no growth (1% build noise) | any machine: gzip of the built files is deterministic (the runner and the Mac agreed within 0.1 kB on every route) |
+| Page speed (`speed.spec.ts`) | safety net, in the browser step | per route below | GitHub Actions `ubuntu-latest` runners, seven safety-net runs of PR #715 |
+| SQL statements per read (`readiness:routes`) | safety net and step 2 | city page 9, article 8, anonymous `/api/me` 0 | the sandbox corpus; counts do not depend on the machine |
+| Journey 12 (`slow.spec.ts`) | safety net, in the browser step | 46 s (the slowest of seven runner walks, 41.6 s, + 10%) | GitHub runners |
+
+**First-load JS** counts what a phone downloads before the page works: the
+page's chunks plus every layout, loading, error and not-found file above it,
+each file once (`src/lib/release/firstLoadJs.mjs`). Next's own "First Load JS"
+column leaves the layouts out and reads about 35 kB low. Every route but two
+is under the cap; the largest is `/[country]/[city]/[category]` at 165.1 kB.
+Two are over it and may not grow: **`/[country]/[city]/itineraries/[slug]`
+190.1 kB** and **`/[country]/[city]/maps/[slug]` 181.3 kB** (the listicle
+components, about 25 kB, load with the page). A change meant to add
+JavaScript updates the baseline in the same PR and says why:
+
+```bash
+pnpm --dir apps/questura/apps/client exec next build            # or the stack's --build
+NEXT_DIST_DIR=.next-readiness pnpm --dir apps/questura/apps/client check:first-load-js [-- --update]
+```
+
+**Page speed.** Each route is loaded cold three times on an emulated Pixel 7
+with Lighthouse's mobile throttling (Slow 4G: 150 ms, 1.6 Mbps down,
+750 kbps up; 4× slower CPU), and the median is checked. LCP and CLS come from
+the browser's own entries; the INP proxy is the longest interaction of one
+scripted tap once the page is idle; image bytes are those fetched before the
+`load` event. Each budget is the worst single sample on the runners × 1.1,
+rounded up to the metric's resolution (LCP 10 ms, CLS 0.01, INP 8 ms, 1 kB).
+
+| Route | LCP worst → budget | CLS | INP proxy worst → budget | Images before load |
+|---|---|---|---|---|
+| home `/zz-launch` | 1,556 → 1,720 ms | 0.0009 → 0.01 | 16 → 24 ms | 3 → 4 kB |
+| city `/zz-launch/harbor` | 1,760 → 1,940 ms | 0 → 0.01 | 72 → 80 ms | 0.8 → 1 kB |
+| article (free) | 1,756 → 1,940 ms | 0.0026 → 0.01 | 16 → 24 ms | 0.4 → 1 kB |
+| `/join` | **2,840 → 3,130 ms, over the 2.5 s cap** | 0 → 0.01 | 88 → 104 ms | 123.9 → 137 kB |
+
+`/join` is over the LCP cap because of its hero globe: on a phone the page
+asks for the 2,400 px WebP (124 kB), since `sizes` paints the art at
+1,000 CSS px, and it shares the slow link with four fonts. Whether to ship a
+smaller phone image is a design call for the owner.
+
+Why these choices:
+- **Slow 4G, not Fast 3G.** The audit suggested DevTools "Fast 3G" (562 ms
+  round trips). There the sandbox's tiny pages already took 2.45–2.73 s on
+  the Mac, so the 2.5 s cap would have failed on the network's round trips,
+  not on the code. Lighthouse's mobile profile is the one the 2.5 s "good"
+  line is usually judged by. Journey 12 still walks the site on Slow 3G.
+- **The numbers are the runner's.** A budget that gates CI has to be measured
+  where CI runs it. The Mac measured every page faster than the runner
+  (LCP 1.2–1.5 s, `/join` 2.6 s); a slower machine, such as the Linux laptop,
+  can fail a page budget without any regression. Re-measure there before
+  trusting a red result from it.
+- **The INP proxy counts only interactions** (`interactionId`), as INP does.
+  Counting every event read a hover queued during load as about 1 s on every
+  page on the runner.
+- **The sandbox's pages are small.** Its city is not Lima: statement counts
+  and image bytes here guard the code paths, not real-content weight. The
+  Lima-class city page measured 171 statements in CAP-05
+  (`docs/capacity/STATUS.md`); only real data can re-check that.
+
+To re-measure: the page-speed test prints one `SPEED {…}` line per route with
+every sample. Take them from several `full-ci` runs (`gh run view <id> --log |
+grep 'SPEED {'`), use the worst, and edit `perf/budgets.json`.
+
+**Real readers' numbers.** The site reports every page view's LCP, INP, CLS,
+FCP and TTFB with Next's built-in `useReportWebVitals` (no new dependency) to
+`POST /api/web-vitals`, the sibling of the error beacon: no cookies, a 2 kB
+cap, every field validated, 60 batches a minute per address and 1,200 in
+total, always a 204. The API writes one log line per page view,
+`"message":"Web vitals"`, with `lcp`, `inp`, `cls`, `fcp`, `ttfb` and a
+rating for each as fields, which a log search can chart. They are not sent to
+Sentry: Sentry is the error alarm, and performance there is tracing, a
+separate decision. Lighthouse CI is not used: it is a new dependency without
+the owner's yes.
 
 ## Before the first deploy
 
@@ -212,7 +298,7 @@ routes, not the client's `returnTo` check. The revert went green.
 
    ```bash
    pnpm --dir apps/questura/apps/server readiness:stack -- up --build
-   pnpm --dir apps/questura/apps/server readiness:routes     # expect 119/119: includes redirects never leaving the site
+   pnpm --dir apps/questura/apps/server readiness:routes     # expect 121/121: includes redirects never leaving the site and the statement budgets
    pnpm --dir apps/questura/apps/server readiness:payments   # expect 43/43
    pnpm --dir apps/questura/apps/server readiness:purchase   # expect 54/54: a whole purchase, refunds and disputes, a failed card (past_due, grace, portal), paused, a deleted customer, fake Stripe (basil-shaped)
    pnpm --dir apps/questura/apps/server readiness:auth       # expect 30/30: sign-in and sessions, attacked (a signed-out session's replayed cookies refused within 3 s)

@@ -13,6 +13,8 @@
  *    non-member, an expired session, a random and a malformed cookie, each
  *    against `/api/me` by exact principal (email and auth user id), not by a
  *    boolean. No-cookie identity must cost zero SQL statements.
+ *  - **Statement budgets (launch fix plan item 13).** The city page and an
+ *    article read stay within `apps/questura/perf/budgets.json`.
  *  - **Isolation.** A's and B's bookmark refs are exactly their own; the
  *    member body is served to a member, refused to a non-member, an expired
  *    session and an anonymous reader, and every public page of a members-only
@@ -44,6 +46,7 @@ import { freshRateLimits, readStackState, STACK_PORTS } from './stack'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const RUNS = resolve(HERE, '../../../../docs/capacity/runs')
+const BUDGETS_PATH = resolve(HERE, '../../../../perf/budgets.json')
 const PAYLOAD_SECRET = 'readiness-payload-secret-not-a-real-one-0123456789abcdef0123'
 
 type Check = { group: string; name: string; ok: boolean; detail: string }
@@ -169,6 +172,30 @@ async function main(): Promise<void> {
     record('identity', 'anonymous is anonymous', anonymousBody?.authenticated === false, JSON.stringify(anonymousBody))
     record('identity', 'no-cookie identity runs zero SQL', statementsOf(anonymous) === 0, `statements=${statementsOf(anonymous)}`)
     record('identity', 'identity is never stored', /no-store/.test(anonymous.headers.get('cache-control') ?? ''), anonymous.headers.get('cache-control') ?? '')
+
+    // --- Statement budgets (launch fix plan item 13) ----------------------
+    // A page read that starts sending more SQL is slowness creeping in.
+    // Sequential, so no request joins another's work and reports none.
+    // Anonymous /api/me (zero) is the identity check just above.
+    {
+      const budgets = JSON.parse(readFileSync(BUDGETS_PATH, 'utf8')) as {
+        statements: Record<'cityPage' | 'article', { path: string; max: number; measured: number }>
+      }
+      for (const [label, budget] of [
+        ['city page', budgets.statements.cityPage],
+        ['article', budgets.statements.article],
+      ] as const) {
+        const response = await fetch(`${BACKEND}${budget.path}`, { headers: { origin } })
+        await response.arrayBuffer()
+        const count = statementsOf(response)
+        record(
+          'statements',
+          `${label} read ≤ ${budget.max} statements (measured ${budget.measured})`,
+          response.status === 200 && count !== null && count <= budget.max,
+          `HTTP ${response.status}, statements=${count}`,
+        )
+      }
+    }
 
     for (const identity of manifest.identities) {
       const response = await fetch(`${BACKEND}/api/me`, { headers: privateHeaders(identity.label) })

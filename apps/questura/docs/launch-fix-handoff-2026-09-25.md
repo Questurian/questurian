@@ -40,7 +40,7 @@ The owner wants to be hands-off:
 | extra: missing itinerary returns 200 instead of 404 | merged | #705 |
 | 7 Safety net in CI | merged | #710 |
 | **14 Account lifecycle** | **draft: finish it** (readiness proven, Playwright re-run left) | #711 |
-| **13 Speed budgets** | not started | none |
+| 13 Speed budgets | merged | #715 |
 | **9 Load test and baseline** | not started | none |
 | **15 Test honesty (mutation)** | not started. The coordinator moved it to **after launch** (the plan allows this) | none |
 | PL1–PL4 | Phase 5, on real hosting with the owner present. **Not part of this run** | none |

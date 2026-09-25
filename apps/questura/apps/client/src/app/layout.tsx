@@ -9,6 +9,7 @@ import "./globals.css";
 import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
 import { IMAGE_CDN_ORIGIN } from "@/lib/media/imageCdnOrigin";
 import { NavigationFeedback } from "@/components/navigation/NavigationFeedback";
+import { WebVitals } from "@/components/observability/WebVitals";
 import { IDENTITY_HINT_SCRIPT } from "@/lib/user/identityHint";
 import { getBackendUrl } from "@/lib/api/api-config";
 import { getPublicBaseUrl } from "@/lib/seo/publicBaseUrl";
@@ -68,6 +69,7 @@ export default async function RootLayout({
           {children}
         </div>
         <NavigationFeedback />
+        <WebVitals />
       </body>
     </html>
   );
