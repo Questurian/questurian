@@ -48,11 +48,14 @@ for (const [label, account] of [
 }
 
 test('#418: a reader reloading /account over and over never gets a hydration error', async ({ page }) => {
-  // The second cause (launch fix plan item 8b): Next streamed metadata into a
-  // hidden <div> ahead of <html>, and on a fast load it was sometimes missing
-  // from the client's tree when hydration began. About one load in thirty
-  // threw #418 at the (private) layout's first element. Fixed by blocking
-  // metadata for every reader (`htmlLimitedBots` in next.config.ts).
+  // The second cause (launch fix plan item 8b), about one fast load in
+  // seventy: a client component directly under a DOM element in a layout
+  // (the root layout's <div>, SiteFonts' <div>) whose code finished loading
+  // mid-hydration. React replayed that element with its hydration cursor
+  // already inside it and claimed the element's first child as the element.
+  // Fixed with a fallback-less Suspense boundary under each (app/layout.tsx,
+  // SiteFonts.tsx). 25 loads do not always hit a 1-in-70 race; the 168-load
+  // hunt that proved the fix is described in the PR.
   test.skip(!SANDBOX, 'creates a reader: sandbox only')
   const errors = pageErrors(page)
   await page.goto(HOME_PATH)

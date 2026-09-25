@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { DM_Sans, Roboto } from "next/font/google";
 
 /*
@@ -32,7 +33,21 @@ export function SiteFonts({
       className={`${dmSans.variable} ${roboto.variable}`}
       style={{ display: "contents" }}
     >
-      {children}
+      {/*
+       * Not a loading state: nothing here suspends on the server, so the
+       * fallback is never sent. It keeps a client component from sitting
+       * directly under this <div> (launch fix plan item 8). The site chrome
+       * below is a client component whose code can finish loading in the
+       * middle of hydration. React then replays the parent fiber, and when
+       * that parent is a DOM element it is hydrated a second time with the
+       * cursor already inside it (React 19.1 and 19.2 do not rewind it): it
+       * claims its own first child as itself, and the page is thrown away
+       * and rendered again. That was minified React error #418 on about one
+       * fast /account load in seventy (the same happened one level up, in
+       * app/layout.tsx). Under a boundary the replayed fiber is the
+       * boundary's, which claims nothing.
+       */}
+      <Suspense fallback={null}>{children}</Suspense>
     </div>
   );
 }

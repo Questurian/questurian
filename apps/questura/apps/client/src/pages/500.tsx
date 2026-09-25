@@ -86,6 +86,8 @@ export default function ServerErrorPage() {
             >
               Try again
             </a>
+            {/* A plain anchor on purpose: a full load, not a router on a page that failed. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/"
               style={{
