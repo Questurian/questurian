@@ -241,7 +241,7 @@ These are the counts on `main`; `launch-day.md` is the source of truth. #711 cha
 | contracts | all ok |
 | front-door | 96 |
 | cutover | 66 |
-| launch:verify | 43 (53 with the cookie check) |
+| launch:verify | 45 (55 with the cookie check; +2 load-test key checks, item 9) |
 | restore | 35 (36 on Postgres 17) |
 | Playwright | 75 passed + 1 skipped |
 | client unit tests | 324 |
