@@ -88,10 +88,19 @@ async function signInAs(email: string, password = SYNTHETIC_PASSWORD): Promise<J
   return response.jar
 }
 
+/**
+ * Changes one character near the end of the signature. Not the last base64
+ * character: that one also carries padding bits, and swapping A for B there
+ * (or B, C or D for A) changed only those bits, so the signature still
+ * decoded to the same bytes and verified. About one run in sixteen "failed"
+ * that way (seen on the safety net, PR #715). Five from the end is always a
+ * whole-bit character.
+ */
 function flipLastChar(value: string): string {
   const decoded = decodeURIComponent(value)
-  const last = decoded.at(-2) === 'A' ? 'B' : 'A'
-  return encodeURIComponent(`${decoded.slice(0, -2)}${last}${decoded.at(-1)}`)
+  const at = decoded.length - 5
+  const swapped = decoded[at] === 'A' ? 'B' : 'A'
+  return encodeURIComponent(`${decoded.slice(0, at)}${swapped}${decoded.slice(at + 1)}`)
 }
 
 async function main(): Promise<void> {
