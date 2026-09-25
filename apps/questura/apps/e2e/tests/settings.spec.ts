@@ -4,6 +4,7 @@ import {
   SANDBOX,
   allowProblems,
   expect,
+  expectCacheCopyKept,
   expectSignedIn,
   expectSignedOut,
   freshEmail,
@@ -16,8 +17,9 @@ import { mailTo } from './sandbox'
 
 /**
  * Journeys 6 and 7 (launch fix plan item 8): changing the password and
- * changing the email address from the account page. They create readers, so
- * they run in the sandbox only, with the fake mailbox on :3192.
+ * changing the email address from the account page. Journey 13 (item 14):
+ * signing out of all devices. They create readers, so they run in the sandbox
+ * only, with the fake mailbox on :3192.
  */
 
 test.skip(!SANDBOX, 'creates readers: sandbox only')
@@ -56,12 +58,11 @@ test('journey 6: changing the password keeps this browser signed in, signs the o
   // The security notice reaches the reader (decision D4).
   await mailTo(email, /password/i, since)
 
-  // The other device's session ended with the change. Its signed five-minute
-  // copy (`cookieCache` in better-auth.ts, a documented trade-off that item 14
-  // revisits) is dropped, as five minutes would; the session cookie itself is
-  // kept, so it is the server refusing it.
-  await other.clearCookies({ name: /questura_visitor\.session_data/ })
-  expect((await other.cookies()).some((c) => c.name.includes('questura_visitor.session_token'))).toBe(true)
+  // The other device's session ended with the change, and it ends there at
+  // once: the device still holds its signed five-minute copy (`cookieCache`),
+  // but a reader with a revoked session is checked against the session store
+  // (`session-revocations.ts`, launch fix plan item 14). Nothing is dropped by hand.
+  await expectCacheCopyKept(other)
   await phone.reload()
   await expectSignedOut(phone)
 
@@ -120,4 +121,46 @@ test('journey 7: changing the email address through the mailbox moves the sign-i
   await expectSignedOut(page)
   await signIn(page, { email: moved, password: NEW_PASSWORD })
   await expectSignedIn(page)
+})
+
+test('journey 13: "sign out of all devices" ends this browser and the other one within seconds, and the account page says how to delete the account', async ({ page, browser }) => {
+  const email = freshEmail('everywhere')
+
+  await page.goto(HOME_PATH)
+  await signUp(page, email)
+  const other = await gated(await browser.newContext())
+  const phone = await other.newPage()
+  await phone.goto(HOME_PATH)
+  await signIn(phone, { email, password: NEW_PASSWORD })
+  await expectSignedIn(phone)
+
+  await page.goto('/account')
+  // Decision D2: no delete button at launch, an address and a deadline.
+  await expect(page.getByRole('heading', { name: 'Delete your account' })).toBeVisible()
+  const mailto = page.getByRole('link', { name: 'hello@questurian.com' })
+  await expect(mailto).toHaveAttribute('href', /^mailto:hello@questurian\.com\?subject=/)
+  await expect(page.getByText(/we delete your account within 30 days/)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Sign out of all devices' }).click()
+  // One click is not enough: it asks first, and Cancel leaves everything as it was.
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByRole('button', { name: 'Sign out of all devices' })).toBeVisible()
+  await page.getByRole('button', { name: 'Sign out of all devices' }).click()
+  await page.getByRole('button', { name: 'Sign out everywhere' }).click()
+
+  // This browser lands signed out.
+  await page.waitForURL((url) => url.pathname === '/')
+  await page.goto(HOME_PATH)
+  await expectSignedOut(page)
+
+  // The other one is signed out too, although it still holds its five-minute
+  // cookie copy: nothing is dropped by hand (launch fix plan item 14).
+  await expectCacheCopyKept(other)
+  await phone.reload()
+  await expectSignedOut(phone)
+
+  // The account itself is untouched: the password signs in again.
+  await signIn(phone, { email, password: NEW_PASSWORD })
+  await expectSignedIn(phone)
+  await other.close()
 })

@@ -235,6 +235,17 @@ export async function expectSignedOut(page: Page) {
   await expect(page.getByRole('button', { name: 'Open user menu' }).locator('visible=true')).toHaveCount(0)
 }
 
+/**
+ * The context still holds both session cookies, the token and Better Auth's
+ * signed five-minute copy (`session_data`), so a signed-out answer after a
+ * revocation is the server refusing a cached session, not a missing cookie.
+ */
+export async function expectCacheCopyKept(context: BrowserContext) {
+  const names = (await context.cookies()).map((cookie) => cookie.name)
+  expect(names.some((name) => name.includes('questura_visitor.session_token')), `session token in ${names}`).toBe(true)
+  expect(names.some((name) => name.includes('questura_visitor.session_data')), `session cache copy in ${names}`).toBe(true)
+}
+
 /** Signs out through the user menu and waits for the signed-out header. */
 export async function signOut(page: Page) {
   await page.getByRole('button', { name: 'Open user menu' }).locator('visible=true').first().click()

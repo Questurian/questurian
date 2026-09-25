@@ -4,6 +4,7 @@ import {
   SANDBOX,
   allowProblems,
   expect,
+  expectCacheCopyKept,
   expectSignedIn,
   expectNoHorizontalScroll,
   expectSignedOut,
@@ -122,12 +123,11 @@ test('journey 5: a password reset signs out every session, its link works once, 
   await phone.getByRole('button', { name: 'Update password' }).click()
   await expect(phone.getByText('Your password has been updated.')).toBeVisible()
 
-  // The first device's session ended with the reset. Its signed five-minute
-  // copy (`cookieCache` in better-auth.ts, a documented trade-off; payment
-  // routes and paid bodies never trust it) is dropped, as five minutes would;
-  // the session cookie itself is kept, so it is the server refusing it.
-  await page.context().clearCookies({ name: /questura_visitor\.session_data/ })
-  expect((await page.context().cookies()).some((c) => c.name.includes('questura_visitor.session_token'))).toBe(true)
+  // The first device's session ended with the reset, and it ends there at
+  // once, although the device still holds its signed five-minute copy
+  // (`cookieCache`): a reader with a revoked session is checked against the
+  // session store (`session-revocations.ts`, launch fix plan item 14).
+  await expectCacheCopyKept(page.context())
   await page.reload()
   await expectSignedOut(page)
 
