@@ -35,7 +35,10 @@ test('#418: a signed-out reader opening /account hydrates cleanly and is sent to
     // Warm the identity lookup first, as a reader arriving from an article does.
     await page.goto(MEMBER_ARTICLE.path)
     await page.goto('/account')
-    await expect.poll(() => new URL(page.url()).pathname, { timeout: 10_000 }).not.toBe('/account')
+    // Sent on to sign in: `/` with the sign-in prompt, which then goes on to
+    // the default city. Wait for the end of that, or the next load cuts it off.
+    await expect.poll(() => new URL(page.url()).pathname, { timeout: 10_000 }).not.toMatch(/^\/(account)?$/)
+    await page.waitForLoadState('load')
   }
   expect(hydrationErrors(errors).length, JSON.stringify(hydrationErrors(errors))).toBeLessThanOrEqual(1)
 })
