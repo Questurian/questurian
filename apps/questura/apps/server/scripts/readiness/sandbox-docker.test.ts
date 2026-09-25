@@ -9,6 +9,7 @@ import {
   removeContainer,
   SANDBOX_POSTGRES,
   SANDBOX_REDIS,
+  sandboxPostgresImage,
 } from './sandbox-docker'
 
 describe('sandbox containers', () => {
@@ -28,6 +29,16 @@ describe('sandbox containers', () => {
     expect(args).toContain('127.0.0.1:5442:5432')
     expect(args).toContain('/var/lib/postgresql/data')
     expect(args).toContain(`POSTGRES_DB=${SANDBOX_POSTGRES.database}`)
+  })
+
+  it('runs postgres:16 unless READINESS_POSTGRES_IMAGE names another official version', () => {
+    expect(postgresDockerArgs(5442, {} as NodeJS.ProcessEnv).at(-1)).toBe('postgres:16')
+    expect(postgresDockerArgs(5442, { READINESS_POSTGRES_IMAGE: 'postgres:17' } as unknown as NodeJS.ProcessEnv).at(-1)).toBe('postgres:17')
+    expect(sandboxPostgresImage({ READINESS_POSTGRES_IMAGE: ' postgres:17-alpine ' } as unknown as NodeJS.ProcessEnv)).toBe('postgres:17-alpine')
+  })
+
+  it.each(['evil/postgres:17', 'postgres:latest', 'postgres:17; rm -rf /', 'redis:7'])('refuses READINESS_POSTGRES_IMAGE=%s', (image) => {
+    expect(() => sandboxPostgresImage({ READINESS_POSTGRES_IMAGE: image } as unknown as NodeJS.ProcessEnv)).toThrow(/official postgres image/)
   })
 
   it.each([5432, 5433])('refuses to run Postgres on %i', (port) => {

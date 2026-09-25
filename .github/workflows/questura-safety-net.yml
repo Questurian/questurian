@@ -1,0 +1,240 @@
+name: Questura safety net
+
+# The launch-day rehearsal (docs/launch-day.md, step 2) and the browser
+# journeys, on a GitHub runner instead of the laptop (launch fix plan item 7).
+# Before this, they only ran when someone started them by hand, so a change
+# could break sign-up with CI still green.
+#
+# The heavy half of CI. It takes ~30 minutes, so pull requests get the fast
+# checks in ci.yml, and this runs:
+#   - on every push to main,
+#   - nightly (drift: dates, time zones, a base image that moved),
+#   - on demand (Actions → Questura safety net → Run workflow, any branch),
+#   - on a pull request once the `full-ci` label is added (remove and re-add
+#     it to run again after new commits).
+#
+# Nothing here reaches a paid service, live Stripe, Google or the laptop. The
+# stack binds loopback only and every process loads deny-outbound.cjs; the
+# browsers run behind a black-hole proxy. The one outbound request is Google
+# Fonts during the builds.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: questura-safety-net-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  # Neon's major. The laptop's sandbox is 16; CI proves the one we launch on.
+  READINESS_POSTGRES_IMAGE: postgres:17
+
+jobs:
+  # Everything in launch-day step 2, in its order, then the browsers, then the
+  # production client build (H01 step 19) with its bundle scan.
+  #
+  # The stack owns its containers exactly as on the laptop
+  # (`questura-readiness-pg` on 5442, `questura-readiness-redis` on 6390), not
+  # GitHub service containers: `readiness:faults` pauses them by name and the
+  # browser specs `docker exec` into the Postgres one.
+  #
+  # Every check step runs even when an earlier one failed (as long as the
+  # stack came up), so one red run names every broken check, not the first.
+  questura-stack:
+    name: Questura readiness stack and browsers
+    if: github.event_name != 'pull_request' || github.event.label.name == 'full-ci'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @questura/server... --filter @questura/client... --filter @questura/e2e...
+
+      # `readiness:faults` takes Redis down by pausing the sandbox container.
+      # With a redis-server binary on PATH the stack would run that instead,
+      # and the fault checks would have nothing to pause.
+      - name: Sandbox prerequisites
+        run: |
+          if command -v redis-server >/dev/null; then echo "redis-server is on PATH; the stack must use its container" >&2; exit 1; fi
+          docker pull -q "$READINESS_POSTGRES_IMAGE"
+          docker pull -q redis:7-alpine
+          # The browser-facing names; systemd-resolved answers *.localhost
+          # already, this makes it independent of the resolver.
+          echo '127.0.0.1 app.readiness.localhost api.readiness.localhost media.readiness.localhost' | sudo tee -a /etc/hosts
+          # pg_dump/psql 17 for restore and cutover, as the one-line docker
+          # wrappers docs/procedures/cutover.md describes.
+          mkdir -p "$RUNNER_TEMP/pg17"
+          for tool in pg_dump psql; do
+            printf '#!/bin/sh\nexec docker run --rm -i --network host %s %s "$@"\n' "$READINESS_POSTGRES_IMAGE" "$tool" > "$RUNNER_TEMP/pg17/$tool"
+            chmod +x "$RUNNER_TEMP/pg17/$tool"
+          done
+          # The cutover rehearsal's throwaway Postgres 17 target.
+          docker run -d --rm --name questura-cutover-pg17 -p 127.0.0.1:5463:5432 \
+            -e POSTGRES_HOST_AUTH_METHOD=trust --tmpfs /var/lib/postgresql/data "$READINESS_POSTGRES_IMAGE"
+
+      - name: Playwright browsers
+        run: pnpm --dir apps/questura/apps/e2e exec playwright install --with-deps chromium firefox
+
+      - name: Stack up (both production builds, Postgres 17, Redis, fakes)
+        id: stack
+        run: pnpm --dir apps/questura/apps/server readiness:stack -- up --build
+
+      - name: readiness:routes
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        run: pnpm --dir apps/questura/apps/server readiness:routes
+
+      - name: readiness:payments
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        run: pnpm --dir apps/questura/apps/server readiness:payments
+
+      - name: readiness:purchase
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        run: pnpm --dir apps/questura/apps/server readiness:purchase
+
+      - name: readiness:auth
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        run: pnpm --dir apps/questura/apps/server readiness:auth
+
+      - name: readiness:oauth
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        run: pnpm --dir apps/questura/apps/server readiness:oauth
+
+      - name: readiness:faults
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        run: pnpm --dir apps/questura/apps/server readiness:faults
+
+      - name: readiness:contracts
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        run: pnpm --dir apps/questura/apps/server readiness:contracts
+
+      - name: readiness:front-door
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        run: pnpm --dir apps/questura/apps/server readiness:front-door
+
+      - name: launch:verify (sandbox)
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        run: |
+          pnpm --dir apps/questura/apps/server launch:verify -- \
+            --client http://app.readiness.localhost:3100 \
+            --api http://api.readiness.localhost:4100 \
+            --bypass http://127.0.0.1:4110 --edge-ip 127.0.0.1:4110 \
+            --local --allow-http --home /zz-launch/harbor \
+            --media http://media.readiness.localhost:3190
+
+      - name: readiness:restore (Postgres 17)
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        env:
+          READINESS_RESTORE_EXPECT_MAJOR: '17'
+        run: READINESS_PG_BINDIR="$RUNNER_TEMP/pg17" pnpm --dir apps/questura/apps/server readiness:restore
+
+      - name: readiness:cutover (Postgres 17, every secret rotated)
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        env:
+          READINESS_CUTOVER_TARGET_URI: postgres://postgres@127.0.0.1:5463/questura_readiness_cutover
+        run: READINESS_PG_BINDIR="$RUNNER_TEMP/pg17" pnpm --dir apps/questura/apps/server readiness:cutover
+
+      - name: Browser journeys (Chromium and Firefox, desktop and phones)
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        run: pnpm --dir apps/questura/apps/e2e exec playwright test --project='chromium*' --project='firefox*'
+
+      # H01 step 19, the build that ships: production guard on (https
+      # addresses, a pk_live_ key), then the bundle scan over what gets
+      # uploaded. The build pre-renders every public page from the API, so the
+      # API name has to answer: `/etc/hosts` sends two `.invalid` names (which
+      # can never resolve anywhere real) to a loopback TLS forwarder in front
+      # of the stack. The key is a placeholder in the live format; nothing is
+      # charged or called with it.
+      - name: Production client build through OpenNext, then the bundle scan
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        working-directory: apps/questura/apps/client
+        run: |
+          echo '127.0.0.1 api.questura-ci.invalid www.questura-ci.invalid' | sudo tee -a /etc/hosts
+          sudo sysctl -q -w net.ipv4.ip_unprivileged_port_start=443
+          tls="$RUNNER_TEMP/tls" && mkdir -p "$tls"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj '/CN=questura-ci' \
+            -addext 'subjectAltName=DNS:api.questura-ci.invalid,DNS:www.questura-ci.invalid' \
+            -keyout "$tls/key.pem" -out "$tls/cert.pem" 2>/dev/null
+          CI_TLS_CERT="$tls/cert.pem" CI_TLS_KEY="$tls/key.pem" \
+            node ../server/scripts/readiness/ci-tls-forward.mjs > "$RUNNER_TEMP/tls-forward.log" 2>&1 &
+          for _ in $(seq 1 50); do curl -sf --cacert "$tls/cert.pem" -o /dev/null https://api.questura-ci.invalid/api/health && break; sleep 0.2; done
+          state=/tmp/questura-readiness/stack.json
+          export QUESTURA_RENDER_TOKEN="$(jq -r .secrets.renderToken "$state")"
+          export QUESTURA_REVALIDATION_SECRET="$(jq -r .secrets.revalidation "$state")"
+          # Pre-renders carry the render token, so the front door adds no
+          # origin secret to them: the site sends its own, as on Cloudflare.
+          export ORIGIN_AUTH_SECRET="$(jq -r .secrets.originAuth "$state")"
+          NODE_EXTRA_CA_CERTS="$tls/cert.pem" \
+          NODE_OPTIONS='--max-old-space-size=3072' \
+          NEXT_PUBLIC_BACKEND_URL=https://api.questura-ci.invalid \
+          NEXT_PUBLIC_APP_URL=https://www.questura-ci.invalid \
+          NEXT_PUBLIC_FRONTEND_URL=https://www.questura-ci.invalid \
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_ciPlaceholderNotARealKey0000 \
+            pnpm exec opennextjs-cloudflare build
+          pnpm scan:bundle
+
+      - name: Stack logs
+        if: ${{ failure() }}
+        run: |
+          for log in /tmp/questura-readiness/*.log "$RUNNER_TEMP/tls-forward.log"; do
+            [ -f "$log" ] || continue
+            echo "::group::$log (last 80 lines)"; tail -n 80 "$log"; echo '::endgroup::'
+          done
+
+      # Logs and reports only: stack.json (this run's generated secrets) stays.
+      - name: Upload Playwright report, traces and stack logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: questura-safety-net-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: ignore
+          path: |
+            apps/questura/apps/e2e/playwright-report/
+            apps/questura/apps/e2e/test-results/
+            /tmp/questura-readiness/*.log
+
+      - name: Stack down
+        if: ${{ always() }}
+        run: |
+          pnpm --dir apps/questura/apps/server readiness:stack -- down || true
+          docker rm -f questura-cutover-pg17 questura-readiness-pg >/dev/null 2>&1 || true
+
+  # The load harness's negative controls (load/k6/negative-control/run.mjs):
+  # every proof gate, preflight refusal and supervisor stop rule must fail
+  # when its fault is injected into a loopback fake target. Needs k6; no
+  # network beyond loopback, no k6 cloud.
+  questura-k6-controls:
+    name: Questura k6 negative controls
+    if: github.event_name != 'pull_request' || github.event.label.name == 'full-ci'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: grafana/setup-k6-action@v1
+      - name: Negative controls
+        env:
+          K6_NO_USAGE_REPORT: 'true'
+        run: node apps/questura/load/k6/negative-control/run.mjs

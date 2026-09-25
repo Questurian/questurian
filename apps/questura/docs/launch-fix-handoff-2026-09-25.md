@@ -38,7 +38,7 @@ The owner wants to be hands-off:
 | 8 Browser journeys | merged | #708 (a), #709 (b) |
 | extra: DB-down rejection spam, `/x.y` returns 500 | merged | #703 |
 | extra: missing itinerary returns 200 instead of 404 | merged | #705 |
-| **7 Safety net in CI** | **draft: finish it** (full run green, red-proof and docs left) | #710 |
+| 7 Safety net in CI | merged | #710 |
 | **14 Account lifecycle** | **draft: finish it** (readiness proven, Playwright re-run left) | #711 |
 | **13 Speed budgets** | not started | none |
 | **9 Load test and baseline** | not started | none |

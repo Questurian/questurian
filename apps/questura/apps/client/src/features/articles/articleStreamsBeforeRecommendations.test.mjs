@@ -15,8 +15,11 @@ import test from 'node:test'
 // the server that matters here and pull in browser-only code. The article
 // index fetch is replaced by a promise the test controls.
 //
-// CI's client job runs without `pnpm install`, so this test needs esbuild and
-// react-dom and skips itself when they are missing.
+// It needs esbuild and react-dom, so it skips itself when they are missing
+// (a checkout with no `pnpm install`). esbuild is not a direct dependency of
+// the client: it is the copy wrangler (a client devDependency) ships with, so
+// an installed checkout always has it. CI's "Questura client tests" job
+// installs, and fails if anything in this file skips.
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SRC = join(HERE, '..', '..')
@@ -32,7 +35,23 @@ function resolvable(name) {
   }
 }
 
-const missing = ['esbuild', 'react', 'react-dom/server'].filter((name) => !resolvable(name))
+// The client's own esbuild if it ever gets one, else the one wrangler uses.
+function esbuildRequire() {
+  if (resolvable('esbuild')) return require
+  try {
+    const viaWrangler = createRequire(require.resolve('wrangler/package.json'))
+    viaWrangler.resolve('esbuild')
+    return viaWrangler
+  } catch {
+    return null
+  }
+}
+
+const requireEsbuild = esbuildRequire()
+const missing = [
+  ...(requireEsbuild ? [] : ['esbuild']),
+  ...['react', 'react-dom/server'].filter((name) => !resolvable(name)),
+]
 const skip = missing.length > 0 ? `needs installed deps: ${missing.join(', ')}` : false
 
 const INDEX_MODULE = join(SRC, 'features/articles/lib/fetchArticleIndex.ts')
@@ -69,7 +88,7 @@ export async function fetchArticleIndex(params) {
 `
 
 async function bundle(entry) {
-  const esbuild = require('esbuild')
+  const esbuild = requireEsbuild('esbuild')
   const outdir = join(CLIENT, 'node_modules', '.cache', 'article-stream-test')
   mkdirSync(outdir, { recursive: true })
   const outfile = join(outdir, `${entry.split('/').pop().replace(/\.tsx?$/, '')}-${process.pid}.mjs`)

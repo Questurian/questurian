@@ -5,6 +5,11 @@ name: CI
 # green test run does not give you (typecheck and lint).
 #
 # Jobs are split so a failure names the thing that broke rather than "CI".
+#
+# This is the fast half, run on every pull request. The launch-day rehearsal
+# (readiness stack, browser journeys, the production client build and its
+# bundle scan, k6 negative controls) is questura-safety-net.yml: on main,
+# nightly, on demand, and on a PR labelled `full-ci`.
 
 on:
   pull_request:
@@ -139,7 +144,8 @@ jobs:
     timeout-minutes: 25
     services:
       postgres:
-        image: postgres:14
+        # Neon's major (launch fix plan item 7).
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: postgres
         ports: ['5432:5432']
@@ -187,20 +193,53 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
 
-      # Deliberately no `pnpm install`: these are node:test suites over pure
-      # modules, and node strips the TypeScript itself (needs >= 22.18, or the
-      # --experimental-strip-types the script passes). Nothing here imports a
-      # dependency, which is the constraint that keeps the job this cheap.
-      - name: Unit tests
-        run: pnpm --dir apps/questura/apps/client run test
+      # node:test suites; node strips the TypeScript itself (needs >= 22.18,
+      # or the --experimental-strip-types the script passes). Most import
+      # nothing, but the article-streaming test renders through react-dom and
+      # esbuild and skipped itself here for as long as this job did not
+      # install (launch fix plan item 7). A skip is now a failure.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @questura/client...
+
+      - name: Unit tests (skips fail)
+        working-directory: apps/questura/apps/client
+        run: |
+          set -o pipefail
+          node --experimental-strip-types --test --test-reporter=tap "src/**/*.test.mjs" | tee "$RUNNER_TEMP/client-tests.tap"
+          grep -qx '# skipped 0' "$RUNNER_TEMP/client-tests.tap" || { echo '::error::A client test skipped. Every client test must run in CI.'; grep -n '# SKIP' "$RUNNER_TEMP/client-tests.tap"; exit 1; }
 
       # The load supervisor's stop rules (surge plan L08): pure node:test, no
       # install. The negative controls need k6 and run locally.
       - name: Load supervisor policy
         run: node --test apps/questura/load/k6/supervisor/policy.test.mjs
 
-  # Its own job so the tests job above keeps its no-install shape. No build
+  # Both Questura apps' ESLint (the writer app is linted in its own job).
+  # Warnings are reported, errors fail.
+  questura-lint:
+    name: Questura lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @questura/server... --filter @questura/client...
+
+      - name: Server lint
+        run: pnpm --dir apps/questura/apps/server run lint
+
+      - name: Client lint
+        run: pnpm --dir apps/questura/apps/client run lint
+
+  # Its own job, not part of the tests job above. No build
   # first: a fresh checkout has no `next-env.d.ts` or `.next/types`, which
   # costs the route-type checks and nothing else, because the client imports
   # no CSS-module or image bindings that need Next's ambient declarations. If
