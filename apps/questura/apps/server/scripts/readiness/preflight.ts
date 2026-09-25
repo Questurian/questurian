@@ -30,6 +30,8 @@ export const ALLOWED_DATABASES = [
   'questura_readiness',
   'questura_readiness_restore',
   'questura_readiness_scratch',
+  // The cutover rehearsal's Postgres 17 target (launch fix plan item 5).
+  'questura_readiness_cutover',
 ] as const
 
 /** Ports that belong to the owner's ordinary development, not to a sandbox. */
