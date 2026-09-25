@@ -88,9 +88,11 @@ Neon offers a pooled and a direct (unpooled) endpoint. Take **both**.
 > subscription change. If you ever switch `DATABASE_URI` to the pooled
 > endpoint, `DATABASE_URI_UNPOOLED` must still be the direct one.
 
-**5. Note the history window.** Neon's retention is the point-in-time
-recovery tier. It is the answer to "how far back can we restore", which is
-the D6 recovery target nobody has set yet.
+**5. Set the history window to 7 days.** Neon's retention is the
+point-in-time recovery tier: the answer to "how far back can we restore".
+Decision D7 set it at 7 days (at most 5 minutes lost). The setting, the
+read-only backup role and the daily off-Neon copy are in
+`docs/procedures/backup-restore-rollback.md`, "One-time setup".
 
 ---
 
@@ -99,6 +101,10 @@ the D6 recovery target nobody has set yet.
 **6. Create the project and the Postgres-less service.**
 New Project → *Empty Project*. Name it `questura`. Then *New* → *GitHub Repo*
 → this repository. Set the service root to `apps/questura/apps/server`.
+Then Settings → *Config-as-code* → `/apps/questura/infra/railway/railway.json`
+(absolute path). That file sets the pre-deploy step (migration guard, then
+migrations), the start command and the healthcheck
+(`docs/procedures/backup-restore-rollback.md`, "Migrations and the deploy guard").
 
 Do **not** add Railway's own Postgres. The database is Neon.
 
