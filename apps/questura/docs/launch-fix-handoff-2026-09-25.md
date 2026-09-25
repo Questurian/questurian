@@ -30,7 +30,7 @@ The owner wants to be hands-off:
 | 17 Small correctness | merged | #699 |
 | 11 Failed-card dead ends | merged | #702 |
 | 4 Email | merged | #695 |
-| 3 Error reporting | merged. **Sentry test event pending the owner's DSN** | #697 |
+| 3 Error reporting | merged. Sentry test event proved 2026-09-25 (`questura-server`) | #697 |
 | 10 API front door | merged | #704 |
 | 5 Cutover rehearsal | merged | #706 |
 | 12 Backups and rollback | merged | #700 |
