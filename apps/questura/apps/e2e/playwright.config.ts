@@ -17,9 +17,24 @@ import { defineConfig, devices } from '@playwright/test'
  *   pnpm --dir apps/questura/apps/e2e test
  *
  * WebKit needs one system library on Linux (`sudo apt-get install
- * libevent-2.1-7t64`). Skip it with `--project=chromium --project=firefox`.
+ * libevent-2.1-7t64`). Skip it with `--project='chromium*' --project='firefox*'`,
+ * which runs both desktop engines and the phone projects below.
  */
 const SANDBOX = !process.env.E2E_BASE_URL
+
+/**
+ * Journey 11 (launch fix plan item 8): journeys 1–3 on two phones. Chromium
+ * emulates each phone whole (screen, pixel density, touch, mobile user
+ * agent). Firefox has no mobile mode in Playwright, so it gets the phone's
+ * screen, density, touch and user agent without `isMobile`. The iPhone
+ * profile normally runs in WebKit, which stays off on this laptop.
+ */
+const PHONES = { 'pixel-7': devices['Pixel 7'], 'iphone-13': devices['iPhone 13'] } as const
+const JOURNEYS_ON_PHONES = /journey [123]:/
+const phoneProjects = Object.entries(PHONES).flatMap(([name, { defaultBrowserType: _engine, isMobile: _mobile, ...phone }]) => [
+  { name: `chromium-${name}`, grep: JOURNEYS_ON_PHONES, use: { ...devices['Desktop Chrome'], ...phone, isMobile: true } },
+  { name: `firefox-${name}`, grep: JOURNEYS_ON_PHONES, use: { ...devices['Desktop Firefox'], ...phone } },
+])
 
 export default defineConfig({
   testDir: './tests',
@@ -40,5 +55,6 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    ...phoneProjects,
   ],
 })
