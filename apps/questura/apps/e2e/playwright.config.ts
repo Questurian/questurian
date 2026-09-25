@@ -19,6 +19,8 @@ import { defineConfig, devices } from '@playwright/test'
  * WebKit needs one system library on Linux (`sudo apt-get install
  * libevent-2.1-7t64`). Skip it with `--project=chromium --project=firefox`.
  */
+const SANDBOX = !process.env.E2E_BASE_URL
+
 export default defineConfig({
   testDir: './tests',
   globalSetup: './tests/global-setup.ts',
@@ -29,6 +31,10 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://app.readiness.localhost:3100',
     trace: 'retain-on-failure',
+    // In the sandbox nothing may leave this machine. A route cannot stop that
+    // alone: requests that follow a redirect are never routed. Every host but
+    // loopback goes to a proxy that is not there, so it fails at once.
+    ...(SANDBOX ? { proxy: { server: 'http://127.0.0.1:9', bypass: '127.0.0.1,localhost,.localhost' } } : {}),
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

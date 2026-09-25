@@ -1,4 +1,5 @@
 import Link from '@/components/navigation/PublicLink';
+import PlanLink from './PlanLink';
 import messages from '../../../../messages/en.json';
 import {
   formatPerMonthEquivalent,
@@ -84,9 +85,9 @@ function PlanArrowLink({ href, label, disabled }: { href: string; label: string;
       {icon}
     </span>
   ) : (
-    <Link href={href} prefetch={false} aria-label={label} className={className}>
+    <PlanLink href={href} prefetch={false} aria-label={label} className={className}>
       {icon}
-    </Link>
+    </PlanLink>
   );
 }
 
