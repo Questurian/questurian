@@ -24,6 +24,7 @@ function principalToUser(response: CurrentPrincipalResponse): User | null {
     membershipExpiration: cancelAtPeriodEnd ? expiresAt : null,
     subscriptionRenewsAt: cancelAtPeriodEnd ? null : expiresAt,
     dunningGraceUntil: principal.membership.graceUntil,
+    billingInterval: principal.membership.interval ?? null,
     cancelAtPeriodEnd,
   };
 }

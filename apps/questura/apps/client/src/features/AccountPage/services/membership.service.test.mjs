@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { getBillingInfo, getMembershipState } from './membership.service.ts'
+import { getBillingInfo, getMembershipLinks, getMembershipState } from './membership.service.ts'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const inDays = (days) => new Date(Date.now() + days * DAY_MS).toISOString()
@@ -49,7 +49,7 @@ test('an entitled active subscription still reads as a premium member', () => {
 
   assert.equal(state.type, 'active')
   assert.equal(state.label, 'Premium Member')
-  const billing = getBillingInfo(user, true)
+  const billing = getBillingInfo({ ...user, billingInterval: 'month' }, true)
   assert.equal(billing?.billingPeriod, 'Monthly')
   assert.ok(billing.nextBilling.length > 0)
 })
@@ -85,14 +85,76 @@ test('an expired membership keeps its upgrade path', () => {
   assert.equal(state.showUpgradeButton, true)
 })
 
-test('a lapsed dunning failure keeps its upgrade path', () => {
+// Launch fix plan item 11. Once the grace runs out, Stripe is still retrying the
+// same subscription, and checkout refuses a second one while it lives (a
+// past_due subscription counts as live). Upgrade was a button that could only
+// answer 400; the portal is where the card gets fixed.
+test('a lapsed dunning failure is sent to the billing portal, not to checkout', () => {
   const state = getMembershipState(
     visitor({ subscriptionStatus: 'past_due', dunningGraceUntil: inDays(-1) }),
     false
   )
 
   assert.equal(state.type, 'expired')
+  assert.equal(state.showUpgradeButton, false)
+  assert.deepEqual(getMembershipLinks(state, getBillingInfo(visitor({ subscriptionStatus: 'past_due' }), false), false), {
+    showActionLinks: true,
+    canUpdatePayment: true,
+  })
+})
+
+// `incomplete` also reads `past_due`, but it never collected and never opened a
+// grace. Checkout does not count it as live, so buying again is the way out.
+test('a checkout that never completed keeps its upgrade path', () => {
+  const state = getMembershipState(visitor({ subscriptionStatus: 'past_due', dunningGraceUntil: null }), false)
+
   assert.equal(state.showUpgradeButton, true)
+})
+
+// Launch fix plan item 11: the payment-issue card told the visitor to "update
+// your payment method" and then showed no link to do it, because the links
+// hung off the billing summary and that only exists for an `active` status.
+test('a covered dunning failure shows the Update Payment Method link', () => {
+  const user = visitor({ subscriptionStatus: 'past_due', dunningGraceUntil: inDays(3) })
+  const state = getMembershipState(user, true)
+
+  assert.deepEqual(getMembershipLinks(state, getBillingInfo(user, true), true), {
+    showActionLinks: true,
+    canUpdatePayment: true,
+  })
+})
+
+// D5 (launch fix plan): Questura never offers pausing, so a paused subscription
+// grants nothing, and it still blocks a second checkout. The card must not sell
+// one; the portal is where it is managed.
+test('a paused subscription is shown as paused, with the portal and no upgrade', () => {
+  const user = visitor({ subscriptionStatus: 'paused' })
+  const state = getMembershipState(user, false)
+
+  assert.equal(state.type, 'paused')
+  assert.equal(state.showUpgradeButton, false)
+  assert.match(state.description, /paused/i)
+  assert.deepEqual(getMembershipLinks(state, getBillingInfo(user, false), false), {
+    showActionLinks: true,
+    canUpdatePayment: true,
+  })
+})
+
+// Launch fix plan item 11: the billing period was the literal 'Monthly'.
+test('the billing period is the one the member actually pays', () => {
+  const renews = inDays(200)
+
+  assert.equal(getBillingInfo(visitor({ subscriptionRenewsAt: renews, billingInterval: 'year' }), true)?.billingPeriod, 'Yearly')
+  assert.equal(getBillingInfo(visitor({ subscriptionRenewsAt: renews, billingInterval: 'month' }), true)?.billingPeriod, 'Monthly')
+  // Not known yet (a profile no webhook has touched since the field existed):
+  // say nothing rather than guess.
+  assert.equal(getBillingInfo(visitor({ subscriptionRenewsAt: renews, billingInterval: null }), true)?.billingPeriod, null)
+})
+
+test('a free visitor gets no billing links', () => {
+  const state = getMembershipState(visitor({ subscriptionStatus: 'none' }), false)
+
+  assert.deepEqual(getMembershipLinks(state, null, false), { showActionLinks: false, canUpdatePayment: false })
 })
 
 test('a covered dunning failure keeps its payment-issue copy while entitled', () => {

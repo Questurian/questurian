@@ -17,6 +17,8 @@ export type VisitorPrincipal = {
     /** Bounded extension while Stripe retries a failed renewal; null otherwise. */
     graceUntil: string | null;
     cancelAtPeriodEnd: boolean;
+    /** How often the subscription bills; null until the server has recorded it. */
+    interval: 'month' | 'year' | null;
   };
 };
 
@@ -47,6 +49,7 @@ type LegacyUserFields = {
   subscriptionRenewsAt?: string | null;
   membershipExpiration?: string | null;
   dunningGraceUntil?: string | null;
+  billingInterval?: 'month' | 'year' | null;
   cancelAtPeriodEnd?: boolean;
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;

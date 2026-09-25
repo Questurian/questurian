@@ -10,7 +10,7 @@ import {
   useRenewSubscriptionMutation,
 } from '../../Payments/hooks/useSubscriptionMutations';
 import { useMembership } from '../../Payments/hooks/useMembership';
-import { getBillingInfo, getMembershipState } from '../services/membership.service';
+import { getBillingInfo, getMembershipLinks, getMembershipState } from '../services/membership.service';
 
 function getMutationErrorMessage(error: unknown): string | null {
   if (!error) return null;
@@ -50,11 +50,9 @@ export function useMembershipSection(user: User | null) {
   // articles -- so the card cannot claim a membership the paywall denies.
   const membershipState = getMembershipState(effectiveUser, isActive);
   const billingInfo = getBillingInfo(effectiveUser, isActive);
-
-  // A paused membership has no billing summary for the links to hang off, and it
-  // is the state that needs the portal most: the subscription is still charging
-  // while access is gone, and the portal is where that gets stopped.
-  const accessPaused = membershipState.type === 'access_paused';
+  // Dunning, paused and access-paused cards have no billing summary, and they
+  // are the ones that need the portal most.
+  const links = getMembershipLinks(membershipState, billingInfo, isActive);
 
   const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -95,8 +93,8 @@ export function useMembershipSection(user: User | null) {
     isRenewing: renewMutation.isPending,
     showCancellationModal,
     successMessage,
-    canUpdatePayment: isActive || membershipState.showCancelButton || accessPaused,
-    showActionLinks: Boolean(billingInfo) || accessPaused,
+    canUpdatePayment: links.canUpdatePayment,
+    showActionLinks: links.showActionLinks,
     clearSuccess: () => setSuccessMessage(null),
     openCancelModal: () => setShowCancellationModal(true),
     handleCancelSubscription,
