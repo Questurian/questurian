@@ -40,13 +40,15 @@ const CLEAN_AUDIT = {
 }
 
 const CLEAN_RETENTION = { expired: 0, deleted: 0 }
+const CLEAN_EMAILS = { email_checked: 9, email_drift: 0, email_synced: 0, email_failed: 0, email_not_owner: 0, email_missing: 0 }
 
 function reports(
-  overrides: Partial<Record<'verify' | 'profiles' | 'audit' | 'retention', ReconcileStepReport>> = {}
+  overrides: Partial<Record<'verify' | 'profiles' | 'emails' | 'audit' | 'retention', ReconcileStepReport>> = {}
 ) {
   return [
     overrides.verify ?? { step: 'verify' as const, counts: CLEAN_VERIFY, lines: [] },
     overrides.profiles ?? { step: 'profiles' as const, counts: CLEAN_PROFILES, lines: [] },
+    overrides.emails ?? { step: 'emails' as const, counts: CLEAN_EMAILS, lines: [] },
     overrides.audit ?? { step: 'audit' as const, counts: CLEAN_AUDIT, lines: [] },
     overrides.retention ?? { step: 'retention' as const, counts: CLEAN_RETENTION, lines: [] },
   ]
@@ -267,5 +269,26 @@ describe('ownership findings escalate', () => {
 
     expect(classified.status).toBe('attention')
     expect(classified.escalations).toContain(key)
+  })
+})
+
+describe('customer email drift (step emails)', () => {
+  it('healed address drift is the job working, not an escalation', () => {
+    const report = buildReconcileReport(
+      reports({ emails: { step: 'emails', counts: { ...CLEAN_EMAILS, email_drift: 2, email_synced: 2 }, lines: [] } }),
+      OPTIONS
+    )
+    expect(report.exitCode).toBe(0)
+    expect(report.summaryLine).toContain('emails=ok')
+    expect(report.summaryLine).toContain('email_drift=2 email_synced=2 email_failed=0')
+  })
+
+  it('an address that could not be written back escalates', () => {
+    const report = buildReconcileReport(
+      reports({ emails: { step: 'emails', counts: { ...CLEAN_EMAILS, email_drift: 1, email_failed: 1 }, lines: [] } }),
+      OPTIONS
+    )
+    expect(report.exitCode).toBe(1)
+    expect(report.summaryLine).toContain('escalations=emails:email_failed')
   })
 })

@@ -7,6 +7,11 @@ const mocks = vi.hoisted(() => ({
   payloadAuth: vi.fn(),
   findVisitorProfileByAuthUserId: vi.fn(),
   ensureVisitorProfileForAuthUser: vi.fn(),
+  isRecentlyRevoked: vi.fn(),
+}))
+
+vi.mock('./session-revocations', () => ({
+  sessionRevocations: { isRecentlyRevoked: mocks.isRecentlyRevoked, record: vi.fn() },
 }))
 
 vi.mock('./better-auth', () => ({
@@ -45,6 +50,7 @@ describe('Current principal', () => {
     mocks.payloadAuth.mockResolvedValue({ user: null })
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue(null)
     mocks.ensureVisitorProfileForAuthUser.mockResolvedValue(null)
+    mocks.isRecentlyRevoked.mockResolvedValue(false)
   })
 
   // Every signed-in page view asks /api/me. `listUserAccounts({ headers })`
@@ -111,6 +117,67 @@ describe('Current principal', () => {
 
     expect(mocks.getSession.mock.calls[0][0]).toEqual({ headers })
     expect(mocks.getSession.mock.calls[1][0]).toEqual({ headers, query: { disableCookieCache: true } })
+  })
+
+  // A session revoked on another device (password change or reset, sign out
+  // of all devices) must end within about a second, not when that device's
+  // five-minute cookie copy runs out.
+  describe('after a revocation', () => {
+    const headers = new Headers({ cookie: 'questura_visitor.session_token=tok.sig' })
+    const cached = {
+      session: { token: 'tok', userId: 'visitor_1' },
+      user: { id: 'visitor_1', email: 'v@example.com', emailVerified: true, name: 'V' },
+    }
+
+    it('trusts the cookie copy of a reader with no recent revocation, with no second lookup', async () => {
+      mocks.getSession.mockResolvedValue(cached)
+      mocks.findVisitorProfileByAuthUserId.mockResolvedValue({ id: 1 })
+
+      const result = await getCurrentPrincipal(headers)
+
+      expect(result.authenticated).toBe(true)
+      expect(mocks.getSession).toHaveBeenCalledTimes(1)
+      expect(mocks.isRecentlyRevoked).toHaveBeenCalledWith('visitor_1')
+    })
+
+    it('asks the session store for a reader revoked recently, and a revoked session is signed out', async () => {
+      mocks.isRecentlyRevoked.mockResolvedValue(true)
+      mocks.getSession.mockResolvedValueOnce(cached).mockResolvedValueOnce(null)
+
+      const result = await getCurrentPrincipal(headers)
+
+      expect(result).toEqual({ authenticated: false, principal: null })
+      expect(mocks.getSession.mock.calls[1][0]).toEqual({ headers, query: { disableCookieCache: true } })
+    })
+
+    it('keeps a session the store still honours (the device that changed the password)', async () => {
+      mocks.isRecentlyRevoked.mockResolvedValue(true)
+      mocks.getSession.mockResolvedValue(cached)
+      mocks.findVisitorProfileByAuthUserId.mockResolvedValue({ id: 1 })
+
+      const result = await getCurrentPrincipal(headers)
+
+      expect(result.principal?.id).toBe('visitor_1')
+      expect(mocks.getSession).toHaveBeenCalledTimes(2)
+    })
+
+    it('covers the sign-in methods read too', async () => {
+      mocks.isRecentlyRevoked.mockResolvedValue(true)
+      mocks.getSession.mockResolvedValueOnce(cached).mockResolvedValueOnce(null)
+
+      expect(await getCurrentAuthMethods(headers)).toBeNull()
+      expect(mocks.findAccounts).not.toHaveBeenCalled()
+    })
+
+    it('does not consult the list when the store is asked anyway', async () => {
+      mocks.getSession.mockResolvedValue(cached)
+      mocks.findVisitorProfileByAuthUserId.mockResolvedValue({ id: 1 })
+
+      await requireVisitorPrincipal(headers, { freshSession: true })
+
+      expect(mocks.isRecentlyRevoked).not.toHaveBeenCalled()
+      expect(mocks.getSession).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('does no account or profile work for an anonymous caller', async () => {

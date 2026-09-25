@@ -11,8 +11,9 @@
  *  - **B2 tampering.** Flipped bytes, A's cache cookie with B's token and the
  *    reverse, a token signed with the wrong secret, a token planted before
  *    sign-in (fixation), oversized and duplicated cookie headers, and old
- *    cookies replayed after sign-out: never someone else, never a 500, and
- *    payments and the member body refuse a revoked session at once.
+ *    cookies replayed after sign-out: never someone else, never a 500,
+ *    payments and the member body refuse a revoked session at once, and
+ *    `/api/me` within seconds despite the cache cookie.
  *  - **B3 enumeration and limits.** A wrong password and an unknown email get
  *    the same status and body; password reset answers the same for unknown
  *    addresses; sign-in over its limit answers 429 with `Retry-After`.
@@ -149,8 +150,17 @@ async function main(): Promise<void> {
   // Sign out B, then replay B's old cookies.
   const signedOut = await post('/sign-out', {}, { cookie: header(b) })
   record(b2, 'sign-out answers 200', signedOut.status === 200, `HTTP ${signedOut.status}`)
-  const replay = await whoIs(header(b))
-  console.log(`  info [${b2}] /api/me for a signed-out session's old cookies: ${replay.email ?? 'signed out'} (the 5-minute cache applies here by design)`)
+  // The replayed cookies still carry the five-minute cache copy. Sign-out is
+  // recorded as a revocation (`session-revocations.ts`), so `/api/me` stops
+  // trusting that copy within about a second.
+  const replayStarted = performance.now()
+  let replay = await whoIs(header(b))
+  while (replay.email !== null && performance.now() - replayStarted < 5_000) {
+    await new Promise((done) => setTimeout(done, 200))
+    replay = await whoIs(header(b))
+  }
+  const replayMs = Math.round(performance.now() - replayStarted)
+  record(b2, '/api/me refuses a signed-out session\'s replayed cookies within 3 s', replay.email === null && replayMs <= 3_000, `${replay.email ?? 'signed out'} after ${replayMs} ms`)
   const details = await fetch(`${BACKEND}/api/payments/subscription-details`, { headers: { origin, cookie: header(b), 'cf-connecting-ip': caller() } })
   record(b2, 'payments refuse the replayed cookies at once', details.status === 401, `HTTP ${details.status}`)
   const bodyReplay = await fetch(`${BACKEND}/api/public/articles/full?type=articles&id=1&lang=en`, { headers: { origin, cookie: header(b), 'cf-connecting-ip': caller() } })

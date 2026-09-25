@@ -57,7 +57,7 @@ for (const [label, account] of [
 
     for (let load = 0; load < LOADS; load += 1) {
       await page.goto('/account')
-      await expect(page.getByRole('heading', { name: 'Your Account' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Your Account', exact: true })).toBeVisible()
       await expect(page.getByText(account.email).first()).toBeVisible()
     }
     expect(hydrationErrors(errors).length, JSON.stringify(hydrationErrors(errors))).toBeLessThanOrEqual(1)

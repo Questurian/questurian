@@ -25,13 +25,17 @@
  *    config-drift class (endpoint missing events, endpoint disabled) before
  *    anything else runs or writes.
  * 2. `reconcile-stripe-visitor-profiles` — with apply and a blast-radius cap.
+ * 2b. `sync-stripe-customer-emails` — puts each reader's current address back
+ *    on their Stripe customer when an email change failed to reach Stripe.
+ *    After `profiles`, so a customer relinked tonight is checked tonight.
+ *    Respects `QUESTURA_RECONCILE_APPLY` and the same cap.
  * 3. `audit-access-revocations` — read-only. Each row is a decision about
  *    somebody's money and stays manual by design; do not add an apply mode.
  * 4. `prune-stripe-webhook-events` — drop processed webhook rows older than
  *    30 days. Last so a prune failure cannot hide billing drift. Respects
  *    `QUESTURA_RECONCILE_APPLY`: dry-run counts, apply deletes.
  *
- * All four run even if an earlier one fails, because the value is in the whole
+ * All five run even if an earlier one fails, because the value is in the whole
  * picture and a Stripe outage in step one should not hide drift in step two.
  * The exit code is aggregated by `reconcile-report.ts`.
  *
@@ -60,6 +64,7 @@ import {
 import { run as runAuditRevocations } from './audit-access-revocations'
 import { run as runPruneWebhookEvents } from './prune-stripe-webhook-events'
 import { run as runReconcileProfiles } from './reconcile-stripe-visitor-profiles'
+import { run as runSyncCustomerEmails } from './sync-stripe-customer-emails'
 import { run as runVerifyWebhookEvents } from './verify-stripe-webhook-events'
 
 const DEFAULT_MAX_APPLY = 25
@@ -110,6 +115,7 @@ async function main(): Promise<number> {
 
   reports.push(await runStep('verify', () => runVerifyWebhookEvents()))
   reports.push(await runStep('profiles', () => runReconcileProfiles({ apply, maxApply })))
+  reports.push(await runStep('emails', () => runSyncCustomerEmails({ apply, maxApply })))
   reports.push(await runStep('audit', () => runAuditRevocations()))
   reports.push(await runStep('retention', () => runPruneWebhookEvents({ apply })))
 

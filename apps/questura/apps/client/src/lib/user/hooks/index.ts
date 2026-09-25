@@ -7,6 +7,7 @@ export {
   useUserQuery,
   useLoginMutation,
   useLogoutMutation,
+  useSignOutEverywhereMutation,
   useSignupMutation,
 } from './useUserQuery';
 

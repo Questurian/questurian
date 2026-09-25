@@ -125,6 +125,39 @@ export function useLoginMutation() {
   });
 }
 
+/**
+ * Sign out of every device, this browser included: every session of the
+ * reader ends on the server (`revoke-sessions`), and the other devices are
+ * refused within about a second (`session-revocations.ts` on the server).
+ * Unlike a plain sign-out, a failure is reported rather than papered over:
+ * the reader asked for the other devices to be signed out, and cleaning up
+ * this browser alone would claim that happened.
+ */
+export function useSignOutEverywhereMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      try {
+        await post('/api/visitor-auth/revoke-sessions', {});
+      } catch (error) {
+        // This session had already ended elsewhere: nothing left to sign out.
+        if (isUnauthenticated(error)) return;
+        if (isServiceUnavailableError(error)) {
+          throw new Error('Service is unavailable. Please try again later.');
+        }
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      writeHint('anon');
+      identityStore.invalidate();
+      queryClient.clear();
+      window.location.href = '/';
+    },
+  });
+}
+
 export function useLogoutMutation() {
   const queryClient = useQueryClient();
 
