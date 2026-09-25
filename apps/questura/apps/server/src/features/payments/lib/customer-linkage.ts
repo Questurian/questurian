@@ -47,7 +47,8 @@ function isOwnedBy(customer: Stripe.Customer, visitorAuthUserId: string): boolea
  * Stripe's receipts and dunning mail going somewhere the visitor still reads.
  *
  * Best-effort by design: this runs inside email verification, and a Stripe
- * outage must not cost someone their verified address.
+ * outage must not cost someone their verified address. A failure is repaired
+ * by the nightly reconcile (`emails` step, `reconcile-emails.ts`).
  */
 export async function syncStripeCustomerEmail(
   stripeCustomerId: string | null | undefined,

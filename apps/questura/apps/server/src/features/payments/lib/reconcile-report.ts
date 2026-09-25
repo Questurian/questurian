@@ -3,7 +3,7 @@
  *
  * Why this exists
  * ---------------
- * The nightly job runs four scripts and then has to answer one question: does
+ * The nightly job runs five scripts and then has to answer one question: does
  * a human need to look at this tonight? That answer is the whole value of the
  * job — get it wrong in the lenient direction and divergence stays silent; get
  * it wrong in the noisy direction and the report joins the pile of output
@@ -20,11 +20,12 @@
  *           Healed drift is logged, not escalated — that is the job working.
  *   exit 1  A human is needed. Anything the scripts cannot repair themselves:
  *           MISSING events on an enabled endpoint, a DISABLED endpoint,
- *           ORPHANED, DUPLICATE, STUCK, UNKNOWN, the blast-radius cap being
- *           exceeded, or a step that threw.
+ *           ORPHANED, DUPLICATE, STUCK, UNKNOWN, a Stripe customer address
+ *           that could not be updated, the blast-radius cap being exceeded,
+ *           or a step that threw.
  */
 
-export type ReconcileStepName = 'verify' | 'profiles' | 'audit' | 'retention'
+export type ReconcileStepName = 'verify' | 'profiles' | 'emails' | 'audit' | 'retention'
 
 /**
  * What each script's `run()` hands back. `lines` is the detail report the
@@ -69,6 +70,10 @@ export const ESCALATING_COUNTS: Readonly<Record<ReconcileStepName, readonly stri
   // deciding which subscription to keep — and therefore who gets refunded — is
   // a human call, so it escalates.
   profiles: ['orphaned', 'duplicate', 'unproven', 'mismatched', 'multi_live'],
+  // An address the script could not write back to Stripe. Drift it did fix
+  // is the job working; a customer that does not name its reader is the
+  // `profiles` step's `mismatched` and escalates there.
+  emails: ['email_failed'],
   audit: ['stuck', 'unknown'],
   // Pruning old webhook rows is the job working. A throw still escalates.
   retention: [],
@@ -90,6 +95,7 @@ const SUMMARY_COUNTS: Readonly<Record<ReconcileStepName, readonly string[]>> = {
     'mismatched',
     'multi_live',
   ],
+  emails: ['email_drift', 'email_synced', 'email_failed'],
   audit: ['stuck', 'unknown', 'in_period', 'contested', 'closed'],
   retention: ['expired', 'deleted'],
 }
