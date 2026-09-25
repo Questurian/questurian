@@ -400,7 +400,7 @@ async function main(): Promise<void> {
   const oldIssue = await issueKey(laptop, oldOrigin, clientOrigin, oldStaff.token ?? '', oldKey)
   record(before, `an admin issues the ${SERVICE_ACCOUNT} key`, [200, 201].includes(oldIssue.status) && oldIssue.id, `HTTP ${oldIssue.status}`)
   const oldKeyStatus = await fromSource(laptop, oldOrigin, `service-accounts API-Key ${oldKey}`)
-  record(before, '…and it works on its route (400 for an empty body, not 401)', oldKeyStatus === 400, `HTTP ${oldKeyStatus}`)
+  record(before, '…and it works on its route (400: no image attached, not 401)', oldKeyStatus === 400, `HTTP ${oldKeyStatus}`)
   record(before, 'the laptop accepts a webhook signed with its secret', (await deliverWebhook(laptop, oldOrigin, SANDBOX_WEBHOOK_SECRET, `evt_cutover_before_${run}`)) === 200)
   await sourcePool.end()
 
@@ -574,7 +574,7 @@ async function main(): Promise<void> {
     const reissue = await issueKey(host, newOrigin, clientOrigin, staff.token ?? '', newKey)
     record(keys, `an admin re-issues the ${SERVICE_ACCOUNT} key on the new host`, reissue.status === 200 && reissue.id === oldIssue.id, `HTTP ${reissue.status}`)
     const newKeyStatus = await fromSource(host, newOrigin, `service-accounts API-Key ${newKey}`)
-    record(keys, 'the new key works on its route (400 for an empty body, not 401)', newKeyStatus === 400, `HTTP ${newKeyStatus}`)
+    record(keys, 'the new key works on its route (400: no image attached, not 401)', newKeyStatus === 400, `HTTP ${newKeyStatus}`)
     record(keys, 'the old key still gets 401 after the re-issue', (await fromSource(host, newOrigin, `service-accounts API-Key ${oldKey}`)) === 401)
 
     const hooks = 'stripe webhook'

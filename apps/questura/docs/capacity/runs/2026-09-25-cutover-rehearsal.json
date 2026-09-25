@@ -1,0 +1,481 @@
+{
+  "kind": "cutover-rehearsal",
+  "takenAt": "2026-09-25T04:45:57.086Z",
+  "source": {
+    "sha": "6157aa248333c33fdb6c93ff8bd969521684a197",
+    "dirty": true,
+    "diffFingerprint": "50057950db216b02"
+  },
+  "from": "questura_readiness (Postgres 16.14)",
+  "to": "questura_readiness_cutover (Postgres 17.11)",
+  "postgres": {
+    "source": "16.14",
+    "target": "17.11",
+    "pgDump": 17,
+    "psql": 17
+  },
+  "rotated": [
+    "PAYLOAD_SECRET",
+    "BETTER_AUTH_SECRET",
+    "ORIGIN_AUTH_SECRET",
+    "STRIPE_WEBHOOK_SECRET",
+    "QUESTURA_REVALIDATION_SECRET",
+    "QUESTURA_RENDER_TOKEN",
+    "DB_STATS_SECRET"
+  ],
+  "dumpMs": 337,
+  "restoreMs": 589,
+  "preDeployMs": 3493,
+  "counts": {
+    "source": {
+      "locations": 13,
+      "articles": 29,
+      "media_assets": 8,
+      "media_sets": 8,
+      "users": 8,
+      "service_accounts": 9,
+      "visitor_profiles": 86,
+      "visitor_auth_users": 86,
+      "visitor_auth_accounts": 98,
+      "visitor_auth_sessions": 274,
+      "visitor_auth_verifications": 5,
+      "bookmarks": 7,
+      "stripe_webhook_events": 167,
+      "payload_migrations": 50
+    },
+    "restored": {
+      "locations": 13,
+      "articles": 29,
+      "media_assets": 8,
+      "media_sets": 8,
+      "users": 8,
+      "service_accounts": 9,
+      "visitor_profiles": 86,
+      "visitor_auth_users": 86,
+      "visitor_auth_accounts": 98,
+      "visitor_auth_sessions": 274,
+      "visitor_auth_verifications": 5,
+      "bookmarks": 7,
+      "stripe_webhook_events": 167,
+      "payload_migrations": 50
+    },
+    "migrated": {
+      "locations": 13,
+      "articles": 29,
+      "media_assets": 8,
+      "media_sets": 8,
+      "users": 8,
+      "service_accounts": 9,
+      "visitor_profiles": 86,
+      "visitor_auth_users": 86,
+      "visitor_auth_accounts": 98,
+      "visitor_auth_sessions": 274,
+      "visitor_auth_verifications": 5,
+      "bookmarks": 7,
+      "stripe_webhook_events": 167,
+      "payload_migrations": 50
+    }
+  },
+  "result": {
+    "total": 66,
+    "passed": 66
+  },
+  "checks": [
+    {
+      "group": "before (laptop, old secrets)",
+      "name": "member A signs in",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "before (laptop, old secrets)",
+      "name": "…and /api/me is member A, a member",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "group": "before (laptop, old secrets)",
+      "name": "staff signs in",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "before (laptop, old secrets)",
+      "name": "a reader signs up with Google",
+      "ok": true,
+      "detail": "HTTP 302 → http://app.readiness.localhost:3100/account"
+    },
+    {
+      "group": "before (laptop, old secrets)",
+      "name": "…and a Google token is stored, encrypted (not the token itself)",
+      "ok": true,
+      "detail": "154 chars"
+    },
+    {
+      "group": "before (laptop, old secrets)",
+      "name": "an admin issues the Location Manager key",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "before (laptop, old secrets)",
+      "name": "…and it works on its route (400: no image attached, not 401)",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "group": "before (laptop, old secrets)",
+      "name": "the laptop accepts a webhook signed with its secret",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "group": "dump and restore",
+      "name": "the target runs Postgres 17",
+      "ok": true,
+      "detail": "source 16.14 → target 17.11, pg_dump 17, psql 17"
+    },
+    {
+      "group": "dump and restore",
+      "name": "pg_dump of the sandbox succeeds",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "group": "dump and restore",
+      "name": "it restores into Postgres 17 with ON_ERROR_STOP, one transaction",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "group": "dump and restore",
+      "name": "locations: same count",
+      "ok": true,
+      "detail": "13 → 13"
+    },
+    {
+      "group": "dump and restore",
+      "name": "articles: same count",
+      "ok": true,
+      "detail": "29 → 29"
+    },
+    {
+      "group": "dump and restore",
+      "name": "media_assets: same count",
+      "ok": true,
+      "detail": "8 → 8"
+    },
+    {
+      "group": "dump and restore",
+      "name": "media_sets: same count",
+      "ok": true,
+      "detail": "8 → 8"
+    },
+    {
+      "group": "dump and restore",
+      "name": "users: same count",
+      "ok": true,
+      "detail": "8 → 8"
+    },
+    {
+      "group": "dump and restore",
+      "name": "service_accounts: same count",
+      "ok": true,
+      "detail": "9 → 9"
+    },
+    {
+      "group": "dump and restore",
+      "name": "visitor_profiles: same count",
+      "ok": true,
+      "detail": "86 → 86"
+    },
+    {
+      "group": "dump and restore",
+      "name": "visitor_auth_users: same count",
+      "ok": true,
+      "detail": "86 → 86"
+    },
+    {
+      "group": "dump and restore",
+      "name": "visitor_auth_accounts: same count",
+      "ok": true,
+      "detail": "98 → 98"
+    },
+    {
+      "group": "dump and restore",
+      "name": "visitor_auth_sessions: same count",
+      "ok": true,
+      "detail": "274 → 274"
+    },
+    {
+      "group": "dump and restore",
+      "name": "visitor_auth_verifications: same count",
+      "ok": true,
+      "detail": "5 → 5"
+    },
+    {
+      "group": "dump and restore",
+      "name": "bookmarks: same count",
+      "ok": true,
+      "detail": "7 → 7"
+    },
+    {
+      "group": "dump and restore",
+      "name": "stripe_webhook_events: same count",
+      "ok": true,
+      "detail": "167 → 167"
+    },
+    {
+      "group": "dump and restore",
+      "name": "payload_migrations: same count",
+      "ok": true,
+      "detail": "50 → 50"
+    },
+    {
+      "group": "migrate",
+      "name": "pre-deploy.sh passes on the restored database (guard, migrate, guard --require-clean, search backfill)",
+      "ok": true,
+      "detail": "3493 ms"
+    },
+    {
+      "group": "migrate",
+      "name": "locations: same count after migrate",
+      "ok": true,
+      "detail": "13 → 13"
+    },
+    {
+      "group": "migrate",
+      "name": "articles: same count after migrate",
+      "ok": true,
+      "detail": "29 → 29"
+    },
+    {
+      "group": "migrate",
+      "name": "media_assets: same count after migrate",
+      "ok": true,
+      "detail": "8 → 8"
+    },
+    {
+      "group": "migrate",
+      "name": "media_sets: same count after migrate",
+      "ok": true,
+      "detail": "8 → 8"
+    },
+    {
+      "group": "migrate",
+      "name": "users: same count after migrate",
+      "ok": true,
+      "detail": "8 → 8"
+    },
+    {
+      "group": "migrate",
+      "name": "service_accounts: same count after migrate",
+      "ok": true,
+      "detail": "9 → 9"
+    },
+    {
+      "group": "migrate",
+      "name": "visitor_profiles: same count after migrate",
+      "ok": true,
+      "detail": "86 → 86"
+    },
+    {
+      "group": "migrate",
+      "name": "visitor_auth_users: same count after migrate",
+      "ok": true,
+      "detail": "86 → 86"
+    },
+    {
+      "group": "migrate",
+      "name": "visitor_auth_accounts: same count after migrate",
+      "ok": true,
+      "detail": "98 → 98"
+    },
+    {
+      "group": "migrate",
+      "name": "visitor_auth_sessions: same count after migrate",
+      "ok": true,
+      "detail": "274 → 274"
+    },
+    {
+      "group": "migrate",
+      "name": "visitor_auth_verifications: same count after migrate",
+      "ok": true,
+      "detail": "5 → 5"
+    },
+    {
+      "group": "migrate",
+      "name": "bookmarks: same count after migrate",
+      "ok": true,
+      "detail": "7 → 7"
+    },
+    {
+      "group": "migrate",
+      "name": "stripe_webhook_events: same count after migrate",
+      "ok": true,
+      "detail": "167 → 167"
+    },
+    {
+      "group": "migrate",
+      "name": "payload_migrations: same count after migrate",
+      "ok": true,
+      "detail": "50 → 50"
+    },
+    {
+      "group": "new host",
+      "name": "the backend boots on Postgres 17 with every secret rotated",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "group": "new host",
+      "name": "a caller without the origin secret gets 403",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "group": "new host",
+      "name": "the laptop’s origin secret gets 403",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "group": "new host",
+      "name": "the new origin secret is let in",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "group": "old credentials",
+      "name": "an old visitor cookie: /api/me says signed out (200), not 500",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "old credentials",
+      "name": "an old visitor cookie: a private route (bookmarks) answers 401, not 500",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "old credentials",
+      "name": "an old visitor cookie: sign-in methods answer 401, not 500",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "old credentials",
+      "name": "an old visitor cookie: get-session finds no session, not 500",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "old credentials",
+      "name": "an old visitor cookie does not open a member body",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "old credentials",
+      "name": "an old staff token: 401 on a staff route, not 500",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "old credentials",
+      "name": "an old staff cookie: /api/users/me is nobody, not 500",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "old credentials",
+      "name": "the old Location Manager key gets 401",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "group": "old credentials",
+      "name": "a webhook signed with the laptop endpoint’s secret gets 400",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "group": "sign-in",
+      "name": "member A signs in with the restored password",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "sign-in",
+      "name": "…is still a member",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "group": "sign-in",
+      "name": "…and is served the member body",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "sign-in",
+      "name": "a new reader signs up with (fake) Google",
+      "ok": true,
+      "detail": "HTTP 302 → http://app.readiness.localhost:3100/account"
+    },
+    {
+      "group": "sign-in",
+      "name": "a reader whose Google token was stored under the old secret signs in with Google, as the same user",
+      "ok": true,
+      "detail": "HTTP 302 → http://app.readiness.localhost:3100/account"
+    },
+    {
+      "group": "sign-in",
+      "name": "…and listing their sign-in methods works (200, Google listed)",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "sign-in",
+      "name": "…and their stored Google token was replaced (now under the new secret)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "group": "sign-in",
+      "name": "staff signs in with the restored password",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "sign-in",
+      "name": "staff can list service accounts whose keys were stored under the old secret (200, not 500)",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "service keys",
+      "name": "an admin re-issues the Location Manager key on the new host",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "group": "service keys",
+      "name": "the new key works on its route (400: no image attached, not 401)",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "group": "service keys",
+      "name": "the old key still gets 401 after the re-issue",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "group": "stripe webhook",
+      "name": "a webhook signed with the new endpoint’s secret gets 200",
+      "ok": true,
+      "detail": "HTTP 200"
+    }
+  ]
+}
