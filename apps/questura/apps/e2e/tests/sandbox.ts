@@ -121,7 +121,14 @@ export async function buyMembership(page: Page, plan: Plan): Promise<Purchase> {
   const verification = await mailTo(email, /verif/i, since)
   const link = verification.links.find((href) => href.includes('verify-email'))
   if (!link) throw new Error(`No verify-email link in ${JSON.stringify(verification.links)}`)
-  await page.goto(link)
+  // The link returns the reader to `/`, which the sandbox cannot show (its
+  // default city is the real site's). Journey 2 follows the link as sent; here
+  // it lands on the sandbox's home instead, and is let settle so the next
+  // navigation is not cancelled under a redirect.
+  const verify = new URL(link)
+  verify.searchParams.set('callbackURL', new URL(HOME_PATH, page.url()).toString())
+  await page.goto(verify.toString())
+  await page.waitForLoadState('networkidle')
 
   await page.goto(`/purchase/${plan}`)
   const subscribe = page.getByRole('button', { name: /^Subscribe Now/ })
