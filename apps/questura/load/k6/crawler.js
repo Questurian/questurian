@@ -49,6 +49,9 @@ export const options = {
   },
   thresholds: gates({
     questura_crawl_refusals: ['count<1'],
+    // Named so they are reported apart: readers beside a crawler, and the crawl.
+    'http_req_duration{journey:reader,kind:page,expected_response:true}': ['p(95)<500'],
+    'http_req_duration{journey:crawler,kind:page,expected_response:true}': ['p(95)<500'],
     'checks{journey:crawler}': ['rate>0.999'],
   }),
 }
@@ -67,6 +70,14 @@ export function setup() {
   return { paths }
 }
 
+/** A redirect target on this site: a path, or an absolute URL on the site's own host. */
+function sameSite(location) {
+  if (!location) return false
+  if (location.startsWith('/') && !location.startsWith('//')) return true
+  const host = (url) => (/^https?:\/\/([^/]+)/.exec(url) || [])[1]
+  return host(location) !== undefined && host(location) === host(CLIENT_URL)
+}
+
 export function crawl(data) {
   const tags = { journey: 'crawler' }
   const path = data.paths[exec.scenario.iterationInTest % data.paths.length]
@@ -79,7 +90,10 @@ export function crawl(data) {
   check(
     response,
     {
-      'crawled page answers 200': (r) => r.status === 200,
+      // The sitemap lists `/`, which redirects to the default city: a crawler
+      // follows that, so a redirect that stays on the site is an answer.
+      'crawled page answers 200, or redirects within the site': (r) =>
+        r.status === 200 || ([301, 302, 307, 308].includes(r.status) && sameSite(r.headers['Location'])),
       'crawled page carries no member marker': (r) => !MEMBER_MARKERS.some((marker) => (r.body || '').includes(marker)),
     },
     tags,

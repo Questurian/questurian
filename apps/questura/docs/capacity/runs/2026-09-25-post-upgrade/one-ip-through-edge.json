@@ -1,0 +1,3594 @@
+{
+  "scenario": "one-ip-through-edge",
+  "note": "the edge overwrites CF-Connecting-IP with the real peer address, as Cloudflare does, and no load identity is sent: the whole run is one caller",
+  "kind": "containment",
+  "envelope": {
+    "maxRequestsPerRun": 60000,
+    "maxRunMs": 300000,
+    "maxBackendRssMb": 3000,
+    "queueSustainMs": 10000,
+    "telemetryGapMs": 5000,
+    "recoveryDeadlineMs": 60000,
+    "provisionalThresholds": "page p95 < 500 ms, dynamic p95 < 1 s, page TTFB p95 < 400 ms (successful requests only)",
+    "note": "Local regression thresholds on one Mac, not product promises."
+  },
+  "settings": {
+    "RATE": "20",
+    "DURATION": "60s"
+  },
+  "floorRps": null,
+  "exit": 99,
+  "memoryStop": null,
+  "supervisor": {
+    "runKind": "containment",
+    "durationS": 60.5,
+    "stop": null,
+    "requests": 3087,
+    "successes": 2932,
+    "refusals": 155,
+    "failures": 155,
+    "successRps": 48.49,
+    "successFraction": 0.9498,
+    "refusalFraction": 0.0502,
+    "correctness": {},
+    "dropped": 0,
+    "instances": [
+      {
+        "id": "readiness-stack-backend",
+        "samples": 60,
+        "peakQueueDepth": 0,
+        "startedAt": "2026-09-25T20:34:29.782Z"
+      }
+    ],
+    "k6Exit": 99,
+    "stopLatencyMs": null,
+    "settings": {
+      "ABORT_WINDOW_MS": 60000,
+      "ABORT_FAILURE_RATE": 0.01,
+      "ABORT_MIN_SAMPLES": 200,
+      "ABORT_MAX_RUN_MS": 300000,
+      "ABORT_MAX_REQUESTS": 60000,
+      "ABORT_CORRECTNESS_MAX": 0,
+      "ABORT_DROPPED_MAX": 0,
+      "ABORT_QUEUE_MIN": 5,
+      "ABORT_QUEUE_SUSTAIN_MS": 10000,
+      "ABORT_TELEMETRY_GAP_MS": 5000,
+      "ABORT_GRACE_MS": 15000,
+      "TELEMETRY_INTERVAL_MS": 1000,
+      "SUCCESS_FLOOR_RPS": 0,
+      "RUN_KIND": "containment"
+    },
+    "instancesDeclared": [
+      "readiness-stack-backend"
+    ]
+  },
+  "latency": {
+    "pageSuccessful": {
+      "med": 3.731,
+      "p(95)": 12.041399999999987,
+      "p(99)": 18.955399999999994,
+      "max": 38.327,
+      "count": 1099,
+      "thresholds": {
+        "p(95)<500": false
+      }
+    },
+    "dynamicSuccessful": {
+      "med": 2.919,
+      "p(95)": 21.74799999999999,
+      "p(99)": 36.46263999999999,
+      "max": 106.436,
+      "count": 1833,
+      "thresholds": {
+        "p(95)<1000": false,
+        "p(99)<2500": false
+      }
+    },
+    "pageTtfb": {
+      "med": 3.601,
+      "p(95)": 10.1047,
+      "p(99)": 15.318699999999998,
+      "max": 36.701,
+      "count": 1099,
+      "thresholds": {
+        "p(95)<400": false
+      }
+    },
+    "pageCacheHit": null,
+    "readers": null,
+    "crawl": null,
+    "crawlRefusals": null
+  },
+  "fault": null,
+  "recoveryMs": null,
+  "probe": {
+    "samples": 70,
+    "failures": 0,
+    "firstMinute": {
+      "pageP95Ms": 14,
+      "meP95Ms": 7
+    }
+  },
+  "loadIdentity": false,
+  "edgeOverwrite": true,
+  "edgeRenders": null,
+  "peaks": {
+    "payloadWaiting": 0,
+    "sessionWaiting": 0,
+    "backendRssMb": 320,
+    "refreshPending": 0,
+    "gates": {
+      "assembly": {
+        "activePeak": 0,
+        "queuedPeak": 0,
+        "refusedTotal": 0
+      },
+      "query": {
+        "activePeak": 0,
+        "queuedPeak": 0,
+        "refusedTotal": 0
+      },
+      "ingress": {
+        "activePeak": 1,
+        "queuedPeak": 0,
+        "refusedTotal": 0
+      },
+      "private": {
+        "activePeak": 1,
+        "queuedPeak": 0,
+        "refusedTotal": 0
+      },
+      "credential": {
+        "activePeak": 0,
+        "queuedPeak": 0,
+        "refusedTotal": 0
+      },
+      "staff": {
+        "activePeak": 0,
+        "queuedPeak": 0,
+        "refusedTotal": 0
+      },
+      "auth": {
+        "activePeak": 0,
+        "queuedPeak": 0,
+        "refusedTotal": 0
+      }
+    }
+  },
+  "publication": null,
+  "samples": [
+    {
+      "t": 1021,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 15,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 306
+    },
+    {
+      "t": 2015,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 307
+    },
+    {
+      "t": 3012,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 9,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 307
+    },
+    {
+      "t": 4011,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 6,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 307
+    },
+    {
+      "t": 5017,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 10,
+      "meStatus": 200,
+      "meMs": 6,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 307
+    },
+    {
+      "t": 6014,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 6,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 309
+    },
+    {
+      "t": 7015,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 5,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 310
+    },
+    {
+      "t": 8018,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 311
+    },
+    {
+      "t": 9021,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 10,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 311
+    },
+    {
+      "t": 10019,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 6,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 311
+    },
+    {
+      "t": 11022,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 8,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 311
+    },
+    {
+      "t": 12023,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 311
+    },
+    {
+      "t": 13033,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 15,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 311
+    },
+    {
+      "t": 14032,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 11,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 311
+    },
+    {
+      "t": 15034,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 8,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 311
+    },
+    {
+      "t": 16037,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 11,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 312
+    },
+    {
+      "t": 17037,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 9,
+      "meStatus": 200,
+      "meMs": 6,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 312
+    },
+    {
+      "t": 18036,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 312
+    },
+    {
+      "t": 19034,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 5,
+      "meStatus": 200,
+      "meMs": 2,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 313
+    },
+    {
+      "t": 20038,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 8,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 313
+    },
+    {
+      "t": 21038,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 313
+    },
+    {
+      "t": 22039,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 6,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 313
+    },
+    {
+      "t": 23039,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 313
+    },
+    {
+      "t": 24039,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 314
+    },
+    {
+      "t": 25039,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 6,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 315
+    },
+    {
+      "t": 26040,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 6,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 315
+    },
+    {
+      "t": 27040,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 5,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 315
+    },
+    {
+      "t": 28044,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 315
+    },
+    {
+      "t": 29046,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 10,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 316
+    },
+    {
+      "t": 30055,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 8,
+      "meStatus": 200,
+      "meMs": 11,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 316
+    },
+    {
+      "t": 31051,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 12,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 316
+    },
+    {
+      "t": 32064,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 8,
+      "meStatus": 200,
+      "meMs": 9,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 316
+    },
+    {
+      "t": 33049,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 316
+    },
+    {
+      "t": 34051,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 6,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 316
+    },
+    {
+      "t": 35054,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 8,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 316
+    },
+    {
+      "t": 36056,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 319
+    },
+    {
+      "t": 37056,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 5,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 319
+    },
+    {
+      "t": 38059,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 319
+    },
+    {
+      "t": 39061,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 319
+    },
+    {
+      "t": 40065,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 10,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 319
+    },
+    {
+      "t": 41064,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 8,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 319
+    },
+    {
+      "t": 42067,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 8,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 319
+    },
+    {
+      "t": 43069,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 9,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 319
+    },
+    {
+      "t": 44069,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 6,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 319
+    },
+    {
+      "t": 45072,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 8,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 319
+    },
+    {
+      "t": 46073,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 2,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 47081,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 12,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 48078,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 8,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 49082,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 9,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 50084,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 11,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 51086,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 14,
+      "meStatus": 200,
+      "meMs": 6,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 52083,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 9,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 53083,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 6,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 54086,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 9,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 55093,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 10,
+      "meStatus": 200,
+      "meMs": 7,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 56088,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 8,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 57088,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 6,
+      "meStatus": 200,
+      "meMs": 2,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 58094,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 8,
+      "meStatus": 200,
+      "meMs": 7,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 59091,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 9,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 1,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 60090,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 7,
+      "meStatus": 200,
+      "meMs": 3,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 61096,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 11,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 62097,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 10,
+      "meStatus": 200,
+      "meMs": 4,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 63098,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 10,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 64102,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 12,
+      "meStatus": 200,
+      "meMs": 6,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 65103,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 11,
+      "meStatus": 200,
+      "meMs": 6,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 66104,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 10,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 67106,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 9,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 68109,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 10,
+      "meStatus": 200,
+      "meMs": 6,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 69110,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 12,
+      "meStatus": 200,
+      "meMs": 6,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    },
+    {
+      "t": 70111,
+      "probeOk": true,
+      "pageStatus": 200,
+      "pageMs": 11,
+      "meStatus": 200,
+      "meMs": 5,
+      "payloadWaiting": 0,
+      "sessionWaiting": 0,
+      "gates": {
+        "assembly": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "query": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "ingress": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "private": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "credential": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "staff": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        },
+        "auth": {
+          "active": 0,
+          "queued": 0,
+          "refused": 0
+        }
+      },
+      "refreshPending": 0,
+      "backendRssMb": 320
+    }
+  ],
+  "tail": [
+    "time=\"2026-09-25T16:35:29-04:00\" level=error msg=\"thresholds on metrics 'checks, http_req_failed' have been crossed\""
+  ]
+}
