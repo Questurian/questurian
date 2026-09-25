@@ -10,8 +10,8 @@
  * counts both, each file once.
  *
  * Sizes are gzip level 9 in kB of 1,000 bytes, like Next's column. Gzip of a
- * built file is deterministic, so the numbers are the same on any machine
- * that builds the same code.
+ * built file is deterministic, so any machine that builds the same code gets
+ * the same numbers (a GitHub runner and a Mac agreed within 0.1 kB).
  *
  * Pure apart from the `sizeOf` callback, so node:test covers it.
  */

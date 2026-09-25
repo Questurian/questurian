@@ -1,7 +1,7 @@
 {
   "_readme": "Speed budgets that fail CI (launch fix plan item 13). Each is 10% above a measured value, capped at LCP 2.5 s, CLS 0.1 and 170 kB of first-load JS per route. Where each number was measured and how to re-measure: docs/launch-day.md, 'Speed budgets'.",
   "pages": {
-    "_measured": "PROVISIONAL: the caps, until GitHub-runner measurements replace them",
+    "_measured": "GitHub Actions ubuntu-latest runners, safety-net runs 36164618152, 36166201469, 36166205070, 36167714118, 36167723739, 36169163561, 36169165317 (2026-09-25; INP from the last two, after the proxy was fixed). Each budget is the worst single sample x 1.1, rounded up to the metric's resolution: LCP 10 ms, CLS 0.01 (how it is reported everywhere), INP 8 ms (event timing's granularity), images 1 kB. The spec checks the median of three loads.",
     "profile": {
       "device": "Pixel 7",
       "latencyMs": 150,
@@ -17,34 +17,63 @@
     "routes": {
       "home": {
         "path": "/zz-launch",
-        "lcpMs": 2500,
-        "cls": 0.1,
-        "inpMs": 2000,
-        "imageKb": 400
+        "lcpMs": 1720,
+        "cls": 0.01,
+        "inpMs": 24,
+        "imageKb": 4,
+        "worst": {
+          "lcpMs": 1556,
+          "cls": 0.0009,
+          "inpMs": 16,
+          "imageKb": 3.0
+        }
       },
       "city": {
         "path": "/zz-launch/harbor",
-        "lcpMs": 2500,
-        "cls": 0.1,
-        "inpMs": 2000,
-        "imageKb": 400
+        "lcpMs": 1940,
+        "cls": 0.01,
+        "inpMs": 80,
+        "imageKb": 1,
+        "worst": {
+          "lcpMs": 1760,
+          "cls": 0.0,
+          "inpMs": 72,
+          "imageKb": 0.8
+        }
       },
       "article": {
         "path": "/zz-launch/hillside/neighbourhoods/launch-article-07",
-        "lcpMs": 2500,
-        "cls": 0.1,
-        "inpMs": 2000,
-        "imageKb": 400
+        "lcpMs": 1940,
+        "cls": 0.01,
+        "inpMs": 24,
+        "imageKb": 1,
+        "worst": {
+          "lcpMs": 1756,
+          "cls": 0.0026,
+          "inpMs": 16,
+          "imageKb": 0.4
+        }
       },
       "join": {
         "path": "/join",
-        "lcpMs": 3200,
-        "cls": 0.1,
-        "inpMs": 2000,
-        "imageKb": 400,
-        "overCap": "PROVISIONAL: the hero globe (123 kB webp at phone widths) is the LCP; 2.59 s on the Mac"
+        "lcpMs": 3130,
+        "cls": 0.01,
+        "inpMs": 104,
+        "imageKb": 137,
+        "worst": {
+          "lcpMs": 2840,
+          "cls": 0.0,
+          "inpMs": 88,
+          "imageKb": 123.9
+        },
+        "overCap": "LCP is the hero globe: on a phone the page asks for its 2400 px WebP (124 kB) because `sizes` paints it at 1000 CSS px, and it shares a 1.6 Mbps link with four fonts. 2.63-2.84 s on the runner, 2.6 s on the Mac. The owner's call: a smaller phone image, or keep the art."
       }
     }
+  },
+  "journey12": {
+    "_measured": "journey 12 (slow.spec.ts, Slow 3G + 4x CPU) on the same seven runs: 39.8-41.6 s; budget = 41.6 s x 1.1, rounded up to the second. Sandbox only; against the real site it stays 180 s.",
+    "worstMs": 41600,
+    "budgetMs": 46000
   },
   "statements": {
     "_measured": "readiness sandbox launch corpus, 2026-09-25, from the backend's Server-Timing; statement counts do not depend on the machine",
@@ -62,7 +91,7 @@
     }
   },
   "firstLoadJs": {
-    "_measured": "gzip -9 of the readiness client build's chunks (src/lib/release/firstLoadJs.mjs), 2026-09-25; deterministic, the same on any machine",
+    "_measured": "gzip -9 of the readiness client build's chunks (src/lib/release/firstLoadJs.mjs), 2026-09-25; a GitHub runner agreed within 0.1 kB on every route",
     "capKb": 170,
     "growth": 0.1,
     "baselineKb": {
