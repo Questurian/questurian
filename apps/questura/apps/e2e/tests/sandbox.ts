@@ -1,6 +1,10 @@
 import { execFileSync } from 'node:child_process'
 import { createHmac, randomBytes } from 'node:crypto'
 
+import type { Page } from '@playwright/test'
+
+import { HOME_PATH, expect, freshEmail, signUp } from './fixtures'
+
 /**
  * The readiness sandbox's fakes, as the journeys that write use them. Only
  * ever loopback: fake Stripe (:3191), fake Google and its mailbox (:3192), the
@@ -80,4 +84,57 @@ export function expireTokensOf(email: string): number {
      WHERE value = (SELECT id::text FROM visitor_auth_users WHERE lower(email) = lower('${email}')) RETURNING 1`,
   )
   return out ? out.split('\n').length : 0
+}
+
+/**
+ * Make the API's front door answer `status` itself for every request whose
+ * path and query contain `match` (`front-door-edge.ts`), or clear it with
+ * `null`. Stands for the API being down for one page.
+ */
+export async function edgeFault(fault: { status: number; match: string } | null): Promise<void> {
+  const response = await fetch(`${API}/__edge/fault`, { method: 'POST', body: JSON.stringify(fault) })
+  if (!response.ok) throw new Error(`edge fault answered ${response.status}`)
+}
+
+type Plan = 'monthly' | 'yearly'
+export type Purchase = { email: string; subscription: Json & { id: string; current_period_end: number } }
+
+/**
+ * A new reader signs up from the header, verifies through the fake mailbox,
+ * and buys `plan` on the purchase page. The payment is the fake's, told to the
+ * app with a signed webhook, as in journey 2. Ends on the success page's
+ * destination; real Stripe is never reached (the context refuses it).
+ */
+export async function buyMembership(page: Page, plan: Plan): Promise<Purchase> {
+  const context = page.context()
+  await context.route(/^https:\/\/([a-z-]+\.)?stripe\.com\//, (route) =>
+    route.fulfill({ status: 418, body: 'real Stripe is out of bounds in the sandbox' }),
+  )
+  await context.route(`${FAKE_STRIPE}/__fake/pay/**`, (route) =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Fake Checkout</title><h1>Fake Checkout</h1>' }),
+  )
+
+  const email = freshEmail(`buy-${plan}`)
+  const since = new Date().toISOString()
+  await page.goto(HOME_PATH)
+  await signUp(page, email)
+  const verification = await mailTo(email, /verif/i, since)
+  const link = verification.links.find((href) => href.includes('verify-email'))
+  if (!link) throw new Error(`No verify-email link in ${JSON.stringify(verification.links)}`)
+  await page.goto(link)
+
+  await page.goto(`/purchase/${plan}`)
+  const subscribe = page.getByRole('button', { name: /^Subscribe Now/ })
+  await expect(subscribe).toBeEnabled()
+  await subscribe.click()
+  await page.waitForURL(new RegExp(`^${FAKE_STRIPE}/__fake/pay/`))
+  const sessionId = new URL(page.url()).pathname.split('/').pop()!
+
+  const paid = await fakeStripe(`/__fake/checkout/${sessionId}/complete`, { email })
+  const delivered = await deliverWebhook('checkout.session.completed', paid.session)
+  if (delivered !== 200) throw new Error(`checkout.session.completed answered ${delivered}`)
+  const session = paid.session as { success_url: string }
+  await page.goto(session.success_url.replace('{CHECKOUT_SESSION_ID}', sessionId))
+  await expect(page).not.toHaveURL((url) => url.pathname.startsWith('/subscription/success'), { timeout: 15_000 })
+  return { email, subscription: paid.subscription as Purchase['subscription'] }
 }

@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { MEMBER_ARTICLE, NEW_PASSWORD, SANDBOX, expect, expectSignedIn, freshEmail, test } from './fixtures'
+import { MEMBER_ARTICLE, NEW_PASSWORD, SANDBOX, expect, expectNoHorizontalScroll, expectSignedIn, freshEmail, test } from './fixtures'
 import { FAKE_STRIPE, deliverWebhook, fakeStripe, mailTo } from './sandbox'
 
 /**
@@ -20,12 +20,14 @@ async function paywallToPlans(page: Page) {
   await page.goto(ARTICLE)
   await expect(page.locator('[data-paywalled]')).toBeVisible()
   await expect(page.getByText(MEMBER_ARTICLE.memberOnlyText)).toHaveCount(0)
+  await expectNoHorizontalScroll(page)
 
   await page.getByRole('link', { name: 'Unlock the full guide' }).click()
   await expect(page).toHaveURL((url) => url.pathname === '/join' && url.searchParams.get('returnTo') === ARTICLE)
   // The site always advertises the catalog prices (AGENTS.md, membership pricing).
   await expect(page.getByText('$12.99', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('$79.99', { exact: true }).first()).toBeVisible()
+  await expectNoHorizontalScroll(page)
 }
 
 test('journey 2: the paywall leads to the plans, at the catalog prices, and the article travels along', async ({ page }) => {
@@ -34,6 +36,7 @@ test('journey 2: the paywall leads to the plans, at the catalog prices, and the 
   await page.getByRole('link', { name: 'Continue with Monthly' }).click()
   await expect(page).toHaveURL((url) => url.pathname === '/purchase/monthly' && url.searchParams.get('returnTo') === ARTICLE)
   await expect(page.getByRole('heading', { name: 'Complete Your Purchase' }).first()).toBeVisible()
+  await expectNoHorizontalScroll(page)
 })
 
 test('journey 2: a new reader signs up, verifies, pays and lands back on the open article', async ({ page, context }) => {
@@ -90,5 +93,6 @@ test('journey 2: a new reader signs up, verifies, pays and lands back on the ope
   await expect(page).toHaveURL((url) => url.pathname === ARTICLE, { timeout: 15_000 })
   await expect(page.getByText(MEMBER_ARTICLE.memberOnlyText).first()).toBeVisible()
   await expect(page.locator('[data-paywalled]')).toHaveCount(0)
+  await expectNoHorizontalScroll(page)
   expect(realStripe).toBe(0)
 })

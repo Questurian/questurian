@@ -183,12 +183,27 @@ export { expect }
 
 // ---------------------------------------------------------------- helpers
 
+/** The header's Sign in button that is on screen (phone and desktop headers differ). */
+export function signInButton(page: Page) {
+  return page.getByRole('button', { name: 'Sign in' }).locator('visible=true').first()
+}
+
 export async function signIn(page: Page, account: { email: string; password: string }) {
-  await page.getByRole('button', { name: 'Sign in' }).first().click()
+  await signInButton(page).click()
   await page.locator('input[name=email]').fill(account.email)
   await page.getByRole('button', { name: /continue/i }).click()
   await page.locator('input[name=password]').fill(account.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).last().click()
+}
+
+/** Creates a password account from the header and waits for the signed-in header. */
+export async function signUp(page: Page, email: string, password = NEW_PASSWORD) {
+  await signInButton(page).click()
+  await page.locator('input[name=email]').fill(email)
+  await page.getByRole('button', { name: /continue/i }).click()
+  await page.locator('input[name=password]').fill(password)
+  await page.getByRole('button', { name: 'Create account' }).click()
+  await expectSignedIn(page)
 }
 
 export async function expectSignedIn(page: Page) {
@@ -213,7 +228,7 @@ export async function signOut(page: Page) {
  * page first so lazy images load, then expects at least one image and no
  * broken one.
  */
-export async function expectImagesDecode(page: Page) {
+export async function expectImagesDecode(page: Page, timeout = 10_000) {
   await page.evaluate(async () => {
     for (let y = 0; y < document.body.scrollHeight; y += Math.max(200, window.innerHeight / 2)) {
       window.scrollTo(0, y)
@@ -231,9 +246,32 @@ export async function expectImagesDecode(page: Page) {
             broken: photos.filter((image) => !image.complete || image.naturalWidth === 0).map((image) => image.currentSrc),
           }
         }),
-      { message: 'every image on the page decodes', timeout: 10_000 },
+      { message: 'every image on the page decodes', timeout },
     )
     .toEqual({ count: expect.any(Number), broken: [] })
   const count = await page.evaluate(() => [...document.images].filter((image) => image.currentSrc && !image.currentSrc.startsWith('data:')).length)
   expect(count, 'the page shows at least one image').toBeGreaterThan(0)
+}
+
+/**
+ * The page fits the screen: nothing sticks out sideways, so a phone reader
+ * never scrolls horizontally (launch fix plan item 8, journey 11). Cheap, so
+ * the journeys check it on every page and every screen size.
+ */
+export async function expectNoHorizontalScroll(page: Page) {
+  const { scrollWidth, clientWidth, widest } = await page.evaluate(() => {
+    const root = document.documentElement
+    // The element sticking out furthest, to name it in the failure.
+    let widest = ''
+    let right = root.clientWidth
+    for (const element of document.body.querySelectorAll('*')) {
+      const box = element.getBoundingClientRect()
+      if (box.width > 0 && box.right > right + 1) {
+        right = box.right
+        widest = `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}.${String(element.className).split(' ').slice(0, 3).join('.')} (right edge ${Math.round(box.right)}px)`
+      }
+    }
+    return { scrollWidth: root.scrollWidth, clientWidth: root.clientWidth, widest }
+  })
+  expect(scrollWidth, `no horizontal scroll on ${new URL(page.url()).pathname}${widest ? `; widest: ${widest}` : ''}`).toBeLessThanOrEqual(clientWidth)
 }

@@ -27,6 +27,12 @@
  * were 403 (for renders that can only be the lock; for everything else it
  * includes the app's own refusals). The front-door check reads it to prove
  * renders really reached the API with the key.
+ *
+ * `POST /__edge/fault` with `{ "status": 503, "match": "<text>" }` makes the
+ * edge answer that status itself, without forwarding, for every request whose
+ * path and query contain `match`; a body of `null` clears it. The browser
+ * journeys use it to show what a reader sees when the API is down for one
+ * article (launch fix plan item 8). One fault at a time, never on by default.
  */
 
 import { Agent, createServer, request as httpRequest } from 'node:http'
@@ -36,6 +42,24 @@ const RENDER_HEADER = 'x-questura-render-token'
 export const EDGE_STATS_PATH = '/__edge/stats'
 /** Marks a request from the front-door check itself: forwarded, never counted. */
 export const PROBE_HEADER = 'x-readiness-edge-probe'
+export const EDGE_FAULT_PATH = '/__edge/fault'
+
+export type EdgeFault = { status: number; match: string } | null
+
+/** Parses a fault request body. Only 5xx statuses and a non-empty match are accepted. */
+export function parseEdgeFault(body: string): EdgeFault | 'invalid' {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(body || 'null')
+  } catch {
+    return 'invalid'
+  }
+  if (parsed === null) return null
+  const { status, match } = parsed as { status?: unknown; match?: unknown }
+  if (typeof status !== 'number' || !Number.isInteger(status) || status < 500 || status > 599) return 'invalid'
+  if (typeof match !== 'string' || match.length === 0) return 'invalid'
+  return { status, match }
+}
 
 export type EdgeStats = {
   forwarded: number
@@ -53,11 +77,36 @@ function main(): void {
 
   const agent = new Agent({ keepAlive: true, maxSockets: 256 })
   const stats: EdgeStats = { forwarded: 0, renders: { withKey: 0, withoutKey: 0 }, answered403: { renders: 0, others: 0 } }
+  let fault: EdgeFault = null
 
   const server = createServer((req, res) => {
     if (req.method === 'GET' && req.url === EDGE_STATS_PATH) {
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
       res.end(JSON.stringify(stats))
+      return
+    }
+
+    if (req.method === 'POST' && req.url === EDGE_FAULT_PATH) {
+      let body = ''
+      req.on('data', (chunk) => (body += chunk))
+      req.on('end', () => {
+        const next = parseEdgeFault(body)
+        if (next === 'invalid') {
+          res.writeHead(400, { 'content-type': 'application/json' })
+          res.end(JSON.stringify({ error: 'expected null or { status: 5xx, match: "<text>" }' }))
+          return
+        }
+        fault = next
+        res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+        res.end(JSON.stringify({ fault }))
+      })
+      return
+    }
+
+    if (fault && req.url?.includes(fault.match)) {
+      res.writeHead(fault.status, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+      res.end(JSON.stringify({ error: 'Service unavailable (sandbox edge fault)' }))
+      req.resume()
       return
     }
 

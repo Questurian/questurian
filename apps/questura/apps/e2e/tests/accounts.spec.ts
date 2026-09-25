@@ -1,5 +1,3 @@
-import type { Page } from '@playwright/test'
-
 import {
   HOME_PATH,
   NEW_PASSWORD,
@@ -7,11 +5,14 @@ import {
   allowProblems,
   expect,
   expectSignedIn,
+  expectNoHorizontalScroll,
   expectSignedOut,
   freshEmail,
   gated,
   signIn,
+  signInButton,
   signOut,
+  signUp,
   test,
 } from './fixtures'
 import { FAKE_PROVIDER, expireTokensOf, mailTo } from './sandbox'
@@ -24,19 +25,12 @@ import { FAKE_PROVIDER, expireTokensOf, mailTo } from './sandbox'
 
 test.skip(!SANDBOX, 'creates readers: sandbox only')
 
-async function signUp(page: Page, email: string, password = NEW_PASSWORD) {
-  await page.getByRole('button', { name: 'Sign in' }).first().click()
-  await page.locator('input[name=email]').fill(email)
-  await page.getByRole('button', { name: /continue/i }).click()
-  await page.locator('input[name=password]').fill(password)
-  await page.getByRole('button', { name: 'Create account' }).click()
-  await expectSignedIn(page)
-}
-
 test('journey 3: sign up with a password, sign out, sign back in, sign out', async ({ page, context }) => {
   const email = freshEmail('signup')
   await page.goto(HOME_PATH)
+  await expectNoHorizontalScroll(page)
   await signUp(page, email)
+  await expectNoHorizontalScroll(page)
   expect((await context.cookies()).some((c) => c.name.includes('questura_visitor.session_token'))).toBe(true)
 
   await signOut(page)
@@ -47,6 +41,7 @@ test('journey 3: sign up with a password, sign out, sign back in, sign out', asy
   await expectSignedIn(page)
   await page.reload()
   await expectSignedIn(page)
+  await expectNoHorizontalScroll(page)
 
   await signOut(page)
   expect((await context.cookies()).filter((c) => c.name.includes('questura_visitor.session'))).toEqual([])
@@ -86,7 +81,7 @@ test('journey 4: sign in with Google (the fake provider) and land back where you
 
   await page.goto(HOME_PATH)
   const start = new URL(page.url()).pathname
-  await page.getByRole('button', { name: 'Sign in' }).first().click()
+  await signInButton(page).click()
   await page.getByRole('button', { name: /google/i }).first().click()
 
   await expect(page).toHaveURL((url) => url.pathname === start, { timeout: 15_000 })
@@ -110,7 +105,7 @@ test('journey 5: a password reset signs out every session, its link works once, 
   const phone = await other.newPage()
   await phone.goto(HOME_PATH)
   const since = new Date().toISOString()
-  await phone.getByRole('button', { name: 'Sign in' }).first().click()
+  await signInButton(phone).click()
   await phone.locator('input[name=email]').fill(email)
   await phone.getByRole('button', { name: /continue/i }).click()
   await phone.getByRole('button', { name: 'Forgot password?' }).click()
@@ -149,7 +144,7 @@ test('journey 5: a password reset signs out every session, its link works once, 
   // A fresh link that has expired: refused too.
   const again = new Date().toISOString()
   await phone.goto(HOME_PATH)
-  await phone.getByRole('button', { name: 'Sign in' }).first().click()
+  await signInButton(phone).click()
   await phone.locator('input[name=email]').fill(email)
   await phone.getByRole('button', { name: /continue/i }).click()
   await phone.getByRole('button', { name: 'Forgot password?' }).click()
