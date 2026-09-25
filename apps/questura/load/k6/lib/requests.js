@@ -1,4 +1,5 @@
 import http from 'k6/http'
+import crypto from 'k6/crypto'
 import { check, fail } from 'k6'
 import { Counter, Trend } from 'k6/metrics'
 
@@ -64,8 +65,31 @@ export function clientAddress() {
   return `198.18.${Math.floor(slot / 250) % 256}.${(slot % 250) + 1}`
 }
 
+/**
+ * The load identity (decision D3, server `src/shared/http/load-identity.ts`).
+ *
+ * Through Cloudflare, `cf-connecting-ip` is overwritten with this machine's
+ * real address and the whole run becomes one caller. During an approved test
+ * window the API holds `LOAD_TEST_KEY`; the same key here signs each
+ * synthetic address, and the API counts the request as that address. The key
+ * comes from the environment at run time, never from a file or argv, and is
+ * never written into a summary. Unset (the default): no header is sent.
+ */
+const LOAD_TEST_KEY = __ENV.LOAD_TEST_KEY || ''
+if (LOAD_TEST_KEY && LOAD_TEST_KEY.length < 32) {
+  throw new Error('LOAD_TEST_KEY is shorter than 32 characters; the API refuses such a key, so it cannot be the one it holds.')
+}
+export const LOAD_IDENTITY_HEADER = 'x-questura-load-identity'
+
+/** The address headers for one request: the synthetic address, and its signature when a load key is set. */
+export function addressHeaders(address = clientAddress()) {
+  const headers = { 'cf-connecting-ip': address }
+  if (LOAD_TEST_KEY) headers[LOAD_IDENTITY_HEADER] = `${address};${crypto.hmac('sha256', LOAD_TEST_KEY, address, 'hex')}`
+  return headers
+}
+
 function baseHeaders(extra = {}) {
-  return { 'cf-connecting-ip': clientAddress(), ...extra }
+  return { ...addressHeaders(), ...extra }
 }
 
 function record(response, tags) {

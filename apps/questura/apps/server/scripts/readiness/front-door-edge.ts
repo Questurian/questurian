@@ -18,9 +18,14 @@
  * a platform unknown (plan PL1); the sandbox assumes it does not, so the
  * client has to send the header itself or its pages fail to render.
  *
- * What it does not emulate: overwriting `CF-Connecting-IP`. The harnesses set
- * that header to stand for many readers, and the trusted-proxy rules are
- * proven elsewhere.
+ * What it does not emulate by default: overwriting `CF-Connecting-IP`. The
+ * harnesses set that header to stand for many readers, and the trusted-proxy
+ * rules are proven elsewhere. `POST /__edge/client-address` with
+ * `{ "overwrite": true }` turns it on: every forwarded request then carries
+ * the caller's real socket address, as Cloudflare does, which makes a whole
+ * load test one caller (launch fix plan item 9). That is the problem the load
+ * identity (`src/shared/http/load-identity.ts`) exists for, reproduced here
+ * so its fix can be shown. `{ "overwrite": false }` turns it off again.
  *
  * `GET /__edge/stats` is answered here and never forwarded: how many render
  * subrequests arrived with and without their own header, and how many answers
@@ -43,6 +48,23 @@ export const EDGE_STATS_PATH = '/__edge/stats'
 /** Marks a request from the front-door check itself: forwarded, never counted. */
 export const PROBE_HEADER = 'x-readiness-edge-probe'
 export const EDGE_FAULT_PATH = '/__edge/fault'
+export const EDGE_CLIENT_ADDRESS_PATH = '/__edge/client-address'
+const CLIENT_ADDRESS_HEADER = 'cf-connecting-ip'
+
+/** Parses a client-address request body: `{ "overwrite": boolean }`. */
+export function parseClientAddressMode(body: string): boolean | 'invalid' {
+  try {
+    const parsed = JSON.parse(body || 'null') as { overwrite?: unknown } | null
+    return parsed && typeof parsed.overwrite === 'boolean' ? parsed.overwrite : 'invalid'
+  } catch {
+    return 'invalid'
+  }
+}
+
+/** What Cloudflare would write: the peer's address, an IPv4-mapped IPv6 one unwrapped. */
+export function peerAddress(remote: string | undefined): string {
+  return (remote ?? '').replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/, '') || '0.0.0.0'
+}
 
 export type EdgeFault = { status: number; match: string } | null
 
@@ -65,6 +87,8 @@ export type EdgeStats = {
   forwarded: number
   renders: { withKey: number; withoutKey: number }
   answered403: { renders: number; others: number }
+  /** Requests whose `CF-Connecting-IP` was overwritten with the peer's address. */
+  clientAddressOverwritten: number
 }
 
 function main(): void {
@@ -76,8 +100,9 @@ function main(): void {
   }
 
   const agent = new Agent({ keepAlive: true, maxSockets: 256 })
-  const stats: EdgeStats = { forwarded: 0, renders: { withKey: 0, withoutKey: 0 }, answered403: { renders: 0, others: 0 } }
+  const stats: EdgeStats = { forwarded: 0, renders: { withKey: 0, withoutKey: 0 }, answered403: { renders: 0, others: 0 }, clientAddressOverwritten: 0 }
   let fault: EdgeFault = null
+  let overwriteClientAddress = false
 
   const server = createServer((req, res) => {
     if (req.method === 'GET' && req.url === EDGE_STATS_PATH) {
@@ -103,6 +128,23 @@ function main(): void {
       return
     }
 
+    if (req.method === 'POST' && req.url === EDGE_CLIENT_ADDRESS_PATH) {
+      let body = ''
+      req.on('data', (chunk) => (body += chunk))
+      req.on('end', () => {
+        const next = parseClientAddressMode(body)
+        if (next === 'invalid') {
+          res.writeHead(400, { 'content-type': 'application/json' })
+          res.end(JSON.stringify({ error: 'expected { "overwrite": true | false }' }))
+          return
+        }
+        overwriteClientAddress = next
+        res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+        res.end(JSON.stringify({ overwrite: overwriteClientAddress }))
+      })
+      return
+    }
+
     if (fault && req.url?.includes(fault.match)) {
       res.writeHead(fault.status, { 'content-type': 'application/json', 'cache-control': 'no-store' })
       res.end(JSON.stringify({ error: 'Service unavailable (sandbox edge fault)' }))
@@ -123,6 +165,10 @@ function main(): void {
     } else {
       // The Transform Rule sets the header, replacing whatever the caller sent.
       headers[ORIGIN_HEADER] = secret
+    }
+    if (overwriteClientAddress) {
+      headers[CLIENT_ADDRESS_HEADER] = peerAddress(req.socket.remoteAddress)
+      stats.clientAddressOverwritten += 1
     }
     stats.forwarded += 1
 

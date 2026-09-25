@@ -63,6 +63,8 @@ export type AppSettings = {
    * server-side call. Absent: the lock is off, as in development.
    */
   originAuthSecret?: string
+  /** Decision D3's load-test key and window end. Absent (the default): the load identity is off. */
+  loadTest?: { key: string; until: string }
   /** Where sandbox children append refused outbound attempts. */
   outboundLog?: string
   /** Run the refresh worker in-process at this interval. Default 0: the harness drains. */
@@ -121,6 +123,7 @@ function backendEnvDeclared(settings: AppSettings): NodeJS.ProcessEnv {
     CORS_ALLOWED_ORIGINS: origins?.clientOrigin ?? 'https://readiness-client.invalid',
     ...(settings.renderToken ? { QUESTURA_RENDER_TOKEN: settings.renderToken } : {}),
     ...(settings.originAuthSecret ? { ORIGIN_AUTH_SECRET: settings.originAuthSecret } : {}),
+    ...(settings.loadTest ? { LOAD_TEST_KEY: settings.loadTest.key, LOAD_TEST_UNTIL: settings.loadTest.until } : {}),
 
     TRUSTED_PROXY: 'cloudflare',
     PAYLOAD_COOKIE_DOMAIN: 'host-only',
