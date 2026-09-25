@@ -4,6 +4,7 @@ import {
   HOME_PATH,
   NEW_PASSWORD,
   SANDBOX,
+  allowProblems,
   expect,
   expectSignedIn,
   expectSignedOut,
@@ -135,7 +136,9 @@ test('journey 5: a password reset signs out every session, its link works once, 
   await page.reload()
   await expectSignedOut(page)
 
-  // The same link again: refused.
+  // The same link again: refused. Refusing a spent or expired token is the
+  // API's 400, which is what this journey expects to see.
+  allowProblems(phone, /^http 400: POST \S+\/api\/visitor-auth\/reset-password$/, 'a spent or expired reset link is refused')
   await phone.goto(link!)
   await phone.locator('input[name=newPassword]').fill('Journey-Again-2026!')
   await phone.locator('input[name=confirmPassword]').fill('Journey-Again-2026!')

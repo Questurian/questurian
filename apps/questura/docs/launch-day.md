@@ -46,11 +46,40 @@ Stripe/Google. From a fresh session it needs only `docker`:
   second build while a stack is up, and run `readiness:stack -- down` when
   finished.
 
+- **Images.** Every image address points at the fixture media server,
+  `http://media.readiness.localhost:3190` (`READINESS_MEDIA_ORIGIN`, honoured
+  only with `READINESS_SANDBOX=1` and only for loopback http; `env:check`
+  refuses both names on Railway). Before launch fix plan item 8 they pointed
+  at a host that does not exist, and no local test had ever seen an image
+  load.
+
 After step 2, the browser journeys run against the same stack:
 
 ```bash
-pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --project=firefox   # expect 20 passed
+pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --project=firefox   # expect 38 passed (19 tests × 2 engines)
 ```
+
+What they cover (launch fix plan item 8; part (b), journeys 6–12, adds to
+this):
+
+| Spec | Tests | What |
+|---|---|---|
+| `browse.spec.ts` | 1 | Journey 1: home → city → article → author → back; every image decodes |
+| `join.spec.ts` | 2 | Journey 2: paywall → plans at $12.99 / $79.99 with the article carried along; sign-up, verification mail, fake Checkout, signed webhook, back on the open article |
+| `accounts.spec.ts` | 3 | Journeys 3–5: password sign-up / in / out; Google through the fake provider; password reset (other sessions end, the link works once, an expired link is refused) |
+| `account.spec.ts` | 3 | `/account` hydrates without React #418, signed out, as a member and as a non-member |
+| `membership.spec.ts` | 3 | The paywall, member sign-in and sign-out, a non-member |
+| `session.spec.ts` | 2 | Session cookie flags; a wrong password |
+| `redirects.spec.ts` | 5 | `?returnTo=` never leaves the site and lands exactly on the safe fallback |
+
+Every page in every spec fails on a console error, an uncaught page error or
+a failed request (a network failure or any response of 400 or more), apart
+from an explicit allowlist in `tests/fixtures.ts`, each entry with its reason.
+In the sandbox the browsers cannot reach anything but this machine (a
+black-hole proxy for every other host). The read-only specs (`browse`, the
+first `join` test, `account`, `membership`, `session`, `redirects`) also run
+against the real site with `E2E_BASE_URL` and the dedicated test account; the
+rest skip themselves there.
 
 ## Before the first deploy
 
@@ -110,7 +139,8 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
      --client http://app.readiness.localhost:3100 \
      --api http://api.readiness.localhost:4100 \
      --bypass http://127.0.0.1:4110 --edge-ip 127.0.0.1:4110 \
-     --local --allow-http --home /zz-launch/harbor --no-image-check # expect 42/42 passed, then NOT RUN: rate-limit probe, image check, cookie check
+     --local --allow-http --home /zz-launch/harbor \
+     --media http://media.readiness.localhost:3190 # expect 43/43 passed, then NOT RUN: rate-limit probe, cookie check
    pnpm --dir apps/questura/apps/server readiness:restore    # expect 35/35: dump, restore, boot, search, member sign-in on the restored database
    READINESS_CUTOVER_TARGET_URI=postgres://postgres@127.0.0.1:5463/questura_readiness_cutover \
    READINESS_PG_BINDIR=<dir with pg_dump/psql 17> \
@@ -137,9 +167,12 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
    Without a free stack slot, `readiness:restore -- --db-only` on the same
    container proves the database half: 29/29, 7 skipped, "PARTIAL".
 
-   `--no-image-check` is for the sandbox only: its images point at a CDN host
-   that does not exist until launch fix plan item 8 serves them locally. It is
-   printed as NOT RUN. Against the real site the image check always runs.
+   The sandbox's images come from its fixture media server
+   (`media.readiness.localhost:3190`), so the image check runs there too.
+   `--media` names that server as the one loopback host besides the site and
+   the API that its pages may contain; it is refused without `--local`.
+   `--no-image-check` is left for a sandbox started without the media server
+   (printed as NOT RUN). Against the real site the image check always runs.
 
    `--local` is also sandbox-only, and refused for any host that is not this
    machine. It is what lets the sandbox leave out `--rate-limit-probe`, which
@@ -149,7 +182,7 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
    sandbox, against the locked backend on 4110. Without `--local`, a run that
    leaves out `--bypass`, `--edge-ip`/`--origin-edge` or `--rate-limit-probe`
    refuses to start (exit 2). The optional signed-in cookie check proved 10/10
-   in the sandbox with `member-b`'s session (52/52 in all).
+   in the sandbox with `member-b`'s session (53/53 in all).
 
    The client build itself refuses to start without real `https` addresses
    and a `pk_live_` key, and fails if its output mentions `localhost`. The
@@ -212,6 +245,17 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
    site, that one image loads as `image/*`, that a made-up path is a real 404,
    and that the site's JavaScript calls the `--api` origin.
    The last one uses up one caller's `/plans` budget for a minute.
+
+   The read-only browser specs, with the dedicated accounts (a member for
+   `E2E_MEMBER_*`, a non-member for `E2E_NONMEMBER_*`; never the purchase
+   account). They sign in and read; the specs that write skip themselves.
+   Written to run here, proven so far only in the sandbox:
+
+   ```bash
+   E2E_BASE_URL=https://www.questurian.com E2E_MEMBER_ARTICLE=<a member article path> E2E_MEMBER_TEXT=<text only members see> \
+   E2E_MEMBER_EMAIL=… E2E_MEMBER_PASSWORD=… E2E_NONMEMBER_EMAIL=… E2E_NONMEMBER_PASSWORD=… \
+     pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --project=firefox   # expect no failures; the sandbox-only tests show as skipped
+   ```
 
    Every API response carries a request id, and errors reach Sentry:
 

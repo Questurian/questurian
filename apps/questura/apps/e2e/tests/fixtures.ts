@@ -1,3 +1,5 @@
+import { randomInt } from 'node:crypto'
+
 import { expect, test as base, type BrowserContext, type Page } from '@playwright/test'
 
 /**
@@ -137,8 +139,10 @@ export async function gated(context: BrowserContext): Promise<BrowserContext> {
     // own caller, the way distinct visitors arrive through Cloudflare. Added
     // at the network layer, after the browser's CORS decision. Never on the
     // real site: there Cloudflare overwrites it anyway.
-    caller += 1
-    const address = `198.18.${100 + Math.floor(caller / 250)}.${(caller % 250) + 1}`
+    // Random, not counted: each spec file runs in a fresh worker, so a
+    // counter handed every file the same few addresses and the per-address
+    // limits (password reset: 5 a minute) failed the later ones.
+    const address = `198.18.${randomInt(0, 256)}.${randomInt(1, 255)}`
     // Not the addresses a browser reaches by following a redirect (Google's
     // callback, a mail link): Chromium restarts a redirect chain from the
     // previous address when one of its hops is intercepted at all.
@@ -162,7 +166,6 @@ export function unexpectedProblems(context: BrowserContext): string[] {
   return gate.problems.filter((problem) => !gate.allowed.some(({ pattern }) => pattern.test(problem)))
 }
 
-let caller = 0
 const REDIRECT_TARGETS = /^\/api\/visitor-auth\/(callback\/|verify-email|reset-password\/)/
 /** Every context gated during the current test, its own and any it made. */
 let watched: BrowserContext[] = []

@@ -29,7 +29,8 @@ test('#418: a signed-out reader opening /account hydrates cleanly and is sent to
 })
 
 for (const [label, account] of [
-  ['a member', ACCOUNTS.member],
+  // member-b in the sandbox, so member-a's sign-in budget (per account, per minute) is not spent twice over; launch day's one account otherwise.
+  ['a member', SANDBOX ? ACCOUNTS.memberB : ACCOUNTS.member],
   ['a signed-in non-member', ACCOUNTS.nonmember],
 ] as const) {
   test(`#418: ${label} opening /account hydrates cleanly and sees the account`, async ({ page }) => {

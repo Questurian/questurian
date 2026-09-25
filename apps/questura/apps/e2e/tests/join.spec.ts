@@ -33,7 +33,7 @@ test('journey 2: the paywall leads to the plans, at the catalog prices, and the 
 
   await page.getByRole('link', { name: 'Continue with Monthly' }).click()
   await expect(page).toHaveURL((url) => url.pathname === '/purchase/monthly' && url.searchParams.get('returnTo') === ARTICLE)
-  await expect(page.getByRole('heading', { name: 'Complete Your Purchase' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Complete Your Purchase' }).first()).toBeVisible()
 })
 
 test('journey 2: a new reader signs up, verifies, pays and lands back on the open article', async ({ page, context }) => {
