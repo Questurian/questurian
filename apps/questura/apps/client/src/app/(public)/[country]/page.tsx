@@ -5,6 +5,7 @@ import { ArrowUpRight } from 'lucide-react'
 import { fetchCountryCities } from '@/features/CountryHub/lib/fetchCountryCities'
 import { LocationContentList } from '@/features/search/components/LocationContentList'
 import { fetchLocationContent } from '@/features/search/lib/fetchSearch'
+import { isLocationSlug } from '@/lib/routing/locationSlug'
 import { countryParams } from '@/lib/routing/publicRouteParams'
 import { publicUrlIndex } from '@/lib/routing/publicStaticParams'
 
@@ -25,6 +26,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { country } = await params
+  if (!isLocationSlug(country)) return {}
   const data = await fetchCountryCities(country)
 
   if (!data) return {}
@@ -44,6 +46,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CountryHubPage({ params }: Props) {
   const { country } = await params
+  // `/evil.com`, `/foo.bar`: not a location slug, so not a page. Asking the
+  // backend anyway got a 400 back and rendered a 500 (lib/routing/locationSlug.ts).
+  if (!isLocationSlug(country)) notFound()
   // 'public-page' keeps this list on the same hour-long revalidate as
   // fetchCountryCities. The fetcher's default is search's five minutes, and
   // because Next takes the shortest revalidate in a render, that default was
