@@ -1,5 +1,51 @@
 {
   "_readme": "Speed budgets that fail CI (launch fix plan item 13). Each is 10% above a measured value, capped at LCP 2.5 s, CLS 0.1 and 170 kB of first-load JS per route. Where each number was measured and how to re-measure: docs/launch-day.md, 'Speed budgets'.",
+  "pages": {
+    "_measured": "PROVISIONAL: the caps, until GitHub-runner measurements replace them",
+    "profile": {
+      "device": "Pixel 7",
+      "latencyMs": 150,
+      "downloadKbps": 1600,
+      "uploadKbps": 750,
+      "cpuSlowdown": 4,
+      "name": "Slow 4G + 4x CPU: Lighthouse's mobile profile (150 ms, 1.6 Mbps down, 750 kbps up)"
+    },
+    "caps": {
+      "lcpMs": 2500,
+      "cls": 0.1
+    },
+    "routes": {
+      "home": {
+        "path": "/zz-launch",
+        "lcpMs": 2500,
+        "cls": 0.1,
+        "inpMs": 200,
+        "imageKb": 400
+      },
+      "city": {
+        "path": "/zz-launch/harbor",
+        "lcpMs": 2500,
+        "cls": 0.1,
+        "inpMs": 200,
+        "imageKb": 400
+      },
+      "article": {
+        "path": "/zz-launch/hillside/neighbourhoods/launch-article-07",
+        "lcpMs": 2500,
+        "cls": 0.1,
+        "inpMs": 200,
+        "imageKb": 400
+      },
+      "join": {
+        "path": "/join",
+        "lcpMs": 2850,
+        "cls": 0.1,
+        "inpMs": 200,
+        "imageKb": 400,
+        "overCap": "PROVISIONAL: the hero globe (123 kB webp at phone widths) is the LCP; 2.59 s on the Mac"
+      }
+    }
+  },
   "statements": {
     "_measured": "readiness sandbox launch corpus, 2026-09-25, from the backend's Server-Timing; statement counts do not depend on the machine",
     "anonymousMeNote": "anonymous /api/me must send zero statements: readiness:routes' identity check",
