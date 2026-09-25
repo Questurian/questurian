@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   stripeCustomerList: vi.fn(),
   stripeSubscriptionList: vi.fn(),
   stripeCheckoutCreate: vi.fn(),
+  stripeCheckoutRetrieve: vi.fn(),
   stripePriceRetrieve: vi.fn(),
 }))
 
@@ -32,6 +33,7 @@ vi.mock('@/payments/lib/stripe', () => ({
     checkout: {
       sessions: {
         create: mocks.stripeCheckoutCreate,
+        retrieve: mocks.stripeCheckoutRetrieve,
       },
     },
     prices: {
@@ -101,6 +103,7 @@ describe('create checkout session route auth guard', () => {
       id: 'cs_123',
       url: 'https://checkout.stripe.test/session',
     })
+    mocks.stripeCheckoutRetrieve.mockImplementation(async (id: string) => ({ id, status: 'open' }))
   })
 
   afterEach(() => {
@@ -461,5 +464,98 @@ describe('create checkout session price validation', () => {
       expect.objectContaining({ line_items: [{ price: 'price_yearly_123', quantity: 1 }] }),
       expect.anything(),
     )
+  })
+})
+
+// Launch fix plan item 11 (found in item 2). The checkout idempotency key
+// replays one session per plan for five minutes, and Stripe replays the
+// *original response*, which still says `open`. A visitor who paid, was
+// refunded or cancelled, and pressed Subscribe again inside that window was
+// handed the page they had already paid on.
+describe('create checkout session never hands back a used session', () => {
+  const visitor = {
+    result: { authenticated: true },
+    principal: {
+      kind: 'visitor',
+      id: 'visitor_123',
+      email: 'visitor@example.com',
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      profileId: 10,
+      emailVerified: true,
+    },
+    error: null,
+    status: 200,
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.stripePriceRetrieve.mockImplementation(catalogPriceRetrieve())
+    mocks.requireVisitorPrincipal.mockResolvedValue(visitor)
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({ id: 10, subscriptionStatus: 'cancelled', stripeCustomerId: 'cus_123' })
+    mocks.stripeSubscriptionList.mockResolvedValue({ data: [] })
+    mocks.updateVisitorProfileByAuthUserId.mockResolvedValue({ id: 10 })
+    mocks.stripeCheckoutCreate.mockReset()
+    mocks.stripeCheckoutRetrieve.mockReset()
+    mocks.stripeCheckoutRetrieve.mockImplementation(async (id: string) => ({ id, status: 'open' }))
+  })
+
+  it('opens a new session when the replayed one was already completed', async () => {
+    mocks.stripeCheckoutCreate
+      .mockResolvedValueOnce({ id: 'cs_paid', status: 'open', url: 'https://checkout.stripe.test/paid' })
+      .mockResolvedValueOnce({ id: 'cs_new', status: 'open', url: 'https://checkout.stripe.test/new' })
+    mocks.stripeCheckoutRetrieve.mockImplementation(async (id: string) => ({
+      id,
+      status: id === 'cs_paid' ? 'complete' : 'open',
+    }))
+
+    const response = await POST(createRequest())
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ sessionId: 'cs_new', url: 'https://checkout.stripe.test/new' })
+    const [, first] = mocks.stripeCheckoutCreate.mock.calls[0]!
+    const [, second] = mocks.stripeCheckoutCreate.mock.calls[1]!
+    expect(second.idempotencyKey).not.toBe(first.idempotencyKey)
+  })
+
+  it('opens a new session when the replayed one has expired', async () => {
+    mocks.stripeCheckoutCreate
+      .mockResolvedValueOnce({ id: 'cs_old', status: 'open', url: 'https://checkout.stripe.test/old' })
+      .mockResolvedValueOnce({ id: 'cs_new', status: 'open', url: 'https://checkout.stripe.test/new' })
+    mocks.stripeCheckoutRetrieve.mockImplementation(async (id: string) => ({
+      id,
+      status: id === 'cs_old' ? 'expired' : 'open',
+    }))
+
+    const response = await POST(createRequest())
+
+    await expect(response.json()).resolves.toMatchObject({ sessionId: 'cs_new' })
+  })
+
+  // The double click the key exists for still collapses to one page.
+  it('hands back a replayed session that is still open', async () => {
+    mocks.stripeCheckoutCreate.mockResolvedValue({ id: 'cs_open', status: 'open', url: 'https://checkout.stripe.test/open' })
+
+    const response = await POST(createRequest())
+
+    await expect(response.json()).resolves.toEqual({ sessionId: 'cs_open', url: 'https://checkout.stripe.test/open' })
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledTimes(1)
+  })
+
+  // Two used sessions in one window (buy, refund, buy, refund, buy): each
+  // retry key names the session it steps past, so the chain moves on.
+  it('steps past more than one used session', async () => {
+    mocks.stripeCheckoutCreate
+      .mockResolvedValueOnce({ id: 'cs_1', status: 'open', url: 'u1' })
+      .mockResolvedValueOnce({ id: 'cs_2', status: 'open', url: 'u2' })
+      .mockResolvedValueOnce({ id: 'cs_3', status: 'open', url: 'u3' })
+    mocks.stripeCheckoutRetrieve.mockImplementation(async (id: string) => ({
+      id,
+      status: id === 'cs_3' ? 'open' : 'complete',
+    }))
+
+    const response = await POST(createRequest())
+
+    await expect(response.json()).resolves.toEqual({ sessionId: 'cs_3', url: 'u3' })
   })
 })
