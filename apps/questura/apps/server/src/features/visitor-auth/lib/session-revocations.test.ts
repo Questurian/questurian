@@ -79,6 +79,14 @@ describe('session revocations', () => {
     await registry.isRecentlyRevoked('reader')
     expect(since).toHaveBeenCalledTimes(2)
     expect(log).toHaveBeenCalledTimes(1)
+
+    // While failing, a request never waits on the retry.
+    time.advance(1_000)
+    let release: () => void = () => {}
+    since.mockImplementationOnce(() => new Promise((_, reject) => (release = () => reject(new Error('still down')))))
+    expect(await registry.isRecentlyRevoked('reader')).toBe(true)
+    expect(since).toHaveBeenCalledTimes(3)
+    release()
   })
 
   it('a revocation that could not be shared still holds on the instance that made it', async () => {

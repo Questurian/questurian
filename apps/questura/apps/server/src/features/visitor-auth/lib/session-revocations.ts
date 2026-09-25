@@ -26,10 +26,11 @@ import { visitorAuthRedis } from './redis-secondary-storage'
  * Being on the list only ever costs that reader a store lookup; it never signs
  * anybody out on its own.
  *
- * If Redis cannot be read, the last snapshot stays in use and the next attempt
- * waits a second: a Redis outage must not add a timeout to every identity
- * check. A revocation made during that outage is still enforced by the store
- * lookup at the five-minute mark, as before this existed.
+ * If Redis cannot be read, the last snapshot stays in use, the next attempt
+ * waits a second and runs behind the request rather than in front of it: a
+ * Redis outage must not add a timeout to identity checks. A revocation made
+ * during that outage is still enforced by the store lookup at the five-minute
+ * mark, as before this existed.
  */
 
 /** How long Better Auth trusts its signed session cookie, in seconds. */
@@ -160,7 +161,10 @@ export function createRevocationRegistry(options: {
         inflight ??= refresh().finally(() => {
           inflight = null
         })
-        await inflight
+        // While the shared list is unreachable, answer from the last one and
+        // let the retry run behind the request: an outage must not add a
+        // command timeout to an identity check once a second.
+        if (!failing) await inflight
       }
       const at = snapshot.get(userId)
       return at !== undefined && at >= now() - REVOCATION_WINDOW_MS
