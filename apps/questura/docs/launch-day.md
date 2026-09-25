@@ -78,7 +78,7 @@ Stripe/Google. From a fresh session it needs only `docker`:
 After step 2, the browser journeys run against the same stack:
 
 ```bash
-pnpm --dir apps/questura/apps/e2e exec playwright test --project='chromium*' --project='firefox*'   # expect 79 passed, 1 skipped (32 tests × 2 engines, journey 12 is Chromium only, + journeys 1–3 on 2 phones × 2 engines)
+pnpm --dir apps/questura/apps/e2e exec playwright test --project='chromium*' --project='firefox*'   # expect 81 passed, 1 skipped (33 tests × 2 engines, journey 12 is Chromium only, + journeys 1–3 on 2 phones × 2 engines)
 ```
 
 What they cover (launch fix plan items 8 and 14):
@@ -98,7 +98,7 @@ What they cover (launch fix plan items 8 and 14):
 | `membership.spec.ts` | 3 | The paywall, member sign-in and sign-out, a non-member |
 | `session.spec.ts` | 2 | Session cookie flags; a wrong password |
 | `redirects.spec.ts` | 5 | `?returnTo=` never leaves the site and lands exactly on the safe fallback |
-| `privacy.spec.ts` | 1 | `/join` links to a real `/privacy` page that says how to have an account deleted (email, within 30 days) |
+| `privacy.spec.ts` | 2 | `/join` links to a real `/privacy` page that says how to have an account deleted (email, within 30 days), and to real `/terms` and `/faq` pages (no 404, not even from the prefetch) |
 
 Every page in every spec fails on a console error, an uncaught page error or
 a failed request (a network failure or any response of 400 or more), apart
@@ -144,7 +144,7 @@ Questura safety net → Run workflow), and on a pull request labelled
 
 | Check | What, and the count it expects |
 |---|---|
-| Questura readiness stack and browsers | `readiness:stack -- up --build` on **Postgres 17** (Neon's major; the laptop sandbox stays on 16), then step 2 in order with the counts above: routes 119, payments 43, purchase 54, auth 29, oauth 71, faults 26, contracts all ok, front-door 96, `launch:verify` 43, restore 36 (17 → 17), cutover 66; then Playwright in Chromium and Firefox (75 passed, 1 skipped); then the production client build through OpenNext with the guard on and `scan:bundle` |
+| Questura readiness stack and browsers | `readiness:stack -- up --build` on **Postgres 17** (Neon's major; the laptop sandbox stays on 16), then step 2 in order with the counts above: routes 119, payments 43, purchase 54, auth 29, oauth 71, faults 26, contracts all ok, front-door 96, `launch:verify` 43, restore 36 (17 → 17), cutover 66; then Playwright in Chromium and Firefox (81 passed, 1 skipped); then the production client build through OpenNext with the guard on and `scan:bundle` |
 | Questura k6 negative controls | every load-test proof gate, preflight refusal and supervisor stop rule fails when its fault is injected into a loopback fake target |
 
 Every check step in the stack job runs even when an earlier one fails, so one
