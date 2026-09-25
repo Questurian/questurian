@@ -96,7 +96,9 @@ const UNPAID_CURRENT_PERIOD = new Set<Stripe.Subscription.Status>([
 export type BillingInterval = 'month' | 'year'
 
 export type DerivedSubscriptionState = {
-  subscriptionStatus: 'none' | 'active' | 'cancelled' | 'past_due' | 'paused'
+  subscriptionStatus: 'none' | 'active' | 'cancelled' | 'past_due'
+  /** Stripe paused it (D5): no access, still live for duplicate prevention. */
+  subscriptionPaused: boolean
   cancelAtPeriodEnd: boolean
   paidThroughAt: string | null
   dunningGraceUntil: string | null
@@ -312,9 +314,12 @@ export function deriveSubscriptionState(
   const billingInterval =
     getSubscriptionBillingInterval(subscription) ?? asBillingInterval(context.previousBillingInterval)
 
+  const subscriptionPaused = subscription.status === 'paused'
+
   if (revocation) {
     return {
       subscriptionStatus,
+      subscriptionPaused,
       cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
       paidThroughAt: null,
       dunningGraceUntil: null,
@@ -324,6 +329,7 @@ export function deriveSubscriptionState(
 
   return {
     subscriptionStatus,
+    subscriptionPaused,
     cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
     paidThroughAt: resolvePaidThroughAt(subscription, context),
     // Paused grants nothing (D5), so it opens no grace either.

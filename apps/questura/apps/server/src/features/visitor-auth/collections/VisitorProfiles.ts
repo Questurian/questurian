@@ -118,8 +118,6 @@ export const VisitorProfiles: CollectionConfig = {
         { label: 'Active', value: 'active' },
         { label: 'Cancelled', value: 'cancelled' },
         { label: 'Past Due', value: 'past_due' },
-        // D5 (launch fix plan): no access, and still blocks a second checkout.
-        { label: 'Paused', value: 'paused' },
       ],
       access: membershipFieldAccess,
       admin: {
@@ -162,6 +160,20 @@ export const VisitorProfiles: CollectionConfig = {
       admin: {
         readOnly: true,
         description: 'How often the subscription bills, from its Stripe price. Shown on the account page.',
+      },
+    },
+    {
+      // Its own flag rather than a fifth status: adding an enum value is a
+      // type rewrite the deploy guard (check-pending-migrations.mjs) refuses
+      // without the manual procedure, for a state Questura never offers.
+      name: 'subscriptionPaused',
+      type: 'checkbox',
+      defaultValue: false,
+      access: membershipFieldAccess,
+      admin: {
+        readOnly: true,
+        description:
+          'Stripe has paused the subscription. No access (launch fix plan D5), and it still blocks a second checkout. subscriptionStatus reads Past Due meanwhile.',
       },
     },
     {

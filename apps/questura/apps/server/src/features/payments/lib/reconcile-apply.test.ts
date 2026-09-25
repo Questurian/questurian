@@ -25,12 +25,14 @@ const PAID_STATE = {
   paidThroughAt: '2026-03-01T00:00:00.000Z',
   dunningGraceUntil: null,
   billingInterval: null,
+  subscriptionPaused: false,
 }
 
 const REVOKED_STATE = {
   subscriptionStatus: 'active' as const,
   cancelAtPeriodEnd: false,
   billingInterval: null,
+  subscriptionPaused: false,
   paidThroughAt: null,
   dunningGraceUntil: null,
 }

@@ -1045,6 +1045,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "subscription_paused": {
+          "name": "subscription_paused",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "cancel_at_period_end": {
           "name": "cancel_at_period_end",
           "type": "boolean",
@@ -18067,8 +18074,7 @@
         "none",
         "active",
         "cancelled",
-        "past_due",
-        "paused"
+        "past_due"
       ]
     },
     "public.enum_visitor_profiles_billing_interval": {
@@ -19235,6 +19241,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "18e8852b-b154-4573-91dd-bd9699d75b4d",
+  "id": "05c206fb-3297-4d80-82e4-00bf768ce8ed",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

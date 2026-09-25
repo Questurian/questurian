@@ -274,7 +274,8 @@ describe('create checkout session route auth guard', () => {
     })
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
       id: 10,
-      subscriptionStatus: 'paused',
+      subscriptionStatus: 'past_due',
+      subscriptionPaused: true,
       stripeCustomerId: 'cus_123',
     })
     mocks.stripeSubscriptionList.mockResolvedValue({

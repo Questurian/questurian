@@ -55,6 +55,7 @@ export type ProfileSnapshot = {
   paidThroughAt?: string | null
   dunningGraceUntil?: string | null
   billingInterval?: string | null
+  subscriptionPaused?: boolean | null
 }
 
 /** What a fresh Stripe read says a profile should mirror. */
@@ -137,6 +138,9 @@ export function diffProfileAgainst(
     }
     if (profile.subscriptionStatus !== state.subscriptionStatus) {
       changes.subscriptionStatus = state.subscriptionStatus
+    }
+    if (Boolean(profile.subscriptionPaused) !== state.subscriptionPaused) {
+      changes.subscriptionPaused = state.subscriptionPaused
     }
     if (Boolean(profile.cancelAtPeriodEnd) !== state.cancelAtPeriodEnd) {
       changes.cancelAtPeriodEnd = state.cancelAtPeriodEnd

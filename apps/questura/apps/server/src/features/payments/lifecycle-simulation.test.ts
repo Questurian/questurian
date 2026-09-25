@@ -1011,7 +1011,8 @@ describe('unusual subscription shapes', () => {
 
     await deliver('customer.subscription.updated', sub)
 
-    expect(profile().subscriptionStatus).toBe('paused')
+    expect(profile().subscriptionPaused).toBe(true)
+    expect(deriveVisitorMembership(profile() as never).status).toBe('paused')
     expect(profile().dunningGraceUntil).toBeNull()
     expect(entitled()).toBe(false)
   })

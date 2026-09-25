@@ -95,6 +95,12 @@ describe('deriveVisitorMembership', () => {
     expect(deriveVisitorMembership({ subscriptionStatus: 'active', billingInterval: 'week' }).interval).toBeNull()
   })
 
+  // D5: stored as past_due plus a flag, told to the client as paused.
+  it('reports a paused subscription as paused', () => {
+    expect(deriveVisitorMembership({ subscriptionStatus: 'past_due', subscriptionPaused: true }).status).toBe('paused')
+    expect(deriveVisitorMembership({ subscriptionStatus: 'past_due', subscriptionPaused: false }).status).toBe('past_due')
+  })
+
   it('defaults a missing status to none and does not grant entitlement', () => {
     const membership = deriveVisitorMembership({})
 
