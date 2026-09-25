@@ -12,7 +12,7 @@ import { Authors } from './features/authors/collections/Authors'
 import { ServiceAccounts } from './features/auth/collections/ServiceAccounts'
 import { EmailLogs } from './features/emails/collections/EmailLogs'
 import { MediaAsset } from './features/media/collections/MediaAsset'
-import { MEDIA_ASSETS_PREFIX } from './features/media/lib/bunny-public-url'
+import { MEDIA_ASSETS_PREFIX, sandboxMediaOrigin, sandboxMediaUrl } from './features/media/lib/bunny-public-url'
 import { MediaSet } from './features/media/collections/MediaSet'
 import { Articles } from './features/articles/articles/collections/Articles'
 import { Locations } from './features/location/collections'
@@ -134,6 +134,11 @@ export default buildConfig({
            * `mediaAssetAccess.read` already opens with `if (!req.user) return true`.
            */
           disablePayloadAccessControl: true,
+          // Readiness sandbox only: its fixture media server stands in for
+          // the pull zone (launch fix plan item 8). Nothing anywhere else.
+          ...(sandboxMediaOrigin()
+            ? { urlTransform: { transformUrl: ({ baseUrl }: { baseUrl: string }) => sandboxMediaUrl(baseUrl) } }
+            : {}),
         },
       },
       storage: {

@@ -23,6 +23,8 @@ export interface CreateCheckoutSessionVariables {
   referralId?: string | null;
   /** Which Stripe price to buy; the server defaults to monthly. */
   plan?: 'monthly' | 'yearly';
+  /** Where the success page sends the buyer once membership is live. The server validates it. */
+  returnTo?: string | null;
 }
 
 export interface UserMutationContext {

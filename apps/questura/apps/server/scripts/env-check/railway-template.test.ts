@@ -172,6 +172,7 @@ describe('platform checks the boot check cannot make', () => {
     ['REDIS_URL', 'redis://[::1]:6379', 'loopback'],
     ['READINESS_SANDBOX', '1', 'readiness sandbox'],
     ['READINESS_STRIPE_STUB_URL', 'http://127.0.0.1:12111', 'readiness sandbox'],
+    ['READINESS_MEDIA_ORIGIN', 'http://media.readiness.localhost:3190', 'readiness sandbox'],
     ['REFRESH_DISCONNECTED', '1', 'readiness sandbox'],
     ['STRIPE_PRICE_ID', 'price_other', 'both set and differ'],
     ['TRUSTED_PROXY', '<decide>', 'placeholder'],

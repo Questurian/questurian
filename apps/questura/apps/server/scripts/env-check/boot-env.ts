@@ -61,7 +61,7 @@ export async function runBootCheck(env: Env): Promise<BootCheckResult> {
 export const PLACEHOLDER = /^<[^>]*>$/
 
 /** Set in the readiness sandbox or in development, never on a real platform. */
-export const FORBIDDEN_IN_PRODUCTION = ['READINESS_SANDBOX', 'READINESS_STRIPE_STUB_URL', 'REFRESH_DISCONNECTED'] as const
+export const FORBIDDEN_IN_PRODUCTION = ['READINESS_SANDBOX', 'READINESS_STRIPE_STUB_URL', 'READINESS_MEDIA_ORIGIN', 'REFRESH_DISCONNECTED'] as const
 
 const SECRET_NAMES = [
   'PAYLOAD_SECRET',

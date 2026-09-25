@@ -39,8 +39,11 @@
  *                              the first article in the sitemap)
  *   --author <path>            author page for the host checks (default: the
  *                              first author link on the article)
- *   --no-image-check           skip loading an image (readiness sandbox only,
- *                              until it serves real images; printed as NOT RUN)
+ *   --media <origin>           with --local only: the sandbox's fixture media
+ *                              server, the one other loopback host its pages
+ *                              may name (http://media.readiness.localhost:3190)
+ *   --no-image-check           skip loading an image (a sandbox without its
+ *                              media server; printed as NOT RUN)
  *   --allow-http               for the readiness sandbox only
  *   --json                     print results as JSON
  *

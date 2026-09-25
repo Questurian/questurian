@@ -49,7 +49,9 @@ export default function PurchasePage({
   }
 
   const handleSubscribe = () => {
-    checkoutMutation.mutate({ plan });
+    // Carried from the paywall through /join (PlanLink); the server validates it.
+    const returnTo = new URLSearchParams(window.location.search).get('returnTo');
+    checkoutMutation.mutate({ plan, returnTo });
   };
 
   const handleAuthSuccess = async () => {

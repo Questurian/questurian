@@ -41,4 +41,35 @@ const nextConfig = {
   },
 }
 
-export default withPayload(nextConfig, { devBundleServerPackages: false })
+/**
+ * Payload's client hints, on the admin only (launch fix plan item 8).
+ *
+ * `withPayload` sends `Accept-CH`, `Vary` and `Critical-CH:
+ * Sec-CH-Prefers-Color-Scheme` on every path, for the admin's light or dark
+ * theme. `Critical-CH` makes Chrome answer a top-level navigation that lacked
+ * the hint by sending the same request again, with it. The first copy has
+ * already been served by then. On `/api/visitor-auth/callback/google` that
+ * spends the OAuth state, so the retry fails with `state_mismatch` and the
+ * reader lands on this API's root instead of being signed in: every reader
+ * whose Chrome had never opened the API host before, which is every reader.
+ * Found by the Google browser journey; Firefox does not retry.
+ */
+export function scopeClientHintsToAdmin(config) {
+  const payloadHeaders = config.headers
+  const isHint = ({ key, value }) =>
+    /^(accept-ch|critical-ch)$/i.test(key) || (/^vary$/i.test(key) && /^sec-ch-prefers-color-scheme$/i.test(value.trim()))
+  return {
+    ...config,
+    async headers() {
+      const rules = payloadHeaders ? await payloadHeaders() : []
+      return rules.flatMap((rule) => {
+        const hints = rule.headers.filter(isHint)
+        if (hints.length === 0) return [rule]
+        const rest = rule.headers.filter((header) => !isHint(header))
+        return [...(rest.length ? [{ ...rule, headers: rest }] : []), { ...rule, source: '/admin/:path*', headers: hints }]
+      })
+    },
+  }
+}
+
+export default scopeClientHintsToAdmin(withPayload(nextConfig, { devBundleServerPackages: false }))

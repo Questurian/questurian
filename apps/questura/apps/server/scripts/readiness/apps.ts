@@ -76,6 +76,13 @@ export type AppSettings = {
    */
   fakeProviderUrl?: string
   /**
+   * The fixture media server (`media-server.ts`) as browsers reach it. Present:
+   * every image address points there instead of at the pull zone
+   * (`READINESS_MEDIA_ORIGIN`, launch fix plan item 8). Absent: images keep
+   * the `.invalid` host, fine for runs with no browser.
+   */
+  mediaOrigin?: string
+  /**
    * Secrets a new host would have instead of the sandbox's fixed ones
    * (`readiness:cutover`, launch fix plan item 5). Absent: the fixed values
    * every other harness shares.
@@ -128,10 +135,10 @@ function backendEnvDeclared(settings: AppSettings): NodeJS.ProcessEnv {
     REFRESH_WORKER_INTERVAL_MS: String(settings.workerIntervalMs ?? 0),
 
     // Production refuses to boot without an image host. The sandbox has no
-    // CDN, so this resolves nowhere, as the empty value did before
-    // (`https:///media/…`). Pointing it at the fixture media server is
-    // launch fix plan item 8.
+    // CDN, so this resolves nowhere; with `mediaOrigin` set, image addresses
+    // move to the fixture media server instead (launch fix plan item 8).
     BUNNY_STORAGE_HOSTNAME: 'readiness-media.invalid',
+    ...(settings.mediaOrigin ? { READINESS_MEDIA_ORIGIN: settings.mediaOrigin } : {}),
 
     STRIPE_SECRET_KEY: 'sk_readiness_placeholder_not_a_key',
     STRIPE_WEBHOOK_SECRET: settings.rotated?.stripeWebhookSecret ?? SANDBOX_WEBHOOK_SECRET,

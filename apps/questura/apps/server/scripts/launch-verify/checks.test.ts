@@ -239,6 +239,18 @@ describe('launch-verify checks', () => {
     expect(loopbackAddresses(html, ['app.readiness.localhost:3100', 'api.readiness.localhost:4100'])).toEqual(['http://localhost:4000'])
   })
 
+  it('a sandbox run may allow its media server as one more loopback host, and nothing else', async () => {
+    const extra = '<img alt="" src="http://media.readiness.localhost:3190/media/a.jpg"/>'
+    expect((await failures({ homeHtmlExtra: extra })).some((name) => /localhost or 127/.test(name))).toBe(true)
+    const results = await runChecks({ ...TARGET, mediaHost: 'media.readiness.localhost:3190' }, fakeServer({ homeHtmlExtra: extra }))
+    expect(results.filter((r) => !r.ok).map((r) => r.name)).toEqual([])
+    const leak = await runChecks(
+      { ...TARGET, mediaHost: 'media.readiness.localhost:3190' },
+      fakeServer({ homeHtmlExtra: `${extra}<a href="http://localhost:4000/api/me">x</a>` }),
+    )
+    expect(leak.filter((r) => !r.ok).map((r) => r.name)).toEqual(['home page has no localhost or 127.0.0.1 address'])
+  })
+
   it('reads canonical and og:url however the attributes are ordered', () => {
     expect(pageAddresses('<link href="https://a.test/x" rel="canonical"><meta content="https://a.test/y" property="og:url">')).toEqual({
       canonical: 'https://a.test/x',
