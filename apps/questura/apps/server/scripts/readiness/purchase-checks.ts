@@ -27,8 +27,18 @@
  *   it comes back → lost, it stays ended and the billing stops. Every one of
  *   them finds the charge's invoice through an invoice payment.
  *
+ * A failed card and unusual Stripe states (launch fix plan item 11):
+ *   Subscribe after a refund or a cancellation opens a new Checkout page, not
+ *   the one already paid on → a renewal fails (`past_due`) → still a member
+ *   while Stripe retries, a second checkout is refused, the billing portal
+ *   opens → the grace runs out: locked, still refused, the portal still opens
+ *   (the account page sends both states there) → the card is fixed: a member
+ *   again → paused (D5): locked and still refused → the customer is deleted in
+ *   Stripe: the profile lets go of it, and Subscribe works instead of a 500.
+ *
  * Uses `nonmember@example.com` and `member-b@example.com`. It changes their
- * membership in the sandbox database only.
+ * membership in the sandbox database only. `member-b` ends every run as a
+ * member (the browser journeys rely on it).
  */
 
 import { createHmac, randomBytes } from 'node:crypto'
@@ -104,7 +114,9 @@ async function main(): Promise<void> {
   await fake('/__fake/reset', {})
 
   const as = (cookie: string) => ({ cookie, origin, 'content-type': 'application/json', ...caller() })
-  const me = async (cookie: string) => (await (await fetch(`${BACKEND}/api/me`, { headers: as(cookie) })).json()) as { authenticated?: boolean; principal?: { membership?: { active?: boolean } } }
+  type Membership = { active?: boolean; status?: string; graceUntil?: string | null; interval?: string | null }
+  const me = async (cookie: string) => (await (await fetch(`${BACKEND}/api/me`, { headers: as(cookie) })).json()) as { authenticated?: boolean; principal?: { membership?: Membership } }
+  const membership = async (cookie: string): Promise<Membership> => (await me(cookie)).principal?.membership ?? {}
   const isMember = async (cookie: string) => (await me(cookie)).principal?.membership?.active === true
   const body = async (cookie: string) => {
     const response = await fetch(`${BACKEND}/api/public/articles/full?type=${memberPiece.type}&id=${memberPiece.id}&lang=en`, { headers: as(cookie) })
@@ -113,11 +125,14 @@ async function main(): Promise<void> {
   }
   const checkout = (cookie: string, plan: 'monthly' | 'yearly' = 'monthly') =>
     fetch(`${BACKEND}/api/payments/create-checkout-session`, { method: 'POST', headers: as(cookie), body: JSON.stringify({ plan }) })
+  const portal = (cookie: string) => fetch(`${BACKEND}/api/payments/create-portal-session`, { method: 'POST', headers: as(cookie), body: '{}' })
+  const sessionStatus = async (url: unknown) =>
+    ((await fake('/__fake/state')).sessions as Json[]).find((session) => session.id === String(url ?? '').split('/').pop())?.status
 
   try {
     // Start from a non-member whatever an earlier run left behind.
     await pool.query(
-      `UPDATE visitor_profiles SET stripe_customer_id = NULL, stripe_subscription_id = NULL, subscription_status = 'none', paid_through_at = NULL, dunning_grace_until = NULL, cancel_at_period_end = false
+      `UPDATE visitor_profiles SET stripe_customer_id = NULL, stripe_subscription_id = NULL, subscription_status = 'none', paid_through_at = NULL, dunning_grace_until = NULL, cancel_at_period_end = false, billing_interval = NULL
        WHERE email IN ('nonmember@example.com', 'member-b@example.com')`,
     )
 
@@ -175,7 +190,16 @@ async function main(): Promise<void> {
     const locked = await body(buyer)
     record(group, 'the member body locks again', locked.status === 403 && !locked.hasMarker, `HTTP ${locked.status}`)
     const resubscribe = await checkout(buyer)
+    const resubscribeBody = (await resubscribe.json()) as { url?: string }
     record(group, 'Subscribe works again', resubscribe.status === 200, `HTTP ${resubscribe.status}`)
+    // Inside the checkout idempotency window, which used to replay the page
+    // the buyer had already paid on (launch fix plan item 11).
+    record(
+      group,
+      'Subscribe again inside five minutes opens a new Checkout page, not the paid one',
+      Boolean(resubscribeBody.url) && resubscribeBody.url !== firstBody.url && (await sessionStatus(resubscribeBody.url)) === 'open',
+      `first ${firstBody.url}, again ${resubscribeBody.url}`,
+    )
 
     // ---------------------------------------------------------------- A2
     const a2 = 'deliveries'
@@ -236,12 +260,12 @@ async function main(): Promise<void> {
     }
     const lookupsBefore = Number((await fake('/__fake/state')).invoicePaymentLookups)
 
-    // The buyer buys again, yearly: a monthly checkout inside five minutes of
-    // A8's would be handed A8's session back (the checkout idempotency bucket).
-    // Refunded part of it, then all of it.
+    // The buyer buys again, yearly. Refunded part of it, then all of it.
     const started = (await (await checkout(buyer, 'yearly')).json()) as { url?: string }
     const refundBuy = await pay(String(started.url).split('/').pop()!, 'nonmember@example.com')
     record(money, 'the buyer buys again and is a member', refundBuy.status === 200 && (await isMember(buyer)), `HTTP ${refundBuy.status}`)
+    const yearly = await membership(buyer)
+    record(money, 'a yearly member is told they pay yearly', yearly.interval === 'year', `interval=${yearly.interval}`)
     record(money, 'the charge carries no invoice, as basil returns it', Boolean(refundBuy.charge.id) && !('invoice' in refundBuy.charge), JSON.stringify(refundBuy.charge))
 
     const partial = await deliver('charge.refunded', await fake(`/__fake/charges/${refundBuy.charge.id}/refund`, { amount: 100 }))
@@ -268,11 +292,17 @@ async function main(): Promise<void> {
     const won = await deliver('charge.dispute.closed', await fake(`/__fake/disputes/${opened.id}/close`, { status: 'won' }))
     record(money, 'a won dispute is accepted and restores the membership', won.status === 200 && (await isMember(reader)), `HTTP ${won.status}`)
 
-    // The buyer buys once more, disputes, and loses. Both plans' checkouts are
-    // inside their five-minute replay window now, so the fake opens the
-    // session a later visit would get.
-    const reopened = await fake(`/__fake/checkout/${refundBuy.session.id}/reopen`, {})
-    const disputeBuy = await pay(String(reopened.id), 'nonmember@example.com')
+    // The buyer buys once more, disputes, and loses. Yearly again, inside the
+    // replay window of the refunded yearly checkout: that session was paid, so
+    // checkout has to open a new one (launch fix plan item 11).
+    const afterRefund = (await (await checkout(buyer, 'yearly')).json()) as { url?: string }
+    record(
+      money,
+      'Subscribe after a refund opens a new Checkout page, not the refunded one',
+      Boolean(afterRefund.url) && afterRefund.url !== started.url && (await sessionStatus(afterRefund.url)) === 'open',
+      `refunded ${started.url}, again ${afterRefund.url}`,
+    )
+    const disputeBuy = await pay(String(afterRefund.url).split('/').pop()!, 'nonmember@example.com')
     record(money, 'the buyer buys a third time and is a member', disputeBuy.status === 200 && (await isMember(buyer)), `HTTP ${disputeBuy.status}`)
     const lostOpened = await fake(`/__fake/charges/${disputeBuy.charge.id}/dispute`, {})
     const lostCreated = await deliver('charge.dispute.created', lostOpened)
@@ -285,6 +315,66 @@ async function main(): Promise<void> {
     // partial refund stops before looking anything up.
     const lookups = Number((await fake('/__fake/state')).invoicePaymentLookups) - lookupsBefore
     record(money, 'each of them found its invoice through an invoice payment', lookups >= 5, `lookups=${lookups}`)
+
+    // ------------------------------------------ a failed card (item 11)
+    // The buyer again: `member-b` has to end the run as a member.
+    const card = 'failed card'
+    const monthly = (await (await checkout(buyer)).json()) as { url?: string }
+    const cardBuy = await pay(String(monthly.url).split('/').pop()!, 'nonmember@example.com')
+    const monthlyMembership = await membership(buyer)
+    record(card, 'the buyer is a monthly member again', cardBuy.status === 200 && monthlyMembership.active === true && monthlyMembership.interval === 'month', JSON.stringify(monthlyMembership))
+
+    // The renewal charge fails. Stripe rolls the period forward first and
+    // retries the card for days; the fake does what Stripe's billing would.
+    const month = 30 * 24 * 60 * 60
+    const failed = await fake(`/__fake/subscriptions/${cardBuy.subscription.id}`, {
+      status: 'past_due',
+      current_period_start: now() - 60,
+      current_period_end: now() + month,
+    })
+    const failedDelivery = await deliver('customer.subscription.updated', failed)
+    const dunning = await membership(buyer)
+    record(card, 'a failed renewal (past_due) is accepted', failedDelivery.status === 200, `HTTP ${failedDelivery.status} ${JSON.stringify(failedDelivery.body)}`)
+    record(card, 'still a member while Stripe retries the card (grace)', dunning.active === true && dunning.status === 'past_due' && Boolean(dunning.graceUntil), JSON.stringify(dunning))
+    const dunningCheckout = await checkout(buyer)
+    record(card, 'a second checkout is refused while past_due', dunningCheckout.status === 400, `HTTP ${dunningCheckout.status}`)
+    const dunningPortal = await portal(buyer)
+    record(card, 'the billing portal opens, to update the card', dunningPortal.status === 200 && Boolean(((await dunningPortal.json()) as Json).url), `HTTP ${dunningPortal.status}`)
+
+    // Days pass and the grace runs out while Stripe is still retrying.
+    await pool.query(`UPDATE visitor_profiles SET dunning_grace_until = now() - interval '1 minute' WHERE email = 'nonmember@example.com'`)
+    const lapsed = await membership(buyer)
+    record(card, 'after the grace, locked', lapsed.active === false && lapsed.status === 'past_due', JSON.stringify(lapsed))
+    const lapsedCheckout = await checkout(buyer)
+    record(card, 'checkout still refuses, so the account page must not offer Upgrade', lapsedCheckout.status === 400, `HTTP ${lapsedCheckout.status}`)
+    const lapsedPortal = await portal(buyer)
+    record(card, 'the billing portal still opens, which is where the account page sends them', lapsedPortal.status === 200, `HTTP ${lapsedPortal.status}`)
+
+    // A new card in the portal, and Stripe's retry collects.
+    const recovered = await fake(`/__fake/subscriptions/${cardBuy.subscription.id}`, { status: 'active' })
+    await deliver('customer.subscription.updated', recovered)
+    const back = await membership(buyer)
+    record(card, 'the retry collects: a member again, grace cleared', back.active === true && back.status === 'active' && !back.graceUntil, JSON.stringify(back))
+
+    // D5: paused means no access, and it still blocks a second checkout.
+    const paused = await fake(`/__fake/subscriptions/${cardBuy.subscription.id}`, { status: 'paused' })
+    const pausedDelivery = await deliver('customer.subscription.updated', paused)
+    const pausedMembership = await membership(buyer)
+    record(card, 'a paused subscription is locked out (D5)', pausedDelivery.status === 200 && pausedMembership.active === false && pausedMembership.status === 'paused', JSON.stringify(pausedMembership))
+    const pausedCheckout = await checkout(buyer)
+    record(card, 'a paused subscription still blocks a second checkout (D5)', pausedCheckout.status === 400, `HTTP ${pausedCheckout.status}`)
+
+    // The customer is deleted in the Dashboard, after the paused period ran
+    // out. Stripe cancels its subscription; the customer's event comes first
+    // here, so the subscription's must not stitch the dead customer back on.
+    await fake(`/__fake/subscriptions/${cardBuy.subscription.id}`, { current_period_start: now() - month - 60, current_period_end: now() - 60 })
+    const removal = await fake(`/__fake/customers/${String(cardBuy.session.customer)}/delete`, {})
+    const customerDeleted = await deliver('customer.deleted', removal.customer)
+    const subscriptionEnded = await deliver('customer.subscription.deleted', (removal.subscriptions as Json[])[0])
+    const linkage = await pool.query(`SELECT stripe_customer_id FROM visitor_profiles WHERE email = 'nonmember@example.com'`)
+    record(card, 'customer.deleted is accepted and the profile lets go of the customer', customerDeleted.status === 200 && subscriptionEnded.status === 200 && linkage.rows[0]?.stripe_customer_id === null, `HTTP ${customerDeleted.status}/${subscriptionEnded.status} customer=${linkage.rows[0]?.stripe_customer_id}`)
+    const freshCheckout = await checkout(buyer)
+    record(card, 'Subscribe works after the customer is deleted (was a 500)', freshCheckout.status === 200, `HTTP ${freshCheckout.status}`)
   } finally {
     await pool.end()
   }

@@ -1,5 +1,5 @@
 import { logger } from '@/shared/utils/logger'
-import { stripe } from './stripe'
+import { isDeletedStripeCustomer } from './customer-linkage'
 import {
   findVisitorProfileByAuthUserId,
   findVisitorProfileByStripeCustomerId,
@@ -67,7 +67,7 @@ export async function resolveProfileForStripeCustomer(
   // deletion also raises. Stitching the dead customer back on here would undo
   // the unlink, and checkout and the portal would 500 for this visitor again.
   // The profile is still the right one to act on; only the repair is skipped.
-  if (await isDeletedCustomer(stripeCustomerId)) {
+  if (await isDeletedStripeCustomer(stripeCustomerId)) {
     logger.warn('Not restoring a Stripe linkage to a deleted customer', {
       stripeCustomerId,
       profileId: byAuthUser.id,
@@ -95,20 +95,3 @@ export async function resolveProfileForStripeCustomer(
   return { ...byAuthUser, stripeCustomerId }
 }
 
-/**
- * Whether Stripe reports the customer deleted. Only asked on the rare repair
- * path. A failed read answers "no", which keeps the old behaviour (repair)
- * rather than failing the webhook over a courtesy check.
- */
-async function isDeletedCustomer(stripeCustomerId: string): Promise<boolean> {
-  try {
-    const customer = await stripe.customers.retrieve(stripeCustomerId)
-    return Boolean((customer as { deleted?: boolean }).deleted)
-  } catch (error) {
-    logger.warn('Could not check whether the Stripe customer is deleted', {
-      stripeCustomerId,
-      error: error instanceof Error ? error.message : String(error),
-    })
-    return false
-  }
-}

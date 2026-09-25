@@ -12,15 +12,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  */
 
 const created = vi.hoisted(() => [] as Array<{ params: Record<string, unknown>; options?: { idempotencyKey?: string } }>)
+const replay = vi.hoisted(() => ({ keys: new Map<string, string>(), deleted: new Set<string>() }))
 
 vi.mock('./stripe', () => ({
   stripe: {
     customers: {
       list: vi.fn(async () => ({ data: [] })),
+      // Stripe replays a key's first response for 24 hours, even after that
+      // customer has been deleted.
       create: vi.fn(async (params: Record<string, unknown>, options?: { idempotencyKey?: string }) => {
         created.push({ params, options })
-        return { id: `cus_${created.length}` }
+        const key = options?.idempotencyKey ?? `none_${created.length}`
+        if (!replay.keys.has(key)) replay.keys.set(key, `cus_${created.length}`)
+        return { id: replay.keys.get(key)! }
       }),
+      retrieve: vi.fn(async (id: string) => (replay.deleted.has(id) ? { id, deleted: true } : { id })),
     },
   },
 }))
@@ -32,6 +38,8 @@ const visitor = { email: 'reader@example.com', visitorAuthUserId: 'auth_1', visi
 describe('resolveStripeCustomerForVisitor, creating a customer', () => {
   beforeEach(() => {
     created.length = 0
+    replay.keys.clear()
+    replay.deleted.clear()
   })
 
   it('sends an idempotency key, so two simultaneous requests get one customer', async () => {
@@ -63,5 +71,18 @@ describe('resolveStripeCustomerForVisitor, creating a customer', () => {
     await resolveStripeCustomerForVisitor(visitor)
 
     expect(created[0]!.options!.idempotencyKey).not.toContain('reader@example.com')
+  })
+
+  // Launch fix plan item 11. A customer deleted in the Dashboard within a day of
+  // being created: the next checkout's create replays that customer, and every
+  // checkout after it answers 500 until the key expires.
+  it('does not hand back a deleted customer that the idempotency key replays', async () => {
+    const first = await resolveStripeCustomerForVisitor(visitor)
+    replay.deleted.add(first.customerId)
+
+    const again = await resolveStripeCustomerForVisitor(visitor)
+
+    expect(again.customerId).not.toBe(first.customerId)
+    expect(again.created).toBe(true)
   })
 })
