@@ -6,6 +6,8 @@ you run it; you do not write it. Steps marked **owner** need your yes.
 
 Platform plan: `docs/capacity/cap07-platform-readiness.md` §1a. Clicks:
 `docs/capacity/h01-provisioning-checklist.md`. Origin decision: ADR-0016.
+Moving the data and the keys off the laptop, in order, with the owner steps:
+`docs/procedures/cutover.md`.
 
 ## Sandbox setup
 
@@ -110,17 +112,30 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
      --origin-edge http://127.0.0.1:4110 \
      --allow-http --home /zz-launch/harbor --no-image-check # expect 41/41 passed
    pnpm --dir apps/questura/apps/server readiness:restore    # expect 35/35: dump, restore, boot, search, member sign-in on the restored database
+   READINESS_CUTOVER_TARGET_URI=postgres://postgres@127.0.0.1:5463/questura_readiness_cutover \
+   READINESS_PG_BINDIR=<dir with pg_dump/psql 17> \
+     pnpm --dir apps/questura/apps/server readiness:cutover  # expect 66/66: moving day on a throwaway Postgres 17 with every secret rotated (docs/procedures/cutover.md)
    ```
 
-   The restore on Neon's Postgres major (17), without the stack, on a
-   throwaway container (`docs/procedures/backup-restore-rollback.md`,
+   `readiness:cutover` needs a throwaway Postgres 17 on a spare loopback port
+   first (the command is in `docs/procedures/cutover.md`, "Running the
+   rehearsal again"); remove it afterwards.
+
+   The full restore on Neon's Postgres major (17): bootstrap and seed a
+   `questura_readiness` database in a throwaway Postgres 17 container, start
+   the stack pointed at it, then (`docs/procedures/backup-restore-rollback.md`,
    "Measured so far"):
 
    ```bash
-   READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:<spare port>/questura_readiness \
+   export READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:<spare port>/questura_readiness
+   pnpm --dir apps/questura/apps/server readiness bootstrap && pnpm --dir apps/questura/apps/server readiness:launch -- seed
+   pnpm --dir apps/questura/apps/server readiness:stack -- up
    READINESS_PG_BINDIR=<dir with pg_dump/psql 17> READINESS_RESTORE_EXPECT_MAJOR=17 \
-     pnpm --dir apps/questura/apps/server readiness:restore -- --db-only   # expect 29/29, 7 skipped, "PARTIAL"
+     pnpm --dir apps/questura/apps/server readiness:restore   # expect 36/36 (35 + the Postgres 17 gate)
    ```
+
+   Without a free stack slot, `readiness:restore -- --db-only` on the same
+   container proves the database half: 29/29, 7 skipped, "PARTIAL".
 
    `--no-image-check` is for the sandbox only: its images point at a CDN host
    that does not exist until launch fix plan item 8 serves them locally. It is

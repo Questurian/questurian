@@ -63,6 +63,15 @@ and eventually retired. Generate new ones for the real platform. Rotating
 invalidates existing sessions — do it at cutover, not after visitors have
 signed in.
 
+What else it does, rehearsed on 2026-09-25 (`readiness:cutover`, 66/66):
+a new `PAYLOAD_SECRET` turns off every service-account key (Payload finds a
+key by a fingerprint made with the secret), so Location Manager's key is
+re-issued on the new host; a new `BETTER_AUTH_SECRET` makes stored Google
+tokens unreadable, which is harmless because they are replaced at the reader's
+next Google sign-in. Old cookies and staff tokens get signed-out answers,
+never 500. The full list of keys, where each one lives, and the order:
+`docs/procedures/cutover.md`.
+
 ## 4. Move the database
 
 The live DB is `questura` on port 5433 inside the `questura-postgres` container
@@ -71,6 +80,7 @@ truth for anything.
 
 - Provision managed Postgres on the chosen platform
 - Dump and restore, then run `pnpm db:migrate` and confirm `db:migrate:status`
+  (the exact order and commands: `docs/procedures/cutover.md`)
 - Check row counts on `locations`, `articles`, `media_assets`, `media_sets`,
   `users`, `visitor_profiles` and the `visitor_auth_*` tables against the source
 - **Set up real backups.** What exists today is one 1.8 MB `pg_dump -Fc` sitting

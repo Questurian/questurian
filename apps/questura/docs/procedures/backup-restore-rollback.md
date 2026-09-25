@@ -159,6 +159,8 @@ Postgres versions are compatible. It says nothing about how long Neon takes.
 
 | What | Result |
 |---|---|
+| Full `readiness:restore` on Postgres 17.11, the stack pointed at a Postgres 17 container (pg_dump/psql 17.11), 2026-09-25 | **36/36**, nothing skipped: the server booted on the restored database, member A signed in with the restored password, search served from the rebuilt index, the member body was served. Dump 372 ms, restore 654 ms. Bootstrapping that container also applied the two newest migrations on 17. `docs/capacity/runs/2026-09-25-surge-L09-restore-pg17.json` |
+| The cutover path end to end, `readiness:cutover`, 2026-09-25 | Postgres 16.14 → 17.11 with a 17 client, counts identical before and after Railway's pre-deploy step, then every secret rotated: 66/66 (`docs/procedures/cutover.md`) |
 | `readiness:restore -- --db-only` on Postgres 17.11 (pg_dump/psql 17.11) | 29/29 checks, 7 service gates skipped (need the sandbox stack). Dump 365 ms, restore 658 ms, 1.7 s end to end. `docs/capacity/runs/2026-09-24-surge-L09-restore-db-only-pg17.json` |
 | Cutover path: Postgres 16 source, host `pg_dump` 16.15, plain SQL → Postgres 17 with `psql -v ON_ERROR_STOP=1 --single-transaction` | restores cleanly. Dump 135 ms (1.8 MB), restore 641 ms, row counts identical |
 | Daily-copy format: `pg_dump -Fc` 17 → `pg_restore --exit-on-error --single-transaction` 17 | Dump 336 ms (636 KB), restore 601 ms, row counts identical |
@@ -170,7 +172,10 @@ database, signs member A in, and serves search and a member body, runs
 against the sandbox stack. To run it on 17, point the stack at a Postgres 17
 container:
 `READINESS_DATABASE_URI=postgres://postgres@127.0.0.1:<port>/questura_readiness`
-plus `READINESS_PG_BINDIR` with 17 clients and `READINESS_RESTORE_EXPECT_MAJOR=17`.
+plus `READINESS_PG_BINDIR` with 17 clients and `READINESS_RESTORE_EXPECT_MAJOR=17`
+(the exact commands are in `docs/launch-day.md`, step 2). A full run with
+`READINESS_RESTORE_EXPECT_MAJOR` set writes its evidence under
+`…-restore-pg<major>.json`, next to the day's ordinary run.
 
 ## Migrations and the deploy guard
 
