@@ -18,7 +18,7 @@ export type ParsedOptions = { target: Target; json: boolean; local: boolean } | 
 export const USAGE =
   'usage: pnpm launch:verify -- --client <site origin> --api <api origin> ' +
   '--bypass <origin> --edge-ip <ip> (or --origin-edge <origin>) --rate-limit-probe ' +
-  '[--local] [--allow-http] [--no-image-check] [--json]'
+  '[--local [--media <origin>]] [--allow-http] [--no-image-check] [--json]'
 
 /** Names a signed-in session cookie can arrive under (production uses the `__Secure-` form). */
 const SESSION_COOKIE_NAMES = ['__Secure-questura_visitor.session_token', 'questura_visitor.session_token']
@@ -99,6 +99,12 @@ export function parseOptions(argv: string[], env: Record<string, string | undefi
     if (remote.length > 0) return { error: `--local is for the readiness sandbox only; refused for ${remote.join(' and ')}` }
   }
 
+  // The sandbox's fixture media server is a `*.localhost` name too; its pages
+  // may name it, and only it, besides the site and the API.
+  const media = origin('media')
+  if (media && !local) return { error: '--media is for the readiness sandbox only (with --local); the real site checks every host' }
+  if (media && !isLocalHost(new URL(media).hostname)) return { error: `--media is for the sandbox's own media server; refused for ${media}` }
+
   const edgeIp = arg('edge-ip')
   const originEdgeArg = origin('origin-edge')
   if (edgeIp && originEdgeArg) return { error: '--edge-ip and --origin-edge name the same probe target; give one' }
@@ -156,6 +162,7 @@ export function parseOptions(argv: string[], env: Record<string, string | undefi
       articlePath: arg('article'),
       authorPath: arg('author'),
       imageCheck: !flag('no-image-check'),
+      ...(media ? { mediaHost: new URL(media).host } : {}),
       cookie,
     },
   }

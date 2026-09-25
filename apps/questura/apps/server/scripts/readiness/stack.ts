@@ -46,7 +46,8 @@
  *    docker. Any other URI is used as given.
  *
  * Browser-facing origins are `http://app.readiness.localhost:3100` and
- * `http://api.readiness.localhost:4100` (see `AppSettings.browser`).
+ * `http://api.readiness.localhost:4100` (see `AppSettings.browser`); images
+ * come from `http://media.readiness.localhost:3190` (`AppSettings.mediaOrigin`).
  */
 
 import { spawn, spawnSync } from 'node:child_process'
@@ -83,6 +84,12 @@ import { dotenvNames } from './sandbox-env'
 
 export const STACK_PORTS = { client: 3100, backend: 4100, origin: 4110, media: 3190, stripe: 3191, oauth: 3192, redis: 6390 } as const
 export const STACK_DIST = '.next-readiness'
+/**
+ * The fixture media server as a browser reaches it. A `*.localhost` name, not
+ * `127.0.0.1`, so pages name no raw loopback address and `launch:verify
+ * --local --media` can tell it apart from a leak (launch fix plan item 8).
+ */
+export const STACK_MEDIA_ORIGIN = `http://media.readiness.localhost:${STACK_PORTS.media}`
 export const STATE_DIR = resolve(tmpdir(), 'questura-readiness')
 const STATE_FILE = resolve(STATE_DIR, 'stack.json')
 
@@ -131,6 +138,7 @@ export function stackAppSettings(state: Pick<StackState, 'secrets' | 'origins' |
     workerIntervalMs: 5_000,
     stripeStubUrl: `http://127.0.0.1:${STACK_PORTS.stripe}`,
     fakeProviderUrl: `http://127.0.0.1:${STACK_PORTS.oauth}`,
+    mediaOrigin: STACK_MEDIA_ORIGIN,
   }
 }
 

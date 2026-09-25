@@ -73,6 +73,13 @@ describe('launch:verify options', () => {
     expect(t.originEdge).toBe('http://127.0.0.1:4110')
   })
 
+  it('--media names the sandbox media server, only with --local and only on this machine', () => {
+    expect(target([...SANDBOX, '--local', '--media', 'http://media.readiness.localhost:3190']).mediaHost).toBe('media.readiness.localhost:3190')
+    expect(target([...SANDBOX, '--local']).mediaHost).toBeUndefined()
+    expect(error([...ALL, '--media', 'http://media.readiness.localhost:3190'])).toMatch(/--media is for the readiness sandbox only/)
+    expect(error([...SANDBOX, '--local', '--media', 'https://questurian-cdn.b-cdn.net'])).toMatch(/refused for/)
+  })
+
   it('the sandbox without --local is held to the same rule as the real site', () => {
     expect(error(SANDBOX)).toMatch(/missing/)
   })

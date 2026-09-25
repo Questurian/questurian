@@ -49,10 +49,15 @@ export type Target = {
   authorPath?: string
   /**
    * Load one image from the home page and expect 200 image/*. Default on.
-   * Off only for the readiness sandbox, which has no image CDN until launch
-   * fix plan item 8 points it at its fixture media server.
+   * `--no-image-check` exists for a sandbox started without its fixture
+   * media server; since launch fix plan item 8 the stack serves real images.
    */
   imageCheck?: boolean
+  /**
+   * Sandbox only (`--local --media`): the fixture media server's host, the
+   * one loopback name besides the site and the API a page may contain.
+   */
+  mediaHost?: string
   /**
    * A dedicated test account's session, as a Cookie header holding only the
    * session token (`options.ts`), and whether that account is a member now.
@@ -500,7 +505,7 @@ async function text(fetchImpl: Fetch, url: string): Promise<{ status: number; bo
 async function hostChecks(target: Target, fetchImpl: Fetch, homeHtml: string, homeUrl: string, record: Record_): Promise<void> {
   const client = new URL(target.client)
   const api = new URL(target.api)
-  const allowed = [client.host, api.host]
+  const allowed = [client.host, api.host, ...(target.mediaHost ? [target.mediaHost] : [])]
 
   const robots = await text(fetchImpl, `${target.client}/robots.txt`)
   const sitemapLines = [...robots.body.matchAll(/^\s*sitemap:\s*(\S+)/gim)].map((match) => match[1]!)
