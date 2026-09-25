@@ -25,6 +25,12 @@ Stripe/Google. From a fresh session it needs only `docker`:
   PATH, `stack up` runs it as the `questura-readiness-redis` container
   (`redis:7-alpine`, no persistence), which is also what `readiness:faults`
   pauses. `stack down` removes it.
+- **Front door.** The API's port 4100 is a stand-in for Cloudflare
+  (`front-door-edge.ts`) that adds the origin secret, as the Transform Rule
+  will; the backend itself listens on 4110 with `ORIGIN_AUTH_SECRET` set and
+  refuses anything without it (ADR-0016). Every script and the browsers call
+  4100 and go through the door. The site's own renders get nothing added, so
+  the client has to send the secret itself.
 - **Rate limits.** Every step-2 script empties the sandbox Redis (6390 only)
   before it starts, so running them back to back does not spend each other's
   per-address budget. Playwright's global setup does the same.
@@ -56,8 +62,9 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
    It must say the server would boot. It also refuses leftover placeholders,
    test-mode Stripe keys, loopback databases, sandbox variables and one secret
    used twice, a missing Resend key, a missing sender or one not on
-   questurian.com (`EMAIL_FROM_ADDRESS`), and a missing or malformed
-   `SENTRY_DSN`.
+   questurian.com (`EMAIL_FROM_ADDRESS`), a missing or malformed
+   `SENTRY_DSN`, and a missing `ORIGIN_AUTH_SECRET` (the API front door,
+   H01 step 8).
 
    Email DNS (SPF, DKIM, DMARC) must be verified in Resend before this:
    `docs/procedures/email-domain.md`, steps 1 to 5.
@@ -96,10 +103,12 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
    pnpm --dir apps/questura/apps/server readiness:oauth      # expect 71/71: Google linking (fake Google), staff/visitor isolation
    pnpm --dir apps/questura/apps/server readiness:faults     # expect 26/26: Stripe, Redis, Postgres failing (Postgres frozen: 503 in ~17 s, ready 503 in ~2 s; articles locked: member body 503 + Retry-After in ~5 s)
    pnpm --dir apps/questura/apps/server readiness:contracts  # expect all ok: response shapes match both apps' types
+   pnpm --dir apps/questura/apps/server readiness:front-door # expect 96/96: the origin refuses callers who skip Cloudflare (webhooks, Google, admin included), health answers, every launch page renders with the site sending the secret itself, the secret in no log
    pnpm --dir apps/questura/apps/server launch:verify -- \
      --client http://app.readiness.localhost:3100 \
      --api http://api.readiness.localhost:4100 \
-     --allow-http --home /zz-launch/harbor --no-image-check # expect 39/39 passed
+     --origin-edge http://127.0.0.1:4110 \
+     --allow-http --home /zz-launch/harbor --no-image-check # expect 41/41 passed
    pnpm --dir apps/questura/apps/server readiness:restore    # expect 35/35: dump, restore, boot, search, member sign-in on the restored database
    ```
 
@@ -135,13 +144,16 @@ pnpm --dir apps/questura/apps/e2e exec playwright test --project=chromium --proj
      --client https://www.questurian.com \
      --api https://api.questurian.com \
      --bypass https://<service>.up.railway.app \
+     --origin-edge https://<target api.questurian.com's DNS record points at> \
      --rate-limit-probe
    ```
 
    It checks https and HSTS, framing headers, health, the advertised prices
    ($12.99 / $79.99), signed-out and foreign-origin callers on every payment
    route, webhook signature refusal, that the Railway origin does not serve
-   the API, and that forged IP headers do not buy a fresh rate-limit budget.
+   the API, that a caller who connects to Railway's edge as
+   `api.questurian.com` without the origin secret gets 403 (H01 step 8), and
+   that forged IP headers do not buy a fresh rate-limit budget.
    On the home page, an article (the first in the sitemap) and an author page
    it checks for `localhost`/`127.0.0.1`, that the canonical and `og:url` are
    absolute on the site's host, that robots.txt and the sitemap name only this

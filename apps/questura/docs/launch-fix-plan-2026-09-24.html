@@ -378,6 +378,12 @@ summary{cursor:pointer;font-weight:600;color:var(--accent)}
 <div class="you">
 <p>Order: provision (H01 checklist) → cutover (item 5 runbook) → deploy → <strong>PL1</strong> go-live verification → <strong>PL2</strong> Stripe settings check, then your one purchase and refund → <strong>PL3</strong> load test with your spending cap → <strong>PL4</strong> ops drills (a forced error, downtime alert, Redis restart, restore, rollbacks, cold start) → <strong>announce</strong>.</p>
 <p>The prompts are in the audit, "Prompts · on the real hosting". Every live action needs your yes to that specific step. Nothing is announced until all four pass.</p>
+<p><strong>Added to PL1 by item 10</strong> (the API front door, ADR-0016). Two questions only the platform can answer, both read-only, from the API's log and Cloudflare's dashboard:</p>
+<ul>
+<li><strong>PL1-10a · Does the Transform Rule reach the Worker's own subrequests?</strong> The site sends <code>X-Questura-Origin-Auth</code> itself from the Worker secret, so pages render either way. Record whether the header on a Worker render is the Worker's or the rule's (a temporary Transform Rule value that differs from the Worker's, for one request, with the owner's yes), and whether pages still render with the rule on. If the rule does not reach them, nothing changes; if the Worker secret is missing, every page that needs the API fails, which <code>launch:verify</code>'s home, article and author checks catch.</li>
+<li><strong>PL1-10b · Which address do Worker renders present to the API?</strong> From the API log, record the <code>CF-Connecting-IP</code> a Worker render arrives with (a Cloudflare address, one per colo, or the reader's). Public reads carry the render token and have their own bucket either way; any other limiter a render reaches counts by that address. If all renders share one address, say so and check that no render path hits an address-counted limiter.</li>
+</ul>
+<p>Also for PL1: <code>launch:verify --origin-edge &lt;the target api.questurian.com's DNS record points at&gt;</code> must report 403 for a caller who skips Cloudflare, and the Railway edge rule is in place (H01 step 8), or the write-up says the app's own check is the only lock.</p>
 </div>
 </section>
 

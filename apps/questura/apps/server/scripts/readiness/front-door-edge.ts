@@ -23,8 +23,10 @@
  * proven elsewhere.
  *
  * `GET /__edge/stats` is answered here and never forwarded: how many render
- * subrequests arrived with and without their own header. The front-door check
- * reads it to prove renders really reached the API with the key.
+ * subrequests arrived with and without their own header, and how many answers
+ * were 403 (for renders that can only be the lock; for everything else it
+ * includes the app's own refusals). The front-door check reads it to prove
+ * renders really reached the API with the key.
  */
 
 import { Agent, createServer, request as httpRequest } from 'node:http'
@@ -38,7 +40,7 @@ export const PROBE_HEADER = 'x-readiness-edge-probe'
 export type EdgeStats = {
   forwarded: number
   renders: { withKey: number; withoutKey: number }
-  refusedByOrigin: { renders: number; others: number }
+  answered403: { renders: number; others: number }
 }
 
 function main(): void {
@@ -50,7 +52,7 @@ function main(): void {
   }
 
   const agent = new Agent({ keepAlive: true, maxSockets: 256 })
-  const stats: EdgeStats = { forwarded: 0, renders: { withKey: 0, withoutKey: 0 }, refusedByOrigin: { renders: 0, others: 0 } }
+  const stats: EdgeStats = { forwarded: 0, renders: { withKey: 0, withoutKey: 0 }, answered403: { renders: 0, others: 0 } }
 
   const server = createServer((req, res) => {
     if (req.method === 'GET' && req.url === EDGE_STATS_PATH) {
@@ -79,8 +81,8 @@ function main(): void {
       { host: '127.0.0.1', port: originPort, method: req.method, path: req.url, headers, agent },
       (response) => {
         if (response.statusCode === 403 && !probe) {
-          if (render) stats.refusedByOrigin.renders += 1
-          else stats.refusedByOrigin.others += 1
+          if (render) stats.answered403.renders += 1
+          else stats.answered403.others += 1
         }
         res.writeHead(response.statusCode ?? 502, response.rawHeaders)
         response.pipe(res)

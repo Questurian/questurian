@@ -186,11 +186,11 @@ async function main(): Promise<void> {
   const after = await edgeStats()
   const withKey = after.renders.withKey - before.renders.withKey
   const withoutKey = after.renders.withoutKey - before.renders.withoutKey
-  const refusedRenders = after.refusedByOrigin.renders - before.refusedByOrigin.renders
+  const refusedRenders = after.answered403.renders - before.answered403.renders
   record('renders', 'render calls reached the API while the pages were loaded', withKey > 0, `${withKey} with the key`)
   record('renders', 'every render call carried the key itself (the edge added nothing)', withoutKey === 0, `${withoutKey} without`)
   record('renders', 'no render call was refused', refusedRenders === 0, `${refusedRenders} refused`)
-  record('renders', 'since the stack started, no render call ever lacked the key', after.renders.withoutKey === 0 && after.refusedByOrigin.renders === 0, JSON.stringify(after.renders))
+  record('renders', 'since the stack started, no render call ever lacked the key', after.renders.withoutKey === 0 && after.answered403.renders === 0, JSON.stringify(after.renders))
 
   // The edge really adds nothing to a render: one without its own key is refused.
   const bareRender = await raw(EDGE, '/api/public/articles/by-location?country=zz-launch', {
