@@ -17,8 +17,11 @@ import { expect, gated, test, unexpectedProblems } from './fixtures'
  *  - LCP, from the `largest-contentful-paint` entries;
  *  - CLS, the largest session window of `layout-shift` entries, as Google
  *    computes it;
- *  - an INP proxy: the longest event-timing entry for one scripted tap on the
- *    page's heading;
+ *  - an INP proxy: for one scripted tap on the page's heading, the longest
+ *    input delay plus processing time of its event-timing entries. INP also
+ *    counts the wait for the next paint; that part is left out because a
+ *    CI runner paints in software (no GPU), which put a flat 1-1.5 s on
+ *    every tap there and measured the runner, not the page;
  *  - image bytes fetched before the `load` event (what is above the fold).
  * JavaScript and CSS bytes are reported, not budgeted here: the build check
  * (`check:first-load-js`) holds JavaScript per route exactly, and the
@@ -90,7 +93,9 @@ async function observeVitals(page: Page) {
       }
     }).observe({ type: 'layout-shift', buffered: true })
     new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) vitals.inp = Math.max(vitals.inp, entry.duration)
+      for (const entry of list.getEntries() as PerformanceEventTiming[]) {
+        vitals.inp = Math.max(vitals.inp, entry.processingEnd - entry.startTime)
+      }
     }).observe({ type: 'event', buffered: true, durationThreshold: 16 } as PerformanceObserverInit)
   })
 }
