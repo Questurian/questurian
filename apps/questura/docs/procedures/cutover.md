@@ -192,7 +192,7 @@ Write down the time at each step.
    ```
 
    That a caller who skips Cloudflare gets 403 is checked in step 12
-   (`launch:verify --origin-edge`).
+   (`launch:verify --edge-ip`, required since launch fix plan item 6).
 
 10. **Deploy the website** (H01 step 20).
 

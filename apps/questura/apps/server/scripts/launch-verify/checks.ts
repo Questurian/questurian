@@ -3,9 +3,14 @@
  *
  * Every check here is read-only: GETs, OPTIONS, and POSTs that are refused
  * before they touch anything (no cookie, a foreign Origin, no Stripe
- * signature). Nothing signs in, buys, or writes. The two things that need
- * more than that (a signed-in cookie check with a test account, and the
- * rate-limit probe that spends one caller's budget) are opt-in and say so.
+ * signature). Nothing signs in, buys, or writes. Two things go further: the
+ * rate-limit probe spends one caller's budget, and the signed-in cookie check
+ * reads a dedicated test account's session (`LAUNCH_VERIFY_COOKIE`, passed at
+ * run time, never committed).
+ *
+ * Only an answer proves a lock. A DNS, TLS or connection error on a lockdown
+ * probe is reported as "unknown" and fails: a typo in the address must not
+ * read as "locked down" (launch fix plan item 6).
  *
  * The same checks run against the readiness sandbox before launch
  * (`--allow-http`), which is how they are proven to pass before they matter.
@@ -48,6 +53,12 @@ export type Target = {
    * fix plan item 8 points it at its fixture media server.
    */
   imageCheck?: boolean
+  /**
+   * A dedicated test account's session, as a Cookie header holding only the
+   * session token (`options.ts`), and whether that account is a member now.
+   * Read from `LAUNCH_VERIFY_COOKIE` at run time; never committed or logged.
+   */
+  cookie?: { header: string; member: boolean }
 }
 
 export type Result = { group: string; name: string; ok: boolean; detail: string }
@@ -58,7 +69,36 @@ type Fetch = typeof fetch
 export type EdgeRequest = (
   url: string,
   init: { method?: string; headers?: Record<string, string>; hostName: string },
-) => Promise<{ status: number } | 'unreachable'>
+) => Promise<{ status: number } | { error: string }>
+
+const TLS_CODE = /CERT|SSL|TLS|SELF_SIGNED|UNABLE_TO_(?:GET|VERIFY)|ERR_TLS|HOSTNAME|ALTNAME|EPROTO/i
+
+/**
+ * Why a request got no answer, in words that say which kind of mistake to
+ * look for: a wrong name (DNS), a certificate or handshake problem (TLS), or
+ * nothing listening. Every one of them is "unknown", never "locked".
+ */
+export function describeNetworkError(error: unknown): string {
+  const seen = new Set<unknown>()
+  let current: unknown = error
+  let code = ''
+  let message = ''
+  while (current && typeof current === 'object' && !seen.has(current)) {
+    seen.add(current)
+    const { code: c, name, message: m, cause } = current as { code?: unknown; name?: unknown; message?: unknown; cause?: unknown }
+    if (!code && typeof c === 'string') code = c
+    if (!code && (name === 'TimeoutError' || name === 'AbortError')) code = 'TIMEOUT'
+    if (typeof m === 'string' && m) message = m
+    current = cause
+  }
+  if (!code && typeof error === 'string') message = error
+  const said = [code, message].filter(Boolean).join(': ') || 'no answer'
+  if (/^(?:ENOTFOUND|EAI_AGAIN|EAI_NODATA|EAI_NONAME)$/.test(code)) return `DNS (${said})`
+  if (TLS_CODE.test(code)) return `TLS (${said})`
+  if (code === 'ECONNREFUSED') return `connection refused (${said})`
+  if (code === 'TIMEOUT' || code === 'ETIMEDOUT' || code === 'UND_ERR_CONNECT_TIMEOUT') return `timed out (${said})`
+  return said
+}
 
 export const edgeRequest: EdgeRequest = async (url, init) => {
   const { request: httpRequest } = await import('node:http')
@@ -74,15 +114,19 @@ export const edgeRequest: EdgeRequest = async (url, init) => {
         path: `${target.pathname}${target.search}`,
         method: init.method ?? 'GET',
         headers: { ...init.headers, host: init.hostName },
-        ...(secure ? { servername: init.hostName.replace(/:\d+$/, '') } : {}),
+        // Presented as the API's name, and the certificate is not held
+        // against us: a caller skipping Cloudflare ignores it too, and what
+        // this asks is whether the edge serves them, not whether it is
+        // trusted. No secret is sent. A failed handshake is still "unknown".
+        ...(secure ? { servername: init.hostName.replace(/:\d+$/, ''), rejectUnauthorized: false } : {}),
       },
       (res) => {
         res.resume()
         resolvePromise({ status: res.statusCode ?? 0 })
       },
     )
-    req.setTimeout(10_000, () => req.destroy())
-    req.on('error', () => resolvePromise('unreachable'))
+    req.setTimeout(10_000, () => req.destroy(Object.assign(new Error('no answer in 10 s'), { code: 'TIMEOUT' })))
+    req.on('error', (error) => resolvePromise({ error: describeNetworkError(error) }))
     req.end()
   })
 }
@@ -245,17 +289,28 @@ export async function runChecks(target: Target, fetchImpl: Fetch = fetch, edgeIm
 
   // --- Origin lockdown (C2, ADR-0016) -------------------------------------------
   if (target.bypassOrigin) {
-    let status = 'unreachable'
+    // Not /api/health/ready: the app answers the health pair without the
+    // origin secret (Railway's healthcheck calls it on the container), so
+    // only a route the lock covers says whether the API is served.
+    //
+    // Only a 4xx proves it. A deleted *.up.railway.app domain still answers
+    // Railway's own 404 at its edge; a DNS or TLS error means the address is
+    // wrong (a typo used to count as "locked down"), so it is "unknown".
+    let status: number | null = null
+    let unknown = ''
     try {
-      // Not /api/health/ready: the app answers the health pair without the
-      // origin secret (Railway's healthcheck calls it on the container), so
-      // only a route the lock covers says whether the API is served.
       const direct = await get(fetchImpl, `${target.bypassOrigin}/api/me`, { signal: AbortSignal.timeout(10_000) })
-      status = `HTTP ${direct.status}`
-    } catch {
-      // unreachable is the pass
+      status = direct.status
+      await direct.body?.cancel().catch(() => undefined)
+    } catch (error) {
+      unknown = describeNetworkError(error)
     }
-    record('lockdown', `the platform origin ${target.bypassOrigin} does not serve the API`, status === 'unreachable' || /HTTP 4\d\d/.test(status), status)
+    record(
+      'lockdown',
+      `the platform origin ${target.bypassOrigin} does not serve the API`,
+      status !== null && status >= 400 && status < 500,
+      status !== null ? `HTTP ${status}` : `unknown: ${unknown}. Check the address; only a 4xx answer proves the lock`,
+    )
   }
 
   // --- Front door (ADR-0016, launch fix plan item 10) ---------------------------
@@ -269,12 +324,13 @@ export async function runChecks(target: Target, fetchImpl: Fetch = fetch, edgeIm
       ['a caller with a wrong origin header is refused', { 'x-questura-origin-auth': 'launch-verify-not-the-secret', 'cf-connecting-ip': '203.0.113.8' }],
     ] as const) {
       const answer = await edgeImpl(`${target.originEdge}/api/me`, { headers: { ...headers, origin: target.client }, hostName })
-      const status = answer === 'unreachable' ? 'unreachable' : `HTTP ${answer.status}`
       record(
         'front door',
         label,
-        answer !== 'unreachable' && answer.status === 403,
-        `${status} from ${target.originEdge} as ${hostName}${answer === 'unreachable' ? ' (check the address: the lock is only proven by a refusal)' : ''}`,
+        'status' in answer && answer.status === 403,
+        'status' in answer
+          ? `HTTP ${answer.status} from ${target.originEdge} as ${hostName}`
+          : `unknown: ${answer.error} at ${target.originEdge} as ${hostName}. Check the address; only a refusal proves the lock`,
       )
     }
   }
@@ -296,7 +352,88 @@ export async function runChecks(target: Target, fetchImpl: Fetch = fetch, edgeIm
     record('rate-limit', 'forged address headers do not buy a fresh plans budget (31st → 429)', last === 429, `last HTTP ${last}; if this is the origin itself, see ADR-0016`)
   }
 
+  // --- Signed-in cookie (B6, opt-in: LAUNCH_VERIFY_COOKIE) ------------------------
+  if (target.cookie) await cookieChecks(target, target.cookie, fetchImpl, record)
+
   return results
+}
+
+/**
+ * What an all-green result did not cover, so the summary can say so. Only
+ * `--local` (the sandbox) may leave out the lockdown and rate-limit checks
+ * (`options.ts`); the image and cookie checks may be left out anywhere, and
+ * are named here every time they are.
+ */
+export function notRun(target: Target): string[] {
+  const missing: string[] = []
+  if (!target.bypassOrigin) missing.push('the platform-origin lockdown check (--bypass)')
+  if (!target.originEdge) missing.push('the front-door check (--edge-ip or --origin-edge)')
+  if (!target.rateLimitProbe) missing.push('the rate-limit probe (--rate-limit-probe)')
+  if (target.imageCheck === false) missing.push('the image check (--no-image-check; never skip it against the real site)')
+  if (!target.cookie) missing.push('the signed-in cookie check (LAUNCH_VERIFY_COOKIE)')
+  return missing
+}
+
+type SetCookie = { name: string; attributes: Map<string, string> }
+
+/** Every `Set-Cookie` on a response, split into name and lower-cased attributes. */
+export function setCookies(response: Response): SetCookie[] {
+  const headers = response.headers as Headers & { getSetCookie?: () => string[] }
+  const lines = typeof headers.getSetCookie === 'function' ? headers.getSetCookie() : (headers.get('set-cookie') ?? '').split(/,(?=\s*[^;,=\s]+=)/)
+  return lines
+    .filter((line) => line.trim())
+    .map((line) => {
+      const [pair = '', ...rest] = line.split(';')
+      const attributes = new Map<string, string>()
+      for (const attribute of rest) {
+        const at = attribute.indexOf('=')
+        const key = (at < 0 ? attribute : attribute.slice(0, at)).trim().toLowerCase()
+        if (key) attributes.set(key, at < 0 ? '' : attribute.slice(at + 1).trim())
+      }
+      return { name: pair.slice(0, pair.indexOf('=')).trim(), attributes }
+    })
+}
+
+/**
+ * The signed-in cookie contract, with a dedicated test account's session.
+ *
+ * The session token alone is sent to Better Auth's get-session, so the
+ * 5-minute cache cookie is missing and the server issues a fresh one: that
+ * `Set-Cookie` is where the attributes are visible. The visitor cookies are
+ * host-only on the API host (no `Domain`): the site reads membership through
+ * `/api/me` with credentials, never from the cookie, so no other host needs
+ * it (live-checks/visitor-auth.html, PR #650).
+ */
+async function cookieChecks(target: Target, cookie: { header: string; member: boolean }, fetchImpl: Fetch, record: Record_): Promise<void> {
+  const group = 'cookie'
+  const headers = { origin: target.client, cookie: cookie.header }
+
+  const session = await get(fetchImpl, `${target.api}/api/visitor-auth/get-session`, { headers })
+  const sessionBody = (await session.json().catch(() => null)) as { session?: unknown; user?: unknown } | null
+  record(group, 'the test account’s cookie is a live session', session.status === 200 && Boolean(sessionBody?.session && sessionBody?.user), `HTTP ${session.status}${sessionBody?.user ? '' : ': no session (sign the test account in again and copy a fresh cookie)'}`)
+
+  const issued = setCookies(session).filter((c) => /questura_visitor\./.test(c.name))
+  const names = issued.map((c) => c.name).join(', ') || 'none'
+  const every = (test: (c: SetCookie) => boolean) => issued.length > 0 && issued.every(test)
+  const describe = (read: (c: SetCookie) => string) => issued.map((c) => `${c.name}: ${read(c)}`).join('; ') || 'no questura_visitor Set-Cookie on get-session (send the session token alone, not the session_data cookie)'
+  record(group, 'visitor cookies are named __Secure-', every((c) => c.name.startsWith('__Secure-')), names)
+  record(group, 'visitor cookies are HttpOnly', every((c) => c.attributes.has('httponly')), describe((c) => (c.attributes.has('httponly') ? 'HttpOnly' : 'missing HttpOnly')))
+  record(group, 'visitor cookies are Secure', every((c) => c.attributes.has('secure')), describe((c) => (c.attributes.has('secure') ? 'Secure' : 'missing Secure')))
+  record(group, 'visitor cookies are SameSite=Lax', every((c) => (c.attributes.get('samesite') ?? '').toLowerCase() === 'lax'), describe((c) => `SameSite=${c.attributes.get('samesite') ?? 'missing'}`))
+  record(group, `visitor cookies are host-only on ${new URL(target.api).host} (no Domain)`, every((c) => !c.attributes.has('domain')), describe((c) => (c.attributes.has('domain') ? `Domain=${c.attributes.get('domain')}` : 'host-only')))
+
+  const me = await get(fetchImpl, `${target.api}/api/me`, { headers })
+  const meBody = (await me.json().catch(() => null)) as { authenticated?: boolean; principal?: { membership?: { active?: boolean; status?: string } } | null } | null
+  record(group, '/api/me with the cookie says signed in', me.status === 200 && meBody?.authenticated === true, `HTTP ${me.status} authenticated=${meBody?.authenticated}`)
+  record(group, 'signed-in /api/me is no-store', /no-store/i.test(header(me, 'cache-control')), header(me, 'cache-control') || 'missing')
+  record(group, 'signed-in /api/me varies on Cookie', /cookie/i.test(header(me, 'vary')), header(me, 'vary') || 'missing')
+  const active = meBody?.principal?.membership?.active
+  record(
+    group,
+    `the test account reads as ${cookie.member ? 'a member' : 'not a member'} (LAUNCH_VERIFY_COOKIE_MEMBER)`,
+    active === cookie.member,
+    `membership.active=${active} status=${meBody?.principal?.membership?.status}`,
+  )
 }
 
 type Record_ = (group: string, name: string, ok: boolean, detail?: string) => void
@@ -453,6 +590,5 @@ export const MANUAL_STEPS = [
   'pnpm --dir apps/questura/apps/server verify:stripe-webhook-events   # no MISSING, endpoint not DISABLED',
   'Stripe Dashboard → Webhooks → the new endpoint → recent deliveries all 200',
   'QUESTURA_RECONCILE_APPLY=0 pnpm --dir apps/questura/apps/server reconcile:nightly   # dry run: 0 changes',
-  'Signed-in cookie contract (B6): run with LAUNCH_VERIFY_COOKIE_CHECK once a dedicated test account exists',
-  'First real purchase, only with the owner’s yes: live-checks/payments.html (platform version)',
+  'First real purchase, only with the owner’s yes: live-checks/launch-purchase.html (purchase → cancel → reactivate → cancel → refund)',
 ]
