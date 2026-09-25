@@ -184,6 +184,9 @@ describe('platform checks the boot check cannot make', () => {
     ['SENTRY_DSN', '', 'SENTRY_DSN is not set'],
     ['SENTRY_DSN', 'http://key@127.0.0.1:9000/1', 'does not look like a Sentry DSN'],
     ['SENTRY_DSN', 'not-a-dsn', 'does not look like a Sentry DSN'],
+    // Plan item 10: Railway's edge is reachable by anyone; the app must be locked too.
+    ['ORIGIN_AUTH_SECRET', '', 'ORIGIN_AUTH_SECRET is not set'],
+    ['ORIGIN_AUTH_SECRET', '<64 random characters>', 'placeholder'],
   ])('refuses %s=%s', (key, value, expected) => {
     expect(platformProblems({ ...base(), [key]: value }).join('\n')).toContain(expected)
   })
@@ -204,6 +207,21 @@ describe('platform checks the boot check cannot make', () => {
     const env = { ...base(), BETTER_AUTH_SECRET: base().PAYLOAD_SECRET! }
 
     expect(platformProblems(env).join('\n')).toContain('PAYLOAD_SECRET and BETTER_AUTH_SECRET hold the same value')
+  })
+
+  it('refuses the origin secret doubling as the render token', () => {
+    const env = { ...base(), QUESTURA_RENDER_TOKEN: base().ORIGIN_AUTH_SECRET! }
+
+    expect(platformProblems(env).join('\n')).toContain('QUESTURA_RENDER_TOKEN and ORIGIN_AUTH_SECRET hold the same value')
+  })
+
+  it('the boot check refuses a short origin secret or a misspelt mode', async () => {
+    vi.resetModules()
+    const short = await runBootCheck({ ...base(), ORIGIN_AUTH_SECRET: 'short' })
+    expect(short.problems.join('\n')).toContain('ORIGIN_AUTH_SECRET is shorter than 32 characters')
+    vi.resetModules()
+    const mode = await runBootCheck({ ...base(), ORIGIN_AUTH_MODE: 'open' })
+    expect(mode.problems.join('\n')).toContain('ORIGIN_AUTH_MODE is set to an unknown value')
   })
 
   it('accepts STRIPE_PRICE_ID equal to STRIPE_PRICE_ID_MONTHLY', () => {

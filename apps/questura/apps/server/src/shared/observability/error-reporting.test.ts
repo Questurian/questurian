@@ -116,11 +116,15 @@ describe('scrubEvent', () => {
         'cf-connecting-ip': '192.0.2.1',
         'user-agent': 'Mozilla/5.0',
         'x-request-id': 'req-12345678',
+        'x-questura-origin-auth': 'origin-secret-in-a-header-0123456789',
       },
     },
     user: { id: 'visitor-1', email: 'reader@example.com', ip_address: '192.0.2.1', username: 'reader' },
     extra: { email: 'reader@example.com', detail: `key ${FAKE_KEY}` },
-    contexts: { response: { headers: { 'set-cookie': 'payload-token=xyz' } } },
+    contexts: {
+      response: { headers: { 'set-cookie': 'payload-token=xyz' } },
+      upstream: { 'X-Questura-Origin-Auth': 'origin-secret-in-a-context-0123456789' },
+    },
     tags: { note: 'reader@example.com' },
     exception: {
       values: [
@@ -151,7 +155,7 @@ describe('scrubEvent', () => {
   const serialized = JSON.stringify(scrubbed)
 
   it.each(['reader@example.com', 'secret-reset-token', 'hunter2', 'abcdefghijkl', 'session_token', 'payload-token=xyz',
-    '192.0.2.1', FAKE_KEY, '0123456789abcdef'])('sends no %s', (needle) => {
+    '192.0.2.1', FAKE_KEY, '0123456789abcdef', 'origin-secret-in-a'])('sends no %s', (needle) => {
     expect(serialized).not.toContain(needle)
   })
 

@@ -16,6 +16,10 @@
  *   address, a bearer token, a Stripe key or signing secret, a Resend key, or
  *   credentials in a URL is replaced in place. Error messages are where these
  *   leak from most, and an error message has no key to go by.
+ * - **By value.** The origin secret (`ORIGIN_AUTH_SECRET`, ADR-0016) has no
+ *   shape to match, so the configured value itself is removed wherever it
+ *   appears. `proxy.ts` strips the header before any route runs; this is the
+ *   second lock, for a copy that escapes that some other way.
  *
  * It errs towards removing too much. A log line with `[redacted]` in it costs
  * a second look; a log line with a session token in it costs a rotation and a
@@ -31,7 +35,7 @@ export const REDACTED_EMAIL = '[email]'
  * are one rule.
  */
 const SENSITIVE_KEY =
-  /^(cookie|cookies|setcookie|authorization|proxyauthorization|stripesignature|xapikey|apikey|password|currentpassword|newpassword|passwordhash|salt|token|accesstoken|refreshtoken|idtoken|sessiontoken|session|secret|clientsecret|email|emailaddress|useremail|ipaddress|ip)$|token$|secret$|password$|apikey$|cookie$/i
+  /^(cookie|cookies|setcookie|authorization|proxyauthorization|stripesignature|xapikey|apikey|password|currentpassword|newpassword|passwordhash|salt|token|accesstoken|refreshtoken|idtoken|sessiontoken|session|secret|clientsecret|email|emailaddress|useremail|ipaddress|ip)$|token$|secret$|password$|apikey$|cookie$|originauth$/i
 
 export function isSensitiveKey(key: string): boolean {
   return SENSITIVE_KEY.test(key.replace(/[-_\s]/g, ''))
@@ -53,11 +57,20 @@ const STRING_RULES: Array<[RegExp, string]> = [
   [/\bre_[A-Za-z0-9]{8,}_[A-Za-z0-9]{8,}/g, REDACTED],
   // Cookie pairs for the session cookies this app sets.
   [/\b((?:__Secure-)?(?:better-auth|payload-token|questura)[A-Za-z0-9._-]*)=[^;\s]+/g, `$1=${REDACTED}`],
+  // The origin-lock header written into a message, whatever its value.
+  [/\b(x-questura-origin-auth["']?\s*[:=]\s*["']?)[^\s"',;}]+/gi, `$1${REDACTED}`],
 ]
+
+/** Shorter than this is not the origin secret (boot requires 32); never match a stray short value. */
+const MIN_VALUE_RULE_LENGTH = 16
 
 export function redactString(value: string): string {
   let out = value
   for (const [pattern, replacement] of STRING_RULES) out = out.replace(pattern, replacement)
+  const originSecret = process.env.ORIGIN_AUTH_SECRET?.trim()
+  if (originSecret && originSecret.length >= MIN_VALUE_RULE_LENGTH && out.includes(originSecret)) {
+    out = out.split(originSecret).join(REDACTED)
+  }
   return out
 }
 

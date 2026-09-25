@@ -48,6 +48,25 @@ describe('logger', () => {
     expect(raw).not.toContain('session_token=abc')
   })
 
+  it('never writes the origin secret, by header name or by value (plan item 10)', () => {
+    const secret = 'origin-secret-for-logger-test-0123456789'
+    vi.stubEnv('ORIGIN_AUTH_SECRET', secret)
+    try {
+      const lines = captureLines(() =>
+        logger.warn(`upstream said ${secret}`, {
+          headers: new Headers({ 'x-questura-origin-auth': secret, 'user-agent': 'curl' }),
+          request: { 'X-Questura-Origin-Auth': secret },
+          error: new Error(`x-questura-origin-auth: ${secret}`),
+        }),
+      )
+      expect(lines).toHaveLength(1)
+      expect(JSON.stringify(lines[0])).not.toContain(secret)
+      expect((lines[0].headers as Record<string, string>)['user-agent']).toBe('curl')
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
   it('writes no request id outside a request', () => {
     const [line] = captureLines(() => logger.info('Server starting'))
     expect(line).not.toHaveProperty('requestId')
