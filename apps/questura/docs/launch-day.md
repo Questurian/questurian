@@ -99,6 +99,55 @@ in `errors`, `slow`, search in `find` when `E2E_SEARCH_QUERY` /
 journey 2 test) also run against the real site with `E2E_BASE_URL` and the
 dedicated test account; the rest skip themselves there.
 
+### What CI runs, and where
+
+Everything in step 2 and the browser journeys above also runs on GitHub's
+runners (launch fix plan item 7), so a change that breaks sign-up turns CI red
+without anyone starting the sandbox by hand. It runs in two halves.
+
+**Every pull request, every push to `main`** (`.github/workflows/ci.yml`,
+9 checks, a few minutes each):
+
+| Check | What |
+|---|---|
+| Questura softprod scripts | the laptop deploy scripts' own tests |
+| Questura server tests | `test:deploy` and `test:int` (about 2,670) |
+| Questura server build | Payload build, generated types unchanged, server typecheck |
+| Questura readiness integrations | `readiness:required` against Postgres 17 and Redis services; each failing test is named |
+| Questura client tests | 324 tests, **0 skipped** (the job fails on any skip), plus the k6 supervisor policy test |
+| Questura lint | server and client ESLint |
+| Questura client typecheck | `tsc` for the client |
+| Writer frontend / Writer backend | the ai-blog-writer app, not Questura |
+
+**On every push to `main`, nightly at 07:23 UTC, on demand (Actions →
+Questura safety net → Run workflow), and on a pull request labelled
+`full-ci`** (`.github/workflows/questura-safety-net.yml`, 2 more checks, about
+11 minutes; 11 checks in all on a labelled PR):
+
+| Check | What, and the count it expects |
+|---|---|
+| Questura readiness stack and browsers | `readiness:stack -- up --build` on **Postgres 17** (Neon's major; the laptop sandbox stays on 16), then step 2 in order with the counts above: routes 119, payments 43, purchase 54, auth 29, oauth 71, faults 26, contracts all ok, front-door 96, `launch:verify` 43, restore 36 (17 → 17), cutover 66; then Playwright in Chromium and Firefox (75 passed, 1 skipped); then the production client build through OpenNext with the guard on and `scan:bundle` |
+| Questura k6 negative controls | every load-test proof gate, preflight refusal and supervisor stop rule fails when its fault is injected into a loopback fake target |
+
+Every check step in the stack job runs even when an earlier one fails, so one
+red run names every broken check. A failed run uploads the Playwright report,
+traces and the stack's logs as an artifact. Nothing in either workflow reaches
+live Stripe, Google, a paid service or the laptop: the stack binds loopback,
+every process loads `deny-outbound.cjs`, the browsers sit behind a black-hole
+proxy, and the production build points at `*.questura-ci.invalid` through a
+loopback TLS forwarder (`scripts/readiness/ci-tls-forward.mjs`).
+
+The `full-ci` label only fires when it is added, so after new commits remove
+it and add it back to run again. `gh pr edit --add-label` fails here; use
+`gh api -X POST repos/Questurian/questurian/issues/<N>/labels -f 'labels[]=full-ci'`
+(and `-X DELETE …/labels/full-ci` to remove it).
+
+Proof that it catches a break: on PR #710 a throwaway commit let `?returnTo=`
+accept an outside address. CI went red in two places: client tests (2 of
+324 failed) and the browser journeys (`redirects.spec.ts`, 4 failed in
+Chromium and Firefox). `readiness:routes` stayed green: it tests the server
+routes, not the client's `returnTo` check. The revert went green.
+
 ## Before the first deploy
 
 1. **Check the Railway variables.** Fill a copy of
