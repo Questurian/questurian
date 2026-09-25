@@ -24,7 +24,7 @@ test('the 500 page offers a way back and never shows an error', () => {
 })
 
 test('the 500 page ships no JavaScript', () => {
-  assert.match(source, /export const config = \{ unstable_runtimeJS: false \};/)
+  assert.match(source, /export const config = \{ amp: false, unstable_runtimeJS: false \};/)
 })
 
 test('the 500 page uses only foundations colours, and no white', () => {
