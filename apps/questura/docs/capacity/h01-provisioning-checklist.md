@@ -113,21 +113,44 @@ Do **not** add Railway's own Postgres. The database is Neon.
 is what makes a session check sub-millisecond. Take its private URL as
 `REDIS_URL`.
 
-**8. Decide `TRUSTED_PROXY` before deploying anything.**
+**8. `TRUSTED_PROXY` and the API front door (ADR-0016, option A).**
 
-This one has no safe default and production refuses to boot without it. It
-names the single header the app will believe about a caller's IP. Get it
-wrong and every rate limit either applies to the whole internet as one
-caller, or can be bypassed with a forged header.
+`TRUSTED_PROXY` has no safe default and production refuses to boot without
+it. It names the single header the app believes about a caller's IP. The
+owner chose option A in `docs/adr/0016-api-origin-identity-on-railway.md`:
+Cloudflare in front of the API, the origin locked by a shared secret.
 
-Railway's docs name `X-Real-IP` as the client address but do not say a
-caller-sent one is overwritten, and a custom domain on Railway is reachable at
-Railway's edge without passing Cloudflare. The options and the recommendation
-(Cloudflare in front, origin locked by a shared-secret header) are in
-`docs/adr/0016-api-origin-identity-on-railway.md`. Pick one there first.
+1. `TRUSTED_PROXY=cloudflare`.
+2. Generate `ORIGIN_AUTH_SECRET` (64 random characters, its own value, not
+   the render token's). It goes in three places, all the same value:
+   Railway (step 10), the Worker (step 17), and the Transform Rule below.
+3. DNS: `api.questurian.com` proxied (orange cloud) in the `questurian.com`
+   zone, pointing at the target Railway gives for the custom domain. Write
+   that target down: it is `--origin-edge` for `launch:verify` on the day.
+4. Cloudflare → Rules → Transform Rules → *Modify Request Header*: when
+   hostname equals `api.questurian.com`, **set** static header
+   `X-Questura-Origin-Auth` to the secret. *Set*, not *add*, so a caller's
+   own value is replaced.
+5. Railway → the service → Networking → Edge rules, in this order: allow
+   when header `X-Questura-Origin-Auth` equals the secret; then block
+   `Path matches *`. Not "block when header is not the secret": a negative
+   match against a missing header does not match, so it would let every
+   request without the header through. If the plan has no edge-rule
+   allowance, the app's own check (below) is the lock; say so in the PL1
+   write-up.
+6. Delete the generated `*.up.railway.app` domain. Not the lock, one less door.
 
-Do not guess, and do not set it to something permissive to get past the boot
-check.
+The app checks the header itself (`src/shared/http/origin-auth.ts`): a
+request without it gets 403, except `/api/health` and `/api/health/ready`,
+which Railway's healthcheck calls on the container directly. Stripe
+webhooks, Google's sign-in redirect, the writer pipeline, Location Manager
+and the admin panel all arrive through Cloudflare and carry it. A scheduler
+must call `https://api.questurian.com/...`, not Railway's private network.
+
+Do not guess, and do not set anything permissive to get past the boot check.
+Rotating the secret: set the new value in the Transform Rule and on the
+Worker and Railway together; in between, requests with the old value are
+refused.
 
 **9. Load the database — from a dump, not from migrations.**
 
@@ -169,6 +192,7 @@ Required. Boot refuses without these:
 | `APP_PROCESS_COUNT` | the autoscale cap you set on the service |
 | `APP_ROLLOUT_SURGE` | extra instances alive during a deploy (1 is fine) |
 | `TRUSTED_PROXY` | from step 8 |
+| `ORIGIN_AUTH_SECRET` | from step 8 (env:check requires it; boot requires 32+ chars when set) |
 | `REDIS_URL` | Railway Redis private URL |
 | `QUESTURA_CLIENT_URL` | the frontend origin, where publications are delivered |
 | `QUESTURA_REVALIDATION_SECRET` | generate one now; Cloudflare gets the same value in step 16 |
@@ -238,13 +262,16 @@ between a leaked token purging a cache and a leaked token editing DNS.
 cd apps/questura/apps/client
 pnpm exec wrangler secret put QUESTURA_REVALIDATION_SECRET   # same value as step 10
 pnpm exec wrangler secret put QUESTURA_RENDER_TOKEN          # same value as step 10
+pnpm exec wrangler secret put ORIGIN_AUTH_SECRET             # same value as step 8
 pnpm exec wrangler secret put CLOUDFLARE_API_TOKEN           # from step 16
 pnpm exec wrangler secret put CLOUDFLARE_ZONE_ID             # from step 12
 ```
 
-`QUESTURA_RENDER_TOKEN` is server-only. It must never appear as
-`NEXT_PUBLIC_` anything — a render token in a browser bundle is a published
-bypass of the per-IP read limits.
+`QUESTURA_RENDER_TOKEN` and `ORIGIN_AUTH_SECRET` are server-only. Neither may
+ever appear as `NEXT_PUBLIC_` anything: a render token in a browser bundle is
+a published bypass of the per-IP read limits, and the origin secret in one is
+a published key to the origin. Without `ORIGIN_AUTH_SECRET` on the Worker,
+every page that needs the API fails to render once the lock is on.
 
 **18. Gather the site's build settings.**
 `NEXT_PUBLIC_*` values are written into the site's JavaScript when it is

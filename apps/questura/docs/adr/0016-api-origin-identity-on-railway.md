@@ -1,8 +1,14 @@
 # Who the API believes a caller is, on Railway
 
-*2026-09-23. **Proposed, not decided.** The owner picks the option. Written
-for launch-harness PR 2 (`docs/launch-test-harness-handoff-2026-09-23.html`,
-"Start here", second P0).*
+*2026-09-23. Written for launch-harness PR 2
+(`docs/launch-test-harness-handoff-2026-09-23.html`, "Start here", second P0).*
+
+*2026-09-25. **Decided: option A.** The owner picked it
+(`docs/pre-launch-plan-2026-09-24.html`, "Decided for you"). The in-app half
+is built (launch fix plan item 10); see "Option A as built" at the end. The
+Cloudflare Transform Rule and the Railway edge rule are provisioning steps
+(`docs/capacity/h01-provisioning-checklist.md`, step 8), and two platform-only
+questions are PL1 checks.*
 
 Every limiter in the server counts callers by address: sign-in, sign-up,
 password reset, payments, bookmarks, the private and public read limits. The
@@ -76,8 +82,8 @@ proving more than it does. Only the options below close it.
 - **Defence in depth, in the app:** with `ORIGIN_AUTH_SECRET` set, a request
   without the matching header is treated as unidentified (shared bucket),
   or refused. The app then does not depend on a dashboard rule staying put,
-  and the rule can be tested locally like everything else. *Not built yet.
-  It is one small change once the owner picks A.*
+  and the rule can be tested locally like everything else. *Built: see
+  "Option A as built".*
 - Delete the generated `*.up.railway.app` domain. It is not the lock, but
   it is one less door.
 
@@ -118,3 +124,47 @@ header name: any caller at Railway's edge picks their own bucket.
   custom host and a forged `CF-Connecting-IP`. Under A it must be blocked (or
   counted as unidentified). Under B, forged `X-Real-IP` values must not
   rotate the bucket. Run sign-in past its limit and expect 429 both times.
+
+## Option A as built (launch fix plan item 10, 2026-09-25)
+
+- **Where.** `src/proxy.ts` runs `shared/http/origin-auth.ts` on every request
+  the proxy matcher covers (everything except `_next` and static files).
+  `ORIGIN_AUTH_SECRET` is compared in constant time (both sides hashed, then
+  `timingSafeEqual`). The header is removed from the request before any
+  route, logger or error reporter sees it, and the redaction pass removes it
+  by name, by shape and by value as a second lock.
+- **Two modes.** `ORIGIN_AUTH_MODE=refuse` (default): 403, `no-store`, a
+  request id, `{"error":"Forbidden"}` and nothing else. `unidentified`: served,
+  with every address header removed first, so every limiter counts it in the
+  one shared bucket.
+- **One exemption: `/api/health` and `/api/health/ready`, exact paths.**
+  Railway's healthcheck (`infra/railway/railway.json`) calls
+  `/api/health/ready` on the container from inside Railway, with no header.
+  Dot segments are normalised before the check, so `/api/health/../me` is
+  locked.
+- **Nothing else is exempt, deliberately.** Everything that reaches the API
+  from outside passes Cloudflare and so carries the header: browsers, Stripe's
+  webhook deliveries (`/api/payments/webhooks/stripe`, still signature-checked
+  as before), Google's sign-in redirect (`/api/visitor-auth/callback/google`),
+  the writer pipeline, Location Manager and the admin panel. An in-app
+  exemption for any of them would be a path the Railway edge rule blocks
+  anyway. Schedulers (ADR-0015) must call the public host, not Railway's
+  private network, or send the header themselves.
+- **The site's own renders** send the header themselves, from the Worker
+  secret `ORIGIN_AUTH_SECRET` (`renderHeaders()` in the client), so it does
+  not matter whether the Transform Rule applies to Worker subrequests.
+- **Configuration.** Boot refuses a secret under 32 characters, an unknown
+  mode, or a mode without a secret. Boot allows it unset, because the laptop's
+  origin is reachable only through its tunnel. `env:check` refuses a Railway
+  variable file without it, or with the render token's value.
+- **Proof.** Unit: `proxy.test.ts`, `origin-auth.test.ts`, redaction, logger
+  and Sentry scrub tests, the client's `originAuth.test.mjs`. Readiness: the
+  stack runs a Cloudflare stand-in on the API port and the locked backend on
+  4110, so every other suite goes through the door; `readiness:front-door`
+  proves the lock at 4110 and that every page in the launch route list renders
+  with the stand-in adding nothing to the site's renders. Launch day:
+  `launch:verify --origin-edge <Railway edge>` must see 403.
+- **Still platform-only (PL1).** Whether the Transform Rule reaches Worker
+  subrequests, and which client address those subrequests present to the API
+  (the render token gives public reads their own bucket either way, but other
+  limiters count by address). Both are read from the API log on the day.

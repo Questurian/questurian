@@ -148,20 +148,41 @@ async function main(): Promise<void> {
     { label: 'country hub', path: `/${published[0]!.path.split('/')[1]}`, expect: 200 },
     ...manifest.cities.map((city) => ({ label: `city ${city.slug}`, path: city.path, expect: 200 })),
     ...published.map((piece) => ({ label: `${piece.type} ${piece.markers.title}`, path: piece.path, expect: 200, marker: piece.markers.title })),
-    ...manifest.authors.filter((author) => author.path).map((author) => ({ label: `author ${author.slug}`, path: author.path!, expect: 200 })),
     ...manifest.searches.map((search) => ({ label: `search "${search.q}"`, path: `/search?q=${encodeURIComponent(search.q)}`, expect: 200, marker: search.expectedPaths?.[0] })),
     // A query nobody has asked before: a render the data cache cannot answer.
     { label: 'search for something new', path: `/search?q=zzqq${randomBytes(6).toString('hex')}`, expect: 200 },
     { label: 'sitemap', path: '/sitemap.xml', expect: 200, marker: published[0]!.path },
-    ...manifest.pieces.filter((piece) => piece.status === 'draft').map((piece) => ({ label: `draft ${piece.markers.title} stays hidden`, path: piece.path, expect: 404 })),
+    // Drafts with a canonical path (articles get theirs on publication).
+    ...manifest.pieces.filter((piece) => piece.status === 'draft' && piece.path).map((piece) => ({ label: `draft ${piece.markers.title} stays hidden`, path: piece.path, expect: 404, absent: piece.markers.body })),
     ...manifest.missingPaths.map((path) => ({ label: `missing ${path}`, path, expect: 404 })),
   ]
-  for (const page of pages) {
+  // Author pages: the ones the site links to. (The manifest's author slugs
+  // are user rows, not the public author profiles the pages link.)
+  const authorPaths = new Set<string>()
+  const load = async (page: { label: string; path: string; expect: number; marker?: string; absent?: string }) => {
     const response = await fetch(`${CLIENT}${page.path}`, { redirect: 'manual' })
     const html = await response.text()
+    for (const match of html.matchAll(/href="(\/authors\/[a-z0-9-]+)"/g)) authorPaths.add(match[1]!)
     const markerOk = page.marker ? html.includes(page.marker) : true
-    record('renders', `${page.label} → ${page.expect}`, response.status === page.expect && markerOk, `HTTP ${response.status}${page.marker ? `, marker ${markerOk ? 'present' : 'absent'}` : ''}`)
+    const leaked = page.absent ? html.includes(page.absent) : false
+    // A route with a loading.tsx (itineraries) streams its shell before the
+    // page calls notFound(), so the status is already 200: Next then sends the
+    // not-found page with noindex. Not a front-door matter, and nothing of the
+    // draft is in it; accepted here only with both markers of that path.
+    const streamedNotFound =
+      page.expect === 404 && response.status === 200 && /<meta name="robots" content="noindex"/.test(html) && html.includes('NEXT_HTTP_ERROR_FALLBACK;404')
+    const statusOk = response.status === page.expect || streamedNotFound
+    record(
+      'renders',
+      `${page.label} → ${page.expect}`,
+      statusOk && markerOk && !leaked,
+      `HTTP ${response.status}${streamedNotFound ? ' (streamed not-found, noindex)' : ''}${page.marker ? `, marker ${markerOk ? 'present' : 'absent'}` : ''}${leaked ? ', DRAFT CONTENT LEAKED' : ''}`,
+    )
+    if (streamedNotFound) console.log(`        note: ${page.path} is a streamed not-found (HTTP 200 + noindex)`)
   }
+  for (const page of pages) await load(page)
+  record('renders', 'the pages link to at least one author page', authorPaths.size > 0, `${authorPaths.size} linked`)
+  for (const path of [...authorPaths].sort()) await load({ label: `author ${path}`, path, expect: 200 })
   const after = await edgeStats()
   const withKey = after.renders.withKey - before.renders.withKey
   const withoutKey = after.renders.withoutKey - before.renders.withoutKey
@@ -170,6 +191,12 @@ async function main(): Promise<void> {
   record('renders', 'every render call carried the key itself (the edge added nothing)', withoutKey === 0, `${withoutKey} without`)
   record('renders', 'no render call was refused', refusedRenders === 0, `${refusedRenders} refused`)
   record('renders', 'since the stack started, no render call ever lacked the key', after.renders.withoutKey === 0 && after.refusedByOrigin.renders === 0, JSON.stringify(after.renders))
+
+  // The edge really adds nothing to a render: one without its own key is refused.
+  const bareRender = await raw(EDGE, '/api/public/articles/by-location?country=zz-launch', {
+    headers: { 'x-questura-render-token': stack.secrets.renderToken, 'x-readiness-edge-probe': '1' },
+  })
+  record('renders', 'a render call without its own key is refused (the stand-in adds nothing to renders)', refused(bareRender), `HTTP ${bareRender.status}`)
 
   // --- Never logged -----------------------------------------------------------
   for (const role of ['backend', 'client', 'edge']) {

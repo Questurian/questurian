@@ -32,6 +32,8 @@ import { Agent, createServer, request as httpRequest } from 'node:http'
 const ORIGIN_HEADER = 'x-questura-origin-auth'
 const RENDER_HEADER = 'x-questura-render-token'
 export const EDGE_STATS_PATH = '/__edge/stats'
+/** Marks a request from the front-door check itself: forwarded, never counted. */
+export const PROBE_HEADER = 'x-readiness-edge-probe'
 
 export type EdgeStats = {
   forwarded: number
@@ -58,9 +60,14 @@ function main(): void {
     }
 
     const headers = { ...req.headers }
+    // The front-door check's own deliberate misses are not the site's renders.
+    const probe = headers[PROBE_HEADER] !== undefined
+    delete headers[PROBE_HEADER]
     const render = typeof headers[RENDER_HEADER] === 'string'
     if (render) {
-      if (headers[ORIGIN_HEADER]) stats.renders.withKey += 1
+      if (probe) {
+        // not counted
+      } else if (headers[ORIGIN_HEADER]) stats.renders.withKey += 1
       else stats.renders.withoutKey += 1
     } else {
       // The Transform Rule sets the header, replacing whatever the caller sent.
@@ -71,7 +78,7 @@ function main(): void {
     const upstream = httpRequest(
       { host: '127.0.0.1', port: originPort, method: req.method, path: req.url, headers, agent },
       (response) => {
-        if (response.statusCode === 403) {
+        if (response.statusCode === 403 && !probe) {
           if (render) stats.refusedByOrigin.renders += 1
           else stats.refusedByOrigin.others += 1
         }
