@@ -197,7 +197,8 @@ routes, not the client's `returnTo` check. The revert went green.
    pnpm --dir apps/questura/apps/server readiness:routes     # expect 119/119: includes redirects never leaving the site
    pnpm --dir apps/questura/apps/server readiness:payments   # expect 43/43
    pnpm --dir apps/questura/apps/server readiness:purchase   # expect 54/54: a whole purchase, refunds and disputes, a failed card (past_due, grace, portal), paused, a deleted customer, fake Stripe (basil-shaped)
-   pnpm --dir apps/questura/apps/server readiness:auth       # expect 29/29: sign-in and sessions, attacked
+   pnpm --dir apps/questura/apps/server readiness:auth       # expect 30/30: sign-in and sessions, attacked (a signed-out session's replayed cookies refused within 3 s)
+   pnpm --dir apps/questura/apps/server readiness:account    # expect 49/49: password change / reset / sign out of all devices end other devices within 3 s with the cache cookie kept, email change end to end (Stripe customer follows), nightly email drift, account deletion (docs/procedures/account-deletion.md)
    pnpm --dir apps/questura/apps/server readiness:oauth      # expect 71/71: Google linking (fake Google), staff/visitor isolation
    pnpm --dir apps/questura/apps/server readiness:faults     # expect 26/26: Stripe, Redis, Postgres failing (Postgres frozen: 503 in ~17 s, ready 503 in ~2 s; articles locked: member body 503 + Retry-After in ~5 s)
    pnpm --dir apps/questura/apps/server readiness:contracts  # expect all ok: response shapes match both apps' types

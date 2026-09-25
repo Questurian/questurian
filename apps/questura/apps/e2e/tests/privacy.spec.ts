@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures'
+import { allowProblems, expect, test } from './fixtures'
 
 /**
  * The privacy text (launch fix plan item 14, decision D2). `/join` linked to
@@ -7,6 +7,9 @@ import { expect, test } from './fixtures'
  */
 
 test('the privacy page answers from the join page and says how to have an account deleted', async ({ page }) => {
+  // `/terms` and `/faq`, linked beside Privacy on /join, do not exist yet
+  // (owner content); Next prefetches them and gets a 404.
+  allowProblems(page, /^http 404: GET \S+\/(terms|faq)(\?_rsc=\S+)?$/, '/terms and /faq are not written yet')
   await page.goto('/join')
   await page.getByRole('link', { name: 'Privacy Policy' }).click()
   await expect(page).toHaveURL((url) => url.pathname === '/privacy')

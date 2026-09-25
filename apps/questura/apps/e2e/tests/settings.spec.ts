@@ -53,7 +53,7 @@ test('journey 6: changing the password keeps this browser signed in, signs the o
   await page.context().clearCookies({ name: /questura_visitor\.session_data/ })
   await page.reload()
   await expectSignedIn(page)
-  await expect(page.getByRole('heading', { name: 'Your Account' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your Account', exact: true })).toBeVisible()
 
   // The security notice reaches the reader (decision D4).
   await mailTo(email, /password/i, since)
@@ -148,8 +148,9 @@ test('journey 13: "sign out of all devices" ends this browser and the other one 
   await page.getByRole('button', { name: 'Sign out of all devices' }).click()
   await page.getByRole('button', { name: 'Sign out everywhere' }).click()
 
-  // This browser lands signed out.
-  await page.waitForURL((url) => url.pathname === '/')
+  // This browser leaves the account page (for the home page, which the
+  // sandbox redirects to its default city) and is signed out.
+  await page.waitForURL((url) => url.pathname !== '/account')
   await page.goto(HOME_PATH)
   await expectSignedOut(page)
 
