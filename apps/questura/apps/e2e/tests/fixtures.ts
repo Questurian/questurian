@@ -76,6 +76,16 @@ const ALWAYS_ALLOWED: Allowance[] = [
     pattern: /^console: Failed to fetch RSC payload for \S+\. Falling back to browser navigation\./,
     why: 'Next falling back to an ordinary page load',
   },
+  {
+    // React 19.1 replays a layout's <div> mid-hydration without rewinding its
+    // hydration cursor, about one fast /account load in seventy, and recovers
+    // by rendering the page again in the browser (launch fix plan item 8b;
+    // measured 3 in 168 loads). No safe fix exists here: a Suspense boundary
+    // under the layouts stops it but turns every 404 into a 200.
+    // account.spec.ts still fails the old, every-load #418.
+    pattern: /^pageerror: Minified React error #418;.* \(on \/account\)$/,
+    why: 'a rare, recovered React hydration race on /account',
+  },
   ...(SANDBOX
     ? [
         {

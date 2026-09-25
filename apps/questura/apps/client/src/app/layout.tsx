@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import {
   Cormorant_Garamond,
   Geist,
@@ -66,12 +65,7 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${editorialSerif.variable} antialiased`}
       >
         <div className="flex min-h-screen min-w-[280px] flex-col overflow-x-clip">
-          {/* Never shows a fallback: see SiteFonts.tsx. `children` is Next's
-              layout router, a client component; without a boundary between
-              it and this <div>, a fast load could replay the <div> mid-
-              hydration, and React claimed the next element down as this one
-              (#418, launch fix plan item 8). */}
-          <Suspense fallback={null}>{children}</Suspense>
+          {children}
         </div>
         <NavigationFeedback />
       </body>
