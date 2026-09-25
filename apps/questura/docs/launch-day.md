@@ -61,17 +61,17 @@ Stripe/Google. From a fresh session it needs only `docker`:
 After step 2, the browser journeys run against the same stack:
 
 ```bash
-pnpm --dir apps/questura/apps/e2e exec playwright test --project='chromium*' --project='firefox*'   # expect 75 passed, 1 skipped (30 tests × 2 engines, journey 12 is Chromium only, + journeys 1–3 on 2 phones × 2 engines)
+pnpm --dir apps/questura/apps/e2e exec playwright test --project='chromium*' --project='firefox*'   # expect 79 passed, 1 skipped (32 tests × 2 engines, journey 12 is Chromium only, + journeys 1–3 on 2 phones × 2 engines)
 ```
 
-What they cover (launch fix plan item 8):
+What they cover (launch fix plan items 8 and 14):
 
 | Spec | Tests | What |
 |---|---|---|
 | `browse.spec.ts` | 1 | Journey 1: home → city → article → author → back; every image decodes, nothing wider than the screen |
 | `join.spec.ts` | 2 | Journey 2: paywall → plans at $12.99 / $79.99 with the article carried along; sign-up, verification mail, fake Checkout, signed webhook, back on the open article |
-| `accounts.spec.ts` | 3 | Journeys 3–5: password sign-up / in / out; Google through the fake provider; password reset (other sessions end, the link works once, an expired link is refused) |
-| `settings.spec.ts` | 2 | Journey 6: change password (this browser stays in, the other is signed out, the old password is refused, the notice mail arrives); journey 7: change email through the mailbox (sign-in moves to the new address, the old one is told) |
+| `accounts.spec.ts` | 3 | Journeys 3–5: password sign-up / in / out; Google through the fake provider; password reset (other sessions end with the cache cookie kept, the link works once, an expired link is refused) |
+| `settings.spec.ts` | 3 | Journey 6: change password (this browser stays in, the other is signed out with its cache cookie kept, the old password is refused, the notice mail arrives); journey 7: change email through the mailbox (sign-in moves to the new address, the old one is told); journey 13: "sign out of all devices" ends this browser and the other one within seconds, and the account page says how to delete the account |
 | `billing.spec.ts` | 3 | Journey 8: a monthly and a yearly member's account page (plan, renewal date, Monthly / Yearly); cancel, then reactivate |
 | `find.spec.ts` | 2 | Journey 9: bookmark an article, find it in Bookmarks, remove it; search from the menu, open the result, a query with no match |
 | `errors.spec.ts` | 3 | Journey 10: a made-up address and a missing article are real 404s with the site's menu and footer; an article the API cannot serve (503 at the front door) shows the branded error page (HTTP 500), not a blank or bare one |
@@ -81,6 +81,7 @@ What they cover (launch fix plan item 8):
 | `membership.spec.ts` | 3 | The paywall, member sign-in and sign-out, a non-member |
 | `session.spec.ts` | 2 | Session cookie flags; a wrong password |
 | `redirects.spec.ts` | 5 | `?returnTo=` never leaves the site and lands exactly on the safe fallback |
+| `privacy.spec.ts` | 1 | `/join` links to a real `/privacy` page that says how to have an account deleted (email, within 30 days) |
 
 Every page in every spec fails on a console error, an uncaught page error or
 a failed request (a network failure or any response of 400 or more), apart
@@ -93,7 +94,7 @@ fails. A Suspense boundary under the layouts stops the race but made every
 404 answer 200, so it was not kept.
 In the sandbox the browsers cannot reach anything but this machine (a
 black-hole proxy for every other host). The read-only specs (`browse`, the
-first `join` test, `account`, `membership`, `session`, `redirects`, the 404s
+first `join` test, `account`, `membership`, `session`, `redirects`, `privacy`, the 404s
 in `errors`, `slow`, search in `find` when `E2E_SEARCH_QUERY` /
 `E2E_SEARCH_PATH` are set, and the phone projects' journey 1 and first
 journey 2 test) also run against the real site with `E2E_BASE_URL` and the
