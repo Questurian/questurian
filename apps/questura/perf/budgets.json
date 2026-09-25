@@ -1,5 +1,22 @@
 {
+  "_readme": "Speed budgets that fail CI (launch fix plan item 13). Each is 10% above a measured value, capped at LCP 2.5 s, CLS 0.1 and 170 kB of first-load JS per route. Where each number was measured and how to re-measure: docs/launch-day.md, 'Speed budgets'.",
+  "statements": {
+    "_measured": "readiness sandbox launch corpus, 2026-09-25, from the backend's Server-Timing; statement counts do not depend on the machine",
+    "anonymousMeNote": "anonymous /api/me must send zero statements: readiness:routes' identity check",
+    "cityPage": {
+      "path": "/api/public/location-homepages/zz-launch/harbor",
+      "measured": 8,
+      "max": 9,
+      "note": "the sandbox's cities are small; a Lima-class page measured 171 statements (docs/capacity/STATUS.md CAP-05), which only real data can re-check"
+    },
+    "article": {
+      "path": "/api/public/articles/by-canonical-path?path=/zz-launch/hillside/neighbourhoods/launch-article-07&lang=en",
+      "measured": 7,
+      "max": 8
+    }
+  },
   "firstLoadJs": {
+    "_measured": "gzip -9 of the readiness client build's chunks (src/lib/release/firstLoadJs.mjs), 2026-09-25; deterministic, the same on any machine",
     "capKb": 170,
     "growth": 0.1,
     "baselineKb": {
