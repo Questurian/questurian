@@ -23,6 +23,10 @@ test('the 500 page offers a way back and never shows an error', () => {
   assert.match(source, /function ServerErrorPage\(\)/, 'it takes no props, so no error can reach the page')
 })
 
+test('the 500 page ships no JavaScript', () => {
+  assert.match(source, /export const config = \{ unstable_runtimeJS: false \};/)
+})
+
 test('the 500 page uses only foundations colours, and no white', () => {
   const colours = [...source.matchAll(/#[0-9a-f]{6}\b/gi)].map((match) => match[0].toUpperCase())
   assert.ok(colours.length > 0)

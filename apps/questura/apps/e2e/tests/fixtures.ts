@@ -57,7 +57,8 @@ export function freshEmail(label: string): string {
  * console line is left to the response check, which names the URL and works
  * the same in Firefox (which logs nothing).
  */
-type Allowance = { pattern: RegExp; why: string }
+/** `once`: allowed a single time per browser context; a second match is a failure. */
+type Allowance = { pattern: RegExp; why: string; once?: boolean }
 
 const ALWAYS_ALLOWED: Allowance[] = [
   {
@@ -77,14 +78,18 @@ const ALWAYS_ALLOWED: Allowance[] = [
     why: 'Next falling back to an ordinary page load',
   },
   {
-    // React 19.1 replays a layout's <div> mid-hydration without rewinding its
-    // hydration cursor, about one fast /account load in seventy, and recovers
-    // by rendering the page again in the browser (launch fix plan item 8b;
-    // measured 3 in 168 loads). No safe fix exists here: a Suspense boundary
-    // under the layouts stops it but turns every 404 into a 200.
-    // account.spec.ts still fails the old, every-load #418.
-    pattern: /^pageerror: Minified React error #418;.* \(on \/account\)$/,
-    why: 'a rare, recovered React hydration race on /account',
+    // React 19.1 sometimes replays a layout's <div> mid-hydration without
+    // rewinding its hydration cursor (a client component's code arriving at
+    // that moment), throws #418 and recovers by rendering the page again in
+    // the browser; the reader still gets the page (launch fix plan item 8b:
+    // 3 in 168 fast /account loads, also seen once on /zz-launch in Firefox).
+    // No safe fix exists here: a Suspense boundary under the layouts stops it
+    // but turns every 404 into a 200. Allowed once per context only, so a real
+    // mismatch, which fails every load, still fails the gate; account.spec.ts
+    // checks /account over repeated loads.
+    pattern: /^pageerror: Minified React error #418;/,
+    why: 'a rare, recovered React hydration race',
+    once: true,
   },
   ...(SANDBOX
     ? [
@@ -173,7 +178,12 @@ export function allowProblems(target: Page | BrowserContext, pattern: RegExp, wh
 export function unexpectedProblems(context: BrowserContext): string[] {
   const gate = gates.get(context)
   if (!gate) return []
-  return gate.problems.filter((problem) => !gate.allowed.some(({ pattern }) => pattern.test(problem)))
+  const spent = new Set<Allowance>()
+  return gate.problems.filter((problem) => {
+    const allowance = gate.allowed.find((each) => each.pattern.test(problem) && !(each.once && spent.has(each)))
+    if (allowance?.once) spent.add(allowance)
+    return !allowance
+  })
 }
 
 const REDIRECT_TARGETS = /^\/api\/visitor-auth\/(callback\/|verify-email|reset-password\/)/

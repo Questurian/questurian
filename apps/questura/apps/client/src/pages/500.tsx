@@ -18,6 +18,13 @@ import Head from 'next/head';
  * shows it.
  */
 
+/**
+ * No JavaScript at all. The page needs none (plain links), and Next's Pages
+ * Router runtime, once loaded on an error page, keeps probing the failed
+ * address (`HEAD /_next/data/…`), adding load to a page that already failed.
+ */
+export const config = { unstable_runtimeJS: false };
+
 const INK = '#1A1A1A';
 const GROUND = '#F5F0E8';
 const ACCENT = '#3B5BDB';
