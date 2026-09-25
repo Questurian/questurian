@@ -138,8 +138,13 @@ test.describe('speed budgets', () => {
 
           const response = await page.goto(budget.path, { waitUntil: 'load', timeout: 60_000 })
           expect(response?.status(), `${budget.path} answers`).toBe(200)
-          // LCP can still move until the page settles; give it a moment.
-          await page.waitForTimeout(1_500)
+          // Let the page settle (hydration done, the main thread idle) before
+          // the tap: on a 4x slower runner a tap during hydration waits a
+          // second or more behind it, which measures the runner's scheduling
+          // more than the page. LCP stops at the first input, so this also
+          // lets it finish.
+          await page.waitForTimeout(1_000)
+          await page.evaluate(() => new Promise((done) => requestIdleCallback(() => done(null), { timeout: 15_000 })))
           const heading = page.locator('h1').first()
           await expect(heading).toBeVisible()
           // A tap on the heading's middle, straight to the touchscreen: no

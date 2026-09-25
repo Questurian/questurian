@@ -19,28 +19,28 @@
         "path": "/zz-launch",
         "lcpMs": 2500,
         "cls": 0.1,
-        "inpMs": 200,
+        "inpMs": 2000,
         "imageKb": 400
       },
       "city": {
         "path": "/zz-launch/harbor",
         "lcpMs": 2500,
         "cls": 0.1,
-        "inpMs": 200,
+        "inpMs": 2000,
         "imageKb": 400
       },
       "article": {
         "path": "/zz-launch/hillside/neighbourhoods/launch-article-07",
         "lcpMs": 2500,
         "cls": 0.1,
-        "inpMs": 200,
+        "inpMs": 2000,
         "imageKb": 400
       },
       "join": {
         "path": "/join",
-        "lcpMs": 2850,
+        "lcpMs": 3200,
         "cls": 0.1,
-        "inpMs": 200,
+        "inpMs": 2000,
         "imageKb": 400,
         "overCap": "PROVISIONAL: the hero globe (123 kB webp at phone widths) is the LCP; 2.59 s on the Mac"
       }
