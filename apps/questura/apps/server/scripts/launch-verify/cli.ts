@@ -9,6 +9,11 @@
  *   --api <origin>             the API (required)
  *   --bypass <origin>          a platform-generated origin (e.g. the
  *                              *.up.railway.app host) that must NOT serve the API
+ *   --origin-edge <origin>     where the API's DNS record sends Cloudflare
+ *                              (Railway's edge for the custom domain; in the
+ *                              sandbox the backend's own port). A request
+ *                              there naming the API host, without the origin
+ *                              secret, must be refused with 403 (ADR-0016)
  *   --monthly-cents <n>        advertised monthly price (default 1299)
  *   --yearly-cents <n>         advertised yearly price (default 7999)
  *   --rate-limit-probe         spend one caller's plans budget to prove forged
@@ -41,7 +46,7 @@ async function main(): Promise<void> {
   const client = arg('client')?.replace(/\/$/, '')
   const api = arg('api')?.replace(/\/$/, '')
   if (!client || !api) {
-    console.error('usage: pnpm launch:verify -- --client <site origin> --api <api origin> [--bypass <origin>] [--rate-limit-probe]')
+    console.error('usage: pnpm launch:verify -- --client <site origin> --api <api origin> [--bypass <origin>] [--origin-edge <origin>] [--rate-limit-probe]')
     process.exit(2)
   }
 
@@ -49,6 +54,7 @@ async function main(): Promise<void> {
     client,
     api,
     bypassOrigin: arg('bypass')?.replace(/\/$/, ''),
+    originEdge: arg('origin-edge')?.replace(/\/$/, ''),
     expectPrices: {
       monthly: Number(arg('monthly-cents') ?? 1299),
       yearly: Number(arg('yearly-cents') ?? 7999),

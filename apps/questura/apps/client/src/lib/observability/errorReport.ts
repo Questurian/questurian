@@ -168,7 +168,7 @@ export function createBrowserReporter(options: { backendUrl: string; fetch?: Fet
  */
 export async function sendWorkerReport(
   report: ErrorReport,
-  options: { backendUrl: string; fetch?: FetchLike; timeoutMs?: number },
+  options: { backendUrl: string; fetch?: FetchLike; timeoutMs?: number; headers?: Record<string, string> },
 ): Promise<boolean> {
   const doFetch = options.fetch ?? (globalThis.fetch as unknown as FetchLike | undefined);
   if (!doFetch) return false;
@@ -179,7 +179,9 @@ export async function sendWorkerReport(
     await doFetch(reportUrl(options.backendUrl), {
       method: 'POST',
       body: JSON.stringify(report),
-      headers: { 'content-type': 'application/json' },
+      // The caller's headers (the front door's key, from the Worker) first:
+      // the content type is this function's to set.
+      headers: { ...options.headers, 'content-type': 'application/json' },
       signal: controller?.signal,
     });
     return true;

@@ -143,6 +143,8 @@ async function main(): Promise<void> {
     [
       `QUESTURA_REVALIDATION_SECRET=${settings.revalidationSecret}`,
       `QUESTURA_RENDER_TOKEN=${settings.renderToken}`,
+      // The front door's key (plan item 10): the Worker sends it on every call to the API.
+      ...(settings.originAuthSecret ? [`ORIGIN_AUTH_SECRET=${settings.originAuthSecret}`] : []),
       `BACKEND_URL_LOCAL=http://127.0.0.1:${STACK_PORTS.backend}`,
     ].join('\n') + '\n',
     { mode: 0o600 },

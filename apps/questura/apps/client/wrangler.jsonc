@@ -92,6 +92,11 @@
   //   QUESTURA_RENDER_TOKEN         identifies this frontend's server-side
   //                                 reads to the backend's render bucket.
   //                                 Server-only: never NEXT_PUBLIC_.
+  //   ORIGIN_AUTH_SECRET            the API front door's key (ADR-0016), sent
+  //                                 as X-Questura-Origin-Auth on every
+  //                                 server-side call. Same value as the
+  //                                 backend and the Cloudflare Transform
+  //                                 Rule. Server-only: never NEXT_PUBLIC_.
   //   CLOUDFLARE_API_TOKEN          cache purge only. Cache Purge permission
   //   CLOUDFLARE_ZONE_ID            on this zone and nothing else.
 }
