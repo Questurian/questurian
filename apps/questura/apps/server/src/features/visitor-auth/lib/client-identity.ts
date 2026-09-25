@@ -43,5 +43,15 @@ export function withClientIdentity(request: Request): Request {
     address === UNIDENTIFIED_CLIENT ? UNIDENTIFIED_CLIENT_ADDRESS : address
   )
 
-  return new Request(request, { headers })
+  // Rebuilt from its parts rather than `new Request(request, …)`: on Node 24
+  // that copy throws "Cannot read private member #state" for the request Next
+  // hands the route, and every sign-in answered 500. `mount-bounds.ts` rebuilds
+  // for the same reason. The signal is not carried; the route passes it to the
+  // admission gate itself.
+  const hasBody = request.method !== 'GET' && request.method !== 'HEAD'
+  return new Request(request.url, {
+    method: request.method,
+    headers,
+    ...(hasBody ? { body: request.body, duplex: 'half' } : {}),
+  } as RequestInit)
 }
