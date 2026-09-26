@@ -41,10 +41,16 @@ describe('generateApiKeyHook', () => {
     expect(absent.data?.apiKey).toBeUndefined()
   })
 
-  it('issues a key on update, so re-enabling a revoked account works', async () => {
+  it('never issues a key on update: a Save after Generate must not replace the copied key', async () => {
     const result = await run({ enableAPIKey: true }, 'update')
 
-    expect(typeof result.data?.apiKey).toBe('string')
+    expect(result.data?.apiKey).toBeUndefined()
+  })
+
+  it('keeps a key supplied on update', async () => {
+    const result = await run({ enableAPIKey: true, apiKey: 'generated-in-admin' }, 'update')
+
+    expect(result.data?.apiKey).toBe('generated-in-admin')
   })
 
   it('leaves reads and deletes alone', async () => {
