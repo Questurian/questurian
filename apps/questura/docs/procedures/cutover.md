@@ -218,12 +218,23 @@ Write down the time at each step.
    script the rehearsal ran. The deploy log must show
    `Checking pending database migrations` and end with `Pre-deploy complete`.
    If the pre-deploy fails, the deploy stops and nothing serves; read the log.
+   The service has no deploy trigger: start this one by hand (dashboard →
+   `questura-server` → Deploy, or the API's `serviceInstanceDeployV2`).
 
    Then run the step 7 query against Neon again: the same numbers, except
    `payload_migrations`, which grows by the migrations newer than the Mac's
    (three on 2026-09-25, all rated `automatic-safe` by the guard).
 
-9. **Check the API answers** before anyone can see it:
+   Then switch the daily backup on and run it once
+   (`docs/procedures/backup-restore-rollback.md`, "One-time setup" steps 6–7):
+   `gh variable set QUESTURA_BACKUP_ENABLED --repo Questurian/questurian --body true`
+   and `gh workflow run questura-daily-backup.yml --repo Questurian/questurian`.
+
+9. **Check the API answers** before anyone can see it. First, with your go
+   (DNS): `api.questurian.com` is a proxied CNAME to an old, dead Render
+   server; replace it with a proxied CNAME to Railway's target for the custom
+   domain, and create the Transform Rule (H01 step 8.4). Once Railway shows
+   the certificate issued, add the two edge rules (H01 step 8.5).
 
    ```bash
    curl -s https://api.questurian.com/api/health            # answers
@@ -233,7 +244,10 @@ Write down the time at each step.
    That a caller who skips Cloudflare gets 403 is checked in step 12
    (`launch:verify --edge-ip`, required since launch fix plan item 6).
 
-10. **Deploy the website** (H01 step 20).
+10. **Deploy the website** (H01 steps 19–20, then the Worker secrets of step
+    17). Only after step 9: the build reads every public page from the live
+    API (`/api/public/sitemap-entries`) and fails with a 404 while the API is
+    not answering at `api.questurian.com`.
 
 11. **Point the domains at the new site.** Cloudflare → DNS: `www.questurian.com`
     and `questurian.com` go to the Worker (its custom domains), replacing the
@@ -243,7 +257,9 @@ Write down the time at each step.
 12. **Run the launch checks** against the real domains, read-only:
     `docs/launch-day.md` step 3 (`launch:verify`, every check must pass) and
     step 4 (`verify:stripe-webhook-events`: the new endpoint at the pinned
-    version with no `MISSING`).
+    version with no `MISSING`). That check also fails on the laptop's
+    endpoint (no pinned version, no `customer.deleted`) until it is disabled:
+    do step 16's Stripe part before it.
 
 13. **Re-issue Location Manager's key.** Sign in at
     `https://api.questurian.com/admin` → Service Accounts → `Location Manager`

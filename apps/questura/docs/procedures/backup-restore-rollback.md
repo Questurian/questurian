@@ -38,7 +38,10 @@ uploaded and the run fails, which emails the owner.
 ## One-time setup (owner)
 
 Done during provisioning (`docs/capacity/h01-provisioning-checklist.md`).
-Nothing below exists yet.
+Done on 2026-09-26 (bucket `questura-db-backups`, role `questura_backup`),
+except the switch: `QUESTURA_BACKUP_ENABLED` stays `false` until production
+holds data (after `docs/procedures/cutover.md` step 8). A run against the
+empty database fails.
 
 **Neon.**
 1. Project settings → history retention (called *instant restore* in the
@@ -64,9 +67,9 @@ Nothing below exists yet.
 6. Secrets: `QUESTURA_BACKUP_DATABASE_URL` (step 2),
    `R2_BACKUP_ACCESS_KEY_ID`, `R2_BACKUP_SECRET_ACCESS_KEY` (step 5).
    Variables: `QUESTURA_BACKUP_S3_URI=s3://questura-db-backups/daily`,
-   `QUESTURA_BACKUP_S3_ENDPOINT=<endpoint from step 5>`, and last
-   `QUESTURA_BACKUP_ENABLED=true`.
-7. Actions → *Questura daily backup* → *Run workflow*. It must end with
+   `QUESTURA_BACKUP_S3_ENDPOINT=<endpoint from step 5>`, and last, **only once
+   production holds data**, `QUESTURA_BACKUP_ENABLED=true`.
+7. Then Actions → *Questura daily backup* → *Run workflow*. It must end with
    `Stored questura-<stamp>.dump in the off-Neon bucket`, and the bucket must
    show that file and its `.sha256`.
 
