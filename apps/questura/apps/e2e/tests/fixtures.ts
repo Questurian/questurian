@@ -78,6 +78,14 @@ const ALWAYS_ALLOWED: Allowance[] = [
     why: 'Next falling back to an ordinary page load',
   },
   {
+    // Firefox logs a web font it was still downloading when leaving the page
+    // cut it off. 2152398850 is NS_BINDING_ABORTED (0x804B0002), the same
+    // cancellation as above; a font that fails for any other reason (404,
+    // decode error) has another status, or none, and still fails.
+    pattern: /^console: \[JavaScript Error: "downloadable font: download failed \(.*\): status=2152398850 source: \S+"\]/,
+    why: 'a font download cancelled by leaving the page',
+  },
+  {
     // React 19.1 sometimes replays a layout's <div> mid-hydration without
     // rewinding its hydration cursor (a client component's code arriving at
     // that moment), throws #418 and recovers by rendering the page again in

@@ -1,4 +1,4 @@
-import { SANDBOX, allowProblems, expect, test } from './fixtures'
+import { HOME_PATH, MEMBER_ARTICLE, SANDBOX, allowProblems, expect, test } from './fixtures'
 import { edgeFault } from './sandbox'
 
 /**
@@ -56,4 +56,25 @@ test('journey 10: an article the API cannot serve (503) shows the error page, no
   // Once the API is back the same address is an ordinary 404 again.
   allowProblems(page, new RegExp(`^http 404: GET \\S+${article}(\\?_rsc=\\S+)?$`), 'with the API back, the made-up article is missing')
   expect((await page.goto(article))?.status()).toBe(404)
+})
+
+test('journey 10: leaving a page before its modals have loaded shows no error, and the next page\'s menu opens', async ({ page }) => {
+  // Firefox cancels the old page's pending scripts as soon as the next page is
+  // requested. The modal renderers load, closed, at hydration; one whose code
+  // was cut off used to throw a ChunkLoadError into `app/error.tsx`, which
+  // swapped the page being left for "Something went wrong", reported it, and
+  // logged a bare "Error" to the console (the gate's failure here). Holding
+  // the lazy chunks makes that the case every time instead of one in thirty.
+  let leaving = false
+  await page.route(/\/_next\/static\/chunks\/\d+\.[0-9a-f]+\.js$/, async (route) => {
+    if (!leaving) await new Promise((resolve) => setTimeout(resolve, 1_500))
+    await route.continue().catch(() => {}) // cancelled by the browser meanwhile
+  })
+  await page.goto(MEMBER_ARTICLE.path, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(300)
+  leaving = true
+  await page.goto(HOME_PATH)
+  // The modals still load on an ordinary visit.
+  await page.getByRole('button', { name: 'Open menu modal' }).locator('visible=true').first().click()
+  await expect(page.getByLabel('Search articles').first()).toBeVisible()
 })

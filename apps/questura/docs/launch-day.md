@@ -79,7 +79,7 @@ Stripe/Google. From a fresh session it needs only `docker`:
 After step 2, the browser journeys run against the same stack:
 
 ```bash
-pnpm --dir apps/questura/apps/e2e exec playwright test --project='chromium*' --project='firefox*'   # expect 88 passed, 6 skipped (39 tests × 2 engines, journey 12 and five of the six speed tests are Chromium only, + journeys 1–3 on 2 phones × 2 engines)
+pnpm --dir apps/questura/apps/e2e exec playwright test --project='chromium*' --project='firefox*'   # expect 90 passed, 6 skipped (40 tests × 2 engines, journey 12 and five of the six speed tests are Chromium only, + journeys 1–3 on 2 phones × 2 engines)
 ```
 
 What they cover (launch fix plan items 8 and 14):
@@ -92,7 +92,7 @@ What they cover (launch fix plan items 8 and 14):
 | `settings.spec.ts` | 3 | Journey 6: change password (this browser stays in, the other is signed out with its cache cookie kept, the old password is refused, the notice mail arrives); journey 7: change email through the mailbox (sign-in moves to the new address, the old one is told); journey 13: "sign out of all devices" ends this browser and the other one within seconds, and the account page says how to delete the account |
 | `billing.spec.ts` | 3 | Journey 8: a monthly and a yearly member's account page (plan, renewal date, Monthly / Yearly); cancel, then reactivate |
 | `find.spec.ts` | 2 | Journey 9: bookmark an article, find it in Bookmarks, remove it; search from the menu, open the result, a query with no match |
-| `errors.spec.ts` | 3 | Journey 10: a made-up address and a missing article are real 404s with the site's menu and footer; an article the API cannot serve (503 at the front door) shows the branded error page (HTTP 500), not a blank or bare one |
+| `errors.spec.ts` | 4 | Journey 10: a made-up address and a missing article are real 404s with the site's menu and footer; an article the API cannot serve (503 at the front door) shows the branded error page (HTTP 500), not a blank or bare one; leaving a page before its modals' code arrives (Firefox cancels it) shows no error page |
 | `slow.spec.ts` | 1 | Journey 12: journey 1 on Slow 3G + 4× slower CPU (Chromium only), inside its speed budget (46 s in the sandbox; 180 s against the real site) |
 | `speed.spec.ts` | 6 | Speed budgets (item 13): home, a city, an article and `/join` cold on a throttled phone, held to `perf/budgets.json`; the budgets are all under their caps or say why not; the web vitals beacon reaches the API (see "Speed budgets" below) |
 | phone projects | 4 per phone and engine | Journey 11: journeys 1–3 on Pixel 7 and iPhone 13 screens (`chromium-*` emulate the phone fully; `firefox-*` get its screen, density, touch and user agent), with no horizontal scroll on any page |
