@@ -1,13 +1,17 @@
-# Membership pricing (laptop vs launch)
+# Membership pricing
 
-This is the rule. Reviews that "fix" advertised prices to match Checkout are
-wrong until serverless launch.
+> **Since 2026-09-26 Checkout charges the catalog: $12.99/month, $79.99/year.**
+> The Linux laptop is retired and live runs on Railway + Cloudflare + Neon.
+> The $0.50 laptop test price is not used by any checkout; the two $0.50
+> subscriptions were refunded and canceled. Sections below that describe the
+> laptop switch and `stripe-live` are historical. Move record:
+> `docs/procedures/cutover.md` and `docs/moveday-handoff-2026-09-26.md`.
 
 ## One product
 
 Stripe product **Questurian Membership** (`prod_V4XBrsC0ai3ZOY`) is the only
-membership product. Monthly, yearly, and the cheap laptop test charge are
-**prices on that product**. Do not create another product for testing.
+membership product. Monthly, yearly, and the old laptop test charge (unused)
+are **prices on that product**. Do not create another product for testing.
 
 ## Two numbers, on purpose
 
@@ -15,12 +19,11 @@ membership product. Monthly, yearly, and the cheap laptop test charge are
 |---|---|---|
 | **Catalog** (what the site says) | **$12.99 / month**, **$79.99 / year** | `membership-catalog.ts` → `/api/payments/plans` → server-rendered `/join`, client `/purchase` |
 | **Nav Subscribe button** | **`Join: $1.54/wk` / `Subscribe: under $1.55/wk`** | Hardcoded in `SubscribeButton.tsx`. Not a bug. Do not wire plans/Stripe into it. |
-| **Laptop test charge** (what Checkout takes now) | **$0.50 / month** | Host `STRIPE_PRICE_ID_MONTHLY` → Stripe Checkout |
+| **Old laptop test charge** (retired, used by no checkout) | $0.50 / month | Was the laptop's `STRIPE_PRICE_ID_MONTHLY` |
 
-The site advertises the catalog. The laptop charges $0.50 so live Checkout can
-be proven without a $12.99 hit every test. **That mismatch is intentional.**
-Ignore it in reviews. Do not sync the UI down to $0.50. Do not treat $0.50 as
-the product.
+The site advertises the catalog and Checkout charges it. The laptop used to
+charge $0.50 so live Checkout could be proven cheaply; that ended with the
+laptop. Do not treat $0.50 as the product.
 
 The only forbidden mismatch: advertising **less** than Stripe will charge.
 
@@ -33,8 +36,8 @@ price from Stripe and refuses the plan outright when the price disagrees with
 - **billing interval** — a "yearly" price that actually bills monthly
 - **interval count** — anything other than every 1 interval
 - **currency** — anything other than the catalog currency
-- **amount** — *above* the catalog amount. Below is the laptop test charge and
-  is allowed; that is the whole point of the switch below.
+- **amount** — *above* the catalog amount. Below is allowed (that is what let
+  the old laptop test charge through).
 
 It also refuses when Stripe cannot be reached at all, rather than guessing.
 
@@ -46,18 +49,16 @@ loading the pricing page — kept charging it.
 
 A refused plan is a **400 `That plan is not available right now.`** on Checkout
 and a missing entry on `/api/payments/plans`. If the buy button starts returning
-that, the price ID in `~/questura/config/server.env` is the thing to look at,
+that, the `STRIPE_PRICE_ID_*` variables on the Railway API are the thing to look at,
 and the reason is in the server log (`Configured membership price does not match
 the catalog`, or `Stripe would charge more than the catalog price`).
 
-## This is not launch
+## Launch (done 2026-09-26)
 
-The Linux laptop is a live-like test environment, not production. Production
-is serverless, later. **Catalog Stripe prices become what Checkout charges at
-serverless deploy**, not before, unless someone deliberately switches (below)
-for one real-price test.
+Monthly and yearly point at the catalog price IDs on the Railway API.
+Advertised = charged.
 
-## Switch: $0.50 test charge ↔ real catalog charge
+## Switch: $0.50 test charge ↔ real catalog charge (historical, laptop only)
 
 Price IDs are also in `apps/questura/apps/server/src/features/payments/lib/membership-catalog.ts`.
 
@@ -126,7 +127,12 @@ collects, files and remits sales tax/VAT in 80+ countries, for +3.5% per sale.
   Steps: `docs/procedures/cutover.md`, "Sales tax: turn on Stripe Managed
   Payments".
 
-## Stripe CLI (until serverless)
+## Stripe CLI (historical: laptop key is being deleted)
+
+Live Stripe reads now use the restricted read key in the owner's vault
+(`~/.questura-vault/owner.env`, read only inside scripts, never printed). Still
+never the Mac CLI device key. The text below described the laptop era;
+`stripe-live` stops working once the laptop key is deleted.
 
 Use the **`questura-linux-laptop`** restricted key (host `STRIPE_SECRET_KEY`,
 suffix `…1dDj`). Never the Mac `CLI key for Rubens-iMac-2.local` (`…qnwG`).

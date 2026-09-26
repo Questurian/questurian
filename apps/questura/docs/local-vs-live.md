@@ -1,8 +1,14 @@
 # Local vs live
 
-Default for UI and ordinary feature work is **Mac localhost**. The Linux laptop
-is parked until a live window (Stripe, OAuth, cross-subdomain cookies, or
-pre-launch proof).
+> **The Linux laptop is retired (2026-09-26).** Live is Cloudflare (Worker
+> `questura-client` on `www.questurian.com` + `questurian.com`), Railway (API
+> `questura-server` on `api.questurian.com`, Redis, us-east4) and Neon
+> (Postgres 17, aws-us-east-1). The laptop's pause/resume/deploy scripts are
+> historical: do not run them. How the move went and what is left:
+> `docs/procedures/cutover.md` and `docs/moveday-handoff-2026-09-26.md`.
+
+Default for UI and ordinary feature work is **Mac localhost**. Stripe, OAuth
+and cross-subdomain cookies are checked on the live site.
 
 ## What each one is for
 
@@ -10,12 +16,13 @@ pre-launch proof).
 |---|---|
 | Layout, CSS, copy, most feature clicks | `localhost:3000` / `localhost:4000` |
 | Merge work in groups without a deploy per tweak | Local, then PR when the group is ready |
-| Stripe Checkout, webhooks, membership truth | Live laptop |
-| Google OAuth redirects | Live laptop |
-| Staff/visitor cookies across `www` / `cms` / `abw` | Live laptop |
+| Stripe Checkout, webhooks, membership truth | Live site (Railway API) |
+| Google OAuth redirects | Live site |
+| Staff/visitor cookies across subdomains | Live site |
 
-Local Postgres (`google-login` @5432) is scratch. Live DB stays on the laptop
-(`questura` @5433). Local never answers “what does live Stripe do?”
+Local Postgres (`google-login` @5432) is an old copy. Never edit it expecting
+the site to change; content is edited on the live API. The live DB is Neon.
+Local never answers “what does live Stripe do?”
 
 ## Local loop
 
@@ -41,8 +48,8 @@ docker compose -f infra/local/compose.yml up -d
 ```
 
 Then set `REDIS_URL=redis://127.0.0.1:6380` in `apps/server/.env` and restart
-the server. Port 6380 on purpose: on the Linux laptop, 6379 is the live
-`questura-redis` container. Never point local at 6379 there, and never flush it.
+the server. Port 6380 on purpose: on the retired Linux laptop, 6379 was the
+live `questura-redis` container. Keep local off 6379.
 
 Sessions are also written to Postgres (`storeSessionInDatabase`, #650), so
 flushing the local Redis no longer signs anyone out: lookups fall back to
@@ -85,40 +92,19 @@ The script flushes only the `questura-local-redis` container, never port 6379.
 With no Stripe key, checkout's plan lookup fails closed (400) after the auth
 check. Test users stay in the scratch database.
 
-## Park live (public domains go down)
+## Park / resume live (retired)
 
-Stripe webhooks to the live URL will fail until you resume. That is expected
-while parked. Releases, config, Postgres, and Redis stay.
+The laptop's `pause-live.sh`, `resume-live.sh` and `~/questura/deploy.sh` no
+longer apply. Do **not** run `resume-live.sh`: it would start a second copy of
+the site against an out-of-date database. Live is not parked any more; deploy
+is by hand (Railway API deploy started yourself, Worker built in a worktree and
+shipped with `opennextjs-cloudflare deploy`: `docs/capacity/h01-provisioning-checklist.md`
+steps 19–20). Checkout on live is a real charge.
 
-```bash
-ssh linux-laptop 'bash -s' < apps/questura/infra/softprod/pause-live.sh
-```
-
-After this file is on `origin/main` and deployed once:
-
-```bash
-ssh linux-laptop '~/questura/app/apps/questura/infra/softprod/pause-live.sh'
-```
-
-## Resume live (Stripe / OAuth / cookie window)
-
-```bash
-ssh linux-laptop 'bash -s' < apps/questura/infra/softprod/resume-live.sh
-```
-
-Then, if `main` moved while parked:
-
-```bash
-ssh linux-laptop '~/questura/deploy.sh'
-```
-
-Check the real domains, not localhost. Checkout on live is a real charge.
-
-While live is up, run everything open in `live-checks/` (top level of `apps/questura`): that folder
-collects the checks merged work is still waiting on.
+Run everything open in `live-checks/` (top level of `apps/questura`) against
+the live site: that folder collects the checks merged work is still waiting on.
 
 ## Git
 
 Local preview is not “skip GitHub.” Still branch / PR / CI. Difference: do not
-`deploy.sh` for every CSS tweak. Batch, merge, and only resume+deploy when you
-need a live window or a grouped release.
+deploy for every CSS tweak. Batch, merge, and deploy a grouped release.
