@@ -11,12 +11,16 @@ Afterwards come the go-live checks (`docs/launch-day.md` steps 3 to 6, then
 PL1 to PL4 in the launch fix plan).
 
 **How long:** about an hour. The site is down for readers from step 4 until
-step 11, usually 20 to 30 minutes.
+step 11, usually 20 to 30 minutes. Editing is frozen on the Mac from step 4
+too, until the writer tool points at the new API (step 13).
 
 **Rehearsed:** the whole move, on sandbox data, on 2026-09-25 (launch fix
 plan item 5): `pnpm --dir apps/questura/apps/server readiness:cutover`, 66/66
 checks, evidence in `docs/capacity/runs/2026-09-25-cutover-rehearsal.json`.
 What it proved is in [What the rehearsal proved](#what-the-rehearsal-proved).
+The merge of the Mac's and the laptop's databases (step 5) was rehearsed on
+the real dumps of 2026-09-25, into Postgres 16 and 17, and the API and
+website booted on the result: [Merging the two databases](#merging-the-two-databases).
 
 ---
 
@@ -120,39 +124,72 @@ straight into the place in the third column.
 
 Write down the time at each step.
 
-4. **Park the laptop.** Nobody can sign up, pay or publish on it after this,
-   so nothing is written that the dump would miss.
+4. **Freeze editing on BOTH machines.** There are two databases, and each
+   holds half of the truth ([Merging the two databases](#merging-the-two-databases)):
+   the Mac has the newer content, the laptop has the readers and payments.
+   Anything written to either after its dump is lost.
+
+   - **The Mac:** stop everything that writes to its database: the Questura
+     server (`pnpm dev`, port 4000), Location Manager, and the writer tool
+     (ABW). Close the admin panel.
+   - **The laptop:** park it. Nobody can sign up, pay or publish on it after
+     this.
+
+     ```bash
+     ssh linux-laptop 'bash -s' < apps/questura/infra/softprod/pause-live.sh
+     ```
+
+     It stops the site, the API and the tunnel, and switches off the nightly
+     reconcile and the healthcheck timers. Postgres keeps running.
+
+5. **The final dumps, and the merge.** Both dumps only read. Work in a private
+   folder outside the repository: the files hold readers' email addresses.
 
    ```bash
-   ssh linux-laptop 'bash -s' < apps/questura/infra/softprod/pause-live.sh
+   mkdir -m 700 -p /tmp/questura-move && cd /tmp/questura-move && umask 077
+   # the laptop (Postgres 16): readers, members, payments
+   ssh linux-laptop 'docker exec questura-postgres pg_dump -U questura -d questura -Fc --no-owner --no-privileges' > laptop.dump
+   # the Mac (Postgres 14): content and schema
+   /opt/homebrew/opt/postgresql@17/bin/pg_dump -Fc --no-owner --no-privileges \
+     'postgres://google_app@127.0.0.1:5432/google-login' > mac.dump
    ```
 
-   It stops the site, the API and the tunnel, and switches off the nightly
-   reconcile and the healthcheck timers. Postgres keeps running.
-
-5. **The final dump** (on the laptop, Postgres 16):
+   Then merge them in a throwaway Postgres 17 on the Mac, and stop it after
+   ([the runbook](#runbook-merging-on-moving-day) has the exact commands):
 
    ```bash
-   ssh linux-laptop 'docker exec questura-postgres pg_dump -U questura -d questura --no-owner --no-privileges' \
-     > questura-final-$(date -u +%Y%m%dT%H%MZ).sql
+   PG_BINDIR=/opt/homebrew/opt/postgresql@17/bin \
+     apps/questura/apps/server/scripts/cutover/merge-databases.sh \
+     --mac mac.dump --laptop laptop.dump \
+     --scratch postgres://postgres@127.0.0.1:5471 --out merged.sql
    ```
 
-   Keep this file somewhere private until the move has been fine for 30 days.
-   It holds readers' email addresses.
+   It must end with `it restores with identical row counts`. Read its report
+   ([what to expect](#what-the-report-says)). If it stops, nothing was
+   written anywhere: read the reason, fix it, dump again.
 
-6. **Restore into Neon** (Postgres 17, with a 17 client, stopping on the first
-   error, as one transaction, so it either all arrives or nothing does):
+   Keep `laptop.dump`, `mac.dump` and `merged.sql` somewhere private until the
+   move has been fine for 30 days.
+
+6. **Restore the merged dump into Neon** (Postgres 17, with a 17 client,
+   stopping on the first error, as one transaction, so it either all arrives
+   or nothing does):
 
    ```bash
-   docker run --rm -i postgres:17 psql '<Neon direct connection string>' \
-     -q -v ON_ERROR_STOP=1 --single-transaction < questura-final-<stamp>.sql
+   /opt/homebrew/opt/postgresql@17/bin/psql '<Neon direct connection string>' \
+     -q -v ON_ERROR_STOP=1 --single-transaction -f merged.sql
    ```
 
-   Any error: stop. Neon is still empty or unchanged (one transaction), so
-   fix and run it again, or go back with [If it goes wrong](#if-it-goes-wrong).
+   (`docker run --rm -i postgres:17 psql …` works as well, where docker is
+   installed.) Any error: stop. Neon is still empty or unchanged (one
+   transaction), so fix and run it again, or go back with
+   [If it goes wrong](#if-it-goes-wrong).
 
-7. **Compare the counts.** Run this against the laptop and against Neon and
-   put the two results side by side. Every number must match.
+7. **Compare the counts.** Run this against the Mac, the laptop and Neon and
+   put the three results side by side. Each Neon number must equal its
+   source: `visitor_*`, `stripe_webhook_events` and `service_accounts` equal
+   the laptop's; everything else equals the Mac's, except `bookmarks`, which
+   is the Mac's minus the number the merge report says it dropped.
 
    ```sql
    SELECT 'locations' AS t, count(*) FROM locations UNION ALL
@@ -172,7 +209,8 @@ Write down the time at each step.
    ```
 
    Laptop: `ssh linux-laptop 'docker exec -i questura-postgres psql -U questura -d questura' < counts.sql`.
-   Neon: `docker run --rm -i postgres:17 psql '<Neon direct connection string>' < counts.sql`.
+   Mac: `/opt/homebrew/opt/postgresql@17/bin/psql 'postgres://google_app@127.0.0.1:5432/google-login' < counts.sql`.
+   Neon: `/opt/homebrew/opt/postgresql@17/bin/psql '<Neon direct connection string>' < counts.sql`.
 
 8. **Deploy the API** (Railway). Railway's pre-deploy step migrates the
    database forward (guard, migrate, guard again, search index), the same
@@ -181,8 +219,8 @@ Write down the time at each step.
    If the pre-deploy fails, the deploy stops and nothing serves; read the log.
 
    Then run the step 7 query against Neon again: the same numbers, except
-   `payload_migrations`, which may grow by the migrations newer than the
-   laptop's last deploy.
+   `payload_migrations`, which grows by the migrations newer than the Mac's
+   (three on 2026-09-25, all rated `automatic-safe` by the guard).
 
 9. **Check the API answers** before anyone can see it:
 
@@ -291,8 +329,14 @@ something on its own behalf that it no longer should.
     `infra/softprod/README.md`) to say the laptop is retired and Railway is
     live.
 
+The Mac's `google-login` database is no longer a source either: from step 6
+on, content is edited on the new API only. Point Location Manager and the
+writer tool there (step 13) and do not edit locally expecting it to reach the
+site.
+
 After 30 days of a healthy site: delete the laptop's containers, config and the
-final dump file, and delete the Cloudflare tunnel.
+final dump files (`laptop.dump`, `mac.dump`, `merged.sql`), and delete the
+Cloudflare tunnel.
 
 ---
 
@@ -301,12 +345,166 @@ final dump file, and delete the Cloudflare tunnel.
 - **Before step 11** (the domains still point at the laptop): nothing was
   written on the new host that matters. Resume the laptop
   (`ssh linux-laptop 'bash -s' < apps/questura/infra/softprod/resume-live.sh`),
-  and it serves exactly what it had at step 4. Try again another day. Disable
-  the new Stripe endpoint in the meantime, or it keeps failing.
+  and it serves exactly what it had at step 4. Neither real database was
+  written by the merge, so the Mac's is also as it was. Try again another
+  day, with fresh dumps. Disable the new Stripe endpoint in the meantime, or
+  it keeps failing.
 - **After step 11** (readers and Stripe have reached the new host): fix
   forward. Going back to the laptop loses every sign-up, payment and edit made
   since step 11. To roll back a bad release, see
   `docs/procedures/backup-restore-rollback.md`, "Rolling back a release".
+
+---
+
+## Merging the two databases
+
+Found on 2026-09-25 by comparing the two, read-only: since the copies split
+(2026-08-12, the last migration both recorded at the same moment), the site's
+data lives in two places.
+
+- **The Mac** (`google-login`, Postgres 14) has a month of newer content and
+  14 newer migrations: authors and bylines, homepage blocks, the main
+  homepage, listicles, dining, 58 more media assets, exchange rates, the
+  `bookmarks` and `public_search_documents` tables.
+- **The laptop** (`questura`, Postgres 16) has the real readers, members and
+  payments: 3 readers (the Mac has 2 of them), their memberships, 24 Stripe
+  webhook events, 15 sent emails, and on 2026-08-16 the owner made 2 articles
+  and 5 itineraries members-only there.
+
+Moving only one of them loses the other half, so the move merges them with
+`apps/server/scripts/cutover/merge-databases.sh` (rules and checks in
+`merge-databases.sql`, next to it).
+
+### Where each table comes from
+
+| Source | Tables | Why |
+|---|---|---|
+| **Laptop**, row for row | `visitor_auth_users`, `visitor_auth_accounts`, `visitor_auth_sessions`, `visitor_auth_verifications`, `visitor_auth_rate_limits`, `visitor_profiles`, `stripe_webhook_events`, `email_logs`, `service_accounts` | Readers, memberships and money happened on the live site. Their id counters carry on from the laptop's. The Mac's own rows here are local tests: one Google sign-in link and one session made on the Mac are dropped; its `email_logs` 6 to 8 were failed local sends that reuse the ids of the laptop's real membership emails. `service_accounts` differ only in the key, which is re-issued in step 13 anyway. |
+| **Merged** | `identity_email_owners` | One email, one owner. Staff rows follow `users` (Mac), reader rows follow `visitor_auth_users` (laptop). The check rebuilds it from both and requires an exact match. |
+| **Merged** | `articles.access`, `listicle_itineraries.access` | The paywall. The migration that added it ran on the laptop first (08-15) and the owner set members-only content there (08-16). The Mac got the column on 08-20 with the default, `free`. On rows the laptop edited after the split, the laptop's value wins; everything else in the row is the Mac's. |
+| **Mac**, minus orphans | `bookmarks` | Only the Mac has the table. A bookmark whose reader is not among the laptop's readers is dropped (none on 2026-09-25: both belong to readers the laptop has). |
+| **Emptied** | `payload_locked_documents` (+`_rels`) | Editing locks of admin sessions that end at the move. |
+| **Mac** | everything else: content, media, homepages, `users` (staff) and `users_sessions`, `payload_preferences`, `payload_kv`, `refresh_jobs`, `public_search_documents`, `payload_migrations` | Newer content and the newer schema. Staff passwords are the same on both sides (only `updated_at` differs on one staff row). Staff sessions end at the move anyway. |
+
+The laptop's tables need no migration first: every laptop-sourced table has
+exactly the columns of the Mac's schema, and the merge refuses if that ever
+stops being true. The merged database ends at the Mac's migrations; Railway's
+pre-deploy (step 8) then applies the newer ones.
+
+Checked and **not** a difference: `accommodations`, `attractions`, `tours`,
+`nightlife` looked 4 hours apart when compared by hand. Row by row they are
+identical; it was the same instant shown in two time zones.
+
+### What the merge refuses
+
+It runs every rule and check in one transaction on a throwaway Postgres, so a
+failure leaves nothing half-done, and it never connects to either real
+database. It stops when:
+
+- the laptop edited content **after the split** that the Mac does not have
+  (the row, or its blocks and relations), and the laptop's edit is the newer
+  one: the merge would lose it. Make the same edit on the Mac, dump again.
+  (`--accept-lost-laptop-edits` merges anyway and lists what was dropped.)
+- the laptop has a table or a migration the Mac lacks;
+- a laptop column does not exist on the Mac, or a Mac-only column has no default;
+- any row count differs from its source, or a laptop table is not the
+  laptop's rows exactly;
+- any foreign key points at nothing;
+- `identity_email_owners` does not match staff plus readers;
+- a membership profile belongs to no reader, or one Stripe customer is linked
+  to two profiles (ownership is `visitor_profiles.auth_user_id`, the value
+  stamped on the Stripe customer as `metadata.visitorAuthUserId`, never the
+  email);
+- a bookmark belongs to no reader;
+- `payload_migrations` is not the Mac's;
+- the merged dump does not restore to the same counts.
+
+It also refuses a scratch server that is not on this machine, that uses port
+5432, 5433, 5442, 6379 or 6390, that has a password in its address, or that
+holds any other database; and an output path inside a git checkout.
+
+### What the report says
+
+On 2026-09-25 it printed (and the move-day run should look the same, give or
+take new readers and events):
+
+```
+split: copies split after 2026-08-12 12:15 UTC
+edited on both sides, Mac newer, Mac kept: articles id 32: laptop differs in author_id
+edited on both sides, Mac newer, Mac kept: currencies 23 rows: laptop differs in latest_usd_rate_*
+bookmarks: 0 dropped (reader not on the laptop)
+laptop value kept: articles.access: 2 rows
+laptop value kept: listicle_itineraries.access: 5 rows
+people: 3 readers, 3 profiles (3 with a Stripe customer), 5 sign-in methods, 24 webhook events, 15 email logs
+schema: 47 migrations, last 20260921_214514_refresh_jobs_outbox
+```
+
+"Edited on both sides, Mac newer" lines are the Mac's later edit replacing an
+older laptop value; read them, and stop if one is a laptop edit you want to
+keep. Article 32: the Mac changed its author, the laptop made it
+members-only; both survive. Currencies: the exchange-rate sync ran on both
+machines; the Mac's is newer.
+
+### Runbook: merging on moving day
+
+From the repository root on the Mac, after step 4 (editing frozen on both):
+
+```bash
+REPO=$(pwd)
+export LC_ALL=en_US.UTF-8          # without it initdb fails ("postmaster became multithreaded")
+PG17=/opt/homebrew/opt/postgresql@17/bin   # brew install postgresql@17 if missing
+mkdir -m 700 -p /tmp/questura-move && cd /tmp/questura-move && umask 077
+
+# 1. a throwaway Postgres 17 on port 5471, data under /tmp
+$PG17/initdb -D /tmp/questura-move/pg -U postgres -A trust >/dev/null
+$PG17/pg_ctl -D /tmp/questura-move/pg -l /tmp/questura-move/pg.log \
+  -o "-p 5471 -k /tmp/questura-move -c listen_addresses=127.0.0.1" start
+
+# 2. the two dumps (step 5 above), then the merge
+PG_BINDIR=$PG17 "$REPO"/apps/questura/apps/server/scripts/cutover/merge-databases.sh \
+  --mac mac.dump --laptop laptop.dump \
+  --scratch postgres://postgres@127.0.0.1:5471 --out merged.sql
+
+# 3. stop and delete the throwaway server; keep the three files private
+$PG17/pg_ctl -D /tmp/questura-move/pg stop && rm -rf /tmp/questura-move/pg /tmp/questura-move/pg.log
+```
+
+Optional, before touching Neon: prove the API boots on it, exactly as the
+rehearsal did. Load `merged.sql` into `questura_readiness_restore` on the
+throwaway server (step 6's command), run
+`DATABASE_URI=postgres://postgres@127.0.0.1:5471/questura_readiness_restore PAYLOAD_SECRET=<random> bash apps/questura/apps/server/scripts/deploy/pre-deploy.sh`,
+then `READINESS_DATABASE_URI=<same> pnpm --dir apps/questura/apps/server readiness:stack -- up --build` and
+open `http://app.readiness.localhost:3100`.
+
+### The merge rehearsal (2026-09-25)
+
+On that day's real dumps (laptop and Mac, `pg_dump -Fc`, read-only), on
+throwaway servers under `/tmp` that were deleted afterwards with the dumps:
+
+- `merge-databases.sh` passed every check on Postgres 16.15 and on 17.11
+  (the report above); each merged dump restored with identical row counts.
+- The merged dump loaded into an empty Postgres 17.11 with step 6's
+  command (`ON_ERROR_STOP`, one transaction) in under a second. Step 7's
+  counts: `locations` 31, `articles` 25, `media_assets` 18,671, `media_sets`
+  793, `users` 5, `service_accounts` 2, `visitor_profiles` 3,
+  `visitor_auth_users` 3, `visitor_auth_accounts` 5, `visitor_auth_sessions`
+  3, `visitor_auth_verifications` 9, `bookmarks` 2, `stripe_webhook_events`
+  24, `payload_migrations` 47.
+- `pre-deploy.sh` (step 8) on it: the guard rated the three newer migrations
+  `automatic-safe`, applied them (47 → 50), found nothing pending, and left
+  the search index alone (it had rows).
+- The API and website (`readiness:stack -- up --build`, Node 22) booted on
+  it. `/` redirects to `/peru/lima` as designed and Lima renders (200).
+  Article 19 renders with the Mac's author, not the laptop's. Article 32
+  renders with the Mac's author **and** the laptop's members-only lock.
+  Article 17 is members-only, and free article 19 is not. The API serves the
+  Mac's `main_homepage` (one draft block, never published: nothing on the
+  site reads it yet). `/api/user/check` finds all 3 of the laptop's readers
+  and not a made-up address. `stripe_webhook_events` has 24 rows.
+
+The merge's own test, with a throwaway server:
+`MERGE_TEST_SCRATCH=postgres://postgres@127.0.0.1:5471 PG_BINDIR=$PG17 bash apps/questura/apps/server/scripts/cutover/merge-databases.test.sh`
+(CI runs only its refusals, through `test:softprod`).
 
 ---
 
