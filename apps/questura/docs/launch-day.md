@@ -146,7 +146,7 @@ Questura safety net → Run workflow), and on a pull request labelled
 
 | Check | What, and the count it expects |
 |---|---|
-| Questura readiness stack and browsers | `readiness:stack -- up --build` on **Postgres 17** (Neon's major; the laptop sandbox stays on 16), then the first-load JS budget (below), then step 2 in order with the counts above: routes 121, payments 43, purchase 54, auth 29, oauth 71, faults 26, contracts all ok, front-door 96, `launch:verify` 45, restore 36 (17 → 17), cutover 66; then Playwright in Chromium and Firefox, speed budgets included (88 passed, 6 skipped); then the production client build through OpenNext with the guard on and `scan:bundle` |
+| Questura readiness stack and browsers | `readiness:stack -- up --build` on **Postgres 17** (Neon's major; the laptop sandbox stays on 16), then the first-load JS budget (below), then step 2 in order with the counts above: routes 121, payments 43, purchase 56, auth 29, oauth 71, faults 26, contracts all ok, front-door 96, `launch:verify` 45, restore 36 (17 → 17), cutover 66; then Playwright in Chromium and Firefox, speed budgets included (88 passed, 6 skipped); then the production client build through OpenNext with the guard on and `scan:bundle` |
 | Questura k6 negative controls | every load-test proof gate, preflight refusal and supervisor stop rule fails when its fault is injected into a loopback fake target |
 
 Every check step in the stack job runs even when an earlier one fails, so one
@@ -301,7 +301,7 @@ the owner's yes.
    pnpm --dir apps/questura/apps/server readiness:stack -- up --build
    pnpm --dir apps/questura/apps/server readiness:routes     # expect 121/121: includes redirects never leaving the site and the statement budgets
    pnpm --dir apps/questura/apps/server readiness:payments   # expect 43/43
-   pnpm --dir apps/questura/apps/server readiness:purchase   # expect 54/54: a whole purchase, refunds and disputes, a failed card (past_due, grace, portal), paused, a deleted customer, fake Stripe (basil-shaped)
+   pnpm --dir apps/questura/apps/server readiness:purchase   # expect 56/56: a whole purchase, refunds and disputes, a failed card (past_due, grace, portal), paused, a deleted customer, fake Stripe (basil-shaped); unmanaged checkout unless the stack was started with --managed-payments
    pnpm --dir apps/questura/apps/server readiness:auth       # expect 30/30: sign-in and sessions, attacked (a signed-out session's replayed cookies refused within 3 s)
    pnpm --dir apps/questura/apps/server readiness:account    # expect 49/49: password change / reset / sign out of all devices end other devices within 3 s with the cache cookie kept, email change end to end (Stripe customer follows), nightly email drift, account deletion (docs/procedures/account-deletion.md)
    pnpm --dir apps/questura/apps/server readiness:oauth      # expect 71/71: Google linking (fake Google), staff/visitor isolation
@@ -464,7 +464,9 @@ the owner's yes.
    cancelled in Stripe; then the reconcile dry run shows 0 changes. The page
    also lists what never to do (no dispute, no second card, no test mode as
    evidence, no load on checkout). `live-checks/payments.html` is the laptop's
-   page and does not apply here.
+   page and does not apply here. Once Stripe approves Managed Payments (sales
+   tax), `docs/procedures/cutover.md` "Sales tax" turns it on and repeats this
+   purchase with tax on the receipt.
 
 ## If a check fails
 
