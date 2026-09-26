@@ -135,3 +135,36 @@ retire the laptop (cutover steps 16–19) → announce.
 - Talk in simple words. Lead with the plain result.
 - Nothing deploys to the real domains, and no DNS changes happen, without the
   owner's go for that step.
+
+## 7. Setup status (end of 2026-09-26 setup session)
+
+Section 3 steps 1–6 are done, apart from what can only happen on the day.
+Every id and value made is in `~/.questura-vault/generated.env` (never print);
+the filled Railway env is `~/.questura-vault/railway-server.env`.
+
+- **Neon:** project `questura`, aws-us-east-1, Postgres 17.11, 0.25–1 CU,
+  scale-to-zero off, 7-day history, `max_connections` 450. Empty. Backup role
+  `questura_backup` (`pg_read_all_data`). An older project "Questurian"
+  (PG 14) also exists; untouched.
+- **Railway:** project `questura`, Hobby, service `questura-server` + Redis
+  (`allkeys-lru`, 512 MB, D9), both in `us-east4-eqdc4a`. All variables set,
+  `env:check` passes with the real webhook secret. **0 deployments, no
+  deploy trigger.** Settings per H01 step 6 (repo root + lockfile; build proven
+  on a throwaway service). Custom domain `api.questurian.com` added; its
+  certificate waits for DNS. Edge rules drafted, not applied (after the
+  certificate): `~/.questura-vault/railway-edge-rules.py`.
+- **Cloudflare:** R2 `questura-incremental-cache`, D1 `questura-tag-cache`
+  (#723), purge-only token. **Not done until the day:** Transform Rule (the
+  api record still points at dead Render), Worker build/deploy (needs the live
+  API), Worker secrets. The `_railway-verify.api` TXT record is the owner's
+  to add (the agent's DNS write was blocked).
+- **Stripe:** endpoint `questura api (Railway)` on `2025-08-27.basil`, all ten
+  events; secret on Railway. Deliveries fail at Render (400) and are retried
+  until the move.
+- **Resend:** domain verified; sending-only key `questura-api-railway`.
+- **Backups:** bucket `questura-db-backups` (30-day `daily/`), bucket-scoped
+  R2 keys, GitHub secrets/variables set, `QUESTURA_BACKUP_ENABLED=false` until
+  after cutover step 8.
+- **Owner answers (section 4):** move day 2026-09-27; D6 both $0.50 members
+  are test accounts (refund); members-only articles/itineraries kept on
+  purpose; D9 `allkeys-lru`. D8 still open.

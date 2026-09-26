@@ -100,11 +100,28 @@ read-only backup role and the daily off-Neon copy are in
 
 **6. Create the project and the Postgres-less service.**
 New Project → *Empty Project*. Name it `questura`. Then *New* → *GitHub Repo*
-→ this repository. Set the service root to `apps/questura/apps/server`.
-Then Settings → *Config-as-code* → `/apps/questura/infra/railway/railway.json`
-(absolute path). That file sets the pre-deploy step (migration guard, then
-migrations), the start command and the healthcheck
-(`docs/procedures/backup-restore-rollback.md`, "Migrations and the deploy guard").
+→ this repository.
+
+Railway no longer accepts config-as-code (`railway.json`: "deprecated. Use
+Infrastructure as Code"), so `infra/railway/railway.json` is only a record of
+the values; set them on the service itself. The root is the **repository
+root**, so the build uses the root `pnpm-lock.yaml` and its overrides (with the
+root at `apps/questura/apps/server`, Railway sees no lockfile and installs
+fresh versions; proved on a throwaway service 2026-09-26):
+
+| Setting | Value |
+|---|---|
+| Root directory | `/` (through the API send `"/"`; `null` is ignored) |
+| Build command | `pnpm --dir apps/questura/apps/server run build` |
+| Start command | `pnpm --dir apps/questura/apps/server start` |
+| Pre-deploy | `bash apps/questura/apps/server/scripts/deploy/pre-deploy.sh`, timeout 900 s (migration guard, then migrations: `docs/procedures/backup-restore-rollback.md`, "Migrations and the deploy guard") |
+| Healthcheck | `/api/health/ready`, 120 s; restart on failure, 10 retries |
+| Watch paths | `apps/questura/apps/server/**`, `pnpm-lock.yaml` |
+| Variables | `RAILPACK_INSTALL_CMD=pnpm install --frozen-lockfile --filter @questura/server...`, `RAILPACK_NODE_VERSION=22` (from the root Railway cannot see `engines.node`) |
+| Region | `us-east4-eqdc4a` (Virginia, next to Neon `aws-us-east-1`); set it on **every** service, the project default was Amsterdam |
+
+Connecting the repository through the API made no deployment and no push
+trigger: the first deploy is started by hand on moving day.
 
 Do **not** add Railway's own Postgres. The database is Neon.
 
