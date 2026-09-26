@@ -114,10 +114,10 @@ describe('create checkout session payment methods', () => {
   // cashapp and others switched on. This is the assertion that makes the
   // contract's claim true, so enabling a delayed-notification method in the
   // Dashboard can no longer quietly invalidate it.
-  it('sells through card and Link only, whatever the Dashboard has enabled', async () => {
+  it('sells through card only, whatever the Dashboard has enabled', async () => {
     const [params] = await sessionParams()
 
-    expect(params.payment_method_types).toEqual(['card', 'link'])
+    expect(params.payment_method_types).toEqual(['card'])
   })
 
   // The point of the list is not the count, it is that nothing on it can
