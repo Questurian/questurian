@@ -27,9 +27,10 @@ Stripe/Google. From a fresh session it needs only `docker`:
   PATH, `stack up` runs it as the `questura-readiness-redis` container
   (`redis:7-alpine`, no persistence), which is also what `readiness:faults`
   pauses. `stack down` removes it.
-- **Without docker** (the owner's Mac): run Node 22, as CI does. On Node 24
-  every sign-in answers 500 (`new Request(request)` in `withClientIdentity`
-  throws "Cannot read private member #state"). Start your own throwaway
+- **Without docker** (the owner's Mac): run Node 22, as CI and Railway do
+  (the server's `engines.node` pins `22.x`). Node 24 used to answer every
+  sign-in with 500 (`new Request(request)` in `withClientIdentity`); that copy
+  is rebuilt from its parts now, and auth 30/30 and oauth 71/71 pass on 24. Start your own throwaway
   Postgres 16 on 5442 before `stack up`, which then uses it and seeds it:
 
   ```bash

@@ -6,6 +6,7 @@ import { withClientIdentity } from '@/features/visitor-auth/lib/client-identity'
 import { AdmissionRefused } from '@/shared/http/admission'
 import { admitPublicWork, overloadedResponse } from '@/shared/http/public-read'
 import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
+import { logger } from '@/shared/utils/logger'
 
 const handlers = toNextJsHandler(visitorAuth)
 
@@ -36,11 +37,18 @@ async function withCors(req: NextRequest, handler: (request: Request) => Promise
       req.signal ?? undefined,
     )
   } catch (error) {
-    response = error instanceof AdmissionRefused
-      ? overloadedResponse(error)
-      : error instanceof Response
-        ? error
-        : Response.json({ error: 'Authentication request failed' }, { status: 500 })
+    if (error instanceof AdmissionRefused) {
+      response = overloadedResponse(error)
+    } else if (error instanceof Response) {
+      response = error
+    } else {
+      // Logged, because a silent 500 here once hid that every sign-in failed.
+      logger.error('Visitor auth request failed', {
+        path: new URL(req.url).pathname,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      response = Response.json({ error: 'Authentication request failed' }, { status: 500 })
+    }
   }
 
   const headers = new Headers(response.headers)
