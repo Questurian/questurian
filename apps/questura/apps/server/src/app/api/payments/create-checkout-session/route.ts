@@ -354,12 +354,12 @@ export async function POST(req: NextRequest) {
       // becomes true again. Apple Pay and Google Pay are unaffected — they ride
       // in as card wallets.
       //
-      // `link` is named alongside `card` deliberately. Link is card-backed and
-      // settles immediately, so it is not a delayed-notification method and does
-      // not reopen the `checkout.session.async_payment_failed` hole this list
-      // exists to close. Listing it explicitly keeps the guarantee intact while
-      // still offering returning customers one-click checkout.
-      payment_method_types: ['card', 'link'],
+      // Card only. `link` used to be listed too, but on moving day
+      // (2026-09-26) Stripe reported Link as not available on this account,
+      // and a session that names an unavailable method is refused outright:
+      // "The payment method type provided: link is invalid". Nobody could
+      // subscribe. Link returns only if Stripe makes it available here.
+      payment_method_types: ['card'],
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata,
@@ -384,7 +384,7 @@ export async function POST(req: NextRequest) {
 
     // Off: the params above, exactly. On: `managed_payments[enabled]=true`
     // and without the parameters Stripe refuses on a managed session — of
-    // these, only `payment_method_types`. The card-and-Link pin above does not
+    // these, only `payment_method_types`. The card pin above does not
     // survive that: Stripe picks the methods per buyer (dynamic payment
     // methods), which is the price of Stripe being merchant of record.
     const session = await createUnusedCheckoutSession(
