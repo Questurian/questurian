@@ -18,9 +18,15 @@ import type { CollectionBeforeOperationHook } from 'payload'
  * configured), so a key this hook generates cannot be read back by anyone.
  * A caller that needs to use the key supplies it, as the admin panel does;
  * this hook still keeps an enabled row from being keyless.
+ *
+ * Only on create. Since 3.90 the admin's Generate button PATCHes the key by
+ * itself, and a later Save of the same form sends `enableAPIKey: true` with
+ * no `apiKey`. Issuing a key on that update silently replaced the one the
+ * operator had just copied with one nobody can read (moving day, 2026-09-26).
+ * An update that wants a key supplies it.
  */
 export const generateApiKeyHook: CollectionBeforeOperationHook = async ({ args, operation }) => {
-  if (operation !== 'create' && operation !== 'update') return args
+  if (operation !== 'create') return args
 
   const data = args.data as Record<string, unknown> | undefined
   if (!data) return args

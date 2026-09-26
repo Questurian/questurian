@@ -263,7 +263,9 @@ Write down the time at each step.
 
 13. **Re-issue Location Manager's key.** Sign in at
     `https://api.questurian.com/admin` → Service Accounts → `Location Manager`
-    → generate a new API key → copy it → Save. Put it in Location Manager's
+    → generate a new API key → copy it. Generate saves the key by itself;
+    do **not** press Save afterwards (before PR fixing it, Save replaced the
+    copied key with an unreadable one). Put it in Location Manager's
     `PAYLOAD_API_KEY`, set `PAYLOAD_API_URL=https://api.questurian.com`, and
     restart Location Manager. The old key already gets 401; the rehearsal
     proved the new one works. Do the same for any other service account in the
