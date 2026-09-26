@@ -1,9 +1,14 @@
 # Questura soft-production deployment
 
-> **Next deploy (after PR #622) needs three new lines in
-> `~/questura/config/server.env`** or the server exits at boot:
-> `DATABASE_MAX_CONNECTIONS=100`, `APP_PROCESS_COUNT=1`, `APP_ROLLOUT_SURGE=0`.
-> Why and how to check the number: the "connection budget" paragraph below.
+> **Retired 2026-09-26. Historical.** The Linux laptop no longer serves the
+> live domains and nothing in this folder deploys the site. Live is Cloudflare
+> (Worker `questura-client` on `www.questurian.com` + `questurian.com`), Railway
+> (API `questura-server` on `api.questurian.com`, Redis, us-east4) and Neon
+> (Postgres 17, aws-us-east-1). Do **not** run `resume-live.sh` or `deploy.sh`
+> here: a second copy of the site would run against an out-of-date database.
+> Move record: `../../docs/procedures/cutover.md` and
+> `../../docs/moveday-handoff-2026-09-26.md`. The rest of this file describes
+> the laptop as it was.
 
 ## What this environment is, and what it is not
 
@@ -19,10 +24,10 @@ So this is a **live-like test environment that happens to be publicly
 reachable**. The only transactions on it are the owner's own tests. It is not
 serving customers, and nobody but the owner depends on it being up.
 
-**Catalog vs laptop test charge.** One Stripe product, catalog **$12.99/month**
-and **$79.99/year** on the site, **$0.50/month** in Checkout while this machine
-is the test runtime. Intentional until serverless. Do not sync the UI to $0.50.
-How to switch to a real-price test, and Stripe CLI: `docs/membership-pricing.md`.
+**Catalog vs laptop test charge (historical).** While this machine was the
+test runtime, Checkout charged **$0.50/month** against the site's catalog
+**$12.99/month** and **$79.99/year**. Since the move, Checkout charges the
+catalog and the $0.50 price is used by no checkout: `docs/membership-pricing.md`.
 
 **It has an expiry date.** Once the site is proven end to end here, this
 machine is switched off and production moves to a serverless deployment. That
