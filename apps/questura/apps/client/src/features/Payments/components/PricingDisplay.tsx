@@ -199,7 +199,27 @@ function MonthlyPlanCard({ plan, preview }: { plan: MembershipPlan; preview: boo
   );
 }
 
-export default function PricingDisplay({ plans, preview = false }: { plans: MembershipPlan[]; preview?: boolean }) {
+/**
+ * The tax line under the prices. Checkout adds sales tax/VAT only while Stripe
+ * Managed Payments is on (the plans endpoint's `taxAtCheckout`); with it off,
+ * checkout charges the plain price, so the page promises no tax.
+ */
+export function pricingTermsText(taxAtCheckout: boolean): string {
+  return taxAtCheckout
+    ? 'All prices are in U.S. dollars. Sales tax or VAT is added at checkout where it applies, and checkout may show the total in your own currency. Subscriptions renew automatically at the end of each billing period.'
+    : 'All prices are in U.S. dollars. Subscriptions renew automatically at the end of each billing period.';
+}
+
+export default function PricingDisplay({
+  plans,
+  preview = false,
+  taxAtCheckout = false,
+}: {
+  plans: MembershipPlan[];
+  preview?: boolean;
+  /** From `/api/payments/plans`; false (no tax promise) when unknown. */
+  taxAtCheckout?: boolean;
+}) {
   const monthly = plans.find((plan) => plan.id === 'monthly') ?? null;
   const yearly = plans.find((plan) => plan.id === 'yearly') ?? null;
 
@@ -423,11 +443,7 @@ export default function PricingDisplay({ plans, preview = false }: { plans: Memb
         <div className="max-w-2xl mx-auto px-6 py-10 768:py-12">
           {/* Terms */}
           <div className="text-[0.71rem] text-white/50 leading-[1.85] space-y-4 mb-8">
-            <p>
-              All prices are in U.S. dollars. Plus tax where applicable.
-              Subscriptions renew automatically at the end of each billing
-              period.
-            </p>
+            <p data-testid="join-pricing-terms">{pricingTermsText(taxAtCheckout)}</p>
           </div>
 
           {/* Links */}

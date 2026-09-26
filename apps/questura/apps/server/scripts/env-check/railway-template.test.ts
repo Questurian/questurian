@@ -225,6 +225,16 @@ describe('platform checks the boot check cannot make', () => {
     expect(mode.problems.join('\n')).toContain('ORIGIN_AUTH_MODE is set to an unknown value')
   })
 
+  it('the boot check accepts Managed Payments on or off, and refuses anything else', async () => {
+    for (const value of ['on', 'off']) {
+      vi.resetModules()
+      expect((await runBootCheck({ ...base(), STRIPE_MANAGED_PAYMENTS: value })).problems, value).toEqual([])
+    }
+    vi.resetModules()
+    const typo = await runBootCheck({ ...base(), STRIPE_MANAGED_PAYMENTS: 'true' })
+    expect(typo.problems.join('\n')).toContain('STRIPE_MANAGED_PAYMENTS is set to an unknown value')
+  })
+
   it('accepts STRIPE_PRICE_ID equal to STRIPE_PRICE_ID_MONTHLY', () => {
     const env = { ...base(), STRIPE_PRICE_ID: base().STRIPE_PRICE_ID_MONTHLY! }
 

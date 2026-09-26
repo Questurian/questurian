@@ -27,6 +27,12 @@ async function paywallToPlans(page: Page) {
   // The site always advertises the catalog prices (AGENTS.md, membership pricing).
   await expect(page.getByText('$12.99', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('$79.99', { exact: true }).first()).toBeVisible()
+  // Tax is promised only when checkout adds it (Stripe Managed Payments on);
+  // the old unconditional "Plus tax where applicable" sat over a checkout
+  // that charged none.
+  await expect(page.getByTestId('join-pricing-terms')).toHaveText(
+    /^All prices are in U\.S\. dollars\. (Sales tax or VAT is added at checkout where it applies, and checkout may show the total in your own currency\. )?Subscriptions renew automatically at the end of each billing period\.$/,
+  )
   await expectNoHorizontalScroll(page)
 }
 

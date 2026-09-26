@@ -7,7 +7,7 @@
  * lacks, or one this type expects that the server never sends, fails
  * `pnpm typecheck` here. Nothing imports this file; it only has to compile.
  */
-import type { MembershipPlan } from '@/features/Payments/lib/planPresentation';
+import type { MembershipPlansResponse } from '@/features/Payments/lib/planPresentation';
 import type { AuthMethods, CurrentPrincipalResponse } from '@/lib/user/types';
 
 import type authMethods from '../../../../../contracts/api-account-auth-methods.json';
@@ -25,4 +25,4 @@ type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 export const signedInMatches: Same<Keys<typeof signedIn>, Keys<CurrentPrincipalResponse>> = true;
 export const signedOutMatches: Same<Keys<typeof signedOut>['authenticated'], Keys<CurrentPrincipalResponse>['authenticated']> = true;
 export const authMethodsMatch: Same<Keys<typeof authMethods>, Keys<AuthMethods>> = true;
-export const plansMatch: Same<Keys<typeof plans>, Keys<{ plans: MembershipPlan[] }>> = true;
+export const plansMatch: Same<Keys<typeof plans>, Keys<MembershipPlansResponse>> = true;

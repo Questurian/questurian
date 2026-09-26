@@ -62,6 +62,68 @@ function missing(kind: string, id: string, status = 404): FakeResponse {
 }
 
 const ok = (body: unknown): FakeResponse => ({ status: 200, body })
+
+const invalidParam = (param: string, message: string): FakeResponse => ({
+  status: 400,
+  body: { error: { type: 'invalid_request_error', code: 'parameter_invalid', param, message } },
+})
+
+/**
+ * What Stripe refuses on a Managed Payments subscription session, from
+ * docs.stripe.com/payments/managed-payments/update-checkout. Written out here
+ * rather than imported from the app's own list, so a parameter the app forgets
+ * to remove is caught instead of agreed with.
+ */
+const MANAGED_FORBIDDEN_PATHS: ReadonlyArray<readonly string[]> = [
+  ['adaptive_pricing'],
+  ['automatic_tax'],
+  ['tax_id_collection'],
+  ['payment_method_configuration'],
+  ['payment_method_types'],
+  ['customer_update', 'name'],
+  ['customer_update', 'address'],
+  ['shipping_address_collection'],
+  ['shipping_options'],
+  ['invoice_creation'],
+  ['subscription_data', 'default_tax_rates'],
+  ['subscription_data', 'invoice_settings'],
+  ['subscription_data', 'application_fee_percent'],
+  ['subscription_data', 'on_behalf_of'],
+  ['subscription_data', 'transfer_data'],
+]
+
+const paramName = (path: readonly string[]) => path[0] + path.slice(1).map((part) => `[${part}]`).join('')
+
+/**
+ * `managed_payments`, checked as Stripe would: only `enabled`, only a boolean,
+ * and when true none of the forbidden parameters. Returns the error to answer,
+ * or whether the session is managed.
+ */
+function checkManagedPayments(params: Record<string, unknown>): FakeResponse | boolean {
+  if (params.managed_payments === undefined) return false
+  const managed = params.managed_payments
+  if (typeof managed !== 'object' || managed === null || Array.isArray(managed)) {
+    return invalidParam('managed_payments', 'Invalid object')
+  }
+  for (const key of Object.keys(managed)) {
+    if (key !== 'enabled') return invalidParam(`managed_payments[${key}]`, `Received unknown parameter: managed_payments[${key}]`)
+  }
+  const enabled = (managed as { enabled?: unknown }).enabled
+  if (enabled !== 'true' && enabled !== 'false') return invalidParam('managed_payments[enabled]', 'Invalid boolean')
+  if (enabled === 'false') return false
+  if (params.mode !== 'subscription' && params.mode !== 'payment') {
+    return invalidParam('mode', 'Managed Payments supports only `payment` and `subscription` mode.')
+  }
+  for (const path of MANAGED_FORBIDDEN_PATHS) {
+    let node: unknown = params
+    for (const part of path) node = node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined
+    if (node !== undefined) {
+      const name = paramName(path)
+      return invalidParam(name, `You cannot use \`${name}\` when \`managed_payments[enabled]\` is true.`)
+    }
+  }
+  return true
+}
 const list = (data: unknown[], url: string) => ({ object: 'list', data, has_more: false, url })
 
 /**
@@ -168,6 +230,8 @@ export class FakeStripeAccount {
     if (method === 'POST' && path === '/v1/checkout/sessions') {
       if (this.deletedCustomers.has(String(params.customer))) return remember(missing('customer', String(params.customer), 400))
       this.checkoutCreates += 1
+      const managed = checkManagedPayments(params)
+      if (typeof managed !== 'boolean') return remember(managed)
       const lineItems = params.line_items as Array<{ price?: string }> | undefined
       const priceId = lineItems?.[0]?.price ?? ''
       if (!this.prices[priceId]) {
@@ -190,6 +254,10 @@ export class FakeStripeAccount {
         created: now(),
         _price: priceId,
         _subscriptionMetadata: (params.subscription_data as { metadata?: unknown } | undefined)?.metadata ?? {},
+        // What the session was created with, for the harness to read back
+        // through `/__fake/state` (never returned by the API).
+        _managedPayments: managed,
+        _paymentMethodTypes: params.payment_method_types ?? null,
       }
       this.sessions.set(id, session)
       return remember(ok(this.publicSession(session)))
@@ -501,6 +569,8 @@ export class FakeStripeAccount {
     const rest = { ...session }
     delete rest._price
     delete rest._subscriptionMetadata
+    delete rest._managedPayments
+    delete rest._paymentMethodTypes
     return rest
   }
 }

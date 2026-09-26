@@ -2,6 +2,7 @@ import { APP_URLS } from './urls'
 import { readCookieDomain, resolveSessionCookieConfig } from './session-cookie'
 import { resolveTrustedProxyHeader } from './trusted-proxy'
 import { resolveEmailSender } from './email-sender'
+import { parseStripeManagedPayments } from './stripe-managed-payments'
 
 // Centralized application configuration
 
@@ -166,6 +167,13 @@ export const APP_CONFIG = {
      * step to every purchase and issuers decline some of them outright.
      */
     stripeForceThreeDSecure: process.env.STRIPE_FORCE_3DS === 'true',
+    /**
+     * Stripe Managed Payments: Stripe is the merchant of record and handles
+     * sales tax/VAT. `STRIPE_MANAGED_PAYMENTS=on|off`, off by default, and
+     * only turned on once Stripe has approved the account (cutover.md). See
+     * `features/payments/lib/managed-payments.ts`.
+     */
+    stripeManagedPayments: parseStripeManagedPayments(process.env.STRIPE_MANAGED_PAYMENTS).enabled,
   },
 
   // Backend URL - localhost for Phase 1

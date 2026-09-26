@@ -9,6 +9,7 @@ import { getPurchasablePlan, isPlanId, type PlanId } from '@/payments/lib/member
 import { checkPaymentsRateLimit, checkPaymentsVisitorRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
 import { safeReturnPath } from '@/payments/lib/safe-return-path'
 import { checkoutIdempotencyKey } from '@/payments/lib/checkout-idempotency'
+import { toManagedCheckoutParams, type CheckoutSessionCreateParams } from '@/payments/lib/managed-payments'
 import {
   findVisitorProfileByAuthUserId,
   updateVisitorProfileByAuthUserId,
@@ -90,7 +91,7 @@ const MAX_USED_SESSION_SKIPS = 5
  * reversed checkouts inside five minutes; the caller answers 503.
  */
 async function createUnusedCheckoutSession(
-  params: Stripe.Checkout.SessionCreateParams,
+  params: CheckoutSessionCreateParams,
   idempotencyKey: string
 ): Promise<Stripe.Checkout.Session | null> {
   let key = idempotencyKey
@@ -305,6 +306,10 @@ export async function POST(req: NextRequest) {
     // unrestricted 100%-off code is a free membership for whoever learns it.
     const allowPromotionCodes = APP_CONFIG.features.stripePromotionCodes
     const forceThreeDSecure = APP_CONFIG.features.stripeForceThreeDSecure
+    // Stripe as merchant of record (sales tax/VAT). Off until Stripe approves
+    // the account; see `managed-payments.ts`. `=== true` so a config without
+    // the field is off.
+    const managedPayments = APP_CONFIG.features.stripeManagedPayments === true
 
     // A double-clicked buy button otherwise creates two sessions on the same
     // customer. The key is derived from the request rather than the visitor
@@ -319,9 +324,10 @@ export async function POST(req: NextRequest) {
       referralId,
       allowPromotionCodes,
       forceThreeDSecure,
+      managedPayments,
     })
 
-    const session = await createUnusedCheckoutSession({
+    const unmanagedParams: CheckoutSessionCreateParams = {
       customer: stripeCustomerId,
       mode: 'subscription', // KEY: subscription mode, not payment
       line_items: [{
@@ -374,7 +380,17 @@ export async function POST(req: NextRequest) {
       ...(forceThreeDSecure
         ? { payment_method_options: { card: { request_three_d_secure: 'challenge' as const } } }
         : {}),
-    }, idempotencyKey)
+    }
+
+    // Off: the params above, exactly. On: `managed_payments[enabled]=true`
+    // and without the parameters Stripe refuses on a managed session — of
+    // these, only `payment_method_types`. The card-and-Link pin above does not
+    // survive that: Stripe picks the methods per buyer (dynamic payment
+    // methods), which is the price of Stripe being merchant of record.
+    const session = await createUnusedCheckoutSession(
+      managedPayments ? toManagedCheckoutParams(unmanagedParams) : unmanagedParams,
+      idempotencyKey,
+    )
 
     if (!session) {
       return NextResponse.json(

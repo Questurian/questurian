@@ -105,4 +105,53 @@ describe('readiness fake Stripe account', () => {
     const portal = account.handle('POST', new URL('http://127.0.0.1/v1/billing_portal/sessions'), 'customer=cus_1', {})!
     expect(portal.status).toBe(400)
   })
+
+  describe('Managed Payments', () => {
+    const BASE = 'customer=cus_1&mode=subscription&line_items[0][price]=price_m&line_items[0][quantity]=1&billing_address_collection=auto&subscription_data[metadata][visitorAuthUserId]=v1'
+    const create = (body: string) => new FakeStripeAccount(PRICES).handle('POST', new URL('http://127.0.0.1/v1/checkout/sessions'), body, {})!
+
+    it('opens a managed session, records it, and pays it like any other', () => {
+      const account = new FakeStripeAccount(PRICES)
+      const created = account.handle('POST', new URL('http://127.0.0.1/v1/checkout/sessions'), `${BASE}&managed_payments[enabled]=true`, {})!
+      expect(created.status).toBe(200)
+      const id = (created.body as { id: string }).id
+      expect(account.sessions.get(id)).toMatchObject({ _managedPayments: true, _paymentMethodTypes: null })
+      expect(created.body).not.toHaveProperty('_managedPayments')
+      expect(account.completeCheckout(id, 'buyer@example.com')?.subscription).toMatchObject({ status: 'active' })
+    })
+
+    it('records an unmanaged session as unmanaged', () => {
+      const account = new FakeStripeAccount(PRICES)
+      const created = account.handle('POST', new URL('http://127.0.0.1/v1/checkout/sessions'), `${BASE}&payment_method_types[0]=card&payment_method_types[1]=link`, {})!
+      expect(account.sessions.get((created.body as { id: string }).id)).toMatchObject({ _managedPayments: false, _paymentMethodTypes: ['card', 'link'] })
+      expect(create(`${BASE}&managed_payments[enabled]=false&payment_method_types[0]=card`).status).toBe(200)
+    })
+
+    // Stripe answers 400 to these on a managed session; the fake must too, or
+    // the sandbox would bless a checkout real Stripe refuses.
+    it.each([
+      'payment_method_types[0]=card',
+      'payment_method_configuration=pmc_1',
+      'automatic_tax[enabled]=true',
+      'tax_id_collection[enabled]=true',
+      'adaptive_pricing[enabled]=true',
+      'invoice_creation[enabled]=true',
+      'customer_update[name]=auto',
+      'customer_update[address]=auto',
+      'shipping_address_collection[allowed_countries][0]=US',
+      'subscription_data[default_tax_rates][0]=txr_1',
+      'subscription_data[invoice_settings][issuer][type]=self',
+      'subscription_data[on_behalf_of]=acct_1',
+    ])('refuses %s alongside managed_payments', (extra) => {
+      const refused = create(`${BASE}&managed_payments[enabled]=true&${extra}`)
+      expect(refused.status).toBe(400)
+      expect(refused.body).toMatchObject({ error: { type: 'invalid_request_error', param: expect.stringMatching(/^[a-z_]+(\[[a-z_]+\])?$/) } })
+    })
+
+    it('refuses a malformed managed_payments', () => {
+      expect(create(`${BASE}&managed_payments[enabled]=yes`).status).toBe(400)
+      expect(create(`${BASE}&managed_payments[enabled]=true&managed_payments[other]=1`).status).toBe(400)
+      expect(create(`${BASE}&managed_payments=true`).status).toBe(400)
+    })
+  })
 })
