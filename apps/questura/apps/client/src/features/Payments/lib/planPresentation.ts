@@ -18,6 +18,16 @@ export type MembershipPlan = {
   compareAtAmount: number | null;
 };
 
+/** `GET /api/payments/plans`. */
+export type MembershipPlansResponse = {
+  plans: MembershipPlan[];
+  /**
+   * Whether checkout adds sales tax/VAT (Stripe Managed Payments is on).
+   * False means checkout charges no tax, so the page must not promise any.
+   */
+  taxAtCheckout: boolean;
+};
+
 function formatMinorUnits(minorUnits: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',

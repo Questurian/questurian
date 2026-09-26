@@ -93,6 +93,39 @@ click yearly unless that is intended.
 **Serverless launch:** point both monthly and yearly at the catalog price IDs
 and leave them there. Then advertised = charged.
 
+## Sales tax: Stripe Managed Payments (off until Stripe approves)
+
+Checkout charges **no tax** today: the price is the whole charge. Tax is
+handed to Stripe instead of being handled here: with **Stripe Managed
+Payments** Stripe (through Link) is the merchant of record and calculates,
+collects, files and remits sales tax/VAT in 80+ countries, for +3.5% per sale.
+
+- **Switch:** `STRIPE_MANAGED_PAYMENTS=on|off` on the API host, **off** by
+  default. Anything else refuses to boot. Code:
+  `features/payments/lib/managed-payments.ts`.
+- **Off:** Checkout gets exactly the parameters it always had (a test pins them
+  byte for byte), card and Link only. `/join` says "All prices are in U.S.
+  dollars." and nothing about tax.
+- **On:** Checkout sends `managed_payments[enabled]=true` and drops
+  `payment_method_types` (Stripe forbids it; it picks the methods per buyer).
+  Everything else is unchanged: same price, customer, metadata, promotion-code
+  and 3DS choices. `/api/payments/plans` answers `taxAtCheckout: true` and
+  `/join` adds "Sales tax or VAT is added at checkout where it applies, and
+  checkout may show the total in your own currency."
+- **Prices stay $12.99 / $79.99 before tax.** The price's tax behaviour is left
+  unset, so Stripe adds tax on top where it applies. The catalog check above
+  is unaffected: it reads the price, not the charged total.
+- **Only new checkouts.** A subscription bought while the switch was off
+  (including the $0.50 laptop ones) stays unmanaged for its life, with no tax.
+- **Who does what once on:** Stripe sends receipts and invoices from Link, the
+  card statement reads `LINK.COM* …`, Stripe answers disputes (and may accept
+  one) and may refund a buyer through Link support within 60 days. Access
+  still follows the webhooks: a full refund or a lost dispute ends it exactly
+  as now, whoever pressed the button.
+- **Turning it on** needs Stripe's approval and a tax code on the product.
+  Steps: `docs/procedures/cutover.md`, "Sales tax: turn on Stripe Managed
+  Payments".
+
 ## Stripe CLI (until serverless)
 
 Use the **`questura-linux-laptop`** restricted key (host `STRIPE_SECRET_KEY`,

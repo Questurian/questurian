@@ -76,6 +76,7 @@ describe('production config assertion', () => {
     vi.stubEnv('EMAIL_FROM_ADDRESS', '')
     vi.stubEnv('EMAIL_FROM_NAME', '')
     vi.stubEnv('EMAIL_REPLY_TO', '')
+    vi.stubEnv('STRIPE_MANAGED_PAYMENTS', '')
   })
 
   afterEach(() => {
@@ -458,6 +459,21 @@ describe('production config assertion', () => {
     expect(collectProductionConfigProblems()).toEqual([
       expect.stringContaining('TRUSTED_PROXY is set to an unknown value'),
     ])
+  })
+
+  // Managed Payments decides who owes the sales tax. Unset, off and on all
+  // boot; a value that only looks like a switch does not.
+  it('boots with Managed Payments unset, off or on, and refuses anything else', async () => {
+    for (const value of ['', 'off', 'on', ' ON ']) {
+      const { collectProductionConfigProblems } = await load({ ...VALID_PRODUCTION_ENV, STRIPE_MANAGED_PAYMENTS: value })
+      expect(collectProductionConfigProblems(), value).toEqual([])
+    }
+    for (const value of ['true', '1', 'yes']) {
+      const { collectProductionConfigProblems } = await load({ ...VALID_PRODUCTION_ENV, STRIPE_MANAGED_PAYMENTS: value })
+      expect(collectProductionConfigProblems(), value).toEqual([
+        expect.stringContaining('STRIPE_MANAGED_PAYMENTS is set to an unknown value'),
+      ])
+    }
   })
 
   // The front door (ADR-0016). Optional at boot, because the laptop runs

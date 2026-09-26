@@ -65,6 +65,8 @@ export type AppSettings = {
   originAuthSecret?: string
   /** Decision D3's load-test key and window end. Absent (the default): the load identity is off. */
   loadTest?: { key: string; until: string }
+  /** `STRIPE_MANAGED_PAYMENTS=on`. Absent or false (the default): unset, so off. */
+  managedPayments?: boolean
   /** Where sandbox children append refused outbound attempts. */
   outboundLog?: string
   /** Run the refresh worker in-process at this interval. Default 0: the harness drains. */
@@ -124,6 +126,7 @@ function backendEnvDeclared(settings: AppSettings): NodeJS.ProcessEnv {
     ...(settings.renderToken ? { QUESTURA_RENDER_TOKEN: settings.renderToken } : {}),
     ...(settings.originAuthSecret ? { ORIGIN_AUTH_SECRET: settings.originAuthSecret } : {}),
     ...(settings.loadTest ? { LOAD_TEST_KEY: settings.loadTest.key, LOAD_TEST_UNTIL: settings.loadTest.until } : {}),
+    ...(settings.managedPayments ? { STRIPE_MANAGED_PAYMENTS: 'on' } : {}),
 
     TRUSTED_PROXY: 'cloudflare',
     PAYLOAD_COOKIE_DOMAIN: 'host-only',

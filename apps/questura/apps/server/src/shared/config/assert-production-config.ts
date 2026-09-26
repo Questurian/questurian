@@ -6,6 +6,7 @@ import {
   validateCookieDomain,
 } from './session-cookie'
 import { TRUSTED_PROXY_NAMES } from './trusted-proxy'
+import { parseStripeManagedPayments } from './stripe-managed-payments'
 import { emailSenderProblems } from './email-sender'
 import { isOriginAuthMode, MIN_ORIGIN_AUTH_SECRET_LENGTH, ORIGIN_AUTH_MODES } from '@/shared/http/origin-auth'
 import { clientBaseUrl, revalidationDisconnected, revalidationSecret } from '@/features/public-revalidation/revalidation/env'
@@ -249,6 +250,12 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
       'STRIPE_PRICE_ID (or STRIPE_PRICE_ID_MONTHLY) is not set — checkout would 400 at peak intent.'
     )
   }
+
+  // A switch that decides who is the merchant of record, and so who owes the
+  // sales tax, must say `on` or `off`. An unknown value reads as off, which is
+  // exactly the quiet failure an operator who typed `true` would not notice.
+  const managedPaymentsProblem = parseStripeManagedPayments(process.env.STRIPE_MANAGED_PAYMENTS).problem
+  if (managedPaymentsProblem) problems.push(managedPaymentsProblem)
 
   // Mail is how a reader gets back into their account. A missing Resend key
   // does not fail the boot, it fails the first password reset; a sender off

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import PricingDisplay from '@/features/Payments/components/PricingDisplay';
 import JoinHeroVisual from '@/features/Payments/components/JoinHeroVisual';
-import { isLocalJoinPreview, LOCAL_JOIN_PLANS, readJoinPlans } from '@/features/Payments/lib/joinPlans';
+import { isLocalJoinPreview, LOCAL_JOIN_PLANS, readJoinPricing } from '@/features/Payments/lib/joinPlans';
 import { config } from '@/lib/config';
 import messages from '../../../messages/en.json';
 
@@ -15,8 +15,8 @@ export const metadata: Metadata = {
 };
 
 async function JoinPricing() {
-  const plans = await readJoinPlans(config.backendUrl, false);
-  return <PricingDisplay plans={plans} />;
+  const { plans, taxAtCheckout } = await readJoinPricing(config.backendUrl, false);
+  return <PricingDisplay plans={plans} taxAtCheckout={taxAtCheckout} />;
 }
 
 export default function JoinPage() {

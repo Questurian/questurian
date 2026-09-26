@@ -41,6 +41,13 @@ export type CheckoutIdempotencyInput = {
   referralId: string | null
   allowPromotionCodes: boolean
   forceThreeDSecure: boolean
+  /**
+   * Optional so every key minted with the switch off is exactly the key it was
+   * before the switch existed. Flipping it inside a five-minute window must
+   * not replay an unmanaged session (or make Stripe refuse a reused key whose
+   * parameters changed).
+   */
+  managedPayments?: boolean
 }
 
 /**
@@ -70,6 +77,10 @@ export function checkoutIdempotencyKey(
         input.referralId ?? '',
         String(input.allowPromotionCodes),
         String(input.forceThreeDSecure),
+        // Only when on, so the off-path fingerprint is unchanged. The field
+        // count then differs, and NUL cannot occur inside a field, so the two
+        // shapes cannot collide.
+        ...(input.managedPayments ? ['managed-payments'] : []),
         String(bucket),
       ].join('\u0000')
     )

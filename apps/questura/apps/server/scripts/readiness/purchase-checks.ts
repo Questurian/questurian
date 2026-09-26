@@ -14,6 +14,13 @@
  *   (`customer.subscription.deleted`, period over) → locked, and Subscribe
  *   works again.
  *
+ * Managed Payments: the Checkout Session is managed (`managed_payments`
+ *   enabled, no `payment_method_types`) exactly when the stack runs with
+ *   `--managed-payments`, and otherwise card-and-Link as always; the plans
+ *   endpoint's `taxAtCheckout` agrees. The fake refuses a managed session
+ *   carrying a parameter Stripe forbids, so the purchase above failing is
+ *   the other half of the proof.
+ *
  * A2, deliveries:
  *   the same event ten times at once → recorded once; an older event after a
  *   newer one → skipped as stale; an event for a customer with no profile →
@@ -158,6 +165,27 @@ async function main(): Promise<void> {
     )
 
     const sessionId = String(firstBody.url ?? '').split('/').pop()!
+
+    // The switch, as the stack set it (`readiness:stack -- up --managed-payments`).
+    const managedExpected = stack.managedPayments === true
+    const created = (state.sessions as Json[]).find((session) => session.id === sessionId)
+    const methods = JSON.stringify(created?._paymentMethodTypes ?? null)
+    record(
+      group,
+      managedExpected
+        ? 'the Checkout Session is managed (Stripe is merchant of record), with no payment method list'
+        : 'the Checkout Session is unmanaged, card and Link only',
+      created?._managedPayments === managedExpected && methods === (managedExpected ? 'null' : '["card","link"]'),
+      `managed=${String(created?._managedPayments)} payment_method_types=${methods}`,
+    )
+    const plans = (await (await fetch(`${BACKEND}/api/payments/plans`, { headers: { origin, ...caller() } })).json()) as { taxAtCheckout?: unknown }
+    record(
+      group,
+      `the plans endpoint says taxAtCheckout=${managedExpected}`,
+      plans.taxAtCheckout === managedExpected,
+      `taxAtCheckout=${JSON.stringify(plans.taxAtCheckout)}`,
+    )
+
     const paid = await fake(`/__fake/checkout/${sessionId}/complete`, { email: 'nonmember@example.com' })
     const subscription = paid.subscription as Json
     const completed = await deliver('checkout.session.completed', paid.session)

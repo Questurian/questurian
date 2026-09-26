@@ -10,5 +10,6 @@
       "priceId": "string",
       "productName": "string"
     }
-  ]
+  ],
+  "taxAtCheckout": true
 }

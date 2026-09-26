@@ -5,6 +5,7 @@
  *   pnpm readiness:stack -- up --build-client  # rebuild only the client
  *   pnpm readiness:stack -- up           # reuse the last .next-readiness builds
  *   pnpm readiness:stack -- up --load-test-window 90  # backend with a load-test key for 90 min
+ *   pnpm readiness:stack -- up --managed-payments     # backend with STRIPE_MANAGED_PAYMENTS=on
  *   pnpm readiness:stack -- status
  *   pnpm readiness:stack -- down         # stops only what `up` started
  *
@@ -120,6 +121,13 @@ export type StackState = {
   builtFrom: string | null
   /** How Redis was started: a local binary, or the sandbox container. Absent in older state files. */
   redis?: 'binary' | 'docker'
+  /**
+   * Only with `--managed-payments`: the backend runs with
+   * `STRIPE_MANAGED_PAYMENTS=on`, and `readiness:purchase` expects managed
+   * Checkout Sessions. Off by default, like the platform. Read at runtime, so
+   * no rebuild is needed to switch.
+   */
+  managedPayments?: boolean
 }
 
 export function readStackState(): StackState | null {
@@ -133,7 +141,7 @@ function writeState(state: StackState): void {
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), { mode: 0o600 })
 }
 
-export function stackAppSettings(state: Pick<StackState, 'secrets' | 'origins' | 'outboundLog'>): AppSettings {
+export function stackAppSettings(state: Pick<StackState, 'secrets' | 'origins' | 'outboundLog' | 'managedPayments'>): AppSettings {
   const sandbox = sandboxSettings()
   return {
     ports: { backend: STACK_PORTS.backend, client: STACK_PORTS.client },
@@ -147,6 +155,7 @@ export function stackAppSettings(state: Pick<StackState, 'secrets' | 'origins' |
     renderToken: state.secrets.renderToken,
     originAuthSecret: state.secrets.originAuth,
     loadTest: state.secrets.loadTest,
+    managedPayments: state.managedPayments === true,
     outboundLog: state.outboundLog,
     workerIntervalMs: 5_000,
     stripeStubUrl: `http://127.0.0.1:${STACK_PORTS.stripe}`,
@@ -238,7 +247,7 @@ async function waitForPort(port: number, timeoutMs: number): Promise<boolean> {
   return false
 }
 
-export async function stackUp(options: { build: boolean; buildClient?: boolean; loadTestWindowMinutes?: number }): Promise<StackState> {
+export async function stackUp(options: { build: boolean; buildClient?: boolean; loadTestWindowMinutes?: number; managedPayments?: boolean }): Promise<StackState> {
   const sandbox = sandboxSettings()
   assertPreflight(sandbox)
   if (readStackState()) throw new Error('A stack is already recorded. Run `pnpm readiness:stack -- down` first.')
@@ -293,6 +302,7 @@ export async function stackUp(options: { build: boolean; buildClient?: boolean; 
     neutralised: { server: dotenvNames(SERVER_DIR()), client: dotenvNames(CLIENT_DIR()) },
     builtFrom: null,
     redis: redisMode,
+    ...(options.managedPayments ? { managedPayments: true } : {}),
   }
   const settings = stackAppSettings(state)
   const record = () => writeState(state)
@@ -475,8 +485,14 @@ async function main(): Promise<void> {
     if (loadTestWindowMinutes !== undefined && !(Number.isInteger(loadTestWindowMinutes) && loadTestWindowMinutes >= 1 && loadTestWindowMinutes <= 720)) {
       throw new Error('--load-test-window wants whole minutes, 1 to 720 (the server refuses a window over 12 hours).')
     }
-    const state = await stackUp({ build: argv.includes('--build'), buildClient: argv.includes('--build-client'), loadTestWindowMinutes })
+    const state = await stackUp({
+      build: argv.includes('--build'),
+      buildClient: argv.includes('--build-client'),
+      loadTestWindowMinutes,
+      managedPayments: argv.includes('--managed-payments'),
+    })
     if (state.secrets.loadTest) console.log(`Load identity ON until ${state.secrets.loadTest.until} (key in ${STATE_FILE}).`)
+    if (state.managedPayments) console.log('Stripe Managed Payments ON (STRIPE_MANAGED_PAYMENTS=on).')
     console.log(
       `Stack up from ${state.source.sha.slice(0, 8)}${state.source.dirty ? ' (dirty)' : ''}: ` +
         `client ${state.origins.client}, backend ${state.origins.backend}, media :${STACK_PORTS.media}, redis :${STACK_PORTS.redis}. ` +

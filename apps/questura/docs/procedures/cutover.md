@@ -65,6 +65,7 @@ Make new values for everything marked **new**. Nothing from the laptop's
 | `STRIPE_SECRET_KEY` | **new** restricted `rk_live_` key, narrowed to what the app calls (`docs/serverless-launch-checklist.md` §7) | Railway | the API |
 | `STRIPE_WEBHOOK_SECRET` | **new**: the signing secret of the new endpoint made in step 2 | Railway | the API checks every Stripe webhook with it |
 | `STRIPE_PRICE_ID_MONTHLY` / `_YEARLY` | the **catalog** prices ($12.99 / $79.99), not the laptop's $0.50 | Railway | Checkout (`docs/membership-pricing.md`) |
+| `STRIPE_MANAGED_PAYMENTS` | leave **unset (off)** on the day | Railway | Checkout: `on` makes Stripe the merchant of record for sales tax. Turned on later, in [Sales tax](#sales-tax-turn-on-stripe-managed-payments) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | the live `pk_live_` key | the Worker **build** (H01 step 18) | the website |
 | `RESEND_API_KEY`, `EMAIL_FROM_ADDRESS` | **new** sending-only key; sender on questurian.com | Railway | email (`docs/procedures/email-domain.md`, step 5) |
 | `SENTRY_DSN` | from the Sentry project | Railway | error reports (`docs/procedures/sentry-setup.md`, step 5) |
@@ -337,6 +338,66 @@ site.
 After 30 days of a healthy site: delete the laptop's containers, config and the
 final dump files (`laptop.dump`, `mac.dump`, `merged.sql`), and delete the
 Cloudflare tunnel.
+
+---
+
+## Sales tax: turn on Stripe Managed Payments
+
+**When:** after the site is live on the new hosting, **before it is
+announced**. Until the last step, Checkout charges no tax and `/join` makes no
+tax promise; that is correct, not a gap.
+
+**What it is:** Stripe (through Link) becomes the merchant of record and
+calculates, collects, files and remits sales tax/VAT for every new membership,
+for +3.5% per sale (`docs/membership-pricing.md`, "Sales tax"). The code
+shipped switched off; this turns it on by config. An agent never does steps
+T1 to T4: they are live Stripe and live hosting, and need you.
+
+T1. **Ask Stripe for it (owner).** Stripe Dashboard (live) → Settings →
+    **Managed Payments** (`https://dashboard.stripe.com/settings/managed-payments`)
+    → request it and accept the Managed Payments terms. While you are there:
+    Settings → Business details → the **support email** must be one you read.
+    Stripe sends buyer escalations there and may refund a buyer itself if
+    nobody answers within 48 hours.
+
+T2. **Wait for the approval.** Nothing else changes meanwhile. Leave
+    `STRIPE_MANAGED_PAYMENTS` unset on Railway: turned on before approval,
+    every Checkout would fail.
+
+T3. **Give the product its tax code (owner, once approved).** Stripe Dashboard
+    (live) → Product catalog → *Questurian Membership* → ⋯ → **Edit product**
+    → Product tax code: **`txcd_10303002`** (Digital Magazines/Periodicals –
+    viewable only – subscription – with conditional rights; it is labelled
+    *Eligible for Managed Payments*) → Update product. Do not change the
+    prices: their tax behaviour stays unset, so tax is added on top of $12.99
+    and $79.99.
+
+T4. **Flip the switch (owner).** Railway → the API service → Variables →
+    `STRIPE_MANAGED_PAYMENTS=on` → deploy. (`on` or `off` only; any other value
+    refuses to boot, so a typo shows up as a failed deploy, not as silent
+    no-tax.) Then check, read-only:
+
+    ```bash
+    curl -s https://api.questurian.com/api/payments/plans | grep -o '"taxAtCheckout":[a-z]*'   # "taxAtCheckout":true
+    ```
+
+    Within about a minute (the page caches the plans for 60 seconds),
+    `https://www.questurian.com/join` ends with "Sales tax or VAT is added at
+    checkout where it applies, and checkout may show the total in your own
+    currency."
+
+T5. **One real $12.99 purchase, owner only** (`docs/launch-day.md` step 6, the
+    same page and the same refund; do it again if you already did it before
+    T4). What is new: the Checkout page is Link's, it adds tax for a taxable
+    billing address, the receipt comes from Link and **shows the tax**, and the
+    card statement reads `LINK.COM* …`. The full refund includes the tax, and
+    access still ends within a minute of it.
+
+**To undo:** set `STRIPE_MANAGED_PAYMENTS=off` and deploy. New checkouts are
+unmanaged again and `/join` drops the tax line. Memberships bought while it was
+on stay with Stripe as merchant of record; Stripe keeps handling their tax.
+Memberships bought before T4 (including the two $0.50 ones in step 15) never
+become managed and are never taxed.
 
 ---
 

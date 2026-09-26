@@ -43,7 +43,7 @@ export function isHandledStripeEventType(type: string): type is HandledStripeEve
  */
 export const DELIBERATELY_UNHANDLED_STRIPE_EVENTS: Readonly<Record<string, string>> = {
   'checkout.session.async_payment_failed':
-    'Only fires for delayed-notification payment methods (bank debits, vouchers). Checkout is card-only, so it cannot fire; revisit if a delayed method is ever enabled.',
+    'Only fires for delayed-notification payment methods (bank debits, vouchers). With STRIPE_MANAGED_PAYMENTS off, Checkout is card and Link only, so it cannot fire. With it on, Stripe chooses the methods and some are delayed (Bancontact, Pix, UPI); entitlement still follows the subscription status through resync, and a failed first payment also arrives as invoice.payment_failed and customer.subscription.updated, which are handled. Watch the first managed purchases before adding it.',
   'checkout.session.expired':
     'An abandoned Checkout Session grants nothing, so there is no entitlement to correct.',
   'invoice.payment_action_required':
